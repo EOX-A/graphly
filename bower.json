@@ -1,0 +1,12 @@
+{
+  "name": "graphly",
+  "version": "0.0.1",
+  "dependencies": {
+  	"d3": "~3.5.3"
+  },
+  "devDependencies":{},
+  "ignore": [
+    "**/.*",
+    "app"
+  ]
+}
