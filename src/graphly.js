@@ -49,10 +49,11 @@ var graphly = (function() {
               "px" + "," + (this.margin.top + 1) + "px" + ")");
 
         this.context = this.renderCanvas.node().getContext('2d');
-
+        this.context.fillStyle="#FF0000";
+        this.context.fillRect(0,0,this.width,this.height);
 
         // generate random dataset
-        var numberPoints = 40000;
+        var numberPoints = 100000;
         var randomX = d3.random.normal(0, 30);
         var randomY = d3.random.normal(0, 30);
 
@@ -87,6 +88,17 @@ var graphly = (function() {
             .attr("transform", "translate(" + this.margin.left + "," +
                 this.margin.top + ")");
 
+        this.renderingContainer = this.svg.append("g")
+            .attr("id","renderingContainer")
+            .style("clip-path","url(#clip)");
+
+        // Add clip path so only points in the area are shown
+        var clippath = this.svg.append("defs").append("clipPath")
+            .attr("id", "clip")
+            .append("rect")
+                .attr("width", this.width)
+                .attr("height", this.height);
+
         this.xAxis = d3.svg.axis()
             .scale(this.xScale)
             .innerTickSize(-this.height)
@@ -109,14 +121,10 @@ var graphly = (function() {
             .attr('class', 'axis')
             .call(this.yAxis);
 
-        
-
         // create zooming/panning behaviour
         var zoomBehaviour = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScale)
-            .scaleExtent([1, 5])
-            //.on('zoom', debounceZoom.bind(this))
             .on('zoom', this.previewZoom.bind(this));
 
         this.renderCanvas.call(zoomBehaviour);
@@ -147,6 +155,7 @@ var graphly = (function() {
     graph.prototype.onZoom = function() {
         var prevImg = this.el.select('#previewImage');
         if(!prevImg.empty()){
+            //this.svg.select("#clip").attr("transform", "translate(0,0)scale(1)");
             this.renderCanvas.style('opacity','1');
             prevImg.remove();
         }
@@ -158,7 +167,7 @@ var graphly = (function() {
 
     var debounceZoom = debounce(function() {
         this.onZoom();
-    }, 450);
+    }, 250);
 
     graph.prototype.previewZoom = function() {
 
@@ -167,60 +176,97 @@ var graphly = (function() {
         if(prevImg.empty()){
             this.renderCanvas.style('opacity','0');
             var img = this.renderCanvas.node().toDataURL();
-            this.originalScale = d3.event.scale;
-            this.oridinalTranslation = d3.event.translate;
-            this.svg.append("svg:image")
+            this.oSc = d3.event.scale;
+            this.oTr = d3.event.translate;
+
+            this.oT = [
+                d3.event.translate[0]/d3.event.scale,
+                d3.event.translate[1]/d3.event.scale,
+            ];
+            
+            this.renderingContainer.append("svg:image")
                 .attr('id', 'previewImage')
-                .attr("preserveAspectRatio", "none")
-                .style('pointer-events', 'none')
-                .attr('width', this.width)
-                .attr('height', this.height)
-                .attr("xlink:href",img);
-        }else{
-            var scale = 1 + (d3.event.scale - this.originalScale);
-            //var scale = d3.event.scale;
-            console.log(scale);
-            var transX = d3.event.translate[0] - this.oridinalTranslation[0];
-            var transY = d3.event.translate[1] - this.oridinalTranslation[1];
-            this.svg.select("#previewImage").attr("transform", "translate(" + 
-                [transX, transY] + ")scale(" + scale + ")");
+                .attr("xlink:href", img)
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("width",  this.width)
+                .attr("height", this.height);
         }
 
-        // Update image accordingly
-        //console.log(d3.event.translate );
-        //console.log(d3.event.scale );
-        //this.svg.select("#previewImage").attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-        
+        var scale = 1 + (d3.event.scale - this.oSc);
+        var transX, transY;
+
+        if(scale !== 1){
+            transX = (d3.event.translate[0]/d3.event.scale - this.oTr[0]/this.oSc) *
+                this.oSc * d3.event.scale;
+            transY = (d3.event.translate[1]/d3.event.scale - this.oTr[1]/this.oSc) * 
+                this.oSc * d3.event.scale;
+        }else{
+            transX = d3.event.translate[0] - this.oT[0]* this.oSc;
+            transY = d3.event.translate[1] - this.oT[1]* this.oSc;
+        }
+
+        this.svg.select("#previewImage").attr("transform", "translate(" + 
+            [transX, transY] + ")scale(" + scale + ")");
+
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
 
         
     };
 
+    graph.prototype.drawCross = function(point, s) {
+        var x = Math.round(this.xScale(point.x));
+        var y = Math.round(this.yScale(point.y));
+
+        this.context.beginPath();
+        this.context.strokeStyle = "rgba(10, 10, 255, 1)";
+        this.context.moveTo(x - s, y - s);
+        this.context.lineTo(x + s, y + s);
+        this.context.stroke();
+        this.context.moveTo(x + s, y - s);
+        this.context.lineTo(x - s, y + s);
+        this.context.stroke();
+    };
+
+    graph.prototype.drawRect = function(point, s) {
+        var x = Math.round(this.xScale(point.x));
+        var y = Math.round(this.yScale(point.y));
+
+        this.context.beginPath();
+        this.context.strokeStyle = "rgba(10, 10, 255, 1)";
+        this.context.moveTo(x - s-1, y - s);
+        this.context.lineTo(x + s+1, y - s);
+        this.context.stroke();
+        this.context.moveTo(x + s, y - s);
+        this.context.lineTo(x + s, y + s);
+        this.context.stroke();
+        this.context.moveTo(x + s+1, y + s);
+        this.context.lineTo(x - s-1, y + s);
+        this.context.stroke();
+        this.context.moveTo(x - s, y + s);
+        this.context.lineTo(x - s, y - s);
+        this.context.stroke();
+    };
+
 
     graph.prototype.drawPoint = function(point, r) {
-        var cx = Math.round(this.xScale(point.x));
-        var cy = Math.round(this.yScale(point.y));
+        var x = Math.round(this.xScale(point.x));
+        var y = Math.round(this.yScale(point.y));
 
         // NOTE; each point needs to be drawn as its own path
         // as every point needs its own stroke. you can get an insane
         // speed up if the path is closed after all the points have been drawn
         // and don't mind points not having a stroke
         this.context.beginPath();
-        this.context.fillStyle = "rgba(10, 10, 255, 0.5)";
-        this.context.arc(cx, cy, r, 0, 2 * Math.PI);
+        this.context.fillStyle = "rgba(10, 10, 255, 1)";
+        this.context.arc(x, y, r, 0, 2 * Math.PI);
         this.context.closePath();
         this.context.fill();
         this.context.stroke();
     };
 
-    graph.prototype.renderData = function() {
-        console.log('Render data');
-        this.context.clearRect(0, 0, this.width, this.height);
-        this.data.forEach(function(d) {
-            this.drawPoint(d, 1);
-        }, this);
-    };
+
 
     /**
     * Render the colorscale to the specified canvas.
@@ -231,9 +277,11 @@ var graphly = (function() {
     graph.prototype.renderData = function() {
         console.log('Render data');
         this.context.clearRect(0, 0, this.width, this.height);
-        this.data.forEach(function(d) {
-            this.drawPoint(d, 4);
-        }, this);
+
+        for (var i = this.data.length - 1; i >= 0; i--) {
+            this.drawRect(this.data[i], 4);
+        }
+
     };
 
     return {
