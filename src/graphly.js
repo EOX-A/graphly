@@ -15,6 +15,21 @@ var graphly = (function() {
 
     function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
+    // Function to create new colours for the picking.
+    var nextCol = 1;
+    function genColor(){ 
+      
+        var ret = [];
+        if(nextCol < 16777215){ 
+            ret.push(nextCol & 0xff); // R 
+            ret.push((nextCol & 0xff00) >> 8); // G 
+            ret.push((nextCol & 0xff0000) >> 16); // B
+            nextCol += 1; 
+        }
+        var col = "rgb(" + ret.join(',') + ")";
+        return col;
+    }
+
     /**
     * @lends graphly
     */
@@ -38,22 +53,71 @@ var graphly = (function() {
         this.dim = this.el.node().getBoundingClientRect();
         this.margin = {top: 10, left: 30, bottom: 30, right: 10};
         this.width = this.dim.width - this.margin.left - this.margin.right;
-        this.height = this.dim.height - this.margin.top - this.margin.bottom; 
+        this.height = this.dim.height - this.margin.top - this.margin.bottom;
+        var self = this;
+
 
         this.renderCanvas = this.el.append('canvas')
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
+            .style('opacity', 0.5)
             .style('position', 'absolute')
             .style('z-index', 2)
+            .style("transform", "translate(" + (this.margin.left + 1.5) +
+              "px" + "," + (this.margin.top + 1.5) + "px" + ")");
+
+        this.context = this.renderCanvas.node().getContext('2d');
+
+        this.referenceCanvas = this.el.append('canvas')
+            .classed('hiddenCanvas', true) 
+            .attr('width', this.width - 1)
+            .attr('height', this.height - 1)
+            .style('position', 'absolute')
+            .style('display', 'none')
             .style("transform", "translate(" + (this.margin.left + 1) +
               "px" + "," + (this.margin.top + 1) + "px" + ")");
 
-        this.context = this.renderCanvas.node().getContext('2d');
-        this.context.fillStyle="#FF0000";
-        this.context.fillRect(0,0,this.width,this.height);
+        this.referenceContext = this.referenceCanvas.node().getContext('2d', {alpha: false});
+
+        this.context.mozImageSmoothingEnabled = false;
+        this.context.webkitImageSmoothingEnabled = false;
+        this.context.msImageSmoothingEnabled = false;
+        this.context.imageSmoothingEnabled = false;
+
+        this.renderCanvas.on('mousemove', function() {
+            // Get mouse positions from the main canvas.
+            var mouseX = d3.event.offsetX; 
+            var mouseY = d3.event.offsetY;
+            // Pick the colour from the mouse position. 
+            var col = self.referenceContext.getImageData(mouseX, mouseY, 1, 1).data; 
+            // Then stringify the values in a way our map-object can read it.
+            var colKey = 'rgb(' + col[0] + ',' + col[1] + ',' + col[2] + ')';
+            // Get the data from our map! 
+            var nodeId = self.colourToNode[colKey];
+
+            self.svg.selectAll('.highlightItem').remove();
+
+            if(nodeId){
+                var p = self.data[nodeId];
+                var xItem = self.xScale(p.x);
+                var yItem = self.yScale(p.y);
+
+                // Check if selection is correct or the colorId is wrong
+                // because of antialiasing
+                if((Math.abs(mouseX-xItem) <10) && (Math.abs(mouseY-yItem)<10)){
+                    self.svg.append('circle')
+                        .attr('class', 'highlightItem')
+                        .attr("r", 8)
+                        .attr("cx", xItem)
+                        .attr("cy", yItem)
+                        .style("fill", function(d) { return 'rgba(0,0,200,1)';})
+                        .style("stroke", function(d) { return 'rgba(0,0,200,1)'; });
+                }
+            }
+        });
 
         // generate random dataset
-        var numberPoints = 100000;
+        var numberPoints = 86400;
         var randomX = d3.random.normal(0, 30);
         var randomY = d3.random.normal(0, 30);
 
@@ -215,42 +279,33 @@ var graphly = (function() {
         
     };
 
-    graph.prototype.drawCross = function(point, s) {
+    graph.prototype.drawCross = function(ctx, point, s, c) {
         var x = Math.round(this.xScale(point.x));
         var y = Math.round(this.yScale(point.y));
 
-        this.context.beginPath();
-        this.context.strokeStyle = "rgba(10, 10, 255, 1)";
-        this.context.moveTo(x - s, y - s);
-        this.context.lineTo(x + s, y + s);
-        this.context.stroke();
-        this.context.moveTo(x + s, y - s);
-        this.context.lineTo(x - s, y + s);
-        this.context.stroke();
+        ctx.beginPath();
+        ctx.strokeStyle = c;
+        ctx.moveTo(x - s, y - s);
+        ctx.lineTo(x + s, y + s);
+        ctx.stroke();
+        ctx.moveTo(x + s, y - s);
+        ctx.lineTo(x - s, y + s);
+        ctx.stroke();
     };
 
-    graph.prototype.drawRect = function(point, s) {
+    graph.prototype.drawRect = function(ctx, point, s, c) {
         var x = Math.round(this.xScale(point.x));
         var y = Math.round(this.yScale(point.y));
 
-        this.context.beginPath();
-        this.context.strokeStyle = "rgba(10, 10, 255, 1)";
-        this.context.moveTo(x - s-1, y - s);
-        this.context.lineTo(x + s+1, y - s);
-        this.context.stroke();
-        this.context.moveTo(x + s, y - s);
-        this.context.lineTo(x + s, y + s);
-        this.context.stroke();
-        this.context.moveTo(x + s+1, y + s);
-        this.context.lineTo(x - s-1, y + s);
-        this.context.stroke();
-        this.context.moveTo(x - s, y + s);
-        this.context.lineTo(x - s, y - s);
-        this.context.stroke();
+        ctx.beginPath();
+        //ctx.strokeStyle = 'rgba('+c[0]+','+c[1]+','+c[2]+',1)';
+        ctx.strokeStyle = c;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x-s/2, y-s/2, s, s);
     };
 
 
-    graph.prototype.drawPoint = function(point, r) {
+    graph.prototype.drawPoint = function(ctx, point, r, c) {
         var x = Math.round(this.xScale(point.x));
         var y = Math.round(this.yScale(point.y));
 
@@ -258,12 +313,13 @@ var graphly = (function() {
         // as every point needs its own stroke. you can get an insane
         // speed up if the path is closed after all the points have been drawn
         // and don't mind points not having a stroke
-        this.context.beginPath();
-        this.context.fillStyle = "rgba(10, 10, 255, 1)";
-        this.context.arc(x, y, r, 0, 2 * Math.PI);
-        this.context.closePath();
-        this.context.fill();
-        this.context.stroke();
+        ctx.beginPath();
+        ctx.strokeStyle = c;
+        ctx.arc(x, y, r, 0, 2 * Math.PI);
+        ctx.closePath();
+        ctx.fillStyle = c;
+        ctx.fill();
+        ctx.stroke();
     };
 
 
@@ -275,12 +331,22 @@ var graphly = (function() {
     * @param {HTMLCanvasElement} canvas the canvas to render to
     */
     graph.prototype.renderData = function() {
+
         console.log('Render data');
         this.context.clearRect(0, 0, this.width, this.height);
+        this.referenceContext.clearRect(0, 0, this.width, this.height);
+        this.colourToNode = {}; // Map to track the colour of nodes.
+        var idColor;
 
+        var t0 = performance.now();
         for (var i = this.data.length - 1; i >= 0; i--) {
-            this.drawRect(this.data[i], 4);
+            this.drawPoint(this.context, this.data[i], 5, 'rgba(0,0,200,255)');
+            idColor = genColor();
+            this.colourToNode[idColor] = i;
+            this.drawPoint(this.referenceContext, this.data[i], 5, idColor);
         }
+        var t1 = performance.now();
+        console.log("First draw " + (t1 - t0) + " ms.");
 
     };
 
