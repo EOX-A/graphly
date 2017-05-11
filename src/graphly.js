@@ -5,6 +5,53 @@
  * @author: Daniel Santillan
  */
 
+var itemAmount = 86000;
+
+Array.prototype.pushArray = function() {
+    var toPush = this.concat.apply([], arguments);
+    for (var i = 0, len = toPush.length; i < len; ++i) {
+        this.push(toPush[i]);
+    }
+};
+
+function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
+
+function create3DContext(canvas, opt_attribs) {
+    var names = ["webgl", "experimental-webgl"];
+    var context = null;
+    for (var ii = 0; ii < names.length; ++ii) {
+        try {
+            context = canvas.getContext(names[ii], opt_attribs);
+        } catch(e) {}  // eslint-disable-line
+        if (context) {
+            break;
+        }
+    }
+    if (!context || !context.getExtension('OES_texture_float')) {
+        return null;
+    }
+    return context;
+}
+
+var vertexShaderSource = 
+    'attribute vec3 coordinates;' +
+    'attribute vec3 color;'+
+    'varying vec3 vColor;'+
+    'void main(void) {' +
+        'gl_Position = vec4(coordinates, 1.0);' +
+        'gl_PointSize = 10.0;'+
+        'vColor = color;'+
+    '}';
+
+// Definition of fragment shader
+var fragmentShaderSource = 
+    'precision mediump float;\n'+
+    'varying vec3 vColor;\n'+
+    'void main() {\n'+
+        'gl_FragColor = vec4(vColor, 1.0);\n'+
+    '}';
+
+
 var graphly = (function() {
 
     function hasOwnProperty(obj, prop) {
@@ -16,18 +63,20 @@ var graphly = (function() {
     function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
     // Function to create new colours for the picking.
-    var nextCol = 1;
+    this.nextCol = 1;
     function genColor(){ 
       
         var ret = [];
-        if(nextCol < 16777215){ 
-            ret.push(nextCol & 0xff); // R 
-            ret.push((nextCol & 0xff00) >> 8); // G 
-            ret.push((nextCol & 0xff0000) >> 16); // B
-            nextCol += 1; 
+        if(this.nextCol < 16777215){ 
+            ret.push(this.nextCol & 0xff); // R 
+            ret.push((this.nextCol & 0xff00) >> 8); // G 
+            ret.push((this.nextCol & 0xff0000) >> 16); // B
+            this.nextCol += 1; 
         }
-        var col = "rgb(" + ret.join(',') + ")";
-        return col;
+        //var col = "rgb(" + ret.join(',') + ")";
+        //return col;
+        //return ret.map(function(c){return c/255;});
+        return ret;
     }
 
     /**
@@ -60,13 +109,36 @@ var graphly = (function() {
         this.renderCanvas = this.el.append('canvas')
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
-            .style('opacity', 0.5)
+            .style('opacity', 1.0)
+            //.style('display', 'none')
             .style('position', 'absolute')
             .style('z-index', 2)
-            .style("transform", "translate(" + (this.margin.left + 1.5) +
-              "px" + "," + (this.margin.top + 1.5) + "px" + ")");
+            .style("transform", "translate(" + (this.margin.left + 1.0) +
+              "px" + "," + (this.margin.top + 1.0) + "px" + ")");
 
-        this.context = this.renderCanvas.node().getContext('2d');
+        this.context = create3DContext(this.renderCanvas.node(), {preserveDrawingBuffer: true});
+        var gl = this.context;
+        // create the shader program
+        var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(vertexShader));
+        }
+
+        var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(fragmentShader));
+        }
+
+        var program = this.program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        gl.useProgram(this.program);
+
 
         this.referenceCanvas = this.el.append('canvas')
             .classed('hiddenCanvas', true) 
@@ -77,21 +149,46 @@ var graphly = (function() {
             .style("transform", "translate(" + (this.margin.left + 1) +
               "px" + "," + (this.margin.top + 1) + "px" + ")");
 
-        this.referenceContext = this.referenceCanvas.node().getContext('2d', {alpha: false});
+        this.referenceContext = create3DContext(this.referenceCanvas.node(), {
+            preserveDrawingBuffer: true,
+            antialias: false
+        });
+        gl = this.referenceContext;
+        // create the shader program
+        vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(vertexShader));
+        }
 
-        this.context.mozImageSmoothingEnabled = false;
-        this.context.webkitImageSmoothingEnabled = false;
-        this.context.msImageSmoothingEnabled = false;
-        this.context.imageSmoothingEnabled = false;
+        fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(fragmentShader));
+        }
+
+        var referenceProgram = this.referenceProgram = gl.createProgram();
+        gl.attachShader(referenceProgram, vertexShader);
+        gl.attachShader(referenceProgram, fragmentShader);
+        gl.linkProgram(referenceProgram);
+        gl.useProgram(this.referenceProgram);
+
+
 
         this.renderCanvas.on('mousemove', function() {
+
             // Get mouse positions from the main canvas.
             var mouseX = d3.event.offsetX; 
             var mouseY = d3.event.offsetY;
             // Pick the colour from the mouse position. 
-            var col = self.referenceContext.getImageData(mouseX, mouseY, 1, 1).data; 
-            // Then stringify the values in a way our map-object can read it.
-            var colKey = 'rgb(' + col[0] + ',' + col[1] + ',' + col[2] + ')';
+            //var col = self.referenceContext.getImageData(mouseX, mouseY, 1, 1).data;
+            var gl = self.referenceContext;
+            var pixels = new Uint8Array(4);
+            gl.readPixels(mouseX, (this.height-mouseY), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels); 
+            var col = [pixels[0], pixels[1], pixels[2]];
+            var colKey = col.join('-');
             // Get the data from our map! 
             var nodeId = self.colourToNode[colKey];
 
@@ -104,7 +201,7 @@ var graphly = (function() {
 
                 // Check if selection is correct or the colorId is wrong
                 // because of antialiasing
-                if((Math.abs(mouseX-xItem) <10) && (Math.abs(mouseY-yItem)<10)){
+                //if((Math.abs(mouseX-xItem) <10) && (Math.abs(mouseY-yItem)<10)){
                     self.svg.append('circle')
                         .attr('class', 'highlightItem')
                         .attr("r", 8)
@@ -112,12 +209,12 @@ var graphly = (function() {
                         .attr("cy", yItem)
                         .style("fill", function(d) { return 'rgba(0,0,200,1)';})
                         .style("stroke", function(d) { return 'rgba(0,0,200,1)'; });
-                }
+                //}
             }
         });
 
         // generate random dataset
-        var numberPoints = 86400;
+        var numberPoints = itemAmount;
         var randomX = d3.random.normal(0, 30);
         var randomY = d3.random.normal(0, 30);
 
@@ -141,13 +238,22 @@ var graphly = (function() {
 
         this.yScale = d3.scale.linear()
             .domain([yExtent[0] - yRange*0.1, yExtent[1] + yRange*0.1])
-            .range([this.height, 0]);
+            .range([0, this.height]);
+
+        this.xScaleGL = d3.scale.linear()
+            .domain([xExtent[0] - xRange*0.1, xExtent[1] + xRange*0.1])
+            .range([-1, 1]);
+
+        this.yScaleGL = d3.scale.linear()
+            .domain([yExtent[0] - yRange*0.1, yExtent[1] + yRange*0.1])
+            .range([1, -1]);
 
         this.svg = this.el.append('svg')
             .attr('width', this.width + this.margin.left + this.margin.right)
             .attr('height', this.height + this.margin.top + this.margin.bottom)
             .style('position', 'absolute')
-            .style('z-index', 1)
+            .style('z-index', 10)
+            .style('pointer-events', 'none')
             .append('g')
             .attr("transform", "translate(" + this.margin.left + "," +
                 this.margin.top + ")");
@@ -220,12 +326,14 @@ var graphly = (function() {
         var prevImg = this.el.select('#previewImage');
         if(!prevImg.empty()){
             //this.svg.select("#clip").attr("transform", "translate(0,0)scale(1)");
-            this.renderCanvas.style('opacity','1');
+            this.renderCanvas.style('opacity','1.0');
             prevImg.remove();
         }
         
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
+
+
         this.renderData();
     };
 
@@ -234,6 +342,9 @@ var graphly = (function() {
     }, 250);
 
     graph.prototype.previewZoom = function() {
+
+        this.xScaleGL.domain(this.xScale.domain());
+        this.yScaleGL.domain(this.yScale.domain());
 
         debounceZoom.bind(this)();
         var prevImg = this.el.select('#previewImage');
@@ -332,21 +443,136 @@ var graphly = (function() {
     */
     graph.prototype.renderData = function() {
 
-        console.log('Render data');
-        this.context.clearRect(0, 0, this.width, this.height);
-        this.referenceContext.clearRect(0, 0, this.width, this.height);
         this.colourToNode = {}; // Map to track the colour of nodes.
-        var idColor;
 
-        var t0 = performance.now();
+        var vertices = [];
+        var colors = [];
+        var idColors = [];
+        var indices = [];
+
+        // reset color count
+        this.nextCol = 1;
+
         for (var i = this.data.length - 1; i >= 0; i--) {
-            this.drawPoint(this.context, this.data[i], 5, 'rgba(0,0,200,255)');
-            idColor = genColor();
-            this.colourToNode[idColor] = i;
-            this.drawPoint(this.referenceContext, this.data[i], 5, idColor);
+
+            var x = (this.xScaleGL(this.data[i].x));
+            var y = (this.yScaleGL(this.data[i].y));
+            vertices.pushArray([x,y,0.0]);
+
+            var c = genColor();
+            this.colourToNode[c.join('-')] = i;
+            idColors.pushArray(c.map(function(c){return c/255;}));
+            colors.pushArray([0.258, 0.525, 0.956]);
+
+            indices.push(i);
+
         }
-        var t1 = performance.now();
-        console.log("First draw " + (t1 - t0) + " ms.");
+
+
+        var gl = this.context;
+
+        // Create an empty buffer object to store the vertex buffer
+        var vertex_buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        // Create an empty buffer object and store Index data
+        var Index_Buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Index_Buffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+        // Create an empty buffer object and store color data
+        var color_buffer = gl.createBuffer ();
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+
+
+        // Bind vertex buffer object
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+        // Get the attribute location
+        var coord = gl.getAttribLocation(this.program, "coordinates");
+        // Point an attribute to the currently bound VBO
+        gl.vertexAttribPointer(coord, 3, gl.FLOAT, false, 0, 0);
+        // Enable the attribute
+        gl.enableVertexAttribArray(coord);
+
+
+
+
+        // bind the color buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+        // get the attribute location
+        var color = gl.getAttribLocation(this.program, "color");
+        // point attribute to the volor buffer object
+        gl.vertexAttribPointer(color, 3, gl.FLOAT, false,0,0) ;
+        // enable the color attribute
+        gl.enableVertexAttribArray(color);
+
+
+        gl.clearColor(1.0, 1.0, 1.0, 0.0);
+        // Enable the depth test
+        gl.enable(gl.DEPTH_TEST);
+        // Clear the color buffer bit
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        // Set the view port
+        gl.viewport(0,0,this.width,this.height);
+        // Clear the color buffer bit
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        // Draw the triangle
+        gl.drawArrays(gl.POINTS, 0, itemAmount);
+
+
+
+        gl = this.referenceContext;
+
+        // Create an empty buffer object to store the vertex buffer
+        vertex_buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        // Create an empty buffer object and store Index data
+        Index_Buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Index_Buffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+        // Create an empty buffer object and store color data
+        color_buffer = gl.createBuffer ();
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(idColors), gl.STATIC_DRAW);
+
+
+
+        // Bind vertex buffer object
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+        // Get the attribute location
+        coord = gl.getAttribLocation(this.referenceProgram, "coordinates");
+        // Point an attribute to the currently bound VBO
+        gl.vertexAttribPointer(coord, 3, gl.FLOAT, false, 0, 0);
+        // Enable the attribute
+        gl.enableVertexAttribArray(coord);
+
+
+        // bind the color buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+        // get the attribute location
+        color = gl.getAttribLocation(this.referenceProgram, "color");
+        // point attribute to the volor buffer object
+        gl.vertexAttribPointer(color, 3, gl.FLOAT, false,0,0) ;
+        // enable the color attribute
+        gl.enableVertexAttribArray(color);
+
+        gl.viewport(0,0,this.width,this.height);
+        gl.clearColor(1.0, 1.0, 1.0, 1.0);
+        // Clean the screen and the depth buffer
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        // Draw the triangle
+        gl.drawArrays(gl.POINTS, 0, itemAmount);
+
 
     };
 
