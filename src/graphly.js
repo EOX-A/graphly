@@ -37,8 +37,9 @@ var vertexShaderSource =
     'attribute vec3 coordinates;' +
     'attribute vec3 color;'+
     'varying vec3 vColor;'+
+    'uniform vec2 u_resolution;'+
     'void main(void) {' +
-        'gl_Position = vec4(coordinates, 1.0);' +
+        'gl_Position = vec4(coordinates.xy/u_resolution.xy, 1.0);' +
         'gl_PointSize = 10.0;'+
         'vColor = color;'+
     '}';
@@ -47,9 +48,11 @@ var vertexShaderSource =
 var fragmentShaderSource = 
     'precision mediump float;\n'+
     'varying vec3 vColor;\n'+
+    //'uniform vec2 u_resolution;'+
     'void main() {\n'+
         'gl_FragColor = vec4(vColor, 1.0);\n'+
     '}';
+
 
 
 var graphly = (function() {
@@ -77,6 +80,25 @@ var graphly = (function() {
         //return col;
         //return ret.map(function(c){return c/255;});
         return ret;
+    }
+
+    function createShader(gl, shaderSource, type){
+        var shader = gl.createShader(gl[type]);
+        gl.shaderSource(shader, shaderSource);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(shader));
+        }
+        return shader;
+    }
+
+    function createAndLinkProgram(gl, vertexShader, fragmentShader){
+        var program = this.program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+
+        return program;
     }
 
     /**
@@ -116,28 +138,39 @@ var graphly = (function() {
             .style("transform", "translate(" + (this.margin.left + 1.0) +
               "px" + "," + (this.margin.top + 1.0) + "px" + ")");
 
-        this.context = create3DContext(this.renderCanvas.node(), {preserveDrawingBuffer: true});
+        /*this.context = create3DContext(this.renderCanvas.node(), {preserveDrawingBuffer: true});
         var gl = this.context;
         // create the shader program
-        var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertexShader, vertexShaderSource);
-        gl.compileShader(vertexShader);
-        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(vertexShader));
-        }
 
-        var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fragmentShader, fragmentShaderSource);
-        gl.compileShader(fragmentShader);
-        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(fragmentShader));
-        }
+        var vertexShader = createShader(gl, vertexShaderSource, 'VERTEX_SHADER');
+        var fragmentShader = createShader(gl, fragmentShaderSource, 'FRAGMENT_SHADER');
 
-        var program = this.program = gl.createProgram();
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-        gl.linkProgram(program);
-        gl.useProgram(this.program);
+        gl.viewport(0.0, 0.0, this.renderCanvas.width, this.renderCanvas.height);
+
+        var program = this.program = createAndLinkProgram(gl, vertexShader, fragmentShader);
+        gl.useProgram(program);
+
+        var resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+        gl.uniform2f(resolutionLocation, this.renderCanvas.width, this.renderCanvas.height);*/
+
+
+         // Get canvas element:
+
+        // Set parameters (these are the default values used when that option is omitted):
+        var params = {
+            maxLines: itemAmount*4, // used for preallocation
+            maxDots: itemAmount,
+            forceGL1: false, // use WebGL 1 even if WebGL 2 is available
+            clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
+            useNDC: false, // Use normalized device coordinates [0, 1] instead of pixel coordinates,
+            coordinateSystem: 'pixels',
+            contextParams: {
+                preserveDrawingBuffer: true
+            }
+        };
+
+        // Initialize BatchDrawer:
+        this.batchDrawer = new BatchDrawer(this.renderCanvas.node(), params);
 
 
         this.referenceCanvas = this.el.append('canvas')
@@ -149,10 +182,20 @@ var graphly = (function() {
             .style("transform", "translate(" + (this.margin.left + 1) +
               "px" + "," + (this.margin.top + 1) + "px" + ")");
 
-        this.referenceContext = create3DContext(this.referenceCanvas.node(), {
+        // Set parameters (these are the default values used when that option is omitted):
+
+        // Initialize BatchDrawer:
+        params.contextParams = {
+            antialias: false
+        };
+        this.batchDrawerReference = new BatchDrawer(this.referenceCanvas.node(), params);
+        this.referenceContext = this.batchDrawerReference.getContext();
+
+        /*this.referenceContext = create3DContext(this.referenceCanvas.node(), {
             preserveDrawingBuffer: true,
             antialias: false
         });
+
         gl = this.referenceContext;
         // create the shader program
         vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -173,7 +216,7 @@ var graphly = (function() {
         gl.attachShader(referenceProgram, vertexShader);
         gl.attachShader(referenceProgram, fragmentShader);
         gl.linkProgram(referenceProgram);
-        gl.useProgram(this.referenceProgram);
+        gl.useProgram(this.referenceProgram);*/
 
 
 
@@ -343,6 +386,7 @@ var graphly = (function() {
 
     graph.prototype.previewZoom = function() {
 
+        this.svg.selectAll('.highlightItem').remove();
         this.xScaleGL.domain(this.xScale.domain());
         this.yScaleGL.domain(this.yScale.domain());
 
@@ -390,50 +434,6 @@ var graphly = (function() {
         
     };
 
-    graph.prototype.drawCross = function(ctx, point, s, c) {
-        var x = Math.round(this.xScale(point.x));
-        var y = Math.round(this.yScale(point.y));
-
-        ctx.beginPath();
-        ctx.strokeStyle = c;
-        ctx.moveTo(x - s, y - s);
-        ctx.lineTo(x + s, y + s);
-        ctx.stroke();
-        ctx.moveTo(x + s, y - s);
-        ctx.lineTo(x - s, y + s);
-        ctx.stroke();
-    };
-
-    graph.prototype.drawRect = function(ctx, point, s, c) {
-        var x = Math.round(this.xScale(point.x));
-        var y = Math.round(this.yScale(point.y));
-
-        ctx.beginPath();
-        //ctx.strokeStyle = 'rgba('+c[0]+','+c[1]+','+c[2]+',1)';
-        ctx.strokeStyle = c;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x-s/2, y-s/2, s, s);
-    };
-
-
-    graph.prototype.drawPoint = function(ctx, point, r, c) {
-        var x = Math.round(this.xScale(point.x));
-        var y = Math.round(this.yScale(point.y));
-
-        // NOTE; each point needs to be drawn as its own path
-        // as every point needs its own stroke. you can get an insane
-        // speed up if the path is closed after all the points have been drawn
-        // and don't mind points not having a stroke
-        ctx.beginPath();
-        ctx.strokeStyle = c;
-        ctx.arc(x, y, r, 0, 2 * Math.PI);
-        ctx.closePath();
-        ctx.fillStyle = c;
-        ctx.fill();
-        ctx.stroke();
-    };
-
-
 
     /**
     * Render the colorscale to the specified canvas.
@@ -449,27 +449,45 @@ var graphly = (function() {
         var colors = [];
         var idColors = [];
         var indices = [];
+        var radius = 5;
 
         // reset color count
         this.nextCol = 1;
 
         for (var i = this.data.length - 1; i >= 0; i--) {
 
-            var x = (this.xScaleGL(this.data[i].x));
-            var y = (this.yScaleGL(this.data[i].y));
-            vertices.pushArray([x,y,0.0]);
+            var x = (this.xScale(this.data[i].x));
+            var y = (this.yScale(this.data[i].y));
+
+
+
+            //vertices.pushArray([x,y,0.0]);
 
             var c = genColor();
             this.colourToNode[c.join('-')] = i;
-            idColors.pushArray(c.map(function(c){return c/255;}));
-            colors.pushArray([0.258, 0.525, 0.956]);
+            var nCol = c.map(function(c){return c/255;});
+            idColors.pushArray(nCol);
+            //colors.pushArray([0.258, 0.525, 0.956]);
 
-            indices.push(i);
+            //indices.push(i);
+            var w = 3;
+            this.batchDrawer.addLine(x-(w/2)-w, y-w, x+(w/2)+w, y-w, w, 0.258, 0.525, 0.956, 1.0);
+            this.batchDrawer.addLine(x+w, y-w, x+w, y+w, w, 0.258, 0.525, 0.956, 1.0);
+            this.batchDrawer.addLine(x+(w/2)+w, y+w, x-(w/2)-w, y+w, w, 0.258, 0.525, 0.956, 1.0);
+            this.batchDrawer.addLine(x-w, y+w, x-w, y-w, w, 0.258, 0.525, 0.956, 1.0);
 
+            this.batchDrawerReference.addLine(x-(w/2)-w, y, x+(w/2)+w, y, w*4, nCol[0], nCol[1], nCol[2], 1);
+
+            /*this.batchDrawer.addDot(x, y, 20, 0.258, 0.525, 0.956, 1);
+            this.batchDrawerReference.addDot(x, y, 20, nCol[0], nCol[1], nCol[2], 1);*/
         }
 
+        this.batchDrawer.draw();
+        this.batchDrawerReference.draw();
 
-        var gl = this.context;
+
+        /*var gl = this.context;
+
 
         // Create an empty buffer object to store the vertex buffer
         var vertex_buffer = gl.createBuffer();
@@ -522,11 +540,11 @@ var graphly = (function() {
         // Clear the color buffer bit
         gl.clear(gl.COLOR_BUFFER_BIT);
         // Draw the triangle
-        gl.drawArrays(gl.POINTS, 0, itemAmount);
+        gl.drawArrays(gl.POINTS, 0, itemAmount);*/
 
 
 
-        gl = this.referenceContext;
+        /*gl = this.referenceContext;
 
         // Create an empty buffer object to store the vertex buffer
         vertex_buffer = gl.createBuffer();
@@ -571,7 +589,7 @@ var graphly = (function() {
         // Clean the screen and the depth buffer
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         // Draw the triangle
-        gl.drawArrays(gl.POINTS, 0, itemAmount);
+        gl.drawArrays(gl.POINTS, 0, itemAmount);*/
 
 
     };
