@@ -406,6 +406,17 @@ class BatchDrawer {
         // Use dot drawing shaders:
         this.GL.useProgram(this.dotProgram);
 
+        /*this.GL.blendFunc(this.GL.SRC_COLOR, this.GL.DST_COLOR);
+        this.GL.enable(this.GL.BLEND);
+        this.GL.disable(this.GL.DEPTH_TEST);*/
+
+        /*this.GL.enable(this.GL.DEPTH_TEST);
+        this.GL.depthFunc(this.GL.LESS);*/
+
+        this.GL.enable( this.GL.BLEND );
+        this.GL.blendEquation( this.GL.FUNC_ADD );
+        this.GL.blendFunc( this.GL.SRC_ALPHA, this.GL.ONE_MINUS_SRC_ALPHA );
+
         this.GL.enableVertexAttribArray(this.DOT_VX_BUF);
         this.GL.enableVertexAttribArray(this.DOT_POS_BUF);
         this.GL.enableVertexAttribArray(this.DOT_SIZE_BUF);
@@ -428,7 +439,7 @@ class BatchDrawer {
         this.GL.vertexAttribDivisor(this.DOT_COLOR_BUF, 1);
 
         // Draw all dot instances:
-        this.GL.drawArraysInstanced(this.GL.TRIANGLE_STRIP, 0, 4, this.numDots);
+        this.GL.drawArraysInstanced(this.GL.POINT, 0, 4, this.numDots);
     }
 
 
@@ -505,12 +516,103 @@ class BatchDrawer {
 
         if (this.GLVersion == 2) {
             fragSource =   `#version 300 es
+
+                            /*#ifdef GL_EXT_frag_depth
+                            #extension GL_EXT_frag_depth : enable
+                            #endif*/
+
+                            #define PI 3.14159265359
+                            #define TWO_PI 6.28318530718
+
                             precision highp float;
+                            
                             in vec4 color;
                             out vec4 fragmentColor;
-
+                            
                             void main(void) {
-                                fragmentColor = color;
+
+                                /*vec2 st = 2.0 * gl_PointCoord.xy - 1.0;
+                                st.y = st.y * -1.0;
+                                vec3 color2 = vec3(0.0);
+                                float d = 0.0;
+
+                                // Number of sides of your shape
+                                int N = 3;
+
+                                // Angle and radius from the current pixel
+                                float a = atan(st.x,st.y)+PI;
+                                float r = TWO_PI/float(N);
+
+                                // Shaping function that modulate the distance
+                                d = cos(floor(.5+a/r)*r-a)*length(st);
+                                float alpha = 1.0-smoothstep(.4,.41,d);
+                                fragmentColor = color * alpha;*/
+
+
+                                float innerPercent = 0.5;
+                                vec4 outlineColor = color;
+                                float distanceToCenter = length(gl_PointCoord.xy - vec2(0.5));
+                                //float maxDistance = max(0.0, 0.5 - v_pixelDistance);
+                                float maxDistance = 0.4;
+                                float wholeAlpha = 1.0 - smoothstep(maxDistance, 0.5, distanceToCenter);
+                                float innerAlpha = 1.0 - smoothstep(maxDistance * innerPercent, 0.5 * innerPercent, distanceToCenter);
+                                vec4 o_color = mix(outlineColor, color, innerAlpha);
+                                o_color.a *= wholeAlpha;
+                                if (o_color.a < 0.005){
+                                    discard;
+                                }
+                                #ifdef GL_EXT_frag_depth
+                                    float z = gl_FragCoord.z;
+                                    gl_FragDepthEXT = z + ((1.0 - z) * (1.0 - wholeAlpha));
+                                #endif
+                                
+                                fragmentColor = o_color;
+
+
+
+                                /*float r = 0.0, delta = 0.0, alpha = 1.0;
+                                    vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+                                    r = dot(cxy, cxy);
+                                #ifdef GL_OES_standard_derivatives
+                                    delta = fwidth(r);
+                                    alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+                                #endif
+
+                                fragmentColor = color * alpha;*/
+
+
+                                /*float border = 0.05;
+                                float radius = 0.5;
+                                vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                                vec4 color1 = vec4(color[0], color[1], color[2], 1.0);
+
+                                vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                                float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+
+                                float t = 0.0;
+                                if (dist > border)
+                                t = 1.0;
+                                else if (dist > 0.0)
+                                t = dist / border;
+
+                                // float centerDist = length(gl_PointCoord - 0.5);
+                                // works for overlapping circles if blending is enabled
+                                fragmentColor = mix(color0, color1, t);*/
+
+
+                                
+                                /*float r = 0.0, delta = 0.0, alpha = 1.0;
+                                vec2 cxy = 2.0 * gl_PointCoord.xy - 1.0;
+                                r = dot(cxy, cxy);
+                                if (r > 1.0) {
+                                    discard;
+                                } else if (r < 1.0 && r >= 0.9){
+                                    fragmentColor = color * 0.2;
+                                } else {
+                                    fragmentColor = color;
+                                }*/
+
+                                
                             }`;
             if (this.coordinateSystem != this.WGS84) {
                 lineVertexSource = `#version 300 es
@@ -569,11 +671,12 @@ class BatchDrawer {
 
                                   void main(void) {
                                     color = dotColor;
+                                    gl_PointSize =  inDotSize;
                                     vec2 dotPos = resolutionScale * inDotPos;
                                     float dotSize = resolutionScale.x * inDotSize;
                                     mat3 translate = mat3(
-                                      dotSize, 0, 0,
-                                      0, dotSize, 0,
+                                      1, 0, 0,
+                                      0, 1, 0,
                                       dotPos.x, dotPos.y, 1);
 
                                     gl_Position = vec4(projection * translate * vertexPos, 1.0);
