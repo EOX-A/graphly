@@ -406,16 +406,9 @@ class BatchDrawer {
         // Use dot drawing shaders:
         this.GL.useProgram(this.dotProgram);
 
-        /*this.GL.blendFunc(this.GL.SRC_COLOR, this.GL.DST_COLOR);
+        //this.GL.blendFuncSeparate(this.GL.SRC_ALPHA, this.GL.ONE_MINUS_SRC_ALPHA, this.GL.ONE, this.GL.ONE_MINUS_SRC_ALPHA);
+        this.GL.blendFunc(this.GL.ONE, this.GL.ONE_MINUS_SRC_ALPHA);
         this.GL.enable(this.GL.BLEND);
-        this.GL.disable(this.GL.DEPTH_TEST);*/
-
-        /*this.GL.enable(this.GL.DEPTH_TEST);
-        this.GL.depthFunc(this.GL.LESS);*/
-
-        this.GL.enable( this.GL.BLEND );
-        this.GL.blendEquation( this.GL.FUNC_ADD );
-        this.GL.blendFunc( this.GL.SRC_ALPHA, this.GL.ONE_MINUS_SRC_ALPHA );
 
         this.GL.enableVertexAttribArray(this.DOT_VX_BUF);
         this.GL.enableVertexAttribArray(this.DOT_POS_BUF);
@@ -482,6 +475,9 @@ class BatchDrawer {
         // Use dot drawing shaders:
         this.GL.useProgram(this.dotProgram);
 
+        this.GL.blendFunc(this.GL.ONE, this.GL.ONE_MINUS_SRC_ALPHA);
+        this.GL.enable(this.GL.BLEND);
+
         this.GL.enableVertexAttribArray(this.DOT_VX_BUF);
         this.GL.enableVertexAttribArray(this.DOT_POS_BUF);
         this.GL.enableVertexAttribArray(this.DOT_SIZE_BUF);
@@ -504,7 +500,7 @@ class BatchDrawer {
         this.ext.vertexAttribDivisorANGLE(this.DOT_COLOR_BUF, 1);
 
         // Draw all dot instances:
-        this.ext.drawArraysInstancedANGLE(this.GL.TRIANGLE_STRIP, 0, 4, this.numDots);
+        this.ext.drawArraysInstancedANGLE(this.GL.POINT, 0, 4, this.numDots);
     }
 
 
@@ -512,15 +508,11 @@ class BatchDrawer {
         // Shader source code based on WebGL version:
         let lineVertexSource = null;
         let fragSource = null;
+        let fragSourceLine = null;
         let dotVertexSource = null;
 
         if (this.GLVersion == 2) {
             fragSource =   `#version 300 es
-
-                            /*#ifdef GL_EXT_frag_depth
-                            #extension GL_EXT_frag_depth : enable
-                            #endif*/
-
                             #define PI 3.14159265359
                             #define TWO_PI 6.28318530718
 
@@ -530,6 +522,47 @@ class BatchDrawer {
                             out vec4 fragmentColor;
                             
                             void main(void) {
+
+                                //fragmentColor = color;
+                                //fragmentColor = vec4(color.rgb * color.a, color.a);
+
+                                float border = 0.05;
+                                float radius = 0.5;
+                                vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                                vec4 color1 = vec4(color.rgb * color.a, color.a);
+                                float dis = 0.0;
+
+                                if(color.a < 0.0){
+                                    dis = 1.0;
+                                    color1 = vec4(color.rgb, 1.0);
+                                }
+                                
+
+                                vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                                float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+
+                                float t = 0.0;
+                                if (dist > border){
+                                    t = 1.0;
+                                } else if (dist > 0.0){
+                                    t = 1.0;
+                                    if(dis < 0.5){
+                                        t = dist / border;
+                                    }else{
+                                        discard;
+                                    }
+                                }
+
+                                // float centerDist = length(gl_PointCoord - 0.5);
+                                // works for overlapping circles if blending is enabled
+
+                                fragmentColor = mix(color0, color1, t);
+
+
+
+
+
+
 
                                 /*vec2 st = 2.0 * gl_PointCoord.xy - 1.0;
                                 st.y = st.y * -1.0;
@@ -549,7 +582,7 @@ class BatchDrawer {
                                 fragmentColor = color * alpha;*/
 
 
-                                float innerPercent = 0.5;
+                                /*float innerPercent = 0.5;
                                 vec4 outlineColor = color;
                                 float distanceToCenter = length(gl_PointCoord.xy - vec2(0.5));
                                 //float maxDistance = max(0.0, 0.5 - v_pixelDistance);
@@ -566,7 +599,7 @@ class BatchDrawer {
                                     gl_FragDepthEXT = z + ((1.0 - z) * (1.0 - wholeAlpha));
                                 #endif
                                 
-                                fragmentColor = o_color;
+                                fragmentColor = o_color;*/
 
 
 
@@ -613,6 +646,13 @@ class BatchDrawer {
                                 }*/
 
                                 
+                            }`;
+                            fragSourceLine =   `#version 300 es
+                            precision highp float;
+                            in vec4 color;
+                            out vec4 fragmentColor;
+                            void main(void) {
+                                fragmentColor = color;
                             }`;
             if (this.coordinateSystem != this.WGS84) {
                 lineVertexSource = `#version 300 es
@@ -760,11 +800,12 @@ class BatchDrawer {
 
                                   void main(void) {
                                     color = dotColor;
-                                    vec2 dotPos = wgs84_to_webmerc(inDotPos) - pixelOrigin;
-                                    float dotSize = inDotSize;
+                                    gl_PointSize =  inDotSize;
+                                    vec2 dotPos = resolutionScale * inDotPos;
+                                    float dotSize = resolutionScale.x * inDotSize;
                                     mat3 translate = mat3(
-                                      dotSize, 0, 0,
-                                      0, dotSize, 0,
+                                      1, 0, 0,
+                                      0, 1, 0,
                                       dotPos.x, dotPos.y, 1);
 
                                     gl_Position = vec4(projection * translate * vertexPos, 1.0);
@@ -772,6 +813,52 @@ class BatchDrawer {
             }
         } else if (this.GLVersion == 1) {
             fragSource = `#version 100
+
+                        precision highp float;
+
+                        varying vec4 color;
+                        //varying vec4 fragmentColor;
+
+                          void main(void) {
+                            //gl_FragColor = color;
+
+                            float border = 0.05;
+                            float radius = 0.5;
+                            vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                            vec4 color1 = vec4(color.rgb * color.a, color.a);
+                            float dis = 0.0;
+
+                            if(color.a < 0.0){
+                                dis = 1.0;
+                                color1 = vec4(color.rgb, 1.0);
+                            }
+                            
+
+                            vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                            float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+
+                            float t = 0.0;
+                            if (dist > border){
+                                t = 1.0;
+                            } else if (dist > 0.0){
+                                t = 1.0;
+                                if(dis < 0.5){
+                                    t = dist / border;
+                                }else{
+                                    discard;
+                                }
+                            }
+
+                            // float centerDist = length(gl_PointCoord - 0.5);
+                            // works for overlapping circles if blending is enabled
+
+                            //fragmentColor = mix(color0, color1, t);
+
+                            gl_FragColor = mix(color0, color1, t);
+                            //gl_FragColor = color;
+                          }`;
+
+            fragSourceLine = `#version 100
                           precision highp float;
                           varying vec4 color;
 
@@ -838,11 +925,12 @@ class BatchDrawer {
 
                               void main(void) {
                                 color = dotColor;
+                                gl_PointSize =  10.0;
                                 vec2 dotPos = resolutionScale * inDotPos;
                                 float dotSize = resolutionScale.x * inDotSize;
                                 mat3 translate = mat3(
-                                  dotSize, 0, 0,
-                                  0, dotSize, 0,
+                                  1, 0, 0,
+                                  0, 1, 0,
                                   dotPos.x, dotPos.y, 1);
 
                                 gl_Position = vec4(projection * translate * vertexPos, 1.0);
@@ -927,21 +1015,22 @@ class BatchDrawer {
                               }
 
                               void main(void) {
-                                  color = dotColor;
-                                  vec2 dotPos = wgs84_to_webmerc(inDotPos) - pixelOrigin;
-                                  float dotSize = inDotSize;
-                                  mat3 translate = mat3(
-                                      dotSize, 0, 0,
-                                      0, dotSize, 0,
-                                      dotPos.x, dotPos.y, 1);
+                                color = dotColor;
+                                gl_PointSize =  inDotSize;
+                                vec2 dotPos = resolutionScale * inDotPos;
+                                float dotSize = resolutionScale.x * inDotSize;
+                                mat3 translate = mat3(
+                                  1, 0, 0,
+                                  0, 1, 0,
+                                  dotPos.x, dotPos.y, 1);
 
-                                  gl_Position = vec4(projection * translate * vertexPos, 1.0);
+                                gl_Position = vec4(projection * translate * vertexPos, 1.0);
                               }`;
             }
         }
 
 
-        this.lineProgram = this._createShaderProgram(lineVertexSource, fragSource, 'line');
+        this.lineProgram = this._createShaderProgram(lineVertexSource, fragSourceLine, 'line');
         this.dotProgram = this._createShaderProgram(dotVertexSource, fragSource, 'dot');
         return (this.lineProgram != false && this.dotProgram != false);
     }

@@ -77,6 +77,23 @@ var graphly = (function() {
         var self = this;
 
 
+        // move tooltip
+        var tooltip = this.el.append('pre')
+            .attr('id', 'tooltip')
+            .style('position', 'absolute')
+            .style('display', 'none')
+            .style('z-index', 10)
+            .style('width', 10 + 'px')
+            .style('height', 10 + 'px');
+
+        window.onmousemove = function (e) {
+            var x = e.clientX,
+                y = e.clientY;
+            tooltip.style('top', (y + 20) + 'px');
+            tooltip.style('left', (x + 20) + 'px');
+        };
+
+
         this.renderCanvas = this.el.append('canvas')
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
@@ -92,7 +109,7 @@ var graphly = (function() {
         var params = {
             maxLines: itemAmount*10, // used for preallocation
             maxDots: itemAmount,
-            forceGL1: false, // use WebGL 1 even if WebGL 2 is available
+            forceGL1: true, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             useNDC: true, // Use normalized device coordinates [0, 1] instead of pixel coordinates,
             coordinateSystem: 'pixels',
@@ -137,12 +154,15 @@ var graphly = (function() {
             // Get the data from our map! 
             var nodeId = self.colourToNode[colKey];
             self.svg.selectAll('.highlightItem').remove();
+            tooltip.style('display', 'none');
 
             if(nodeId){
                 if(self.data.hasOwnProperty(nodeId)){
                     var p = self.data[nodeId];
                     var xItem = self.xScale(p[c_x]);
                     var yItem = self.yScale(p[c_y]);
+                    tooltip.style('display', 'block');
+                    tooltip.html(document.createElement('pre').innerHTML = JSON.stringify(p, null, 2));
                     self.svg.append('circle')
                         .attr('class', 'highlightItem')
                         .attr("r", 5)
@@ -397,29 +417,10 @@ var graphly = (function() {
 
         // reset color count
         this.nextCol = 1;
+        var p_x, p_y;
 
-        /*for (var i = 0; i <= this.data.length -1; i+=2) {
-
-            var x1 = (this.xScale(this.data[i][c_x]));
-            var y1 = (this.yScale(this.data[i][c_y]));
-
-            var x2 = (this.xScale(this.data[i+1][c_x]));
-            var y2 = (this.yScale(this.data[i+1][c_y]));
-
-            //vertices.pushArray([x,y,0.0]);
-
-            var c = genColor();
-            this.colourToNode[c.join('-')] = i;
-            var nCol = c.map(function(c){return c/255;});
-            idColors.pushArray(nCol);
-            //colors.pushArray([0.258, 0.525, 0.956]);
-
-            this.batchDrawer.addLine(x1, y1, x2, y2, 50.0, 0.258, 0.525, 0.956, 1.0);
-
-
-        }*/
-
-        for (var i = this.data.length - 1; i >= 0; i--) {
+        var l =  this.data.length - 1;
+        for (var i=0; i<=l; i++) {
 
             var x = (this.xScale(this.data[i][c_x]));
             var y = (this.yScale(this.data[i][c_y]));
@@ -429,8 +430,21 @@ var graphly = (function() {
             var nCol = c.map(function(c){return c/255;});
             idColors.pushArray(nCol);
 
-            this.batchDrawer.addDot(x, y, 10, 0.258, 0.525, 0.956, 1);
-            this.batchDrawerReference.addDot(x, y, 10, nCol[0], nCol[1], nCol[2], 1);
+            if(i>0){
+                this.batchDrawer.addLine(p_x, p_y, x, y, 1, 0.258, 0.525, 0.956, 1.0);
+                /*var w = 3;
+                this.batchDrawer.addLine(x-(w/2)-w, y-w, x+(w/2)+w, y-w, w, 0.258, 0.525, 0.956, 1.0);
+                this.batchDrawer.addLine(x+w, y-w, x+w, y+w, w, 0.258, 0.525, 0.956, 1.0);
+                this.batchDrawer.addLine(x+(w/2)+w, y+w, x-(w/2)-w, y+w, w, 0.258, 0.525, 0.956, 1.0);
+                this.batchDrawer.addLine(x-w, y+w, x-w, y-w, w, 0.258, 0.525, 0.956, 1.0);*/
+            }
+
+            this.batchDrawer.addDot(x, y, 10, 0.258, 0.525, 0.956,0.2);
+            //this.batchDrawer.addDot(x, y, 10, nCol[0], nCol[1], nCol[2],0.1);
+            this.batchDrawerReference.addDot(x, y, 10, nCol[0], nCol[1], nCol[2], -1.0);
+
+            p_x = x;
+            p_y = y;
         }
 
         this.batchDrawer.draw();
