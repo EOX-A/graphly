@@ -29,6 +29,7 @@ class BatchDrawer {
             break;
         default:
             this.error = "Unrecognized coordinate system. Use pixels, ndc or wgs84!";
+            console.log(this.error);
             return;
         }
 
@@ -109,6 +110,7 @@ class BatchDrawer {
         if (!this.GL) {
             // Could not get anything
             this.error = "Could not initialize a WebGL context.";
+            console.log(this.error);
             return false;
         }
         return true;
@@ -203,6 +205,7 @@ class BatchDrawer {
 
         if (!this.GL.getProgramParameter(program, this.GL.LINK_STATUS)) {
             this.error = "Could not link shaders: " + this.GL.getProgramInfoLog(program);
+            console.log(this.error);
             return false;
         }
         return program;
@@ -216,6 +219,7 @@ class BatchDrawer {
 
         if (!this.GL.getShaderParameter(shader, this.GL.COMPILE_STATUS)) {
             this.error = "Could not compile shader: " + this.GL.getShaderInfoLog(shader);
+            console.log(this.error);
             return null;
         }
         return shader;
@@ -568,6 +572,7 @@ class BatchDrawer {
     }
 
     _drawRectsGL1() {
+
         // Use rect drawing shaders:
         this.GL.useProgram(this.rectProgram);
 
@@ -582,18 +587,18 @@ class BatchDrawer {
 
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectStartBuffer);
         this.GL.vertexAttribPointer(this.RECT_START_BUF, 2, this.GL.FLOAT, false, 8, 0);
-        this.GL.vertexAttribDivisor(this.RECT_START_BUF, 1);
+        this.ext.vertexAttribDivisorANGLE(this.RECT_START_BUF, 1);
 
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectEndBuffer);
         this.GL.vertexAttribPointer(this.RECT_END_BUF, 2, this.GL.FLOAT, false, 8, 0);
-        this.GL.vertexAttribDivisor(this.RECT_END_BUF, 1);
+        this.ext.vertexAttribDivisorANGLE(this.RECT_END_BUF, 1);
 
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectColorBuffer);
         this.GL.vertexAttribPointer(this.RECT_COLOR_BUF, 4, this.GL.FLOAT, false, 16, 0);
-        this.GL.vertexAttribDivisor(this.RECT_COLOR_BUF, 1);
+        this.ext.vertexAttribDivisorANGLE(this.RECT_COLOR_BUF, 1);
 
         // Draw all rect instances:
-        this.GL.drawArraysInstanced(this.GL.TRIANGLE_STRIP, 0, 4, this.numRects);
+        this.ext.drawArraysInstancedANGLE(this.GL.TRIANGLE_STRIP, 0, 4, this.numRects);
     }
 
 
@@ -986,52 +991,51 @@ class BatchDrawer {
                     gl_Position = vec4(projection * translate * vertexPos, 1.0);
                 }`;
 
-                rectFragSource =
-                   `#version 100 es
-                    precision highp float;
-                    in vec4 color;
-                    out vec4 fragmentColor;
-                    void main(void) {
-                        fragmentColor = color;
+            rectFragSource =
+                `#version 100
+                precision highp float;
+                varying vec4 color;
+
+                void main(void) {
+                    gl_FragColor = vec4(color.rgb * color.a, color.a);
                 }`;
-            
-                rectVertexSource = 
-                   `#version 100 es
-                    precision highp float;
-                    layout(location = 0) in vec3 vertexPos;
-                    layout(location = 1) in vec4 rectColor;
+                
+            rectVertexSource = 
+               `#version 100
+                precision highp float;
 
-                    out vec4 color;
+                attribute vec3 vertexPos;
+                attribute vec2 inRectStart;
+                attribute vec2 inRectEnd;
+                attribute vec4 rectColor;
 
-                    uniform mat3 projection;
-                    uniform vec2 resolutionScale;
+                varying vec4 color;
 
-                    void main(void) {
-                        color = rectColor;
+                uniform mat3 projection;
+                uniform vec2 resolutionScale;
 
-                        vec2 lineStart = inLineStart * resolutionScale;
-                        vec2 lineEnd = inLineEnd * resolutionScale;
-                        float lineWidth = inLineWidth * resolutionScale.x;
+                void main(void) {
+                    color = rectColor;
 
-                        vec2 delta = lineStart - lineEnd;
-                        vec2 centerPos = 0.5 * (lineStart + lineEnd);
-                        float lineLength = length(delta);
-                        float phi = atan(delta.y/delta.x);
+                    vec2 rectStart = inRectStart * resolutionScale;
+                    vec2 rectEnd = inRectEnd * resolutionScale;
 
-                        mat3 scale = mat3(
-                              lineLength, 0, 0,
-                              0, lineWidth, 0,
-                              0, 0, 1);
-                        mat3 rotate = mat3(
-                              cos(phi), sin(phi), 0,
-                              -sin(phi), cos(phi), 0,
-                              0, 0, 1);
-                        mat3 translate = mat3(
-                              1, 0, 0,
-                              0, 1, 0,
-                              centerPos.x, centerPos.y, 1);
+                    float rectWidth = abs(rectEnd.x - rectStart.x);
+                    float rectHeight = abs(rectEnd.y - rectStart.y);
 
-                        gl_Position = vec4(projection * translate *  rotate *  scale * vertexPos, 1.0);
+                    vec2 centerPos = 0.5 * (rectStart + rectEnd);
+
+                    mat3 scale = mat3(
+                          rectWidth, 0, 0,
+                          0, rectHeight, 0,
+                          0, 0, 1);
+
+                    mat3 translate = mat3(
+                          1, 0, 0,
+                          0, 1, 0,
+                          centerPos.x, centerPos.y, 1);
+
+                    gl_Position = vec4(projection *  translate *  scale *  vertexPos, 1.0);
                 }`;
         }
 
