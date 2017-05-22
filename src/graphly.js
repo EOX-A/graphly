@@ -105,8 +105,9 @@ var graphly = (function() {
 
         // Set parameters (these are the default values used when that option is omitted):
         var params = {
-            maxLines: itemAmount*10, // used for preallocation
+            maxLines: itemAmount* 2, // used for preallocation
             maxDots: itemAmount,
+            maxRects: itemAmount * 2,
             forceGL1: false, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             useNDC: true, // Use normalized device coordinates [0, 1] instead of pixel coordinates,
@@ -440,23 +441,31 @@ var graphly = (function() {
 
             if(i>0){
                 this.batchDrawer.addLine(p_x, p_y, x, y, 1, 0.258, 0.525, 0.956, 1.0);
-                /*var w = 3;
-                this.batchDrawer.addLine(x-(w/2)-w, y-w, x+(w/2)+w, y-w, w, 0.258, 0.525, 0.956, 1.0);
-                this.batchDrawer.addLine(x+w, y-w, x+w, y+w, w, 0.258, 0.525, 0.956, 1.0);
-                this.batchDrawer.addLine(x+(w/2)+w, y+w, x-(w/2)-w, y+w, w, 0.258, 0.525, 0.956, 1.0);
-                this.batchDrawer.addLine(x-w, y+w, x-w, y-w, w, 0.258, 0.525, 0.956, 1.0);*/
             }
 
             this.batchDrawer.addDot(x, y, 10, 0.258, 0.525, 0.956,0.2);
-            //this.batchDrawer.addDot(x, y, 10, nCol[0], nCol[1], nCol[2],0.1);
             this.batchDrawerReference.addDot(x, y, 10, nCol[0], nCol[1], nCol[2], -1.0);
 
             p_x = x;
             p_y = y;
         }
 
+        var x1,y1,x2,y2;
+
+        x1 = this.xScale(-50);
+        y1 = this.yScale(4000);
+        x2 = this.xScale(60);
+        y2 =  this.yScale(6000);
+        this.batchDrawer.addRect(x1,y1,x2,y2, 0.2, 0.7, 0.6, 0.3);
+
+        this.batchDrawer.addDot(x1, y1, 10, 0.258, 0.525, 0.956,0.2);
+        this.batchDrawer.addDot(x2, y1, 10, 0.258, 0.525, 0.956,0.2);
+        this.batchDrawer.addDot(x1, y2, 10, 0.258, 0.525, 0.956,0.2);
+        this.batchDrawer.addDot(x2, y2, 10, 0.258, 0.525, 0.956,0.2);
+       
+
         this.batchDrawer.draw();
-        this.batchDrawerReference.draw();
+        //this.batchDrawerReference.draw();
 
         this.renderCanvas.style('opacity','1');
 
