@@ -40,9 +40,6 @@ var graphly = (function() {
             ret.push((this.nextCol & 0xff0000) >> 16); // B
             this.nextCol += 1; 
         }
-        //var col = "rgb(" + ret.join(',') + ")";
-        //return col;
-        //return ret.map(function(c){return c/255;});
         return ret;
     }
 
@@ -74,6 +71,7 @@ var graphly = (function() {
         this.currentScale = 1;
         this.currentTranlate = [0,0];
         this.colourToNode = {}; // Map to track the colour of nodes.
+        this.previewActive = false;
         var self = this;
 
 
@@ -109,7 +107,7 @@ var graphly = (function() {
         var params = {
             maxLines: itemAmount*10, // used for preallocation
             maxDots: itemAmount,
-            forceGL1: true, // use WebGL 1 even if WebGL 2 is available
+            forceGL1: false, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             useNDC: true, // Use normalized device coordinates [0, 1] instead of pixel coordinates,
             coordinateSystem: 'pixels',
@@ -291,26 +289,34 @@ var graphly = (function() {
             .call(this.yAxis);
 
         // create zooming/panning behaviour
-        var zoomBehaviour = d3.behavior.zoom()
+        this.zoomBehaviour = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScale)
             .on('zoom', this.previewZoom.bind(this));
 
-        this.renderCanvas.call(zoomBehaviour);
+        // Limit zoom step to 10% of scale size to make sure zoom kumps are not
+        // to big. Solves issue on big zoom jumps in Firefox (FF)
+        this.zoomBehaviour.scaleExtent([
+            this.zoomBehaviour.scale()*0.9,
+            this.zoomBehaviour.scale()*1.1
+        ]);
+
+        this.renderCanvas.call(this.zoomBehaviour);
 
     };
 
     graph.prototype.onZoom = function() {
-        var prevImg = this.el.select('#previewImage');
-        if(!prevImg.empty()){
-            //this.svg.select("#clip").attr("transform", "translate(0,0)scale(1)");
-            this.renderCanvas.style('opacity','1.0');
-            prevImg.remove();
-        }
+        
         
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
 
+        var prevImg = this.el.select('#previewImage');
+        /*if(!prevImg.empty()){
+            //this.svg.select("#clip").attr("transform", "translate(0,0)scale(1)");
+            this.renderCanvas.style('opacity','1.0');
+            prevImg.remove();
+        }*/
 
         this.renderData();
     };
@@ -321,29 +327,31 @@ var graphly = (function() {
 
     graph.prototype.previewZoom = function() {
 
+        // Limit zoom step to 10% of scale size to make sure zoom kumps are not
+        // to big. Solves issue on big zoom jumps in Firefox (FF)
+        this.zoomBehaviour.scaleExtent([
+            this.zoomBehaviour.scale()*0.9,
+            this.zoomBehaviour.scale()*1.1
+        ]);
+
+        
+
         this.svg.selectAll('.highlightItem').remove();
 
         debounceZoom.bind(this)();
-        var prevImg = this.el.select('#previewImage');
-        if(prevImg.empty()){
+
+        if(!this.previewActive){
             this.renderCanvas.style('opacity','0');
-            var img = this.renderCanvas.node().toDataURL();
             this.oSc = this.currentScale;
             this.oTr = this.currentTranlate;
-
             this.oT = [
                 d3.event.translate[0]/d3.event.scale,
                 d3.event.translate[1]/d3.event.scale,
             ];
-            
-            this.renderingContainer.append("svg:image")
-                .attr('id', 'previewImage')
-                .attr("xlink:href", img)
-                .attr("x", 0)
-                .attr("y", 0)
-                .attr("width",  this.width)
-                .attr("height", this.height);
+            this.previewActive = true;
+            this.svg.select("#previewImage").style('display', 'block');
         }
+
 
         var scale = d3.event.scale / this.oSc;
 
@@ -449,6 +457,27 @@ var graphly = (function() {
 
         this.batchDrawer.draw();
         this.batchDrawerReference.draw();
+
+        this.renderCanvas.style('opacity','1');
+
+        var prevImg = this.el.select('#previewImage');
+        //prevImg.remove();
+        var img = this.renderCanvas.node().toDataURL();
+        if(!prevImg.empty()){
+            prevImg.attr("xlink:href", img)
+                .attr("transform", null)
+                .style('display', 'none');
+        } else {
+            this.renderingContainer.append("svg:image")
+                .attr('id', 'previewImage')
+                .attr("xlink:href", img)
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("width",  this.width)
+                .attr("height", this.height)
+                .style('display', 'none');
+        }
+        this.previewActive = false;
 
 
     };

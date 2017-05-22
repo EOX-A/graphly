@@ -4,20 +4,21 @@
  * License: MIT
  */
 
+'esversion: 6';
+
 class BatchDrawer {
     constructor(canvas, params) {
         // Define coordinate system "enums"
         this.PIXELS = 0;
         this.NDC = 1;
-        this.WGS84 = 2;
 
         // Get optional parameters or defaults
         this.canvas = canvas;
-        this.maxLines = params.maxLines == null ? 10000 : params.maxLines;
-        this.maxDots = params.maxDots == null ? 10000 : params.maxDots;
-        this.forceGL1 = params.forceGL1 == null ? false : params.forceGL1;
-        this.clearColor = params.clearColor == null ? {r: 0, g: 0, b: 0, a: 0} : params.clearColor;
-        this.contextParams = params.contextParams == null ? {} : params.contextParams;
+        this.maxLines = params.maxLines === null ? 10000 : params.maxLines;
+        this.maxDots = params.maxDots === null ? 10000 : params.maxDots;
+        this.forceGL1 = params.forceGL1 === null ? false : params.forceGL1;
+        this.clearColor = params.clearColor === null ? {r: 0, g: 0, b: 0, a: 0} : params.clearColor;
+        this.contextParams = params.contextParams === null ? {} : params.contextParams;
         switch(params.coordinateSystem) {
         case null:
         case "pixels":
@@ -25,9 +26,6 @@ class BatchDrawer {
             break;
         case "ndc":
             this.coordinateSystem = this.NDC;
-            break;
-        case "wgs84":
-            this.coordinateSystem = this.WGS84;
             break;
         default:
             this.error = "Unrecognized coordinate system. Use pixels, ndc or wgs84!";
@@ -38,9 +36,6 @@ class BatchDrawer {
         this.error = null;
         this.numLines = 0;
         this.numDots = 0;
-        this.zoomLevel = 1;
-        this.zoomScale = 256 * Math.pow(2, this.zoomLevel);
-        this.pixelOrigin = {x: 0, y: 0};
 
         if (!this._initGLContext()) {
             return;
@@ -227,13 +222,11 @@ class BatchDrawer {
         this.GL.useProgram(this.dotProgram);
         let dotProjLoc = this.GL.getUniformLocation(this.dotProgram, 'projection');
         this.GL.uniformMatrix3fv(dotProjLoc, false, projection);
-        if (this.coordinateSystem != this.WGS84) {
-            let dotResLoc = this.GL.getUniformLocation(this.dotProgram, 'resolutionScale');
-            this.GL.uniform2f(dotResLoc, resScaleX, resScaleY);
-        }
 
-        this.setZoomLevel(this.zoomLevel);
-        this.setPixelOrigin(this.pixelOrigin);
+        let dotResLoc = this.GL.getUniformLocation(this.dotProgram, 'resolutionScale');
+        this.GL.uniform2f(dotResLoc, resScaleX, resScaleY);
+
+
     }
 
 
@@ -247,34 +240,6 @@ class BatchDrawer {
         return this.GL;
     }
 
-
-    setZoomLevel(zoomLevel) {
-        this.zoomLevel = zoomLevel;
-        this.zoomScale = 256 * Math.pow(2, this.zoomLevel);
-        if (this.coordinateSystem == this.WGS84) {
-            this.GL.useProgram(this.lineProgram);
-            let zoomLocLine = this.GL.getUniformLocation(this.lineProgram, 'zoomScale');
-            this.GL.uniform1f(zoomLocLine, 0.5 * this.zoomScale);
-
-            this.GL.useProgram(this.dotProgram);
-            let zoomLocDot = this.GL.getUniformLocation(this.dotProgram, 'zoomScale');
-            this.GL.uniform1f(zoomLocDot, 0.5 * this.zoomScale);
-        }
-    }
-
-
-    setPixelOrigin(pixelOrigin) {
-        this.pixelOrigin = pixelOrigin;
-        if (this.coordinateSystem == this.WGS84) {
-            this.GL.useProgram(this.lineProgram);
-            let originLocLine = this.GL.getUniformLocation(this.lineProgram, 'pixelOrigin');
-            this.GL.uniform2f(originLocLine, this.pixelOrigin.x, this.pixelOrigin.y);
-
-            this.GL.useProgram(this.dotProgram);
-            let originLocDot = this.GL.getUniformLocation(this.dotProgram, 'pixelOrigin');
-            this.GL.uniform2f(originLocDot, this.pixelOrigin.x, this.pixelOrigin.y);
-        }
-    }
 
 
     addLine(startX, startY, endX, endY, width, colorR, colorG, colorB, colorA) {
@@ -507,531 +472,346 @@ class BatchDrawer {
     _initShaders() {
         // Shader source code based on WebGL version:
         let lineVertexSource = null;
-        let fragSource = null;
-        let fragSourceLine = null;
+        let dotFragSource = null;
+        let lineFragSource = null;
         let dotVertexSource = null;
 
         if (this.GLVersion == 2) {
-            fragSource =   `#version 300 es
-                            #define PI 3.14159265359
-                            #define TWO_PI 6.28318530718
+            dotFragSource = 
+               `#version 300 es
+                #define PI 3.14159265359
+                #define TWO_PI 6.28318530718
 
-                            precision highp float;
-                            
-                            in vec4 color;
-                            out vec4 fragmentColor;
-                            
-                            void main(void) {
+                precision highp float;
+                
+                in vec4 color;
+                out vec4 fragmentColor;
+                
+                void main(void) {
 
-                                //fragmentColor = color;
-                                //fragmentColor = vec4(color.rgb * color.a, color.a);
+                    //fragmentColor = color;
+                    //fragmentColor = vec4(color.rgb * color.a, color.a);
 
-                                float border = 0.05;
-                                float radius = 0.5;
-                                vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
-                                vec4 color1 = vec4(color.rgb * color.a, color.a);
-                                float dis = 0.0;
+                    float border = 0.05;
+                    float radius = 0.5;
+                    vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                    vec4 color1 = vec4(color.rgb * color.a, color.a);
+                    float dis = 0.0;
 
-                                if(color.a < 0.0){
-                                    dis = 1.0;
-                                    color1 = vec4(color.rgb, 1.0);
-                                }
-                                
+                    if(color.a < 0.0){
+                        dis = 1.0;
+                        color1 = vec4(color.rgb, 1.0);
+                    }
+                    
 
-                                vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
-                                float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+                    vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                    float dist = radius - sqrt(m.x * m.x + m.y * m.y);
 
-                                float t = 0.0;
-                                if (dist > border){
-                                    t = 1.0;
-                                } else if (dist > 0.0){
-                                    t = 1.0;
-                                    if(dis < 0.5){
-                                        t = dist / border;
-                                    }else{
-                                        discard;
-                                    }
-                                }
+                    float t = 0.0;
+                    if (dist > border){
+                        t = 1.0;
+                    } else if (dist > 0.0){
+                        t = 1.0;
+                        if(dis < 0.5){
+                            t = dist / border;
+                        }else{
+                            discard;
+                        }
+                    }
 
-                                // float centerDist = length(gl_PointCoord - 0.5);
-                                // works for overlapping circles if blending is enabled
+                    // float centerDist = length(gl_PointCoord - 0.5);
+                    // works for overlapping circles if blending is enabled
 
-                                fragmentColor = mix(color0, color1, t);
-
-
-
+                    fragmentColor = mix(color0, color1, t);
 
 
 
 
-                                /*vec2 st = 2.0 * gl_PointCoord.xy - 1.0;
-                                st.y = st.y * -1.0;
-                                vec3 color2 = vec3(0.0);
-                                float d = 0.0;
-
-                                // Number of sides of your shape
-                                int N = 3;
-
-                                // Angle and radius from the current pixel
-                                float a = atan(st.x,st.y)+PI;
-                                float r = TWO_PI/float(N);
-
-                                // Shaping function that modulate the distance
-                                d = cos(floor(.5+a/r)*r-a)*length(st);
-                                float alpha = 1.0-smoothstep(.4,.41,d);
-                                fragmentColor = color * alpha;*/
-
-
-                                /*float innerPercent = 0.5;
-                                vec4 outlineColor = color;
-                                float distanceToCenter = length(gl_PointCoord.xy - vec2(0.5));
-                                //float maxDistance = max(0.0, 0.5 - v_pixelDistance);
-                                float maxDistance = 0.4;
-                                float wholeAlpha = 1.0 - smoothstep(maxDistance, 0.5, distanceToCenter);
-                                float innerAlpha = 1.0 - smoothstep(maxDistance * innerPercent, 0.5 * innerPercent, distanceToCenter);
-                                vec4 o_color = mix(outlineColor, color, innerAlpha);
-                                o_color.a *= wholeAlpha;
-                                if (o_color.a < 0.005){
-                                    discard;
-                                }
-                                #ifdef GL_EXT_frag_depth
-                                    float z = gl_FragCoord.z;
-                                    gl_FragDepthEXT = z + ((1.0 - z) * (1.0 - wholeAlpha));
-                                #endif
-                                
-                                fragmentColor = o_color;*/
 
 
 
-                                /*float r = 0.0, delta = 0.0, alpha = 1.0;
-                                    vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-                                    r = dot(cxy, cxy);
-                                #ifdef GL_OES_standard_derivatives
-                                    delta = fwidth(r);
-                                    alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
-                                #endif
+                    /*vec2 st = 2.0 * gl_PointCoord.xy - 1.0;
+                    st.y = st.y * -1.0;
+                    vec3 color2 = vec3(0.0);
+                    float d = 0.0;
 
-                                fragmentColor = color * alpha;*/
+                    // Number of sides of your shape
+                    int N = 3;
 
+                    // Angle and radius from the current pixel
+                    float a = atan(st.x,st.y)+PI;
+                    float r = TWO_PI/float(N);
 
-                                /*float border = 0.05;
-                                float radius = 0.5;
-                                vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
-                                vec4 color1 = vec4(color[0], color[1], color[2], 1.0);
-
-                                vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
-                                float dist = radius - sqrt(m.x * m.x + m.y * m.y);
-
-                                float t = 0.0;
-                                if (dist > border)
-                                t = 1.0;
-                                else if (dist > 0.0)
-                                t = dist / border;
-
-                                // float centerDist = length(gl_PointCoord - 0.5);
-                                // works for overlapping circles if blending is enabled
-                                fragmentColor = mix(color0, color1, t);*/
+                    // Shaping function that modulate the distance
+                    d = cos(floor(.5+a/r)*r-a)*length(st);
+                    float alpha = 1.0-smoothstep(.4,.41,d);
+                    fragmentColor = color * alpha;*/
 
 
-                                
-                                /*float r = 0.0, delta = 0.0, alpha = 1.0;
-                                vec2 cxy = 2.0 * gl_PointCoord.xy - 1.0;
-                                r = dot(cxy, cxy);
-                                if (r > 1.0) {
-                                    discard;
-                                } else if (r < 1.0 && r >= 0.9){
-                                    fragmentColor = color * 0.2;
-                                } else {
-                                    fragmentColor = color;
-                                }*/
-
-                                
-                            }`;
-                            fragSourceLine =   `#version 300 es
-                            precision highp float;
-                            in vec4 color;
-                            out vec4 fragmentColor;
-                            void main(void) {
-                                fragmentColor = color;
-                            }`;
-            if (this.coordinateSystem != this.WGS84) {
-                lineVertexSource = `#version 300 es
-                                precision highp float;
-                                layout(location = 0) in vec3 vertexPos;
-                                layout(location = 1) in vec2 inLineStart;
-                                layout(location = 2) in vec2 inLineEnd;
-                                layout(location = 3) in float inLineWidth;
-                                layout(location = 4) in vec4 lineColor;
-
-                                out vec4 color;
-
-                                uniform mat3 projection;
-                                uniform vec2 resolutionScale;
-
-                                void main(void) {
-                                    color = lineColor;
-
-                                    vec2 lineStart = inLineStart * resolutionScale;
-                                    vec2 lineEnd = inLineEnd * resolutionScale;
-                                    float lineWidth = inLineWidth * resolutionScale.x;
-
-                                    vec2 delta = lineStart - lineEnd;
-                                    vec2 centerPos = 0.5 * (lineStart + lineEnd);
-                                    float lineLength = length(delta);
-                                    float phi = atan(delta.y/delta.x);
-
-                                    mat3 scale = mat3(
-                                          lineLength, 0, 0,
-                                          0, lineWidth, 0,
-                                          0, 0, 1);
-                                    mat3 rotate = mat3(
-                                          cos(phi), sin(phi), 0,
-                                          -sin(phi), cos(phi), 0,
-                                          0, 0, 1);
-                                    mat3 translate = mat3(
-                                          1, 0, 0,
-                                          0, 1, 0,
-                                          centerPos.x, centerPos.y, 1);
+                    /*float innerPercent = 0.5;
+                    vec4 outlineColor = color;
+                    float distanceToCenter = length(gl_PointCoord.xy - vec2(0.5));
+                    //float maxDistance = max(0.0, 0.5 - v_pixelDistance);
+                    float maxDistance = 0.4;
+                    float wholeAlpha = 1.0 - smoothstep(maxDistance, 0.5, distanceToCenter);
+                    float innerAlpha = 1.0 - smoothstep(maxDistance * innerPercent, 0.5 * innerPercent, distanceToCenter);
+                    vec4 o_color = mix(outlineColor, color, innerAlpha);
+                    o_color.a *= wholeAlpha;
+                    if (o_color.a < 0.005){
+                        discard;
+                    }
+                    #ifdef GL_EXT_frag_depth
+                        float z = gl_FragCoord.z;
+                        gl_FragDepthEXT = z + ((1.0 - z) * (1.0 - wholeAlpha));
+                    #endif
+                    
+                    fragmentColor = o_color;*/
 
 
-                                    gl_Position = vec4(projection * translate *  rotate *  scale * vertexPos, 1.0);
-                                }`;
 
-            dotVertexSource =    `#version 300 es
-                                  precision highp float;
-                                  layout(location = 0) in vec3 vertexPos;
-                                  layout(location = 1) in vec2 inDotPos;
-                                  layout(location = 2) in float inDotSize;
-                                  layout(location = 3) in vec4 dotColor;
+                    /*float r = 0.0, delta = 0.0, alpha = 1.0;
+                        vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+                        r = dot(cxy, cxy);
+                    #ifdef GL_OES_standard_derivatives
+                        delta = fwidth(r);
+                        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+                    #endif
 
-                                  out vec4 color;
-
-                                  uniform mat3 projection;
-                                  uniform vec2 resolutionScale;
-
-                                  void main(void) {
-                                    color = dotColor;
-                                    gl_PointSize =  inDotSize;
-                                    vec2 dotPos = resolutionScale * inDotPos;
-                                    float dotSize = resolutionScale.x * inDotSize;
-                                    mat3 translate = mat3(
-                                      1, 0, 0,
-                                      0, 1, 0,
-                                      dotPos.x, dotPos.y, 1);
-
-                                    gl_Position = vec4(projection * translate * vertexPos, 1.0);
-                                  }`;
-            } else {
-                lineVertexSource = `#version 300 es
-                                #define M_PI 3.1415926535897932384626433832795
-                                precision highp float;
-                                layout(location = 0) in vec3 vertexPos;
-                                layout(location = 1) in vec2 inLineStart;
-                                layout(location = 2) in vec2 inLineEnd;
-                                layout(location = 3) in float inLineWidth;
-                                layout(location = 4) in vec4 lineColor;
-
-                                out vec4 color;
-
-                                uniform mat3 projection;
-                                uniform float zoomScale;
-                                uniform vec2 pixelOrigin;
-
-                                vec2 wgs84_to_webmerc(vec2 latlong) {
-                                    vec2 p;
-                                    float sin_lat = sin(M_PI * latlong.y / 180.f);
-                                    p.x = zoomScale * (latlong.x / 180.f + 1.f);
-                                    // atanh:
-                                    p.y = zoomScale * (-log((1.f + sin_lat) / (1.f - sin_lat)) / (2.f * M_PI) + 1.f);
-                                    return p;
-                                }
-
-                                void main(void) {
-                                    color = lineColor;
-
-                                    vec2 lineStart = wgs84_to_webmerc(inLineStart) - pixelOrigin;
-                                    vec2 lineEnd = wgs84_to_webmerc(inLineEnd) - pixelOrigin;
-                                    float lineWidth = inLineWidth;
-
-                                    vec2 delta = lineStart - lineEnd;
-                                    vec2 centerPos = 0.5 * (lineStart + lineEnd);
-                                    float lineLength = length(delta);
-                                    float phi = atan(delta.y/delta.x);
-
-                                    mat3 scale = mat3(
-                                          lineLength, 0, 0,
-                                          0, lineWidth, 0,
-                                          0, 0, 1);
-                                    mat3 rotate = mat3(
-                                          cos(phi), sin(phi), 0,
-                                          -sin(phi), cos(phi), 0,
-                                          0, 0, 1);
-                                    mat3 translate = mat3(
-                                          1, 0, 0,
-                                          0, 1, 0,
-                                          centerPos.x, centerPos.y, 1);
+                    fragmentColor = color * alpha;*/
 
 
-                                    gl_Position = vec4(projection * translate *  rotate *  scale * vertexPos, 1.0);
-                                }`;
+                    /*float border = 0.05;
+                    float radius = 0.5;
+                    vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                    vec4 color1 = vec4(color[0], color[1], color[2], 1.0);
 
-            dotVertexSource =    `#version 300 es
-                                  #define M_PI 3.1415926535897932384626433832795
-                                  precision highp float;
-                                  layout(location = 0) in vec3 vertexPos;
-                                  layout(location = 1) in vec2 inDotPos;
-                                  layout(location = 2) in float inDotSize;
-                                  layout(location = 3) in vec4 dotColor;
+                    vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                    float dist = radius - sqrt(m.x * m.x + m.y * m.y);
 
-                                  out vec4 color;
+                    float t = 0.0;
+                    if (dist > border)
+                    t = 1.0;
+                    else if (dist > 0.0)
+                    t = dist / border;
 
-                                  uniform mat3 projection;
-                                  uniform float zoomScale;
-                                  uniform vec2 pixelOrigin;
+                    // float centerDist = length(gl_PointCoord - 0.5);
+                    // works for overlapping circles if blending is enabled
+                    fragmentColor = mix(color0, color1, t);*/
 
-                                  vec2 wgs84_to_webmerc(vec2 latlong) {
-                                      vec2 p;
-                                      float sin_lat = sin(M_PI * latlong.y / 180.f);
-                                      p.x = zoomScale * (latlong.x / 180.f + 1.f);
-                                      // atanh:
-                                      p.y = zoomScale * (-log((1.f + sin_lat) / (1.f - sin_lat)) / (2.f * M_PI) + 1.f);
-                                      return p;
-                                  }
 
-                                  void main(void) {
-                                    color = dotColor;
-                                    gl_PointSize =  inDotSize;
-                                    vec2 dotPos = resolutionScale * inDotPos;
-                                    float dotSize = resolutionScale.x * inDotSize;
-                                    mat3 translate = mat3(
-                                      1, 0, 0,
-                                      0, 1, 0,
-                                      dotPos.x, dotPos.y, 1);
+                    
+                    /*float r = 0.0, delta = 0.0, alpha = 1.0;
+                    vec2 cxy = 2.0 * gl_PointCoord.xy - 1.0;
+                    r = dot(cxy, cxy);
+                    if (r > 1.0) {
+                        discard;
+                    } else if (r < 1.0 && r >= 0.9){
+                        fragmentColor = color * 0.2;
+                    } else {
+                        fragmentColor = color;
+                    }*/
 
-                                    gl_Position = vec4(projection * translate * vertexPos, 1.0);
-                                  }`;
-            }
+                    
+                }`;
+
+                lineFragSource =
+                   `#version 300 es
+                    precision highp float;
+                    in vec4 color;
+                    out vec4 fragmentColor;
+                    void main(void) {
+                        fragmentColor = color;
+                }`;
+            
+                lineVertexSource = 
+                   `#version 300 es
+                    precision highp float;
+                    layout(location = 0) in vec3 vertexPos;
+                    layout(location = 1) in vec2 inLineStart;
+                    layout(location = 2) in vec2 inLineEnd;
+                    layout(location = 3) in float inLineWidth;
+                    layout(location = 4) in vec4 lineColor;
+
+                    out vec4 color;
+
+                    uniform mat3 projection;
+                    uniform vec2 resolutionScale;
+
+                    void main(void) {
+                        color = lineColor;
+
+                        vec2 lineStart = inLineStart * resolutionScale;
+                        vec2 lineEnd = inLineEnd * resolutionScale;
+                        float lineWidth = inLineWidth * resolutionScale.x;
+
+                        vec2 delta = lineStart - lineEnd;
+                        vec2 centerPos = 0.5 * (lineStart + lineEnd);
+                        float lineLength = length(delta);
+                        float phi = atan(delta.y/delta.x);
+
+                        mat3 scale = mat3(
+                              lineLength, 0, 0,
+                              0, lineWidth, 0,
+                              0, 0, 1);
+                        mat3 rotate = mat3(
+                              cos(phi), sin(phi), 0,
+                              -sin(phi), cos(phi), 0,
+                              0, 0, 1);
+                        mat3 translate = mat3(
+                              1, 0, 0,
+                              0, 1, 0,
+                              centerPos.x, centerPos.y, 1);
+
+                        gl_Position = vec4(projection * translate *  rotate *  scale * vertexPos, 1.0);
+                }`;
+
+                dotVertexSource =
+                    `#version 300 es
+                    precision highp float;
+                    layout(location = 0) in vec3 vertexPos;
+                    layout(location = 1) in vec2 inDotPos;
+                    layout(location = 2) in float inDotSize;
+                    layout(location = 3) in vec4 dotColor;
+
+                    out vec4 color;
+
+                    uniform mat3 projection;
+                    uniform vec2 resolutionScale;
+
+                    void main(void) {
+                        color = dotColor;
+                        gl_PointSize =  inDotSize;
+                        vec2 dotPos = resolutionScale * inDotPos;
+                        float dotSize = resolutionScale.x * inDotSize;
+                        mat3 translate = mat3(
+                          1, 0, 0,
+                          0, 1, 0,
+                          dotPos.x, dotPos.y, 1);
+
+                        gl_Position = vec4(projection * translate * vertexPos, 1.0);
+                    }`;
+
         } else if (this.GLVersion == 1) {
-            fragSource = `#version 100
+            dotFragSource = 
+               `#version 100
+                precision highp float;
+                varying vec4 color;
+                void main(void) {
+                    float border = 0.05;
+                    float radius = 0.5;
+                    vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                    vec4 color1 = vec4(color.rgb * color.a, color.a);
+                    float dis = 0.0;
 
-                        precision highp float;
+                    if(color.a < 0.0){
+                        dis = 1.0;
+                        color1 = vec4(color.rgb, 1.0);
+                    }
+                
 
-                        varying vec4 color;
-                        //varying vec4 fragmentColor;
+                    vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                    float dist = radius - sqrt(m.x * m.x + m.y * m.y);
 
-                          void main(void) {
-                            //gl_FragColor = color;
+                    float t = 0.0;
+                    if (dist > border){
+                        t = 1.0;
+                    } else if (dist > 0.0){
+                        t = 1.0;
+                        if(dis < 0.5){
+                            t = dist / border;
+                        }else{
+                            discard;
+                        }
+                    }
 
-                            float border = 0.05;
-                            float radius = 0.5;
-                            vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
-                            vec4 color1 = vec4(color.rgb * color.a, color.a);
-                            float dis = 0.0;
+                    // float centerDist = length(gl_PointCoord - 0.5);
+                    // works for overlapping circles if blending is enabled
 
-                            if(color.a < 0.0){
-                                dis = 1.0;
-                                color1 = vec4(color.rgb, 1.0);
-                            }
-                            
+                    gl_FragColor = mix(color0, color1, t);
+                }`;
 
-                            vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
-                            float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+            lineFragSource =
+                `#version 100
+                precision highp float;
+                varying vec4 color;
 
-                            float t = 0.0;
-                            if (dist > border){
-                                t = 1.0;
-                            } else if (dist > 0.0){
-                                t = 1.0;
-                                if(dis < 0.5){
-                                    t = dist / border;
-                                }else{
-                                    discard;
-                                }
-                            }
+                void main(void) {
+                    gl_FragColor = color;
+                }`;
 
-                            // float centerDist = length(gl_PointCoord - 0.5);
-                            // works for overlapping circles if blending is enabled
+            lineVertexSource = 
+                `#version 100
+                precision highp float;
 
-                            //fragmentColor = mix(color0, color1, t);
+                attribute vec3 vertexPos;
+                attribute vec2 inLineStart;
+                attribute vec2 inLineEnd;
+                attribute float inLineWidth;
+                attribute vec4 lineColor;
 
-                            gl_FragColor = mix(color0, color1, t);
-                            //gl_FragColor = color;
-                          }`;
+                varying vec4 color;
 
-            fragSourceLine = `#version 100
-                          precision highp float;
-                          varying vec4 color;
+                uniform mat3 projection;
+                uniform vec2 resolutionScale;
 
-                          void main(void) {
-                            gl_FragColor = color;
-                          }`;
+                void main(void) {
+                    color = lineColor;
 
-            if (this.coordinateSystem != this.WGS84) {
-                lineVertexSource = `#version 100
-                                precision highp float;
+                    vec2 lineStart = inLineStart * resolutionScale;
+                    vec2 lineEnd = inLineEnd * resolutionScale;
+                    float lineWidth = inLineWidth * resolutionScale.x;
 
-                                attribute vec3 vertexPos;
-                                attribute vec2 inLineStart;
-                                attribute vec2 inLineEnd;
-                                attribute float inLineWidth;
-                                attribute vec4 lineColor;
+                    vec2 delta = lineStart - lineEnd;
+                    vec2 centerPos = 0.5 * (lineStart + lineEnd);
+                    float lineLength = length(delta);
+                    float phi = atan(delta.y/delta.x);
 
-                                varying vec4 color;
+                    mat3 scale = mat3(
+                          lineLength, 0, 0,
+                          0, lineWidth, 0,
+                          0, 0, 1);
+                    mat3 rotate = mat3(
+                          cos(phi), sin(phi), 0,
+                          -sin(phi), cos(phi), 0,
+                          0, 0, 1);
+                    mat3 translate = mat3(
+                          1, 0, 0,
+                          0, 1, 0,
+                          centerPos.x, centerPos.y, 1);
 
-                                uniform mat3 projection;
-                                uniform vec2 resolutionScale;
+                    gl_Position = vec4(projection * translate *  rotate *  scale * vertexPos, 1.0);
+                }`;
 
-                                void main(void) {
-                                    color = lineColor;
+            dotVertexSource = 
+                `#version 100
+                precision highp float;
 
-                                    vec2 lineStart = inLineStart * resolutionScale;
-                                    vec2 lineEnd = inLineEnd * resolutionScale;
-                                    float lineWidth = inLineWidth * resolutionScale.x;
+                attribute vec3 vertexPos;
+                attribute vec2 inDotPos;
+                attribute float inDotSize;
+                attribute vec4 dotColor;
 
-                                    vec2 delta = lineStart - lineEnd;
-                                    vec2 centerPos = 0.5 * (lineStart + lineEnd);
-                                    float lineLength = length(delta);
-                                    float phi = atan(delta.y/delta.x);
+                varying vec4 color;
 
-                                    mat3 scale = mat3(
-                                          lineLength, 0, 0,
-                                          0, lineWidth, 0,
-                                          0, 0, 1);
-                                    mat3 rotate = mat3(
-                                          cos(phi), sin(phi), 0,
-                                          -sin(phi), cos(phi), 0,
-                                          0, 0, 1);
-                                    mat3 translate = mat3(
-                                          1, 0, 0,
-                                          0, 1, 0,
-                                          centerPos.x, centerPos.y, 1);
+                uniform mat3 projection;
+                uniform vec2 resolutionScale;
 
+                void main(void) {
+                    color = dotColor;
+                    gl_PointSize =  10.0;
+                    vec2 dotPos = resolutionScale * inDotPos;
+                    float dotSize = resolutionScale.x * inDotSize;
+                    mat3 translate = mat3(
+                      1, 0, 0,
+                      0, 1, 0,
+                      dotPos.x, dotPos.y, 1);
 
-                                    gl_Position = vec4(projection * translate *  rotate *  scale * vertexPos, 1.0);
-                                }`;
-
-                dotVertexSource = `#version 100
-                              precision highp float;
-
-                              attribute vec3 vertexPos;
-                              attribute vec2 inDotPos;
-                              attribute float inDotSize;
-                              attribute vec4 dotColor;
-
-                              varying vec4 color;
-
-                              uniform mat3 projection;
-                              uniform vec2 resolutionScale;
-
-                              void main(void) {
-                                color = dotColor;
-                                gl_PointSize =  10.0;
-                                vec2 dotPos = resolutionScale * inDotPos;
-                                float dotSize = resolutionScale.x * inDotSize;
-                                mat3 translate = mat3(
-                                  1, 0, 0,
-                                  0, 1, 0,
-                                  dotPos.x, dotPos.y, 1);
-
-                                gl_Position = vec4(projection * translate * vertexPos, 1.0);
-                              }`;
-            } else { // long lat
-                lineVertexSource = `#version 100
-                                #define M_PI 3.1415926535897932384626433832795
-                                precision highp float;
-
-                                attribute vec3 vertexPos;
-                                attribute vec2 inLineStart;
-                                attribute vec2 inLineEnd;
-                                attribute float inLineWidth;
-                                attribute vec4 lineColor;
-
-                                varying vec4 color;
-
-                                uniform mat3 projection;
-                                uniform float zoomScale;
-                                uniform vec2 pixelOrigin;
-
-                                vec2 wgs84_to_webmerc(vec2 latlong) {
-                                    vec2 p;
-                                    float sin_lat = sin(M_PI * latlong.y / 180.0);
-                                    p.x = zoomScale * (latlong.x / 180.0 + 1.0);
-                                    // atanh:
-                                    p.y = zoomScale * (-log((1.0 + sin_lat) / (1.0 - sin_lat)) / (2.0 * M_PI) + 1.0);
-                                    return p;
-                                }
-
-                                void main(void) {
-                                    color = lineColor;
-                                    vec2 lineStart = wgs84_to_webmerc(inLineStart) - pixelOrigin;
-                                    vec2 lineEnd = wgs84_to_webmerc(inLineEnd) - pixelOrigin;
-
-                                    float lineWidth = inLineWidth;
-
-                                    vec2 delta = lineStart - lineEnd;
-                                    vec2 centerPos = 0.5 * (lineStart + lineEnd);
-                                    float lineLength = length(delta);
-                                    float phi = atan(delta.y/delta.x);
-
-                                    mat3 scale = mat3(
-                                          lineLength, 0, 0,
-                                          0, lineWidth, 0,
-                                          0, 0, 1);
-                                    mat3 rotate = mat3(
-                                          cos(phi), sin(phi), 0,
-                                          -sin(phi), cos(phi), 0,
-                                          0, 0, 1);
-                                    mat3 translate = mat3(
-                                          1, 0, 0,
-                                          0, 1, 0,
-                                          centerPos.x, centerPos.y, 1);
-
-
-                                    gl_Position = vec4(projection * translate *  rotate *  scale * vertexPos, 1.0);
-                                }`;
-
-                dotVertexSource = `#version 100
-                                   #define M_PI 3.1415926535897932384626433832795
-                              precision highp float;
-
-                              attribute vec3 vertexPos;
-                              attribute vec2 inDotPos;
-                              attribute float inDotSize;
-                              attribute vec4 dotColor;
-
-                              varying vec4 color;
-
-                              uniform mat3 projection;
-                                  uniform float zoomScale;
-                                  uniform vec2 pixelOrigin;
-
-                              vec2 wgs84_to_webmerc(vec2 latlong) {
-                                  vec2 p;
-                                  float sin_lat = sin(M_PI * latlong.y / 180.0);
-                                  p.x = zoomScale * (latlong.x / 180.0 + 1.0);
-                                  // atanh:
-                                  p.y = zoomScale * (-log((1.0 + sin_lat) / (1.0 - sin_lat)) / (2.0 * M_PI) + 1.0);
-                                  return p;
-                              }
-
-                              void main(void) {
-                                color = dotColor;
-                                gl_PointSize =  inDotSize;
-                                vec2 dotPos = resolutionScale * inDotPos;
-                                float dotSize = resolutionScale.x * inDotSize;
-                                mat3 translate = mat3(
-                                  1, 0, 0,
-                                  0, 1, 0,
-                                  dotPos.x, dotPos.y, 1);
-
-                                gl_Position = vec4(projection * translate * vertexPos, 1.0);
-                              }`;
-            }
+                    gl_Position = vec4(projection * translate * vertexPos, 1.0);
+                }`;
         }
 
-
-        this.lineProgram = this._createShaderProgram(lineVertexSource, fragSourceLine, 'line');
-        this.dotProgram = this._createShaderProgram(dotVertexSource, fragSource, 'dot');
+        this.lineProgram = this._createShaderProgram(lineVertexSource, lineFragSource, 'line');
+        this.dotProgram = this._createShaderProgram(dotVertexSource, dotFragSource, 'dot');
         return (this.lineProgram != false && this.dotProgram != false);
     }
 }
