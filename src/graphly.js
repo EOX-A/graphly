@@ -5,9 +5,9 @@
  * @author: Daniel Santillan
  */
 
-var itemAmount = 180000;
-var c_x = 'Latitude';
-var c_y = 'T_elec';
+var itemAmount = 20000;
+var c_x = 'datetime_stop';
+var c_y = 'altitude_top';
 
 Array.prototype.pushArray = function() {
     var toPush = this.concat.apply([], arguments);
@@ -63,9 +63,18 @@ var graphly = (function() {
     *
     */
     var graph = function(options) {
+
+        // Passed options
         this.el = d3.select(options.el);
+        this.margin = defaultFor(
+            options.margin,
+            {top: 10, left: 90, bottom: 30, right: 10}
+        );
+        this.dataSettings = defaultFor(options.dataSettings, {});
+        this.renderSettings = defaultFor(options.renderSettings, {});
+
+        this.debounceActive = true;
         this.dim = this.el.node().getBoundingClientRect();
-        this.margin = {top: 10, left: 90, bottom: 30, right: 10};
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
         this.currentScale = 1;
@@ -74,15 +83,19 @@ var graphly = (function() {
         this.previewActive = false;
         var self = this;
 
+        this.plotter = new plotty.plot({
+            canvas: document.createElement('canvas'),
+            domain: [0,1]
+        });
+
 
         // move tooltip
         var tooltip = this.el.append('pre')
             .attr('id', 'tooltip')
             .style('position', 'absolute')
+            .style('background-color', 'white')
             .style('display', 'none')
-            .style('z-index', 10)
-            .style('width', 10 + 'px')
-            .style('height', 10 + 'px');
+            .style('z-index', 10);
 
         window.onmousemove = function (e) {
             var x = e.clientX,
@@ -96,6 +109,7 @@ var graphly = (function() {
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
             .style('opacity', 1.0)
+            //.style('background-color', 'yellow')
             //.style('display', 'none')
             .style('position', 'absolute')
             .style('z-index', 2)
@@ -110,7 +124,7 @@ var graphly = (function() {
             maxRects: itemAmount * 2,
             forceGL1: false, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
-            useNDC: true, // Use normalized device coordinates [0, 1] instead of pixel coordinates,
+            //useNDC: false, // Use normalized device coordinates [0, 1] instead of pixel coordinates,
             coordinateSystem: 'pixels',
             contextParams: {
                 preserveDrawingBuffer: true
@@ -160,7 +174,7 @@ var graphly = (function() {
                     var p = self.data[nodeId];
                     var xItem = self.xScale(p[c_x]);
                     var yItem = self.yScale(p[c_y]);
-                    tooltip.style('display', 'block');
+                    tooltip.style('display', 'inline-block');
                     tooltip.html(document.createElement('pre').innerHTML = JSON.stringify(p, null, 2));
                     self.svg.append('circle')
                         .attr('class', 'highlightItem')
@@ -212,7 +226,23 @@ var graphly = (function() {
                 .attr("height", this.height);
 
 
-        //this.renderData();
+        this.svg.append("rect")
+            .attr("id", "zoomXBox")
+            .attr("width", this.width)
+            .attr("height", this.margin.bottom)
+            .attr("fill", "blue")
+            .attr("transform", "translate(" + 0 + "," + (this.height) + ")")
+            .style("visibility", "hidden")
+            .attr("pointer-events", "all");
+
+        this.svg.append("rect")
+            .attr("id", "zoomYBox")
+            .attr("width", this.margin.left)
+            .attr("height", this.height )
+            .attr("transform", "translate(" + -this.margin.left + "," + 0 + ")")
+            .attr("fill", "red")
+            .style("visibility", "hidden")
+            .attr("pointer-events", "all");
 
     };
 
@@ -259,6 +289,9 @@ var graphly = (function() {
         var xRange = xExtent[1] - xExtent[0];
         var yRange = yExtent[1] - yExtent[0];
 
+        var domain = d3.extent(this.data, function(d) { return d['mie_wind_velocity']; });
+        this.plotter.setDomain(domain);
+
         this.xScale = d3.scale.linear()
             .domain([xExtent[0] - xRange*0.1, xExtent[1] + xRange*0.1])
             .range([0, this.width]);
@@ -289,37 +322,54 @@ var graphly = (function() {
             .attr('class', 'axis')
             .call(this.yAxis);
 
-        // create zooming/panning behaviour
-        this.zoomBehaviour = d3.behavior.zoom()
-            .x(this.xScale)
-            .y(this.yScale)
-            .on('zoom', this.previewZoom.bind(this));
+
+        // Define zoom behaviour based on parameter dependend x and y scales
+        this.xyzoom = d3.behavior.zoom()
+          .x(this.xScale)
+          .y(this.yScale)
+          .on('zoom', this.previewZoom.bind(this));
+
+        this.xzoom = d3.behavior.zoom()
+          .x(this.xScale)
+          .on('zoom', this.previewZoom.bind(this));
+
+        this.yzoom = d3.behavior.zoom()
+          .y(this.yScale)
+          .on('zoom', this.previewZoom.bind(this));
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
-        this.zoomBehaviour.scaleExtent([
-            this.zoomBehaviour.scale()*0.9,
-            this.zoomBehaviour.scale()*1.1
-        ]);
+        /*this.xyzoom.scaleExtent([
+            this.xyzoom.scale()*0.9,
+            this.xyzoom.scale()*1.1
+        ]);*/
 
-        this.renderCanvas.call(this.zoomBehaviour);
+        this.renderCanvas.call(this.xyzoom);
+        d3.select('#zoomXBox').call(this.xzoom);
+        d3.select('#zoomYBox').call(this.yzoom);
 
     };
 
+    graph.prototype.zoom_update = function() {
+        this.xyzoom = d3.behavior.zoom()
+            .x(this.xScale)
+            .y(this.yScale)
+            .on("zoom", this.previewZoom.bind(this));
+        this.xzoom = d3.behavior.zoom()
+            .x(this.xScale)
+            .on("zoom", this.previewZoom.bind(this));
+        this.yzoom = d3.behavior.zoom()
+            .y(this.yScale)
+            .on("zoom", this.previewZoom.bind(this));
+
+        this.renderCanvas.call(this.xyzoom);
+        d3.select('#zoomXBox').call(this.xzoom);
+        d3.select('#zoomYBox').call(this.yzoom);
+    };
+
     graph.prototype.onZoom = function() {
-        
-        
-        this.xAxisSvg.call(this.xAxis);
-        this.yAxisSvg.call(this.yAxis);
-
-        var prevImg = this.el.select('#previewImage');
-        /*if(!prevImg.empty()){
-            //this.svg.select("#clip").attr("transform", "translate(0,0)scale(1)");
-            this.renderCanvas.style('opacity','1.0');
-            prevImg.remove();
-        }*/
-
         this.renderData();
+        this.zoom_update();
     };
 
     var debounceZoom = debounce(function() {
@@ -328,54 +378,67 @@ var graphly = (function() {
 
     graph.prototype.previewZoom = function() {
 
-        // Limit zoom step to 10% of scale size to make sure zoom kumps are not
-        // to big. Solves issue on big zoom jumps in Firefox (FF)
-        this.zoomBehaviour.scaleExtent([
-            this.zoomBehaviour.scale()*0.9,
-            this.zoomBehaviour.scale()*1.1
-        ]);
-
-        
-
-        this.svg.selectAll('.highlightItem').remove();
-
-        debounceZoom.bind(this)();
-
-        if(!this.previewActive){
-            this.renderCanvas.style('opacity','0');
-            this.oSc = this.currentScale;
-            this.oTr = this.currentTranlate;
-            this.oT = [
-                d3.event.translate[0]/d3.event.scale,
-                d3.event.translate[1]/d3.event.scale,
-            ];
-            this.previewActive = true;
-            this.svg.select("#previewImage").style('display', 'block');
-        }
-
-
-        var scale = d3.event.scale / this.oSc;
-
-        var transX, transY;
-
-        if(scale !== 1){
-            transX = (d3.event.translate[0]/d3.event.scale - this.oTr[0]/this.oSc) *
-                d3.event.scale;
-            transY = (d3.event.translate[1]/d3.event.scale - this.oTr[1]/this.oSc) *
-                d3.event.scale;
-        }else{
-            transX = d3.event.translate[0] - this.oT[0]* this.oSc;
-            transY = d3.event.translate[1] - this.oT[1]* this.oSc;
-        }
-
-        this.svg.select("#previewImage").attr("transform", "translate(" + 
-            [transX-1, transY-1] + ")scale(" + scale + ")");
-
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
 
-        this.currentScale = d3.event.scale;
-        this.currentTranlate = d3.event.translate;
+        // Limit zoom step to 10% of scale size to make sure zoom kumps are not
+        // to big. Solves issue on big zoom jumps in Firefox (FF)
+        /*this.xyzoom.scaleExtent([
+            this.xyzoom.scale()*0.9,
+            this.xyzoom.scale()*1.1
+        ]);*/
+
+        var xScale = this.xzoom.scale();
+        var yScale = this.yzoom.scale();
+        var xyScale = this.xyzoom.scale();
+
+        var transXY = this.xyzoom.translate();
+        var transX = this.xzoom.translate();
+        var transY = this.yzoom.translate();
+
+        this.svg.selectAll('.highlightItem').remove();
+
+        if(this.debounceActive){
+
+            debounceZoom.bind(this)();
+
+            if(!this.previewActive){
+                this.renderCanvas.style('opacity','0');
+                this.oSc = this.currentScale;
+                this.oTr = this.currentTranlate;
+                this.oT = [
+                    d3.event.translate[0]/d3.event.scale,
+                    d3.event.translate[1]/d3.event.scale,
+                ];
+                this.previewActive = true;
+                this.svg.select("#previewImage").style('display', 'block');
+            }
+
+
+            if(xyScale!==1.0){
+                this.svg.select("#previewImage").attr("transform", "translate(" + 
+                transXY + ")scale(" + xyScale + ")");
+            }else if(xScale !== 1.0){
+                this.svg.select("#previewImage").attr("transform", "translate(" + 
+                [transX[0], 0.0] + ")scale(" + [xScale, 1.0] + ")");
+            }else if(yScale !== 1.0){
+                this.svg.select("#previewImage").attr("transform", "translate(" + 
+                [0.0, transY[1.0]] + ")scale(" + [1.0, yScale] + ")");
+            }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
+                this.svg.select("#previewImage").attr("transform", "translate(" + 
+                transXY + ")scale(1)");
+            }else if(transX[0]!==0.0 || transX[1] !==0.0){
+                this.svg.select("#previewImage").attr("transform", "translate(" + 
+                [transX[0], 0.0] + ")scale(1)");
+            }else if(transY[0]!==0.0 || transY[1] !==0.0){
+                this.svg.select("#previewImage").attr("transform", "translate(" + 
+                [0.0, transY[1.0]] + ")scale(1)");
+            }
+
+        }else{
+            this.onZoom();
+        }
+
 
     };
 
@@ -429,7 +492,7 @@ var graphly = (function() {
         var p_x, p_y;
 
         var l =  this.data.length - 1;
-        for (var i=0; i<=l; i++) {
+        /*for (var i=0; i<=l; i++) {
 
             var x = (this.xScale(this.data[i][c_x]));
             var y = (this.yScale(this.data[i][c_y]));
@@ -448,46 +511,61 @@ var graphly = (function() {
 
             p_x = x;
             p_y = y;
+        }*/
+
+        for (var i=0; i<=l; i++) {
+
+            var x = (this.xScale(this.data[i]['datetime_start']));
+            var y = (this.yScale(this.data[i]['dem_height']));
+
+            var x1 = (this.xScale(this.data[i]['datetime_start']));
+            var y1 = (this.yScale(this.data[i]['altitude_bottom']));
+            var x2 = (this.xScale(this.data[i]['datetime_stop']));
+            var y2 = (this.yScale(this.data[i]['altitude_top']));
+
+            var idC = genColor();
+            this.colourToNode[idC.join('-')] = i;
+            var nCol = idC.map(function(c){return c/255;});
+            idColors.pushArray(nCol);
+
+            var c = this.plotter.getColor(this.data[i]['mie_wind_velocity']).map(function(c){return c/255;});
+
+            this.batchDrawer.addRect(x1,y1,x2,y2, c[0], c[1], c[2], 1.0);
+            this.batchDrawerReference.addRect(x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0);
+
+            if(i>0){
+                this.batchDrawer.addLine(p_x, p_y, x, y, 1, 0.258, 0.525, 0.956, 1.0);
+            }
+
+            p_x = x;
+            p_y = y;
         }
-
-        var x1,y1,x2,y2;
-
-        x1 = this.xScale(-50);
-        y1 = this.yScale(4000);
-        x2 = this.xScale(60);
-        y2 =  this.yScale(6000);
-        this.batchDrawer.addRect(x1,y1,x2,y2, 0.2, 0.7, 0.6, 0.3);
-
-        this.batchDrawer.addDot(x1, y1, 10, 0.258, 0.525, 0.956,0.2);
-        this.batchDrawer.addDot(x2, y1, 10, 0.258, 0.525, 0.956,0.2);
-        this.batchDrawer.addDot(x1, y2, 10, 0.258, 0.525, 0.956,0.2);
-        this.batchDrawer.addDot(x2, y2, 10, 0.258, 0.525, 0.956,0.2);
-       
 
         this.batchDrawer.draw();
-        //this.batchDrawerReference.draw();
+        this.batchDrawerReference.draw();
 
-        this.renderCanvas.style('opacity','1');
+        
 
-        var prevImg = this.el.select('#previewImage');
-        //prevImg.remove();
-        var img = this.renderCanvas.node().toDataURL();
-        if(!prevImg.empty()){
-            prevImg.attr("xlink:href", img)
-                .attr("transform", null)
-                .style('display', 'none');
-        } else {
-            this.renderingContainer.append("svg:image")
-                .attr('id', 'previewImage')
-                .attr("xlink:href", img)
-                .attr("x", 0)
-                .attr("y", 0)
-                .attr("width",  this.width)
-                .attr("height", this.height)
-                .style('display', 'none');
+        if(this.debounceActive){
+            this.renderCanvas.style('opacity','1');
+            var prevImg = this.el.select('#previewImage');
+            var img = this.renderCanvas.node().toDataURL();
+            if(!prevImg.empty()){
+                prevImg.attr("xlink:href", img)
+                    .attr("transform", null)
+                    .style('display', 'none');
+            } else {
+                this.renderingContainer.append("svg:image")
+                    .attr('id', 'previewImage')
+                    .attr("xlink:href", img)
+                    .attr("x", 0)
+                    .attr("y", 0)
+                    .attr("width",  this.width)
+                    .attr("height", this.height)
+                    .style('display', 'none');
+            }
+            this.previewActive = false;
         }
-        this.previewActive = false;
-
 
     };
 
