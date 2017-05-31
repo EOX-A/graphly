@@ -135,7 +135,7 @@ var graphly = (function() {
         this.batchDrawer = new BatchDrawer(this.renderCanvas.node(), params);
 
 
-        this.referenceCanvas = this.el.append('canvas')
+        /*this.referenceCanvas = this.el.append('canvas')
             .classed('hiddenCanvas', true) 
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
@@ -150,7 +150,7 @@ var graphly = (function() {
             antialias: false
         };
         this.batchDrawerReference = new BatchDrawer(this.referenceCanvas.node(), params);
-        this.referenceContext = this.batchDrawerReference.getContext();
+        this.referenceContext = this.batchDrawerReference.getContext();*/
 
 
         this.renderCanvas.on('mousemove', function() {
@@ -531,7 +531,7 @@ var graphly = (function() {
             var c = this.plotter.getColor(this.data[i]['mie_wind_velocity']).map(function(c){return c/255;});
 
             this.batchDrawer.addRect(x1,y1,x2,y2, c[0], c[1], c[2], 1.0);
-            this.batchDrawerReference.addRect(x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0);
+            //this.batchDrawerReference.addRect(x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0);
 
             if(i>0){
                 this.batchDrawer.addLine(p_x, p_y, x, y, 1, 0.258, 0.525, 0.956, 1.0);
@@ -542,7 +542,7 @@ var graphly = (function() {
         }
 
         this.batchDrawer.draw();
-        this.batchDrawerReference.draw();
+        //this.batchDrawerReference.draw();
 
         
 
