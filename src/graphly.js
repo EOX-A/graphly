@@ -6,8 +6,7 @@
  */
 
 var itemAmount = 20000;
-var c_x = 'datetime_stop';
-var c_y = 'altitude_top';
+
 
 Array.prototype.pushArray = function() {
     var toPush = this.concat.apply([], arguments);
@@ -70,6 +69,8 @@ var graphly = (function() {
             options.margin,
             {top: 10, left: 90, bottom: 30, right: 10}
         );
+
+        // TOOO: How could some defaults be guessed for rendering?
         this.dataSettings = defaultFor(options.dataSettings, {});
         this.renderSettings = defaultFor(options.renderSettings, {});
 
@@ -83,10 +84,15 @@ var graphly = (function() {
         this.previewActive = false;
         var self = this;
 
+        //plotty.addColorScale('divergent1', ['#2f3895', '#ffffff', '#a70125'], [0, 0.41, 1]);
+
         this.plotter = new plotty.plot({
             canvas: document.createElement('canvas'),
-            domain: [0,1]
+            domain: [0,1]/*,
+            colorScale: 'divergent1'*/
         });
+
+        
 
 
         // move tooltip
@@ -113,15 +119,15 @@ var graphly = (function() {
             //.style('display', 'none')
             .style('position', 'absolute')
             .style('z-index', 2)
-            .style("transform", "translate(" + (this.margin.left + 1.0) +
-              "px" + "," + (this.margin.top + 1.0) + "px" + ")");
+            .style('transform', 'translate(' + (this.margin.left + 1.0) +
+              'px' + ',' + (this.margin.top + 1.0) + 'px' + ')');
 
 
         // Set parameters (these are the default values used when that option is omitted):
         var params = {
-            maxLines: itemAmount* 2, // used for preallocation
+            maxLines: itemAmount, // used for preallocation
             maxDots: itemAmount,
-            maxRects: itemAmount * 2,
+            maxRects: itemAmount,
             forceGL1: false, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             //useNDC: false, // Use normalized device coordinates [0, 1] instead of pixel coordinates,
@@ -141,8 +147,8 @@ var graphly = (function() {
             .attr('height', this.height - 1)
             .style('position', 'absolute')
             .style('display', 'none')
-            .style("transform", "translate(" + (this.margin.left + 1) +
-              "px" + "," + (this.margin.top + 1) + "px" + ")");
+            .style('transform', 'translate(' + (this.margin.left + 1) +
+              'px' + ',' + (this.margin.top + 1) + 'px' + ')');
 
 
         // Initialize BatchDrawer:
@@ -151,6 +157,18 @@ var graphly = (function() {
         };
         this.batchDrawerReference = new BatchDrawer(this.referenceCanvas.node(), params);
         this.referenceContext = this.batchDrawerReference.getContext();
+
+        this.svg = this.el.append('svg')
+            .attr('width', this.width + this.margin.left + this.margin.right)
+            .attr('height', this.height + this.margin.top + this.margin.bottom)
+            .style('position', 'absolute')
+            .style('z-index', 10)
+            .style('pointer-events', 'none')
+            .append('g')
+            .attr('transform', 'translate(' + (this.margin.left+1) + ',' +
+                (this.margin.top+1) + ')');
+
+        this.createHelperObjects();
 
 
         this.renderCanvas.on('mousemove', function() {
@@ -170,7 +188,32 @@ var graphly = (function() {
             tooltip.style('display', 'none');
 
             if(nodeId){
-                if(self.data.hasOwnProperty(nodeId)){
+                if(self.data.mie_wind_velocity.length > nodeId){
+                    var p = {
+                        mie_wind_velocity: self.data.mie_wind_velocity[nodeId],
+                        mie_datetime_start: self.data.mie_datetime_start[nodeId],
+                        mie_altitude_bottom: self.data.mie_altitude_bottom[nodeId],
+                        mie_datetime_stop: self.data.mie_datetime_stop[nodeId],
+                        mie_altitude_top: self.data.mie_altitude_top[nodeId],
+                    };
+
+                    var x1 = (self.xScale(p.mie_datetime_start));
+                    var y1 = (self.yScale(p.mie_altitude_bottom));
+                    var x2 = (self.xScale(p.mie_datetime_stop));
+                    var y2 = (self.yScale(p.mie_altitude_top));
+
+                    tooltip.style('display', 'inline-block');
+                    tooltip.html(document.createElement('pre').innerHTML = JSON.stringify(p, null, 2));
+                    self.svg.append('circle')
+                        .attr('class', 'highlightItem')
+                        .attr('r', 5)
+                        .attr('cx', x1)
+                        .attr('cy', y1)
+                        .style('fill', function(d) { return 'rgba(0,0,200,1)';})
+                        .style('stroke', function(d) { return 'rgba(0,0,200,1)'; });
+
+                }
+                /*if(self.data.hasOwnProperty(nodeId)){
                     var p = self.data[nodeId];
                     var xItem = self.xScale(p[c_x]);
                     var yItem = self.yScale(p[c_y]);
@@ -178,12 +221,12 @@ var graphly = (function() {
                     tooltip.html(document.createElement('pre').innerHTML = JSON.stringify(p, null, 2));
                     self.svg.append('circle')
                         .attr('class', 'highlightItem')
-                        .attr("r", 5)
-                        .attr("cx", xItem)
-                        .attr("cy", yItem)
-                        .style("fill", function(d) { return 'rgba(0,0,200,1)';})
-                        .style("stroke", function(d) { return 'rgba(0,0,200,1)'; });
-                }
+                        .attr('r', 5)
+                        .attr('cx', xItem)
+                        .attr('cy', yItem)
+                        .style('fill', function(d) { return 'rgba(0,0,200,1)';})
+                        .style('stroke', function(d) { return 'rgba(0,0,200,1)'; });
+                }*/
             }
         });
 
@@ -201,49 +244,41 @@ var graphly = (function() {
             };
         });*/
 
-        
+
+    };
 
 
-        this.svg = this.el.append('svg')
-            .attr('width', this.width + this.margin.left + this.margin.right)
-            .attr('height', this.height + this.margin.top + this.margin.bottom)
-            .style('position', 'absolute')
-            .style('z-index', 10)
-            .style('pointer-events', 'none')
-            .append('g')
-            .attr("transform", "translate(" + (this.margin.left+1) + "," +
-                (this.margin.top+1) + ")");
+    graph.prototype.createHelperObjects = function (){
 
-        this.renderingContainer = this.svg.append("g")
-            .attr("id","renderingContainer")
-            .style("clip-path","url(#clip)");
+        this.renderingContainer = this.svg.append('g')
+            .attr('id','renderingContainer')
+            .style('clip-path','url(#clip)');
 
         // Add clip path so only points in the area are shown
-        var clippath = this.svg.append("defs").append("clipPath")
-            .attr("id", "clip")
-            .append("rect")
-                .attr("width", this.width)
-                .attr("height", this.height);
+        var clippath = this.svg.append('defs').append('clipPath')
+            .attr('id', 'clip')
+            .append('rect')
+                .attr('width', this.width)
+                .attr('height', this.height);
 
 
-        this.svg.append("rect")
-            .attr("id", "zoomXBox")
-            .attr("width", this.width)
-            .attr("height", this.margin.bottom)
-            .attr("fill", "blue")
-            .attr("transform", "translate(" + 0 + "," + (this.height) + ")")
-            .style("visibility", "hidden")
-            .attr("pointer-events", "all");
+        this.svg.append('rect')
+            .attr('id', 'zoomXBox')
+            .attr('width', this.width)
+            .attr('height', this.margin.bottom)
+            .attr('fill', 'blue')
+            .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
+            .style('visibility', 'hidden')
+            .attr('pointer-events', 'all');
 
-        this.svg.append("rect")
-            .attr("id", "zoomYBox")
-            .attr("width", this.margin.left)
-            .attr("height", this.height )
-            .attr("transform", "translate(" + -this.margin.left + "," + 0 + ")")
-            .attr("fill", "red")
-            .style("visibility", "hidden")
-            .attr("pointer-events", "all");
-
+        this.svg.append('rect')
+            .attr('id', 'zoomYBox')
+            .attr('width', this.margin.left)
+            .attr('height', this.height )
+            .attr('transform', 'translate(' + -this.margin.left + ',' + 0 + ')')
+            .attr('fill', 'red')
+            .style('visibility', 'hidden')
+            .attr('pointer-events', 'all');
     };
 
     // Returns a function, that, as long as it continues to be invoked, will not
@@ -282,14 +317,68 @@ var graphly = (function() {
 
     };
 
+    graph.prototype.loadData = function (data){
+        this.data = data;
+        this.initAxis();
+        this.renderData();
+    };
+
     graph.prototype.initAxis = function (){
 
-        var xExtent = d3.extent(this.data, function(d) { return d[c_x]; });
-        var yExtent = d3.extent(this.data, function(d) { return d[c_y]; });
+        this.svg.selectAll("*").remove();
+        this.createHelperObjects();
+
+
+        var xExtent, yExtent;
+
+        var xSelection = [].concat.apply([], this.renderSettings.xAxis);
+        var ySelection = [].concat.apply([], this.renderSettings.yAxis);
+
+        for (var i = xSelection.length - 1; i >= 0; i--) {
+            var xExt = d3.extent(this.data[xSelection[i]]);
+            if(xExtent){
+                if(xExt[0]<xExtent){
+                    xExtent[0] = xExt[0];
+                }
+                if(xExt[1]>xExtent[1]){
+                    xExtent[1] = xExt[1];
+                }
+            }else{
+                xExtent = xExt;
+            } 
+
+        }
+
+        for (var j = ySelection.length - 1; j >= 0; j--) {
+            var yExt = d3.extent(this.data[ySelection[j]]);
+            if(yExtent){
+                if(yExt[0]<yExtent[0]){
+                    yExtent[0] = yExt[0];
+                }
+                if(yExt[1]>yExtent[1]){
+                    yExtent[1] = yExt[1];
+                }
+            }else{
+                yExtent = yExt;
+            } 
+        }
+
         var xRange = xExtent[1] - xExtent[0];
         var yRange = yExtent[1] - yExtent[0];
 
-        var domain = d3.extent(this.data, function(d) { return d['mie_wind_velocity']; });
+        var domain;
+        if(this.renderSettings.hasOwnProperty('colorAxis')){
+            var cAxis = this.renderSettings.colorAxis;
+            for (var ca = cAxis.length - 1; ca >= 0; ca--) {
+                if(cAxis[ca]){
+                    domain = d3.extent(
+                        this.data[cAxis[ca]]
+                    );
+                }
+            }
+        }
+
+        // TODO: Allow multiple domains!
         this.plotter.setDomain(domain);
 
         this.xScale = d3.scale.linear()
@@ -354,13 +443,13 @@ var graphly = (function() {
         this.xyzoom = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScale)
-            .on("zoom", this.previewZoom.bind(this));
+            .on('zoom', this.previewZoom.bind(this));
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
-            .on("zoom", this.previewZoom.bind(this));
+            .on('zoom', this.previewZoom.bind(this));
         this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
-            .on("zoom", this.previewZoom.bind(this));
+            .on('zoom', this.previewZoom.bind(this));
 
         this.renderCanvas.call(this.xyzoom);
         d3.select('#zoomXBox').call(this.xzoom);
@@ -411,28 +500,28 @@ var graphly = (function() {
                     d3.event.translate[1]/d3.event.scale,
                 ];
                 this.previewActive = true;
-                this.svg.select("#previewImage").style('display', 'block');
+                this.svg.select('#previewImage').style('display', 'block');
             }
 
 
             if(xyScale!==1.0){
-                this.svg.select("#previewImage").attr("transform", "translate(" + 
-                transXY + ")scale(" + xyScale + ")");
+                this.svg.select('#previewImage').attr('transform', 'translate(' + 
+                transXY + ')scale(' + xyScale + ')');
             }else if(xScale !== 1.0){
-                this.svg.select("#previewImage").attr("transform", "translate(" + 
-                [transX[0], 0.0] + ")scale(" + [xScale, 1.0] + ")");
+                this.svg.select('#previewImage').attr('transform', 'translate(' + 
+                [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
             }else if(yScale !== 1.0){
-                this.svg.select("#previewImage").attr("transform", "translate(" + 
-                [0.0, transY[1.0]] + ")scale(" + [1.0, yScale] + ")");
+                this.svg.select('#previewImage').attr('transform', 'translate(' + 
+                [0.0, transY[1.0]] + ')scale(' + [1.0, yScale] + ')');
             }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
-                this.svg.select("#previewImage").attr("transform", "translate(" + 
-                transXY + ")scale(1)");
+                this.svg.select('#previewImage').attr('transform', 'translate(' + 
+                transXY + ')scale(1)');
             }else if(transX[0]!==0.0 || transX[1] !==0.0){
-                this.svg.select("#previewImage").attr("transform", "translate(" + 
-                [transX[0], 0.0] + ")scale(1)");
+                this.svg.select('#previewImage').attr('transform', 'translate(' + 
+                [transX[0], 0.0] + ')scale(1)');
             }else if(transY[0]!==0.0 || transY[1] !==0.0){
-                this.svg.select("#previewImage").attr("transform", "translate(" + 
-                [0.0, transY[1.0]] + ")scale(1)");
+                this.svg.select('#previewImage').attr('transform', 'translate(' + 
+                [0.0, transY[1.0]] + ')scale(1)');
             }
 
         }else{
@@ -491,7 +580,7 @@ var graphly = (function() {
         this.nextCol = 1;
         var p_x, p_y;
 
-        var l =  this.data.length - 1;
+        //var l =  this.data.mie_wind_velocity.length - 1;
         /*for (var i=0; i<=l; i++) {
 
             var x = (this.xScale(this.data[i][c_x]));
@@ -512,23 +601,64 @@ var graphly = (function() {
             p_x = x;
             p_y = y;
         }*/
+        var xAxRen = this.renderSettings.xAxis;
+        var yAxRen = this.renderSettings.yAxis;
 
-        for (var i=0; i<=l; i++) {
+        for (var xScaleItem=0; xScaleItem<xAxRen.length; xScaleItem++){
+            for (var yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
 
-            var x = (this.xScale(this.data[i]['datetime_start']));
-            var y = (this.yScale(this.data[i]['dem_height']));
+                // If an array is provided as element we need to render either
+                // a line or a rectangle as we have two parameters per item
+                if(xAxRen[xScaleItem].constructor === Array){
+                    // If also the yAxis item is an array we render a rectangle
+                    if(yAxRen[yScaleItem].constructor === Array){
 
-            var x1 = (this.xScale(this.data[i]['datetime_start']));
-            var y1 = (this.yScale(this.data[i]['altitude_bottom']));
-            var x2 = (this.xScale(this.data[i]['datetime_stop']));
-            var y2 = (this.yScale(this.data[i]['altitude_top']));
+                        // TODO: How to decide which item to take for counting
+                        // should we compare changes and look for errors in config?
+                        var l = this.data[xAxRen[xScaleItem][0]].length;
+                        for (var i=0; i<=l; i++) {
+
+                            var x1 = (this.xScale(this.data[xAxRen[xScaleItem][0]][i]));
+                            var x2 = (this.xScale(this.data[xAxRen[xScaleItem][1]][i]));
+                            var y1 = (this.yScale(this.data[yAxRen[yScaleItem][0]][i]));
+                            var y2 = (this.yScale(this.data[yAxRen[yScaleItem][1]][i]));
+
+                            var idC = genColor();
+                            this.colourToNode[idC.join('-')] = i;
+                            var nCol = idC.map(function(c){return c/255;});
+                            idColors.pushArray(nCol);
+
+                            var c = this.plotter.getColor(this.data.mie_wind_velocity[i]).map(function(c){return c/255;});
+
+                            this.batchDrawer.addRect(x1,y1,x2,y2, c[0], c[1], c[2], 1.0);
+                            this.batchDrawerReference.addRect(x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0);
+
+
+                        }
+                    } else {
+                        // TODO: Render a line
+                    }
+                }
+            }
+        }
+
+
+        /*for (var i=0; i<=l; i++) {
+
+            var x = (this.xScale(this.data.mie_datetime_start[i]));
+            var y = (this.yScale(this.data.mie_dem_altitude[i]));
+
+            var x1 = (this.xScale(this.data.mie_datetime_start[i]));
+            var y1 = (this.yScale(this.data.mie_altitude_bottom[i]));
+            var x2 = (this.xScale(this.data.mie_datetime_stop[i]));
+            var y2 = (this.yScale(this.data.mie_altitude_top[i]));
 
             var idC = genColor();
             this.colourToNode[idC.join('-')] = i;
             var nCol = idC.map(function(c){return c/255;});
             idColors.pushArray(nCol);
 
-            var c = this.plotter.getColor(this.data[i]['mie_wind_velocity']).map(function(c){return c/255;});
+            var c = this.plotter.getColor(this.data.mie_wind_velocity[i]).map(function(c){return c/255;});
 
             this.batchDrawer.addRect(x1,y1,x2,y2, c[0], c[1], c[2], 1.0);
             this.batchDrawerReference.addRect(x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0);
@@ -539,7 +669,7 @@ var graphly = (function() {
 
             p_x = x;
             p_y = y;
-        }
+        }*/
 
         this.batchDrawer.draw();
         this.batchDrawerReference.draw();
@@ -551,17 +681,17 @@ var graphly = (function() {
             var prevImg = this.el.select('#previewImage');
             var img = this.renderCanvas.node().toDataURL();
             if(!prevImg.empty()){
-                prevImg.attr("xlink:href", img)
-                    .attr("transform", null)
+                prevImg.attr('xlink:href', img)
+                    .attr('transform', null)
                     .style('display', 'none');
             } else {
-                this.renderingContainer.append("svg:image")
+                this.renderingContainer.append('svg:image')
                     .attr('id', 'previewImage')
-                    .attr("xlink:href", img)
-                    .attr("x", 0)
-                    .attr("y", 0)
-                    .attr("width",  this.width)
-                    .attr("height", this.height)
+                    .attr('xlink:href', img)
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('width',  this.width)
+                    .attr('height', this.height)
                     .style('display', 'none');
             }
             this.previewActive = false;
@@ -575,6 +705,6 @@ var graphly = (function() {
 
 })();
 
-if (typeof module !== "undefined") {
+if (typeof module !== 'undefined') {
   module.exports = graphly;
 }
