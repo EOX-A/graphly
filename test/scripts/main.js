@@ -7,7 +7,7 @@
 
 var graph = new graphly.graph({
     el: '#graph',
-    renderSettings: {
+   /* renderSettings: {
         xAxis: [
             ['mie_datetime_start', 'mie_datetime_stop'],
             'mie_datetime_start'
@@ -22,9 +22,31 @@ var graph = new graphly.graph({
             null
         ],
 
+    },*/
+    renderSettings: {
+        xAxis: [
+            ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
+            'rayleigh_datetime_start'
+        ],
+        yAxis: [
+            ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
+             'rayleigh_dem_altitude'
+        ],
+        //y2Axis: [],
+        colorAxis: [
+            'rayleigh_wind_velocity',
+            null
+        ],
+
     },
     dataSettings: {
-        dem_height: {
+        rayleigh_dem_altitude: {
+            symbol: 'dot',
+            uom: 'm',
+            lineConnect: true,
+            color: [0.2, 0.2, 1.0, 0.8]
+        },
+        mie_dem_altitude: {
             symbol: null,
             uom: 'm',
             lineConnect: true,
@@ -33,6 +55,11 @@ var graph = new graphly.graph({
         mie_wind_velocity: {
             uom: 'cm/s',
             colorscale: 'plasma'
+            //outline: false
+        },
+        rayleigh_wind_velocity: {
+            uom: 'cm/s',
+            colorscale: 'viridis'
             //outline: false
         }
     }

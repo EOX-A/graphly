@@ -5,8 +5,9 @@
  * @author: Daniel Santillan
  */
 
-var itemAmount = 20000;
 
+
+var itemAmount = 20000;
 
 Array.prototype.pushArray = function() {
     var toPush = this.concat.apply([], arguments);
@@ -19,6 +20,7 @@ function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
 
 var graphly = (function() {
+
 
     function hasOwnProperty(obj, prop) {
         var proto = obj.__proto__ || obj.constructor.prototype; // jshint ignore:line
@@ -188,45 +190,51 @@ var graphly = (function() {
             tooltip.style('display', 'none');
 
             if(nodeId){
-                if(self.data.mie_wind_velocity.length > nodeId){
-                    var p = {
-                        mie_wind_velocity: self.data.mie_wind_velocity[nodeId],
-                        mie_datetime_start: self.data.mie_datetime_start[nodeId],
-                        mie_altitude_bottom: self.data.mie_altitude_bottom[nodeId],
-                        mie_datetime_stop: self.data.mie_datetime_stop[nodeId],
-                        mie_altitude_top: self.data.mie_altitude_top[nodeId],
-                    };
 
-                    var x1 = (self.xScale(p.mie_datetime_start));
-                    var y1 = (self.yScale(p.mie_altitude_bottom));
-                    var x2 = (self.xScale(p.mie_datetime_stop));
-                    var y2 = (self.yScale(p.mie_altitude_top));
+                var obj = {};
 
-                    tooltip.style('display', 'inline-block');
-                    tooltip.html(document.createElement('pre').innerHTML = JSON.stringify(p, null, 2));
-                    self.svg.append('circle')
-                        .attr('class', 'highlightItem')
-                        .attr('r', 5)
-                        .attr('cx', x1)
-                        .attr('cy', y1)
-                        .style('fill', function(d) { return 'rgba(0,0,200,1)';})
-                        .style('stroke', function(d) { return 'rgba(0,0,200,1)'; });
-
+                for (var key in nodeId) {
+                    obj[nodeId[key].id] = nodeId[key].val;
                 }
-                /*if(self.data.hasOwnProperty(nodeId)){
-                    var p = self.data[nodeId];
-                    var xItem = self.xScale(p[c_x]);
-                    var yItem = self.yScale(p[c_y]);
-                    tooltip.style('display', 'inline-block');
-                    tooltip.html(document.createElement('pre').innerHTML = JSON.stringify(p, null, 2));
-                    self.svg.append('circle')
-                        .attr('class', 'highlightItem')
-                        .attr('r', 5)
-                        .attr('cx', xItem)
-                        .attr('cy', yItem)
-                        .style('fill', function(d) { return 'rgba(0,0,200,1)';})
-                        .style('stroke', function(d) { return 'rgba(0,0,200,1)'; });
-                }*/
+
+                // Check if parameter has multi values for x and y
+                if (nodeId.hasOwnProperty('x1')){
+                    if(nodeId.hasOwnProperty('y1')){
+                        // Draw rectangle for selection
+                        // make sure all coords are available
+                        if(nodeId.hasOwnProperty('x2') && 
+                           nodeId.hasOwnProperty('y2')) {
+                            //Draw the Rectangle
+                             self.svg.append("rect")
+                                .attr('class', 'highlightItem')
+                                .attr("x", nodeId.x1.coord)
+                                .attr("y", nodeId.y2.coord)
+                                .attr("width", (nodeId.x2.coord - nodeId.x1.coord))
+                                .attr("height", Math.abs(nodeId.y1.coord - nodeId.y2.coord))
+                                .style('fill', 'rgba(0,0,0,0.2)')
+                                .style('stroke', 'rgba(0,0,200,1');
+                        }
+                    }
+                }
+
+                // Check if parameter has one value for x and y (points)
+                if (nodeId.hasOwnProperty('x')){
+                    if(nodeId.hasOwnProperty('y')){
+                        // Draw point for selection
+                        self.svg.append('circle')
+                            .attr('class', 'highlightItem')
+                            .attr('r', 5)
+                            .attr('cx', nodeId.x.coord)
+                            .attr('cy', nodeId.y.coord)
+                            .style('fill', 'rgba(0,0,0,0.2)')
+                            .style('stroke', 'rgba(0,0,200,1');
+                    }
+                }
+
+                tooltip.style('display', 'inline-block');
+                tooltip.html(document.createElement('pre').innerHTML = JSON.stringify(obj, null, 2));
+                
+ 
             }
         });
 
@@ -604,6 +612,8 @@ var graphly = (function() {
         var xAxRen = this.renderSettings.xAxis;
         var yAxRen = this.renderSettings.yAxis;
 
+        var c, nCol, par_properties;
+
         for (var xScaleItem=0; xScaleItem<xAxRen.length; xScaleItem++){
             for (var yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
 
@@ -618,17 +628,74 @@ var graphly = (function() {
                         var l = this.data[xAxRen[xScaleItem][0]].length;
                         for (var i=0; i<=l; i++) {
 
-                            var x1 = (this.xScale(this.data[xAxRen[xScaleItem][0]][i]));
-                            var x2 = (this.xScale(this.data[xAxRen[xScaleItem][1]][i]));
-                            var y1 = (this.yScale(this.data[yAxRen[yScaleItem][0]][i]));
-                            var y2 = (this.yScale(this.data[yAxRen[yScaleItem][1]][i]));
+                            var x1 = (this.xScale(
+                                this.data[xAxRen[xScaleItem][0]][i])
+                            );
+                            var x2 = (this.xScale(
+                                this.data[xAxRen[xScaleItem][1]][i])
+                            );
+                            var y1 = (this.yScale(
+                                this.data[yAxRen[yScaleItem][0]][i])
+                            );
+                            var y2 = (this.yScale(
+                                this.data[yAxRen[yScaleItem][1]][i])
+                            );
 
                             var idC = genColor();
-                            this.colourToNode[idC.join('-')] = i;
-                            var nCol = idC.map(function(c){return c/255;});
-                            idColors.pushArray(nCol);
 
-                            var c = this.plotter.getColor(this.data.mie_wind_velocity[i]).map(function(c){return c/255;});
+                            //this.colourToNode[idC.join('-')] = i;
+                            par_properties = {
+                                x1: {
+                                    val: this.data[xAxRen[xScaleItem][0]][i], 
+                                    coord: x1, id: xAxRen[xScaleItem][0]
+                                },
+                                x2: {val: this.data[xAxRen[xScaleItem][1]][i], 
+                                    coord: x2, id: xAxRen[xScaleItem][1]
+                                },
+                                y1: {val: this.data[yAxRen[yScaleItem][0]][i], 
+                                    coord: y1, id: yAxRen[yScaleItem][0]
+                                },
+                                y2: {val: this.data[yAxRen[yScaleItem][1]][i], 
+                                    coord: y2, id: yAxRen[yScaleItem][1]
+                                },
+                            };
+
+                            nCol = idC.map(function(c){return c/255;});
+                            //idColors.pushArray(nCol);
+
+                            // Check if color axis is being used
+                            // TODO: make sure multiple color scales can be used
+                            if(this.renderSettings.colorAxis[xScaleItem]){
+                                // Check if a colorscale is defined for this 
+                                // attribute, if not use default (plasma)
+                                var cs = 'viridis';
+                                var cA = this.dataSettings[
+                                    this.renderSettings.colorAxis[xScaleItem]
+                                ];
+                                if (cA && cA.hasOwnProperty('colorscale')){
+                                    cs = cA.colorscale;
+                                }
+                                if(cs !== this.plotter.name){
+                                    this.plotter.setColorScale(cs);
+                                }
+                                c = this.plotter.getColor(
+                                    this.data[this.renderSettings.colorAxis[xScaleItem]][i]
+                                ).map(function(c){return c/255;});
+
+                                par_properties.col = {
+                                    id: this.renderSettings.colorAxis[xScaleItem],
+                                    val: this.data[this.renderSettings.colorAxis[xScaleItem]][i]
+                                };
+
+                            } else {
+                                // If no color axis defined check for color 
+                                // defined in data settings
+                                // TODO: check for datasettings for yAxis parameter
+                                // TODO: auto generate identifier color if nothing is defined
+                                c = [0.1, 0.4,0.9, 1.0];
+                            }
+                            
+                            this.colourToNode[idC.join('-')] = par_properties;
 
                             this.batchDrawer.addRect(x1,y1,x2,y2, c[0], c[1], c[2], 1.0);
                             this.batchDrawerReference.addRect(x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0);
@@ -637,6 +704,62 @@ var graphly = (function() {
                         }
                     } else {
                         // TODO: Render a line
+                    }
+                } else {
+                    // xAxis has only one element
+                    // Check if yAxis has two elements
+                    if(yAxRen[yScaleItem].constructor === Array){
+                        // If yAxis has two elements draw lines in yAxis direction
+                        // TODO: drawing of lines
+                    } else {
+                        // Draw normal "points" for x,y coordinates using defined symbol
+                        var lp = this.data[xAxRen[xScaleItem]].length;
+                        for (var j=0;j<=lp; j++) {
+                            var x = (this.xScale(this.data[xAxRen[xScaleItem]][j]));
+                            var y = (this.yScale(this.data[yAxRen[yScaleItem]][j]));
+
+                            c = genColor();
+                            //this.colourToNode[c.join('-')] = j;
+
+                            par_properties = {
+                                x: {
+                                    val: x, id: xAxRen[xScaleItem], coord: x
+                                },
+                                y: {
+                                    val: y, id: yAxRen[yScaleItem], coord: y
+                                },
+                            };
+
+                            nCol = c.map(function(c){return c/255;});
+                            var parSett = this.dataSettings[yAxRen[yScaleItem]];
+
+                            if (parSett){
+
+                                 if(parSett.hasOwnProperty('lineConnect') &&
+                                    parSett.lineConnect && j>0){
+
+                                    this.batchDrawer.addLine(
+                                        p_x, p_y, x, y, 1, 0.258, 0.525, 0.956, 1.0
+                                    );
+                                }
+
+                                if(parSett.hasOwnProperty('symbol')){
+                                    if(parSett.symbol === 'dot'){
+                                        this.batchDrawer.addDot(
+                                            x, y, 10, 0.258, 0.525, 0.956,0.2
+                                        );
+                                        this.batchDrawerReference.addDot(
+                                            x, y, 10, nCol[0], nCol[1], nCol[2], -1.0
+                                        );
+                                    }
+                                }
+                            }
+
+                            this.colourToNode[c.join('-')] = par_properties;
+
+                            p_x = x;
+                            p_y = y;
+                        }
                     }
                 }
             }
