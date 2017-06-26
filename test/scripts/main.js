@@ -7,7 +7,7 @@
 
 var graph = new graphly.graph({
     el: '#graph',
-   /* renderSettings: {
+    /*renderSettings: {
         xAxis: [
             ['mie_datetime_start', 'mie_datetime_stop'],
             'mie_datetime_start'

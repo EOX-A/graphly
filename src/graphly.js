@@ -223,7 +223,7 @@ var graphly = (function() {
                         // Draw point for selection
                         self.svg.append('circle')
                             .attr('class', 'highlightItem')
-                            .attr('r', 5)
+                            .attr('r', 3)
                             .attr('cx', nodeId.x.coord)
                             .attr('cy', nodeId.y.coord)
                             .style('fill', 'rgba(0,0,0,0.2)')
@@ -746,10 +746,10 @@ var graphly = (function() {
                                 if(parSett.hasOwnProperty('symbol')){
                                     if(parSett.symbol === 'dot'){
                                         this.batchDrawer.addDot(
-                                            x, y, 10, 0.258, 0.525, 0.956,0.2
+                                            x, y, 6, 0.258, 0.525, 0.956,0.2
                                         );
                                         this.batchDrawerReference.addDot(
-                                            x, y, 10, nCol[0], nCol[1], nCol[2], -1.0
+                                            x, y, 6, nCol[0], nCol[1], nCol[2], -1.0
                                         );
                                     }
                                 }
