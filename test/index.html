@@ -13,11 +13,13 @@
         <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
         <!-- build:css(.tmp) styles/main.css -->
             <link rel="stylesheet" href="styles/main.css" />
+            <link rel="stylesheet" href="styles/graphly.css" />
         <!-- endbuild -->
 
         <link href='https://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>
 
         <!-- Include dependencies -->
+        <script src="components/msgpack-lite/dist/msgpack.min.js"></script>
         <script src="components/d3/d3.min.js"></script>
         <script src="components/papaparse/papaparse.min.js"></script>
         <script src="components/plotty/dist/plotty.min.js"></script>
@@ -28,10 +30,33 @@
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
         <div> <h1>graphly.js</h1> </div>
+
+
+
+        <select name="datafiles" id="datafiles" style="position:absolute;right:100px;top:50px;">
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP" selected>ALD_U_N_2B_20151001T001124</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T091503_20151001T104518_0001.MSP">ALD_U_N_2B_20151001T091503</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T181657_20151001T195000_0001.MSP">ALD_U_N_2B_20151001T181657</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T014427_20151001T031430_0001.MSP">ALD_U_N_2B_20151001T014427</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T104454_20151001T121445_0001.MSP">ALD_U_N_2B_20151001T104454</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T194948_20151001T203715_0001.MSP">ALD_U_N_2B_20151001T194948</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T031418_20151001T044445_0001.MSP">ALD_U_N_2B_20151001T031418</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T121433_20151001T134436_0001.MSP">ALD_U_N_2B_20151001T121433</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T203651_20151002T001909_0001.MSP">ALD_U_N_2B_20151001T203651</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T044433_20151001T061512_0001.MSP">ALD_U_N_2B_20151001T044433</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T134412_20151001T151503_0001.MSP">ALD_U_N_2B_20151001T134412</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151002T001857_20151002T015536_0001.MSP">ALD_U_N_2B_20151002T001857</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T061448_20151001T074512_0001.MSP">ALD_U_N_2B_20151001T061448</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T151451_20151001T164530_0001.MSP">ALD_U_N_2B_20151001T151451</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T074500_20151001T091515_0001.MSP">ALD_U_N_2B_20151001T074500</option>
+          <option value="data/AE_OPER_ALD_U_N_2B_20151001T164518_20151001T181709_0001.MSP">ALD_U_N_2B_20151001T164518</option>
+        </select>
+
         <div id="graph" style="height: 90%; width: 100%;"></div>
         <!-- build:js scripts/graphly.min.js -->
         <script src="BatchDraw.js"></script>
         <script src="graphly.js"></script>
+
         <!-- endbuild -->
         
         <script src="scripts/main.js"></script>
