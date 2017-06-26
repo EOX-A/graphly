@@ -6,7 +6,6 @@
  */
 
 
-
 var itemAmount = 20000;
 
 Array.prototype.pushArray = function() {
@@ -28,6 +27,8 @@ var graphly = (function() {
             (!(prop in proto) || proto[prop] !== obj[prop]);
     }
 
+    // TODO: move helpers to own file
+
     function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
     // Function to create new colours for the picking.
@@ -43,6 +44,18 @@ var graphly = (function() {
         }
         return ret;
     }
+
+    var timeFormat = d3.time.format.utc.multi([
+        [".%L", function(d) { return d.getUTCMilliseconds(); }],
+        [":%S", function(d) { return d.getUTCSeconds(); }],
+        ["%H:%M", function(d) { return d.getUTCMinutes(); }],
+        ["%Y-%d-%mT%H:%M", function(d) { return d.getUTCHours(); }],
+        ["%a %d", function(d) { return d.getUTCDay() && d.getDate() != 1; }],
+        ["%b %d", function(d) { return d.getUTCDate() != 1; }],
+        ["%Y-%d-%m", function(d) { return d.getUTCMonth(); }],
+        ["%Y", function() { return true; }]
+    ]);
+
 
  
     /**
@@ -327,6 +340,31 @@ var graphly = (function() {
 
     graph.prototype.loadData = function (data){
         this.data = data;
+
+        // Check for special formatting of data
+        var ds = this.dataSettings;
+        for (var key in ds) {
+            if (ds[key].hasOwnProperty('scaleFormat')){
+                if (ds[key].scaleFormat === 'time'){
+                    var format = defaultFor(ds[key].timeFormat, 'default');
+
+                    switch(format){
+                        case 'default':
+                        for (var i = 0; i < this.data[key].length; i++) {
+                            this.data[key][i] = new Date(this.data[key][i]);
+                        }
+                        break;
+                        case 'MJD2000_S':
+                        for (var i = 0; i < this.data[key].length; i++) {
+                            var d = new Date('2000-01-01');
+                            d.setSeconds(d.getSeconds() + this.data[key][i]);
+                            this.data[key][i] = d;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
         this.initAxis();
         this.renderData();
     };
@@ -389,8 +427,27 @@ var graphly = (function() {
         // TODO: Allow multiple domains!
         this.plotter.setDomain(domain);
 
-        this.xScale = d3.scale.linear()
-            .domain([xExtent[0] - xRange*0.1, xExtent[1] + xRange*0.1])
+
+        var xScaleType, yScaleType;
+        // TODO: how to handle multiple different scale types
+        // For now just check first object of scale
+        var xTimeScale = false;
+        if (this.dataSettings.hasOwnProperty(xSelection[0])){
+            if (this.dataSettings[xSelection[0]].hasOwnProperty('scaleFormat')){
+                if (this.dataSettings[xSelection[0]].scaleFormat === 'time'){
+                    xTimeScale = true;
+                }
+            }
+        }
+
+        if(xTimeScale){
+            xScaleType = d3.time.scale.utc();
+        } else {
+            xScaleType = d3.scale.linear();
+        }
+
+        this.xScale = xScaleType
+            .domain([xExtent[0], xExtent[1]])
             .range([0, this.width]);
 
         this.yScale = d3.scale.linear()
@@ -403,6 +460,10 @@ var graphly = (function() {
             .outerTickSize(0)
             .tickPadding(10)
             .orient('bottom');
+
+        if (xTimeScale){
+            this.xAxis.tickFormat(timeFormat);
+        }
 
         this.yAxis = d3.svg.axis()
             .scale(this.yScale)

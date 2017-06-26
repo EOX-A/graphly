@@ -61,6 +61,22 @@ var graph = new graphly.graph({
             uom: 'cm/s',
             colorscale: 'viridis'
             //outline: false
+        },
+        rayleigh_datetime_start: {
+            scaleFormat: 'time',
+            timeFormat: 'MJD2000_S'
+        },
+        rayleigh_datetime_stop: {
+            scaleFormat: 'time',
+            timeFormat: 'MJD2000_S'
+        },
+        mie_datetime_start: {
+            scaleFormat: 'time',
+            timeFormat: 'MJD2000_S'
+        },
+        mie_datetime_stop: {
+            scaleFormat: 'time',
+            timeFormat: 'MJD2000_S'
         }
     }
 });
