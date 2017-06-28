@@ -6,7 +6,7 @@
  */
 
 
-var itemAmount = 20000;
+var itemAmount = 180000;
 
 Array.prototype.pushArray = function() {
     var toPush = this.concat.apply([], arguments);
@@ -30,6 +30,15 @@ var graphly = (function() {
     // TODO: move helpers to own file
 
     function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
+
+    function hexToRgb(hex) {
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? [
+            parseInt(result[1], 16),
+            parseInt(result[2], 16),
+            parseInt(result[3], 16)
+        ] : null;
+    }
 
     // Function to create new colours for the picking.
     this.nextCol = 1;
@@ -330,9 +339,18 @@ var graphly = (function() {
             header: true,
             dynamicTyping: true,
             complete: function(results) {
-                self.data = results.data;
-                self.initAxis();
-                self.renderData();
+                var data = {};
+                for (var i = 0; i < results.data.length; i++) {
+                    var d = results.data[i];
+                    for (var prop in d) {
+                        if (data.hasOwnProperty(prop)){
+                            data[prop].push(d[prop]);
+                        }else{
+                            data[prop] = [d[prop]];
+                        }
+                    }
+                }
+                self.loadData(data);
             }
         });
 
@@ -415,6 +433,19 @@ var graphly = (function() {
         var domain;
         if(this.renderSettings.hasOwnProperty('colorAxis')){
             var cAxis = this.renderSettings.colorAxis;
+            // Check to see if linear colorscale or ordinal colorscale (e.g. IDs)
+            if (this.dataSettings.hasOwnProperty(cAxis)){
+                var ds = this.dataSettings[cAxis];
+                if(
+                    ds.hasOwnProperty('scaleType') && 
+                    ds.scaleType === 'ordinal' &&
+                    ds.hasOwnProperty('categories') ){
+
+                    ds.colorscaleFunction = d3.scale.ordinal()
+                        .range(d3.scale.category10().range().map(hexToRgb))
+                        .domain(ds.categories);
+                }
+            }
             for (var ca = cAxis.length - 1; ca >= 0; ca--) {
                 if(cAxis[ca]){
                     domain = d3.extent(
@@ -425,7 +456,9 @@ var graphly = (function() {
         }
 
         // TODO: Allow multiple domains!
-        this.plotter.setDomain(domain);
+        if(domain){
+            this.plotter.setDomain(domain);
+        }
 
 
         var xScaleType, yScaleType;
@@ -614,7 +647,10 @@ var graphly = (function() {
         { 
             if(prev_point){
                 var next_point = [x + cx, y + cy];
-                renderer.addLine(prev_point[0], prev_point[1], next_point[0], next_point[1], 5, 0.258, 0.525, 0.956, 1.0);
+                renderer.addLine(
+                    prev_point[0], prev_point[1], next_point[0],
+                    next_point[1], 5, 0.258, 0.525, 0.956, 1.0
+                );
                 prev_point = next_point;
             }else{
                 prev_point = [x + cx, y + cy];
@@ -649,27 +685,6 @@ var graphly = (function() {
         this.nextCol = 1;
         var p_x, p_y;
 
-        //var l =  this.data.mie_wind_velocity.length - 1;
-        /*for (var i=0; i<=l; i++) {
-
-            var x = (this.xScale(this.data[i][c_x]));
-            var y = (this.yScale(this.data[i][c_y]));
-
-            var c = genColor();
-            this.colourToNode[c.join('-')] = i;
-            var nCol = c.map(function(c){return c/255;});
-            idColors.pushArray(nCol);
-
-            if(i>0){
-                this.batchDrawer.addLine(p_x, p_y, x, y, 1, 0.258, 0.525, 0.956, 1.0);
-            }
-
-            this.batchDrawer.addDot(x, y, 10, 0.258, 0.525, 0.956,0.2);
-            this.batchDrawerReference.addDot(x, y, 10, nCol[0], nCol[1], nCol[2], -1.0);
-
-            p_x = x;
-            p_y = y;
-        }*/
         var xAxRen = this.renderSettings.xAxis;
         var yAxRen = this.renderSettings.yAxis;
 
@@ -688,7 +703,6 @@ var graphly = (function() {
                         // should we compare changes and look for errors in config?
                         var l = this.data[xAxRen[xScaleItem][0]].length;
                         for (var i=0; i<=l; i++) {
-
                             var x1 = (this.xScale(
                                 this.data[xAxRen[xScaleItem][0]][i])
                             );
@@ -722,6 +736,7 @@ var graphly = (function() {
                             };
 
                             nCol = idC.map(function(c){return c/255;});
+                            var cA;
                             //idColors.pushArray(nCol);
 
                             // Check if color axis is being used
@@ -730,7 +745,7 @@ var graphly = (function() {
                                 // Check if a colorscale is defined for this 
                                 // attribute, if not use default (plasma)
                                 var cs = 'viridis';
-                                var cA = this.dataSettings[
+                                cA = this.dataSettings[
                                     this.renderSettings.colorAxis[xScaleItem]
                                 ];
                                 if (cA && cA.hasOwnProperty('colorscale')){
@@ -753,7 +768,17 @@ var graphly = (function() {
                                 // defined in data settings
                                 // TODO: check for datasettings for yAxis parameter
                                 // TODO: auto generate identifier color if nothing is defined
-                                c = [0.1, 0.4,0.9, 1.0];
+                                cA = this.dataSettings[
+                                    this.renderSettings.colorAxis[xScaleItem]
+                                ];
+                                if (cA && cA.hasOwnProperty('colorscaleFunction')){
+                                    c = cA.colorscaleFunction(
+                                        this.data[this.renderSettings.colorAxis[xScaleItem]][i]
+                                    );
+                                    c.map(function(c){return c/255;});
+                                }else{
+                                    c = [0.1, 0.4,0.9, 1.0];
+                                }
                             }
                             
                             this.colourToNode[idC.join('-')] = par_properties;
@@ -779,6 +804,19 @@ var graphly = (function() {
                             var x = (this.xScale(this.data[xAxRen[xScaleItem]][j]));
                             var y = (this.yScale(this.data[yAxRen[yScaleItem]][j]));
 
+                            var rC;
+                            var colorParam = this.renderSettings.colorAxis[xScaleItem];
+                            cA = this.dataSettings[colorParam];
+
+                            if (cA && cA.hasOwnProperty('colorscaleFunction')){
+                                rC = cA.colorscaleFunction(
+                                    this.data[colorParam][j]
+                                );
+                                rC = rC.map(function(c){return c/255;});
+                            }else{
+                                rC = [0.258, 0.525, 0.956];
+                            }
+
                             c = genColor();
                             //this.colourToNode[c.join('-')] = j;
 
@@ -799,15 +837,26 @@ var graphly = (function() {
                                  if(parSett.hasOwnProperty('lineConnect') &&
                                     parSett.lineConnect && j>0){
 
-                                    this.batchDrawer.addLine(
-                                        p_x, p_y, x, y, 1, 0.258, 0.525, 0.956, 1.0
-                                    );
+                                    // Check if using ordinal scale (multiple
+                                    // parameters), do not connect if different
+
+                                    if(!(cA.hasOwnProperty('scaleType') && 
+                                        cA.scaleType === 'ordinal' &&
+                                        this.data[colorParam][j-1] !== 
+                                        this.data[colorParam][j])
+                                        ){
+                                            this.batchDrawer.addLine(
+                                            p_x, p_y, x, y, 1, rC[0], rC[1], rC[2], 0.8
+                                        );
+                                    }
+
+                                    
                                 }
 
                                 if(parSett.hasOwnProperty('symbol')){
                                     if(parSett.symbol === 'dot'){
                                         this.batchDrawer.addDot(
-                                            x, y, 6, 0.258, 0.525, 0.956,0.2
+                                            x, y, 6, rC[0], rC[1], rC[2], 0.5
                                         );
                                         this.batchDrawerReference.addDot(
                                             x, y, 6, nCol[0], nCol[1], nCol[2], -1.0

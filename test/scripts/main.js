@@ -5,9 +5,9 @@
 
 
 
-var graph = new graphly.graph({
+/*var graph = new graphly.graph({
     el: '#graph',
-    /*renderSettings: {
+    renderSettings: {
         xAxis: [
             ['mie_datetime_start', 'mie_datetime_stop'],
             'mie_datetime_start'
@@ -22,7 +22,7 @@ var graph = new graphly.graph({
             null
         ],
 
-    },*/
+    },
     renderSettings: {
         xAxis: [
             ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
@@ -79,20 +79,47 @@ var graph = new graphly.graph({
             timeFormat: 'MJD2000_S'
         }
     }
+});*/
+
+var graphCSV = new graphly.graph({
+    el: '#graph',
+    renderSettings: {
+        xAxis: ['Timestamp'],
+        yAxis: ['T_elec'],
+        colorAxis: [ 'id' ],
+
+    },
+    dataSettings: {
+        T_elec: {
+            symbol: 'dot',
+            uom: 'n',
+            lineConnect: true,
+            color: [0.2, 0.2, 1.0, 0.8]
+        },
+        Timestamp: {
+            scaleFormat: 'time'
+        },
+        id: {
+            scaleType: 'ordinal',
+            categories: ['Alpha', 'Bravo']
+        },
+    }
 });
 
-//graph.loadCSV('aeolus_test.csv');
+graphCSV.loadCSV('testdata3.csv');
 
 var xhr = new XMLHttpRequest();
+
 xhr.open('GET', 'data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP', true);
 xhr.responseType = 'arraybuffer';
 
 xhr.onload = function(e) {
-    var tmp = new Uint8Array(this.response)
+    var tmp = new Uint8Array(this.response);
     var data = msgpack.decode(tmp);
     graph.loadData(data);
 };
-xhr.send();
+
+//xhr.send();
 
 
 d3.select('#datafiles').on('change', function(e){
