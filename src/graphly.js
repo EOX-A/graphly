@@ -6,67 +6,13 @@
  */
 
 
-var itemAmount = 180000;
 
-Array.prototype.pushArray = function() {
-    var toPush = this.concat.apply([], arguments);
-    for (var i = 0, len = toPush.length; i < len; ++i) {
-        this.push(toPush[i]);
-    }
-};
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
 
 var graphly = (function() {
 
-
-    function hasOwnProperty(obj, prop) {
-        var proto = obj.__proto__ || obj.constructor.prototype; // jshint ignore:line
-        return (prop in obj) &&
-            (!(prop in proto) || proto[prop] !== obj[prop]);
-    }
-
-    // TODO: move helpers to own file
-
-    function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
-
-    function hexToRgb(hex) {
-        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? [
-            parseInt(result[1], 16),
-            parseInt(result[2], 16),
-            parseInt(result[3], 16)
-        ] : null;
-    }
-
-    // Function to create new colours for the picking.
-    this.nextCol = 1;
-    function genColor(){ 
-      
-        var ret = [];
-        if(this.nextCol < 16777215){ 
-            ret.push(this.nextCol & 0xff); // R 
-            ret.push((this.nextCol & 0xff00) >> 8); // G 
-            ret.push((this.nextCol & 0xff0000) >> 16); // B
-            this.nextCol += 1; 
-        }
-        return ret;
-    }
-
-    var timeFormat = d3.time.format.utc.multi([
-        [".%L", function(d) { return d.getUTCMilliseconds(); }],
-        [":%S", function(d) { return d.getUTCSeconds(); }],
-        ["%H:%M", function(d) { return d.getUTCMinutes(); }],
-        ["%Y-%d-%mT%H:%M", function(d) { return d.getUTCHours(); }],
-        ["%a %d", function(d) { return d.getUTCDay() && d.getDate() != 1; }],
-        ["%b %d", function(d) { return d.getUTCDate() != 1; }],
-        ["%Y-%d-%m", function(d) { return d.getUTCMonth(); }],
-        ["%Y", function() { return true; }]
-    ]);
-
-
- 
     /**
     * @lends graphly
     */
@@ -91,7 +37,7 @@ var graphly = (function() {
         this.el = d3.select(options.el);
         this.margin = defaultFor(
             options.margin,
-            {top: 10, left: 90, bottom: 30, right: 10}
+            {top: 10, left: 90, bottom: 50, right: 10}
         );
 
         // TOOO: How could some defaults be guessed for rendering?
@@ -112,11 +58,8 @@ var graphly = (function() {
 
         this.plotter = new plotty.plot({
             canvas: document.createElement('canvas'),
-            domain: [0,1]/*,
-            colorScale: 'divergent1'*/
+            domain: [0,1]
         });
-
-        
 
 
         // move tooltip
@@ -147,14 +90,10 @@ var graphly = (function() {
               'px' + ',' + (this.margin.top + 1.0) + 'px' + ')');
 
 
-        // Set parameters (these are the default values used when that option is omitted):
+        // Set parameters
         var params = {
-            maxLines: itemAmount, // used for preallocation
-            maxDots: itemAmount,
-            maxRects: itemAmount,
             forceGL1: false, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
-            //useNDC: false, // Use normalized device coordinates [0, 1] instead of pixel coordinates,
             coordinateSystem: 'pixels',
             contextParams: {
                 preserveDrawingBuffer: true
@@ -179,14 +118,17 @@ var graphly = (function() {
         params.contextParams = {
             antialias: false
         };
-        this.batchDrawerReference = new BatchDrawer(this.referenceCanvas.node(), params);
+        this.batchDrawerReference = new BatchDrawer(
+            this.referenceCanvas.node(), params
+        );
         this.referenceContext = this.batchDrawerReference.getContext();
 
-        this.svg = this.el.append('svg')
+        this.svg = //this.el.append('svg')
+        this.el.insert('svg',':first-child')
             .attr('width', this.width + this.margin.left + this.margin.right)
             .attr('height', this.height + this.margin.top + this.margin.bottom)
             .style('position', 'absolute')
-            .style('z-index', 10)
+            .style('z-index', 0)
             .style('pointer-events', 'none')
             .append('g')
             .attr('transform', 'translate(' + (this.margin.left+1) + ',' +
@@ -200,10 +142,12 @@ var graphly = (function() {
             var mouseX = d3.event.offsetX; 
             var mouseY = d3.event.offsetY;
             // Pick the colour from the mouse position. 
-            //var col = self.referenceContext.getImageData(mouseX, mouseY, 1, 1).data;
             var gl = self.referenceContext;
             var pixels = new Uint8Array(4);
-            gl.readPixels(mouseX, (this.height-mouseY), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels); 
+            gl.readPixels(
+                mouseX, (this.height-mouseY),
+                1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels
+            ); 
             var col = [pixels[0], pixels[1], pixels[2]];
             var colKey = col.join('-');
             // Get the data from our map! 
@@ -212,13 +156,10 @@ var graphly = (function() {
             tooltip.style('display', 'none');
 
             if(nodeId){
-
                 var obj = {};
-
                 for (var key in nodeId) {
                     obj[nodeId[key].id] = nodeId[key].val;
                 }
-
                 // Check if parameter has multi values for x and y
                 if (nodeId.hasOwnProperty('x1')){
                     if(nodeId.hasOwnProperty('y1')){
@@ -227,12 +168,17 @@ var graphly = (function() {
                         if(nodeId.hasOwnProperty('x2') && 
                            nodeId.hasOwnProperty('y2')) {
                             //Draw the Rectangle
-                             self.svg.append("rect")
+                             self.svg.append('rect')
                                 .attr('class', 'highlightItem')
-                                .attr("x", nodeId.x1.coord)
-                                .attr("y", nodeId.y2.coord)
-                                .attr("width", (nodeId.x2.coord - nodeId.x1.coord))
-                                .attr("height", Math.abs(nodeId.y1.coord - nodeId.y2.coord))
+                                .attr('x', nodeId.x1.coord)
+                                .attr('y', nodeId.y2.coord)
+                                .attr(
+                                    'width', (nodeId.x2.coord - nodeId.x1.coord)
+                                )
+                                .attr(
+                                    'height', 
+                                    Math.abs(nodeId.y1.coord - nodeId.y2.coord)
+                                )
                                 .style('fill', 'rgba(0,0,0,0.2)')
                                 .style('stroke', 'rgba(0,0,200,1');
                         }
@@ -254,26 +200,12 @@ var graphly = (function() {
                 }
 
                 tooltip.style('display', 'inline-block');
-                tooltip.html(document.createElement('pre').innerHTML = JSON.stringify(obj, null, 2));
-                
- 
+                tooltip.html(
+                    document.createElement('pre').innerHTML = 
+                        JSON.stringify(obj, null, 2)
+                );
             }
         });
-
-        // generate random dataset
-        /*var numberPoints = itemAmount;
-        var randomX = d3.random.normal(0, 30);
-        var randomY = d3.random.normal(0, 30);
-
-        this.data = d3.range(numberPoints).map(function(d, i) {
-            return {
-                x: randomX(),
-                y: randomY(),
-                i: i, // save the index of the point as a property, this is useful
-                selected: false
-            };
-        });*/
-
 
     };
 
@@ -309,7 +241,13 @@ var graphly = (function() {
             .attr('fill', 'red')
             .style('visibility', 'hidden')
             .attr('pointer-events', 'all');
-    };
+
+        // Add rectangle as 'outline' for plot
+        this.svg.append('rect')
+            .attr('id', 'rectangleOutline')
+            .attr('width', this.width)
+            .attr('height', this.height);
+        };
 
     // Returns a function, that, as long as it continues to be invoked, will not
     // be triggered. The function will be called after it stops being called for
@@ -356,8 +294,27 @@ var graphly = (function() {
 
     };
 
+    graph.prototype.updateBuffers = function (drawer, amount){
+        drawer.maxLines = amount;
+        drawer.maxDots = amount;
+        drawer.maxRects = amount;
+        drawer._initBuffers();
+    };
+
     graph.prototype.loadData = function (data){
+        
         this.data = data;
+        // Check for longest array and set buffer size accordingly 
+        var max = 0;
+        for (var prop in this.data) {
+          if(max < this.data[prop].length){
+            max = this.data[prop].length;
+          }
+        }
+
+        this.updateBuffers(this.batchDrawer, ++max);
+        this.updateBuffers(this.batchDrawerReference, ++max);
+
 
         // Check for special formatting of data
         var ds = this.dataSettings;
@@ -373,10 +330,10 @@ var graphly = (function() {
                         }
                         break;
                         case 'MJD2000_S':
-                        for (var i = 0; i < this.data[key].length; i++) {
+                        for (var j = 0; j < this.data[key].length; j++) {
                             var d = new Date('2000-01-01');
-                            d.setSeconds(d.getSeconds() + this.data[key][i]);
-                            this.data[key][i] = d;
+                            d.setSeconds(d.getSeconds() + this.data[key][j]);
+                            this.data[key][j] = d;
                         }
                         break;
                     }
@@ -389,12 +346,9 @@ var graphly = (function() {
 
     graph.prototype.initAxis = function (){
 
-        this.svg.selectAll("*").remove();
-        this.createHelperObjects();
-
+        this.svg.selectAll('*').remove();
 
         var xExtent, yExtent;
-
         var xSelection = [].concat.apply([], this.renderSettings.xAxis);
         var ySelection = [].concat.apply([], this.renderSettings.yAxis);
 
@@ -489,10 +443,9 @@ var graphly = (function() {
 
         this.xAxis = d3.svg.axis()
             .scale(this.xScale)
-            .innerTickSize(-this.height)
-            .outerTickSize(0)
-            .tickPadding(10)
-            .orient('bottom');
+            .orient('bottom')
+            .ticks(Math.max(this.width/120,2))
+            .tickSize(-this.height);
 
         if (xTimeScale){
             this.xAxis.tickFormat(timeFormat);
@@ -505,7 +458,7 @@ var graphly = (function() {
             .orient('left');
 
         this.xAxisSvg = this.svg.append('g')
-            .attr('class', 'axis')
+            .attr('class', 'x axis')
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
 
@@ -535,11 +488,14 @@ var graphly = (function() {
             this.xyzoom.scale()*1.1
         ]);*/
 
+        this.createHelperObjects();
+
         this.renderCanvas.call(this.xyzoom);
         d3.select('#zoomXBox').call(this.xzoom);
         d3.select('#zoomYBox').call(this.yzoom);
 
     };
+
 
     graph.prototype.zoom_update = function() {
         this.xyzoom = d3.behavior.zoom()
@@ -571,6 +527,24 @@ var graphly = (function() {
 
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
+
+        var dateFormat = d3.time.format.utc('%Y-%m-%dT%H:%M:%S');
+
+        d3.selectAll('.start-date').remove();
+        d3.selectAll('.x.axis>.tick:first-of-type')
+            .append('text')
+            .attr('dy', '42px')
+            .attr('dx', '-64px')
+            .attr('class', 'start-date')
+            .text(function(d){return dateFormat(d);});
+
+        d3.selectAll('.end-date').remove();
+        d3.selectAll('.x.axis>.tick:nth-last-of-type(2)')
+            .append('text')
+            .attr('dy', '42px')
+            .attr('dx', '-64px')
+            .attr('class', 'end-date')
+            .text(function(d){return dateFormat(d);});
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
@@ -682,13 +656,13 @@ var graphly = (function() {
         var radius = 5;
 
         // reset color count
-        this.nextCol = 1;
+        resetColor();
         var p_x, p_y;
 
         var xAxRen = this.renderSettings.xAxis;
         var yAxRen = this.renderSettings.yAxis;
 
-        var c, nCol, par_properties;
+        var c, nCol, par_properties, cA;
 
         for (var xScaleItem=0; xScaleItem<xAxRen.length; xScaleItem++){
             for (var yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
@@ -736,7 +710,6 @@ var graphly = (function() {
                             };
 
                             nCol = idC.map(function(c){return c/255;});
-                            var cA;
                             //idColors.pushArray(nCol);
 
                             // Check if color axis is being used
@@ -798,7 +771,7 @@ var graphly = (function() {
                         // If yAxis has two elements draw lines in yAxis direction
                         // TODO: drawing of lines
                     } else {
-                        // Draw normal "points" for x,y coordinates using defined symbol
+                        // Draw normal 'points' for x,y coordinates using defined symbol
                         var lp = this.data[xAxRen[xScaleItem]].length;
                         for (var j=0;j<=lp; j++) {
                             var x = (this.xScale(this.data[xAxRen[xScaleItem]][j]));
@@ -818,7 +791,6 @@ var graphly = (function() {
                             }
 
                             c = genColor();
-                            //this.colourToNode[c.join('-')] = j;
 
                             par_properties = {
                                 x: {
@@ -840,17 +812,22 @@ var graphly = (function() {
                                     // Check if using ordinal scale (multiple
                                     // parameters), do not connect if different
 
-                                    if(!(cA.hasOwnProperty('scaleType') && 
-                                        cA.scaleType === 'ordinal' &&
-                                        this.data[colorParam][j-1] !== 
-                                        this.data[colorParam][j])
-                                        ){
+                                    if(cA && !(cA.hasOwnProperty('scaleType') && 
+                                        cA.scaleType === 'ordinal')){
+                                        if(this.data[colorParam][j-1] !== 
+                                            this.data[colorParam][j])
+                                        {
                                             this.batchDrawer.addLine(
-                                            p_x, p_y, x, y, 1, rC[0], rC[1], rC[2], 0.8
+                                                p_x, p_y, x, y, 1, 
+                                                rC[0], rC[1], rC[2], 0.8
+                                            );
+                                        } 
+                                    }else{
+                                        this.batchDrawer.addLine(
+                                            p_x, p_y, x, y, 1, 
+                                            rC[0], rC[1], rC[2], 0.8
                                         );
                                     }
-
-                                    
                                 }
 
                                 if(parSett.hasOwnProperty('symbol')){

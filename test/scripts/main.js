@@ -106,7 +106,7 @@ var graphCSV = new graphly.graph({
     }
 });
 
-graphCSV.loadCSV('testdata3.csv');
+graphCSV.loadCSV('testdata2.csv');
 
 var xhr = new XMLHttpRequest();
 
