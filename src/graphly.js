@@ -448,7 +448,7 @@ var graphly = (function() {
             .tickSize(-this.height);
 
         if (xTimeScale){
-            this.xAxis.tickFormat(timeFormat);
+            //this.xAxis.tickFormat(timeFormat);
         }
 
         this.yAxis = d3.svg.axis()
@@ -456,6 +456,49 @@ var graphly = (function() {
             .innerTickSize(-this.width)
             .outerTickSize(0)
             .orient('left');
+
+
+        ////////////////////
+
+
+        this.xAxisYear = d3.svg.axis()
+            .scale(this.xScale)
+            .orient('bottom')
+            .ticks(d3.time.years.utc, 1)//should display 1 year intervals
+            .tickFormat(d3.time.format.utc('%Y'))//%Y-for year boundaries, such as 2011
+            .tickSubdivide(12);//subdivide 12 months in a year
+
+        this.xAxisYearSvg = this.svg.append('g')
+            .attr('class', 'x axis')
+            .attr('transform', 'translate(0,' + (this.height+25) + ')')
+            .call(this.xAxisYear);
+
+
+        this.xAxisMonth = d3.svg.axis()
+            .scale(this.xScale)
+            .orient('bottom')
+            .ticks(d3.time.months.utc, 1)//should display 1 year intervals
+            .tickFormat(d3.time.format.utc('%b'));
+            /*.tickSubdivide(12);*///subdivide 12 months in a year
+
+        this.xAxisMonthSvg = this.svg.append('g')
+            .attr('class', 'x axis')
+            .attr('transform', 'translate(0,' + (this.height+15) + ')')
+            .call(this.xAxisMonth);
+
+
+        this.xAxisDay = d3.svg.axis()
+            .scale(this.xScale)
+            .orient('bottom')
+            .ticks(d3.time.days.utc, 1)//should display 1 year intervals
+            .tickFormat(d3.time.format.utc('%d'));
+
+        this.xAxisDaySvg = this.svg.append('g')
+            .attr('class', 'x axis')
+            .attr('transform', 'translate(0,' + (this.height+5) + ')')
+            .call(this.xAxisDay);
+
+        /////////////////////
 
         this.xAxisSvg = this.svg.append('g')
             .attr('class', 'x axis')
@@ -528,7 +571,21 @@ var graphly = (function() {
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
 
-        var dateFormat = d3.time.format.utc('%Y-%m-%dT%H:%M:%S');
+        var d = this.xScale.domain();
+        var timeDiff = Math.abs(d[1].getTime() - d[0].getTime());
+        var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)); 
+        if(diffDays>30){
+            var jump = Math.ceil(diffDays/30);
+            this.xAxisDay.ticks(d3.time.days.utc, jump);
+        }
+        
+        this.xAxisYearSvg.call(this.xAxisYear);
+        this.xAxisMonthSvg.call(this.xAxisMonth);
+        this.xAxisDaySvg.call(this.xAxisDay);
+        
+        
+
+        /*var dateFormat = d3.time.format.utc('%Y-%m-%dT%H:%M:%S');
 
         d3.selectAll('.start-date').remove();
         d3.selectAll('.x.axis>.tick:first-of-type')
@@ -544,7 +601,7 @@ var graphly = (function() {
             .attr('dy', '42px')
             .attr('dx', '-64px')
             .attr('class', 'end-date')
-            .text(function(d){return dateFormat(d);});
+            .text(function(d){return dateFormat(d);});*/
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
