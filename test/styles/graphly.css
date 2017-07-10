@@ -22,6 +22,30 @@ svg {
     stroke-dasharray: 2 
 }
 
+.yearaxis {
+    fill: none;
+    stroke: red;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.yearaxis text {
+    stroke: none;
+    fill: red;
+}
+
+.monthaxis {
+    fill: none;
+    stroke: blue;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.monthaxis text {
+    stroke: none;
+    fill: blue;
+}
+
 #rectangleOutline{
     stroke: #ccc;
     stroke-width: 1;
@@ -52,8 +76,9 @@ svg {
     transform: translate(16px, 14px);
     font-size: 14px;
 }
-.year{
+
+/*.year{
     font-weight: bold;
     transform: translate(16px, 16px);
     font-size: 14px;
-}
+}*/

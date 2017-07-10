@@ -466,11 +466,12 @@ var graphly = (function() {
             .orient('bottom')
             .ticks(d3.time.years.utc, 1)//should display 1 year intervals
             .tickFormat(d3.time.format.utc('%Y'))//%Y-for year boundaries, such as 2011
-            .tickSubdivide(12);//subdivide 12 months in a year
+            .tickSubdivide(12)//subdivide 12 months in a year
+            .tickSize(10);
 
         this.xAxisYearSvg = this.svg.append('g')
-            .attr('class', 'x axis')
-            .attr('transform', 'translate(0,' + (this.height+25) + ')')
+            .attr('class', 'x yearaxis')
+            .attr('transform', 'translate(0,' + (this.height+35) + ')')
             .call(this.xAxisYear);
 
 
@@ -478,14 +479,13 @@ var graphly = (function() {
             .scale(this.xScale)
             .orient('bottom')
             .ticks(d3.time.months.utc, 1)//should display 1 year intervals
-            .tickFormat(d3.time.format.utc('%b'));
-            /*.tickSubdivide(12);*///subdivide 12 months in a year
+            .tickFormat(d3.time.format.utc('%b'))
+            .tickSize(10);
 
         this.xAxisMonthSvg = this.svg.append('g')
-            .attr('class', 'x axis')
-            .attr('transform', 'translate(0,' + (this.height+15) + ')')
+            .attr('class', 'x monthaxis')
+            .attr('transform', 'translate(0,' + (this.height+20) + ')')
             .call(this.xAxisMonth);
-
 
         this.xAxisDay = d3.svg.axis()
             .scale(this.xScale)
@@ -495,7 +495,7 @@ var graphly = (function() {
 
         this.xAxisDaySvg = this.svg.append('g')
             .attr('class', 'x axis')
-            .attr('transform', 'translate(0,' + (this.height+5) + ')')
+            .attr('transform', 'translate(0,' + (this.height) + ')')
             .call(this.xAxisDay);
 
         /////////////////////
@@ -504,6 +504,8 @@ var graphly = (function() {
             .attr('class', 'x axis')
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
+
+        this.xAxisSvg.selectAll("text").remove();
 
         this.yAxisSvg = this.svg.append('g')
             .attr('class', 'axis')
@@ -537,6 +539,8 @@ var graphly = (function() {
         d3.select('#zoomXBox').call(this.xzoom);
         d3.select('#zoomYBox').call(this.yzoom);
 
+        this.updateTimeScales();
+
     };
 
 
@@ -566,7 +570,139 @@ var graphly = (function() {
         this.onZoom();
     }, 250);
 
+    graph.prototype.updateTimeScales = function(){
+
+        var that = this;
+
+
+        this.xAxisSvg.selectAll("text").remove();
+        // Check for left tick as probably most of the time it is not there
+        // because we are shifting the tick texts to the right
+        //<text dy=".71em" y="13" x="0" transform="translate(723.6924841904894,-10)" style="text-anchor: middle;">2016</text>
+
+        var start = this.xScale.domain()[0];
+        start.setMonth(1);
+        start.setDate(1);
+        var yearPos = that.xScale(start);
+        d3.select('.x.yearaxis').append('g')
+            .attr('class', 'tick special')
+            .attr('transform', 'translate(' + (yearPos) + ',0)')
+            .append('text')
+            .attr('dy', '.71em')
+            .attr('y', 13)
+            .attr('x', 0)
+            .attr('text-anchor', 'middle')
+            .text(start.getFullYear());
+       
+        
+        d3.selectAll('.yearaxis text')
+            .attr("transform", function(){
+                var d = that.xScale.domain();
+                var date = new Date(d[1].getTime());
+                date.setFullYear( date.getFullYear() - 1 );
+                var translate = d3.select(this.parentNode).attr('transform'); 
+                translate = translate.substring(
+                    translate.indexOf("(")+1,
+                    translate.indexOf(")")
+                ).split(",").map(Number);
+
+                var offset = (that.xScale(d[1])-that.xScale(date))/2;
+
+
+                if(translate[0]<0){
+                    console.log(translate[0]);
+                    
+                    if (translate[0]+(offset) >= that.width - 20){
+                        offset = -translate[0]+that.width -20;
+                        console.log("TOO BIG -keep right");
+                    }else if(translate[0]+offset >= 0){
+                        //offset = -translate[0]+that.width/2-20;
+                        offset = offset;
+                        //console.log("Inside offset");
+                    }else if (translate[0] + offset < -40){
+                        //console.log(translate[0] + offset*2);
+                        offset = -translate[0] + 20 ;
+                        console.log("TOO SMALL -keep left");
+                    }
+                   
+                }else if(translate[0]+(offset) > that.width - 20){
+                    offset = that.width-translate[0] - 20 ;
+                }
+                if (translate[0] > that.width-40){
+                    
+                }
+                return 'translate(' + (offset) + ',' + -10 + ')';
+            });
+
+         d3.selectAll('.monthaxis text')
+            .attr("transform", function(){
+                var d = that.xScale.domain();
+                var date = new Date(d[1].getTime());
+                //date.setMonth( date.getMonth() - 1 );
+                // Using distance of 30 days instead of months as each month has
+                // different number of days which creates a jumping motion when
+                // going over a mont border
+                date.setDate(date.getDate() - 30);
+                var translate = d3.select(this.parentNode).attr('transform'); 
+                translate = translate.substring(
+                    translate.indexOf("(")+1,
+                    translate.indexOf(")")
+                ).split(",").map(Number);
+                var offset = (that.xScale(d[1])-that.xScale(date))/2;
+                if(translate[0]+(offset) > that.width - 20){
+                    offset = that.width-translate[0]-20;
+                }
+                if (translate[0] > that.width-40){
+                    return 'translate(100000,-10)';
+                }
+                return 'translate(' + (offset) + ',' + -10 + ')';
+            });
+
+        /*d3.selectAll('.yearaxis text')
+            .attr("transform", function(){
+                var d = that.xScale.domain();
+                var date = new Date(d[1].getTime());
+                date.setFullYear( date.getFullYear() - 1 );
+                var translate = d3.select(this.parentNode).attr('transform'); 
+                translate = translate.substring(
+                    translate.indexOf("(")+1,
+                    translate.indexOf(")")
+                ).split(",").map(Number);
+                var offset = (that.xScale(d[1])-that.xScale(date))/2;
+                if(translate[0]-(offset+20) < 0){
+                    offset = translate[0]-20;
+                }
+                if (translate[0] < 40){
+                    return 'translate(' + (-100000) + ',' + -10 + ')';
+                }
+                return 'translate(' + (-offset) + ',' + -10 + ')';
+            });*/
+
+         /*d3.selectAll('.monthaxis text')
+            .attr("transform", function(){
+                var translate = d3.select(this.parentNode).attr('transform'); 
+                translate = translate.substring(
+                    translate.indexOf("(")+1,
+                    translate.indexOf(")")
+                ).split(",").map(Number);
+                var d = that.xScale.domain();
+                var date = new Date(d[1].getTime());
+                date.setMonth( date.getMonth() - 1 );
+                var offset = (that.xScale(d[1])-that.xScale(date))/2;
+                if(translate[0]-(offset+20) < 0){
+                    offset = translate[0]-20;
+                }
+                if (translate[0] < 40){
+                    return 'translate(' + (-100000) + ',' + -10 + ')';
+                }
+                return 'translate(' + (-offset) + ',' + -10 + ')';
+            });*/
+
+    };
+
     graph.prototype.previewZoom = function() {
+
+        d3.selectAll('.special').remove();
 
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
@@ -578,11 +714,13 @@ var graphly = (function() {
             var jump = Math.ceil(diffDays/30);
             this.xAxisDay.ticks(d3.time.days.utc, jump);
         }
+
         
         this.xAxisYearSvg.call(this.xAxisYear);
         this.xAxisMonthSvg.call(this.xAxisMonth);
         this.xAxisDaySvg.call(this.xAxisDay);
-        
+
+        this.updateTimeScales();
         
 
         /*var dateFormat = d3.time.format.utc('%Y-%m-%dT%H:%M:%S');
