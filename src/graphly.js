@@ -323,19 +323,22 @@ var graphly = (function() {
                 if (ds[key].scaleFormat === 'time'){
                     var format = defaultFor(ds[key].timeFormat, 'default');
 
-                    switch(format){
-                        case 'default':
-                        for (var i = 0; i < this.data[key].length; i++) {
-                            this.data[key][i] = new Date(this.data[key][i]);
+                    // Check if key is available in data first
+                    if(this.data.hasOwnProperty(key)){
+                        switch(format){
+                            case 'default':
+                            for (var i = 0; i < this.data[key].length; i++) {
+                                this.data[key][i] = new Date(this.data[key][i]);
+                            }
+                            break;
+                            case 'MJD2000_S':
+                            for (var j = 0; j < this.data[key].length; j++) {
+                                var d = new Date('2000-01-01');
+                                d.setSeconds(d.getSeconds() + this.data[key][j]);
+                                this.data[key][j] = d;
+                            }
+                            break;
                         }
-                        break;
-                        case 'MJD2000_S':
-                        for (var j = 0; j < this.data[key].length; j++) {
-                            var d = new Date('2000-01-01');
-                            d.setSeconds(d.getSeconds() + this.data[key][j]);
-                            this.data[key][j] = d;
-                        }
-                        break;
                     }
                 }
             }
@@ -418,19 +421,31 @@ var graphly = (function() {
         var xScaleType, yScaleType;
         // TODO: how to handle multiple different scale types
         // For now just check first object of scale
-        var xTimeScale = false;
+        this.xTimeScale = false;
         if (this.dataSettings.hasOwnProperty(xSelection[0])){
             if (this.dataSettings[xSelection[0]].hasOwnProperty('scaleFormat')){
                 if (this.dataSettings[xSelection[0]].scaleFormat === 'time'){
-                    xTimeScale = true;
+                    this.xTimeScale = true;
                 }
             }
         }
 
-        if(xTimeScale){
+        if(this.xTimeScale){
             xScaleType = d3.time.scale.utc();
         } else {
             xScaleType = d3.scale.linear();
+        }
+
+        // Adapt domain so that data is not directly at border
+        yExtent[0] = yExtent[0] - yRange*0.03;
+        yExtent[1] = yExtent[1] + yRange*0.03;
+        if(this.xTimeScale){
+            xRange = xExtent[1].getTime() - xExtent[0].getTime();
+            xExtent[0] = new Date(xExtent[0].getTime() - xRange*0.03);
+            xExtent[1] = new Date(xExtent[1].getTime() + xRange*0.03);
+        }else{
+            xExtent[0] = xExtent[0] - xRange*0.03;
+            xExtent[1] = xExtent[1] + xRange*0.03;
         }
 
         this.xScale = xScaleType
@@ -438,7 +453,7 @@ var graphly = (function() {
             .range([0, this.width]);
 
         this.yScale = d3.scale.linear()
-            .domain([yExtent[0] - yRange*0.1, yExtent[1] + yRange*0.1])
+            .domain(yExtent)
             .range([this.height, 0]);
 
         this.xAxis = d3.svg.axis()
@@ -446,10 +461,6 @@ var graphly = (function() {
             .orient('bottom')
             .ticks(Math.max(this.width/120,2))
             .tickSize(-this.height);
-
-        if (xTimeScale){
-            this.xAxis.tickFormat(timeFormat);
-        }
 
         this.yAxis = d3.svg.axis()
             .scale(this.yScale)
@@ -490,6 +501,10 @@ var graphly = (function() {
 
         this.createHelperObjects();
 
+        if (this.xTimeScale){
+            this.addTimeInformation();
+        }
+
         this.renderCanvas.call(this.xyzoom);
         d3.select('#zoomXBox').call(this.xzoom);
         d3.select('#zoomYBox').call(this.yzoom);
@@ -523,17 +538,14 @@ var graphly = (function() {
         this.onZoom();
     }, 250);
 
-    graph.prototype.previewZoom = function() {
-
-        this.xAxisSvg.call(this.xAxis);
-        this.yAxisSvg.call(this.yAxis);
+    graph.prototype.addTimeInformation = function() {
 
         var dateFormat = d3.time.format.utc('%Y-%m-%dT%H:%M:%S');
 
         d3.selectAll('.start-date').remove();
-        d3.selectAll('.x.axis>.tick:first-of-type')
+        d3.selectAll('.x.axis>.tick:nth-of-type(2)')
             .append('text')
-            .attr('dy', '42px')
+            .attr('dy', '28px')
             .attr('dx', '-64px')
             .attr('class', 'start-date')
             .text(function(d){return dateFormat(d);});
@@ -541,10 +553,21 @@ var graphly = (function() {
         d3.selectAll('.end-date').remove();
         d3.selectAll('.x.axis>.tick:nth-last-of-type(2)')
             .append('text')
-            .attr('dy', '42px')
+            .attr('dy', '28px')
             .attr('dx', '-64px')
             .attr('class', 'end-date')
             .text(function(d){return dateFormat(d);});
+
+    };
+
+    graph.prototype.previewZoom = function() {
+
+        this.xAxisSvg.call(this.xAxis);
+        this.yAxisSvg.call(this.yAxis);
+
+        if (this.xTimeScale){
+            this.addTimeInformation();
+        }
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
@@ -812,16 +835,17 @@ var graphly = (function() {
                                     // Check if using ordinal scale (multiple
                                     // parameters), do not connect if different
 
-                                    if(cA && !(cA.hasOwnProperty('scaleType') && 
-                                        cA.scaleType === 'ordinal')){
-                                        if(this.data[colorParam][j-1] !== 
+                                    if(cA && cA.hasOwnProperty('scaleType') && 
+                                        cA.scaleType === 'ordinal'){
+
+                                        if(this.data[colorParam][j-1] === 
                                             this.data[colorParam][j])
                                         {
                                             this.batchDrawer.addLine(
                                                 p_x, p_y, x, y, 1, 
                                                 rC[0], rC[1], rC[2], 0.8
                                             );
-                                        } 
+                                        }
                                     }else{
                                         this.batchDrawer.addLine(
                                             p_x, p_y, x, y, 1, 
