@@ -312,6 +312,8 @@ var graphly = (function() {
           }
         }
 
+        max = max +400;
+
         this.updateBuffers(this.batchDrawer, ++max);
         this.updateBuffers(this.batchDrawerReference, ++max);
 
@@ -871,7 +873,106 @@ var graphly = (function() {
                             p_x = x;
                             p_y = y;
                         }
+
+                        // Check if any regression type is selected for parameter
+                        if(this.dataSettings[yAxRen[yScaleItem]].hasOwnProperty('regression')){
+                            // Use current xAxis in combination with yAxis selection
+
+                            var xPoints = this.xScale.domain();
+                            if(this.xTimeScale){
+                                xPoints = [
+                                    xPoints[0].getTime(),
+                                    xPoints[1].getTime()
+                                ];
+                            }
+
+                            // TODO: Check for size mismatch?
+                            var reg_data ;
+                            if(this.xTimeScale){
+                                reg_data = this.data[xAxRen[xScaleItem]]
+                                    .map(function(d){return d.getTime();})
+                                    .zip(
+                                        this.data[yAxRen[yScaleItem]]
+                                    );
+                             }else{
+                                reg_data = this.data[xAxRen[xScaleItem]].zip(
+                                    this.data[yAxRen[yScaleItem]]
+                                );
+                             }
+                           
+
+                            switch(this.dataSettings[yAxRen[yScaleItem]].regression){
+                                case 'linear':
+                                    var result = regression('linear', reg_data);
+                                    var slope = result.equation[0];
+                                    var yIntercept = result.equation[1];
+
+                                    var yPoints = [
+                                        xPoints[0]*slope + yIntercept,
+                                        xPoints[1]*slope + yIntercept,
+                                    ];
+
+                                    xPoints = xPoints.map(this.xScale);
+                                    yPoints = yPoints.map(this.yScale);
+
+                                    this.batchDrawer.addLine(
+                                        xPoints[1], yPoints[1],
+                                        xPoints[0], yPoints[0], 1,
+                                        0.258, 0.525, 0.956, 1.0
+                                    );
+                                break;
+                                case 'polynomial':
+                                    var degree = defaultFor(
+                                        this.dataSettings[yAxRen[yScaleItem]].regressionDegree, 3
+                                    );
+                                    var result = regression('polynomial', reg_data, degree);
+                                    var lineAmount = 200;
+                                    
+                                    
+                                    var extent = Math.abs(xPoints[1]-xPoints[0]);
+                                    var delta = extent/lineAmount;
+                                    for(var l=0; l<lineAmount-1;l++){
+                                        var x1, x2, y1, y2;
+                                        x1 = xPoints[0] + l*delta;
+                                        x2 = xPoints[0] + (l+1)*delta;
+                                        y1 = 0;
+                                        y2 = 0;
+                                        var eql = result.equation.length-1;
+                                        for (var i = eql; i >= 0; i--) {
+                                            y1 = y1 + (
+                                                result.equation[i] *
+                                                Math.pow(x1, i)
+                                            );
+                                            y2 = y2 + (
+                                                result.equation[i] *
+                                                Math.pow(x2, i)
+                                            );
+                                        }
+                                        if(!this.xTimeScale){
+                                            x1 = this.xScale(x1);
+                                            x2 = this.xScale(x2);
+                                        }else{
+                                            x1 = this.xScale(new Date(Math.ceil(x1)));
+                                            x2 = this.xScale(new Date(Math.ceil(x2)));
+                                        }
+                                        y1 = this.yScale(y1);
+                                        y2 = this.yScale(y2);
+
+                                        this.batchDrawer.addLine(
+                                            x1, y1,
+                                            x2, y2, 1,
+                                            0.258, 0.525, 0.956, 1.0
+                                    );
+
+                                    }
+                                    
+
+                                break;
+                            }
+
+                        }
                     }
+
                 }
             }
         }
