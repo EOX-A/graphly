@@ -123,12 +123,22 @@ var graphly = (function() {
         );
         this.referenceContext = this.batchDrawerReference.getContext();
 
-        this.svg = //this.el.append('svg')
-        this.el.insert('svg',':first-child')
+        this.svg = this.el.append('svg')
+        //this.el.insert('svg',':first-child')
             .attr('width', this.width + this.margin.left + this.margin.right)
             .attr('height', this.height + this.margin.top + this.margin.bottom)
             .style('position', 'absolute')
             .style('z-index', 0)
+            .style('pointer-events', 'none')
+            .append('g')
+            .attr('transform', 'translate(' + (this.margin.left+1) + ',' +
+                (this.margin.top+1) + ')');
+
+        this.topSvg = this.el.append('svg')
+            .attr('width', this.width + this.margin.left + this.margin.right)
+            .attr('height', this.height + this.margin.top + this.margin.bottom)
+            .style('position', 'absolute')
+            .style('z-index', 10)
             .style('pointer-events', 'none')
             .append('g')
             .attr('transform', 'translate(' + (this.margin.left+1) + ',' +
@@ -152,7 +162,7 @@ var graphly = (function() {
             var colKey = col.join('-');
             // Get the data from our map! 
             var nodeId = self.colourToNode[colKey];
-            self.svg.selectAll('.highlightItem').remove();
+            self.topSvg.selectAll('.highlightItem').remove();
             tooltip.style('display', 'none');
 
             if(nodeId){
@@ -168,7 +178,7 @@ var graphly = (function() {
                         if(nodeId.hasOwnProperty('x2') && 
                            nodeId.hasOwnProperty('y2')) {
                             //Draw the Rectangle
-                             self.svg.append('rect')
+                             self.topSvg.append('rect')
                                 .attr('class', 'highlightItem')
                                 .attr('x', nodeId.x1.coord)
                                 .attr('y', nodeId.y2.coord)
@@ -189,7 +199,7 @@ var graphly = (function() {
                 if (nodeId.hasOwnProperty('x')){
                     if(nodeId.hasOwnProperty('y')){
                         // Draw point for selection
-                        self.svg.append('circle')
+                        self.topSvg.append('circle')
                             .attr('class', 'highlightItem')
                             .attr('r', 3)
                             .attr('cx', nodeId.x.coord)
@@ -586,7 +596,7 @@ var graphly = (function() {
         var transX = this.xzoom.translate();
         var transY = this.yzoom.translate();
 
-        this.svg.selectAll('.highlightItem').remove();
+        this.topSvg.selectAll('.highlightItem').remove();
 
         if(this.debounceActive){
 
@@ -661,6 +671,168 @@ var graphly = (function() {
             y = s * t + c * y;
         } 
         
+    };
+
+    graph.prototype.renderRegression = function(data, reg, color, thickness) {
+        var result;
+        var c = defaultFor(color, [0.1, 0.4,0.9]);
+        thickness = defaultFor(thickness, 1);
+
+        // Use current xAxis in combination with yAxis selection
+        var xPoints = this.xScale.domain();
+        if(this.xTimeScale){
+            xPoints = [
+                xPoints[0].getTime(),
+                xPoints[1].getTime()
+            ];
+        }
+
+        switch(reg.type){
+            case 'linear':
+                result = regression('linear', data);
+                var slope = result.equation[0];
+                var yIntercept = result.equation[1];
+
+                var yPoints = [
+                    xPoints[0]*slope + yIntercept,
+                    xPoints[1]*slope + yIntercept,
+                ];
+
+                xPoints = xPoints.map(this.xScale);
+                yPoints = yPoints.map(this.yScale);
+
+                this.batchDrawer.addLine(
+                    xPoints[1], yPoints[1],
+                    xPoints[0], yPoints[0], 1,
+                    c[0], c[1], c[2], 1.0
+                );
+            break;
+            case 'polynomial':
+                var degree = defaultFor(reg.degree, 3);
+                result = regression('polynomial', data, degree);
+                var lineAmount = 200;
+                var extent = Math.abs(xPoints[1]-xPoints[0]);
+                var delta = extent/lineAmount;
+                for(var l=0; l<lineAmount-1;l++){
+                    var x1, x2, y1, y2;
+                    x1 = xPoints[0] + l*delta;
+                    x2 = xPoints[0] + (l+1)*delta;
+                    y1 = 0;
+                    y2 = 0;
+                    var eql = result.equation.length-1;
+                    for (var i = eql; i >= 0; i--) {
+                        y1 = y1 + (
+                            result.equation[i] *
+                            Math.pow(x1, i)
+                        );
+                        y2 = y2 + (
+                            result.equation[i] *
+                            Math.pow(x2, i)
+                        );
+                    }
+                    if(!this.xTimeScale){
+                        x1 = this.xScale(x1);
+                        x2 = this.xScale(x2);
+                    }else{
+                        x1 = this.xScale(new Date(Math.ceil(x1)));
+                        x2 = this.xScale(new Date(Math.ceil(x2)));
+                    }
+                    y1 = this.yScale(y1);
+                    y2 = this.yScale(y2);
+
+                    this.batchDrawer.addLine(
+                        x1, y1,
+                        x2, y2, 1,
+                        c[0], c[1], c[2], 1.0
+                    );
+                }
+            break;
+        }
+    };
+
+    graph.prototype.createRegression = function(xScaleItem, yScaleItem) {
+
+        var xAxRen = this.renderSettings.xAxis;
+        var yAxRen = this.renderSettings.yAxis;
+        var data;
+        var reg = {
+            type: this.dataSettings[yAxRen[yScaleItem]].regression,
+            degree: this.dataSettings[yAxRen[yScaleItem]].regressionDegree
+        };
+
+        //Check if data has identifier creating multiple datasets
+        if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+
+            for (var i = 0; i < this.renderSettings.dataIdentifier.identifiers.length; i++) {
+
+                var id = this.renderSettings.dataIdentifier.identifiers[i];
+                var parId = this.renderSettings.dataIdentifier.parameter;
+
+                var filterFunc = function (d,i){
+                    return this.data[parId][i] === id;
+                };
+
+                var filteredX = this.data[xAxRen[xScaleItem]].filter(filterFunc.bind(this));
+                var filteredY = this.data[yAxRen[yScaleItem]].filter(filterFunc.bind(this));
+
+                if(this.xTimeScale){
+
+                    data = filteredX.map(function(d){return d.getTime();})
+                        .zip(filteredY);
+                }else{
+                    data = filteredX.zip(filteredY);
+                }
+
+                var rC = this.getIdColor(xScaleItem, id);
+
+                this.renderRegression(data, reg, rC);
+            }
+            
+        }else{
+            // TODO: Check for size mismatch?
+            if(this.xTimeScale){
+                data = this.data[xAxRen[xScaleItem]]
+                    .map(function(d){return d.getTime();})
+                    .zip(
+                        this.data[yAxRen[yScaleItem]]
+                    );
+            }else{
+                data = this.data[xAxRen[xScaleItem]].zip(
+                    this.data[yAxRen[yScaleItem]]
+                );
+            }
+            this.renderRegression(data, reg);
+        }
+    };
+
+    graph.prototype.getIdColor = function(param, id) {
+        var rC;
+        var colorParam = this.renderSettings.colorAxis[param];
+        cA = this.dataSettings[colorParam];
+
+        if (cA && cA.hasOwnProperty('colorscaleFunction')){
+            rC = cA.colorscaleFunction(id);
+            rC = rC.map(function(c){return c/255;});
+        }else{
+            rC = [0.258, 0.525, 0.956];
+        }
+        return rC;
+    };
+
+    graph.prototype.getColor = function(param, index) {
+        var rC;
+        var colorParam = this.renderSettings.colorAxis[param];
+        cA = this.dataSettings[colorParam];
+
+        if (cA && cA.hasOwnProperty('colorscaleFunction')){
+            rC = cA.colorscaleFunction(
+                this.data[colorParam][index]
+            );
+            rC = rC.map(function(c){return c/255;});
+        }else{
+            rC = [0.258, 0.525, 0.956];
+        }
+        return rC;
     };
 
 
@@ -801,19 +973,7 @@ var graphly = (function() {
                         for (var j=0;j<=lp; j++) {
                             var x = (this.xScale(this.data[xAxRen[xScaleItem]][j]));
                             var y = (this.yScale(this.data[yAxRen[yScaleItem]][j]));
-
-                            var rC;
-                            var colorParam = this.renderSettings.colorAxis[xScaleItem];
-                            cA = this.dataSettings[colorParam];
-
-                            if (cA && cA.hasOwnProperty('colorscaleFunction')){
-                                rC = cA.colorscaleFunction(
-                                    this.data[colorParam][j]
-                                );
-                                rC = rC.map(function(c){return c/255;});
-                            }else{
-                                rC = [0.258, 0.525, 0.956];
-                            }
+                            var rC = this.getColor(xScaleItem, j);
 
                             c = genColor();
 
@@ -876,100 +1036,7 @@ var graphly = (function() {
 
                         // Check if any regression type is selected for parameter
                         if(this.dataSettings[yAxRen[yScaleItem]].hasOwnProperty('regression')){
-                            // Use current xAxis in combination with yAxis selection
-
-                            var xPoints = this.xScale.domain();
-                            if(this.xTimeScale){
-                                xPoints = [
-                                    xPoints[0].getTime(),
-                                    xPoints[1].getTime()
-                                ];
-                            }
-
-                            // TODO: Check for size mismatch?
-                            var reg_data ;
-                            if(this.xTimeScale){
-                                reg_data = this.data[xAxRen[xScaleItem]]
-                                    .map(function(d){return d.getTime();})
-                                    .zip(
-                                        this.data[yAxRen[yScaleItem]]
-                                    );
-                             }else{
-                                reg_data = this.data[xAxRen[xScaleItem]].zip(
-                                    this.data[yAxRen[yScaleItem]]
-                                );
-                             }
-                           
-
-                            switch(this.dataSettings[yAxRen[yScaleItem]].regression){
-                                case 'linear':
-                                    var result = regression('linear', reg_data);
-                                    var slope = result.equation[0];
-                                    var yIntercept = result.equation[1];
-
-                                    var yPoints = [
-                                        xPoints[0]*slope + yIntercept,
-                                        xPoints[1]*slope + yIntercept,
-                                    ];
-
-                                    xPoints = xPoints.map(this.xScale);
-                                    yPoints = yPoints.map(this.yScale);
-
-                                    this.batchDrawer.addLine(
-                                        xPoints[1], yPoints[1],
-                                        xPoints[0], yPoints[0], 1,
-                                        0.258, 0.525, 0.956, 1.0
-                                    );
-                                break;
-                                case 'polynomial':
-                                    var degree = defaultFor(
-                                        this.dataSettings[yAxRen[yScaleItem]].regressionDegree, 3
-                                    );
-                                    var result = regression('polynomial', reg_data, degree);
-                                    var lineAmount = 200;
-                                    
-                                    
-                                    var extent = Math.abs(xPoints[1]-xPoints[0]);
-                                    var delta = extent/lineAmount;
-                                    for(var l=0; l<lineAmount-1;l++){
-                                        var x1, x2, y1, y2;
-                                        x1 = xPoints[0] + l*delta;
-                                        x2 = xPoints[0] + (l+1)*delta;
-                                        y1 = 0;
-                                        y2 = 0;
-                                        var eql = result.equation.length-1;
-                                        for (var i = eql; i >= 0; i--) {
-                                            y1 = y1 + (
-                                                result.equation[i] *
-                                                Math.pow(x1, i)
-                                            );
-                                            y2 = y2 + (
-                                                result.equation[i] *
-                                                Math.pow(x2, i)
-                                            );
-                                        }
-                                        if(!this.xTimeScale){
-                                            x1 = this.xScale(x1);
-                                            x2 = this.xScale(x2);
-                                        }else{
-                                            x1 = this.xScale(new Date(Math.ceil(x1)));
-                                            x2 = this.xScale(new Date(Math.ceil(x2)));
-                                        }
-                                        y1 = this.yScale(y1);
-                                        y2 = this.yScale(y2);
-
-                                        this.batchDrawer.addLine(
-                                            x1, y1,
-                                            x2, y2, 1,
-                                            0.258, 0.525, 0.956, 1.0
-                                    );
-
-                                    }
-                                    
-
-                                break;
-                            }
-
+                            this.createRegression(xScaleItem, yScaleItem);
                         }
                     }
 

@@ -38,9 +38,13 @@ var renderSettings_ray = {
 };
 
 var renderSettingsSwarm = {
-    xAxis: ['Latitude'],
+    xAxis: ['Timestamp'],
     yAxis: ['T_elec'],
     colorAxis: [ 'id' ],
+    dataIdentifier: {
+        parameter: 'id',
+        identifiers: ['Alpha', 'Bravo']
+    }
 };
 
 var renderSettingsMRC = {
