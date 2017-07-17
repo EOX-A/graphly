@@ -1,5 +1,11 @@
 
 
+Array.prototype.zip = function (arr) {
+    return this.map(function (e, i) {
+        return [e, arr[i]];
+    });
+};
+
 
 Array.prototype.pushArray = function() {
     var toPush = this.concat.apply([], arguments);

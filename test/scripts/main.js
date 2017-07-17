@@ -41,11 +41,21 @@ var renderSettingsSwarm = {
     xAxis: ['Timestamp'],
     yAxis: ['T_elec'],
     colorAxis: [ 'id' ],
+    dataIdentifier: {
+        parameter: 'id',
+        identifiers: ['Alpha', 'Bravo']
+    }
 };
 
 var renderSettingsMRC = {
     xAxis: ['Frequency_Offset'],
     yAxis: ['Measurement_Error_Mie_Response'],
+    colorAxis: [ null ],
+};
+
+var renderSettingsRRC = {
+    xAxis: ['Frequency_Offset'],
+    yAxis: ['Measurement_Error_Rayleigh_Response'],
     colorAxis: [ null ],
 };
 
@@ -96,7 +106,8 @@ var dataSettings = {
     T_elec: {
         symbol: 'dot',
         uom: 'n',
-        lineConnect: true,
+        regression: 'polynomial',
+        //lineConnect: true,
         color: [0.2, 0.2, 1.0, 0.8]
     },
     Timestamp: {
@@ -106,18 +117,23 @@ var dataSettings = {
         scaleType: 'ordinal',
         categories: ['Alpha', 'Bravo']
     },
+    Latitude: {
+
+    },
 
 
     Measurement_Response: {
         symbol: 'dot',
         uom: 'Pixel',
         lineConnect: false,
+        regression: 'linear',
         color: [0.2, 0.2, 1.0, 0.8]
     },
     Measurement_Error_Mie_Response: {
         symbol: 'dot',
         uom: 'Pixel',
         lineConnect: false,
+        regression: 'polynomial',
         color: [0.2, 0.2, 1.0, 0.8]
     },
     Reference_Pulse_Response: {
@@ -134,6 +150,14 @@ var dataSettings = {
     },
     Frequency_Offset: {
         uom: 'GHZ'
+    },
+
+    Measurement_Error_Rayleigh_Response: {
+        symbol: 'dot',
+        uom: 'Pixel',
+        lineConnect: false,
+        regression: 'polynomial',
+        color: [0.2, 0.2, 1.0, 0.8]
     }
 };
 
@@ -141,14 +165,14 @@ var dataSettings = {
 var graph = new graphly.graph({
     el: '#graph',
     dataSettings: dataSettings,
-    renderSettings: renderSettings_ray
+    renderSettings: renderSettingsMRC
 });
 
 
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP', true);
+xhr.open('GET', 'data/AE_OPER_AUX_MRC_1B_20071031T021229_20071031T022829_0002.MSP', true);
 xhr.responseType = 'arraybuffer';
 
 xhr.onload = function(e) {
@@ -168,7 +192,9 @@ d3.select('#datafiles').on('change', function(e){
     if (sel_value.indexOf('testdata') === -1){
         if (sel_value.indexOf('MRC') !== -1){
             graph.renderSettings = renderSettingsMRC;
-        }else{
+        }else if (sel_value.indexOf('RRC') !== -1){
+            graph.renderSettings = renderSettingsRRC;
+        }else {
             graph.renderSettings = renderSettings_ray;
         }
         xhr.open('GET', sel_value, true);
