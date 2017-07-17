@@ -161,6 +161,24 @@ var dataSettings = {
     }
 };
 
+var filterSettings = {
+    relationMatrix: {
+
+    },
+    dataSettings: dataSettings,
+    visibleFilters: [
+        'Measurement_Response',
+        'Measurement_Error_Mie_Response',
+        'Reference_Pulse_Response',
+        'Reference_Pulse_Error_Mie_Response'
+    ]
+};
+
+var filterManager = new FilterManager({
+    el:'#filters',
+    filterSettings: filterSettings,
+});
+
 
 var graph = new graphly.graph({
     el: '#graph',
@@ -179,6 +197,7 @@ xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
     var data = msgpack.decode(tmp);
     graph.loadData(data);
+    filterManager.loadData(data);
 };
 
 xhr.send();
