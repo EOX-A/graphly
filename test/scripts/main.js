@@ -161,12 +161,15 @@ var dataSettings = {
     }
 };
 
+
 var filterSettings = {
     relationMatrix: {
 
     },
     dataSettings: dataSettings,
     visibleFilters: [
+        'T_elec',
+        'Latitude',
         'Measurement_Response',
         'Measurement_Error_Mie_Response',
         'Reference_Pulse_Response',
@@ -183,7 +186,8 @@ var filterManager = new FilterManager({
 var graph = new graphly.graph({
     el: '#graph',
     dataSettings: dataSettings,
-    renderSettings: renderSettingsMRC
+    renderSettings: renderSettingsMRC,
+    filterManager: filterManager
 });
 
 
@@ -222,7 +226,7 @@ d3.select('#datafiles').on('change', function(e){
         graph.renderSettings = renderSettingsSwarm;
         graph.loadCSV(sel_value);
     }
-    
+
 });
 
 

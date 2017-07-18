@@ -35,6 +35,11 @@ var graphly = (function() {
 
         // Passed options
         this.el = d3.select(options.el);
+
+        window.onresize = ()=> {
+            this.resize();
+        };
+
         this.margin = defaultFor(
             options.margin,
             {top: 10, left: 90, bottom: 50, right: 10}
@@ -52,6 +57,18 @@ var graphly = (function() {
         this.currentTranlate = [0,0];
         this.colourToNode = {}; // Map to track the colour of nodes.
         this.previewActive = false;
+
+        this.filters = {};
+        this.filterManager = defaultFor(options.filterManager, false);
+        if(this.filterManager){
+            this.filterManager.getNode().addEventListener(
+                'change',
+                (evt)=>{
+                    this.filters = evt.detail;
+                    this.renderData();
+                }
+            );
+        }
         var self = this;
 
         //plotty.addColorScale('divergent1', ['#2f3895', '#ffffff', '#a70125'], [0, 0.41, 1]);
@@ -299,6 +316,11 @@ var graphly = (function() {
                     }
                 }
                 self.loadData(data);
+                // TODO: not sure if this is the best way to do things
+                // should the data be parsed externaly?
+                if(self.filterManager){
+                    self.filterManager.loadData(data);
+                }
             }
         });
 
@@ -750,11 +772,11 @@ var graphly = (function() {
         }
     };
 
-    graph.prototype.createRegression = function(xScaleItem, yScaleItem) {
+    graph.prototype.createRegression = function(data, xScaleItem, yScaleItem) {
 
         var xAxRen = this.renderSettings.xAxis;
         var yAxRen = this.renderSettings.yAxis;
-        var data;
+        var resultData;
         var reg = {
             type: this.dataSettings[yAxRen[yScaleItem]].regression,
             degree: this.dataSettings[yAxRen[yScaleItem]].regressionDegree
@@ -769,15 +791,15 @@ var graphly = (function() {
                 var parId = this.renderSettings.dataIdentifier.parameter;
 
                 var filterFunc = function (d,i){
-                    return this.data[parId][i] === id;
+                    return data[parId][i] === id;
                 };
 
-                var filteredX = this.data[xAxRen[xScaleItem]].filter(filterFunc.bind(this));
-                var filteredY = this.data[yAxRen[yScaleItem]].filter(filterFunc.bind(this));
+                var filteredX = data[xAxRen[xScaleItem]].filter(filterFunc.bind(this));
+                var filteredY = data[yAxRen[yScaleItem]].filter(filterFunc.bind(this));
 
                 if(this.xTimeScale){
 
-                    data = filteredX.map(function(d){return d.getTime();})
+                    resultData = filteredX.map(function(d){return d.getTime();})
                         .zip(filteredY);
                 }else{
                     data = filteredX.zip(filteredY);
@@ -785,23 +807,23 @@ var graphly = (function() {
 
                 var rC = this.getIdColor(xScaleItem, id);
 
-                this.renderRegression(data, reg, rC);
+                this.renderRegression(resultData, reg, rC);
             }
             
         }else{
             // TODO: Check for size mismatch?
             if(this.xTimeScale){
-                data = this.data[xAxRen[xScaleItem]]
+                resultData = data[xAxRen[xScaleItem]]
                     .map(function(d){return d.getTime();})
                     .zip(
-                        this.data[yAxRen[yScaleItem]]
+                        data[yAxRen[yScaleItem]]
                     );
             }else{
-                data = this.data[xAxRen[xScaleItem]].zip(
-                    this.data[yAxRen[yScaleItem]]
+                resultData = data[xAxRen[xScaleItem]].zip(
+                    data[yAxRen[yScaleItem]]
                 );
             }
-            this.renderRegression(data, reg);
+            this.renderRegression(resultData, reg);
         }
     };
 
@@ -819,20 +841,29 @@ var graphly = (function() {
         return rC;
     };
 
-    graph.prototype.getColor = function(param, index) {
+    graph.prototype.getColor = function(param, index, data) {
         var rC;
         var colorParam = this.renderSettings.colorAxis[param];
         cA = this.dataSettings[colorParam];
 
         if (cA && cA.hasOwnProperty('colorscaleFunction')){
             rC = cA.colorscaleFunction(
-                this.data[colorParam][index]
+                data[colorParam][index]
             );
             rC = rC.map(function(c){return c/255;});
         }else{
             rC = [0.258, 0.525, 0.956];
         }
         return rC;
+    };
+
+    graph.prototype.resize = function (){
+        // TODO: NOT working correctly more or less a placeholder here
+        this.dim = this.el.node().getBoundingClientRect();
+        this.width = this.dim.width - this.margin.left - this.margin.right;
+        this.height = this.dim.height - this.margin.top - this.margin.bottom;
+        this.initAxis();
+        this.renderData();
     };
 
 
@@ -861,6 +892,25 @@ var graphly = (function() {
 
         var c, nCol, par_properties, cA;
 
+        var data = {};
+        var inactiveData = {};
+
+
+        for(var p in this.data){
+            data[p] = this.data[p];
+            inactiveData[p] = this.data[p];
+        }
+
+        for (var f in this.filters){
+            var currentDataset = data[f];
+            for (var p in data){
+                data[p] = data[p].filter((e,i)=>{
+                    return this.filters[f](currentDataset[i]);
+                });
+                //inactiveData[k] = inactiveData[k].filter(e=>!this.filters[k](e));
+            }
+        }
+
         for (var xScaleItem=0; xScaleItem<xAxRen.length; xScaleItem++){
             for (var yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
 
@@ -872,36 +922,35 @@ var graphly = (function() {
 
                         // TODO: How to decide which item to take for counting
                         // should we compare changes and look for errors in config?
-                        var l = this.data[xAxRen[xScaleItem][0]].length;
+                        var l = data[xAxRen[xScaleItem][0]].length;
                         for (var i=0; i<=l; i++) {
                             var x1 = (this.xScale(
-                                this.data[xAxRen[xScaleItem][0]][i])
+                                data[xAxRen[xScaleItem][0]][i])
                             );
                             var x2 = (this.xScale(
-                                this.data[xAxRen[xScaleItem][1]][i])
+                                data[xAxRen[xScaleItem][1]][i])
                             );
                             var y1 = (this.yScale(
-                                this.data[yAxRen[yScaleItem][0]][i])
+                                data[yAxRen[yScaleItem][0]][i])
                             );
                             var y2 = (this.yScale(
-                                this.data[yAxRen[yScaleItem][1]][i])
+                                data[yAxRen[yScaleItem][1]][i])
                             );
 
                             var idC = genColor();
 
-                            //this.colourToNode[idC.join('-')] = i;
                             par_properties = {
                                 x1: {
-                                    val: this.data[xAxRen[xScaleItem][0]][i], 
+                                    val: data[xAxRen[xScaleItem][0]][i], 
                                     coord: x1, id: xAxRen[xScaleItem][0]
                                 },
-                                x2: {val: this.data[xAxRen[xScaleItem][1]][i], 
+                                x2: {val: data[xAxRen[xScaleItem][1]][i], 
                                     coord: x2, id: xAxRen[xScaleItem][1]
                                 },
-                                y1: {val: this.data[yAxRen[yScaleItem][0]][i], 
+                                y1: {val: data[yAxRen[yScaleItem][0]][i], 
                                     coord: y1, id: yAxRen[yScaleItem][0]
                                 },
-                                y2: {val: this.data[yAxRen[yScaleItem][1]][i], 
+                                y2: {val: data[yAxRen[yScaleItem][1]][i], 
                                     coord: y2, id: yAxRen[yScaleItem][1]
                                 },
                             };
@@ -925,12 +974,13 @@ var graphly = (function() {
                                     this.plotter.setColorScale(cs);
                                 }
                                 c = this.plotter.getColor(
-                                    this.data[this.renderSettings.colorAxis[xScaleItem]][i]
+                                    data[this.renderSettings.colorAxis[xScaleItem]][i],
+                                    data
                                 ).map(function(c){return c/255;});
 
                                 par_properties.col = {
                                     id: this.renderSettings.colorAxis[xScaleItem],
-                                    val: this.data[this.renderSettings.colorAxis[xScaleItem]][i]
+                                    val: data[this.renderSettings.colorAxis[xScaleItem]][i]
                                 };
 
                             } else {
@@ -943,7 +993,7 @@ var graphly = (function() {
                                 ];
                                 if (cA && cA.hasOwnProperty('colorscaleFunction')){
                                     c = cA.colorscaleFunction(
-                                        this.data[this.renderSettings.colorAxis[xScaleItem]][i]
+                                        data[this.renderSettings.colorAxis[xScaleItem]][i]
                                     );
                                     c.map(function(c){return c/255;});
                                 }else{
@@ -969,11 +1019,11 @@ var graphly = (function() {
                         // TODO: drawing of lines
                     } else {
                         // Draw normal 'points' for x,y coordinates using defined symbol
-                        var lp = this.data[xAxRen[xScaleItem]].length;
+                        var lp = data[xAxRen[xScaleItem]].length;
                         for (var j=0;j<=lp; j++) {
-                            var x = (this.xScale(this.data[xAxRen[xScaleItem]][j]));
-                            var y = (this.yScale(this.data[yAxRen[yScaleItem]][j]));
-                            var rC = this.getColor(xScaleItem, j);
+                            var x = (this.xScale(data[xAxRen[xScaleItem]][j]));
+                            var y = (this.yScale(data[yAxRen[yScaleItem]][j]));
+                            var rC = this.getColor(xScaleItem, j, data);
 
                             c = genColor();
 
@@ -1000,8 +1050,8 @@ var graphly = (function() {
                                     if(cA && cA.hasOwnProperty('scaleType') && 
                                         cA.scaleType === 'ordinal'){
 
-                                        if(this.data[colorParam][j-1] === 
-                                            this.data[colorParam][j])
+                                        if(data[colorParam][j-1] === 
+                                            data[colorParam][j])
                                         {
                                             this.batchDrawer.addLine(
                                                 p_x, p_y, x, y, 1, 
@@ -1036,7 +1086,7 @@ var graphly = (function() {
 
                         // Check if any regression type is selected for parameter
                         if(this.dataSettings[yAxRen[yScaleItem]].hasOwnProperty('regression')){
-                            this.createRegression(xScaleItem, yScaleItem);
+                            this.createRegression(data, xScaleItem, yScaleItem);
                         }
                     }
 
@@ -1044,34 +1094,6 @@ var graphly = (function() {
             }
         }
 
-
-        /*for (var i=0; i<=l; i++) {
-
-            var x = (this.xScale(this.data.mie_datetime_start[i]));
-            var y = (this.yScale(this.data.mie_dem_altitude[i]));
-
-            var x1 = (this.xScale(this.data.mie_datetime_start[i]));
-            var y1 = (this.yScale(this.data.mie_altitude_bottom[i]));
-            var x2 = (this.xScale(this.data.mie_datetime_stop[i]));
-            var y2 = (this.yScale(this.data.mie_altitude_top[i]));
-
-            var idC = genColor();
-            this.colourToNode[idC.join('-')] = i;
-            var nCol = idC.map(function(c){return c/255;});
-            idColors.pushArray(nCol);
-
-            var c = this.plotter.getColor(this.data.mie_wind_velocity[i]).map(function(c){return c/255;});
-
-            this.batchDrawer.addRect(x1,y1,x2,y2, c[0], c[1], c[2], 1.0);
-            this.batchDrawerReference.addRect(x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0);
-
-            if(i>0){
-                this.batchDrawer.addLine(p_x, p_y, x, y, 1, 0.258, 0.525, 0.956, 1.0);
-            }
-
-            p_x = x;
-            p_y = y;
-        }*/
 
         this.batchDrawer.draw();
         this.batchDrawerReference.draw();

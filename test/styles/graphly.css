@@ -53,3 +53,8 @@ svg {
     margin-left: 4px;
 
 }
+
+
+.brush .extent{
+    fill-opacity: 0.6;
+}
