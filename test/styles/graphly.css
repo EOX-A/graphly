@@ -58,3 +58,9 @@ svg {
 .brush .extent{
     fill-opacity: 0.6;
 }
+
+.parameterLabel {
+    font-size: 0.8em;
+    position: absolute;
+    transform-origin: left;
+}

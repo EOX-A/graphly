@@ -11,7 +11,7 @@ class FilterManager {
 
         this.margin = defaultFor(
             params.margin,
-            {top: 10, right: 10, bottom: 10, left: 50}
+            {top: 10, right: 10, bottom: 10, left: 70}
         );
         this.dim = this.el.node().getBoundingClientRect();
         this.width = this.dim.width - this.margin.left - this.margin.right;
@@ -44,7 +44,7 @@ class FilterManager {
     _createFilterElement(d, data) {
 
         var height = 252;
-        var width = 100;
+        var width = 120;
         var bins = 28;
 
         var div = this.el.append('div')
@@ -52,6 +52,14 @@ class FilterManager {
                 .style('float', 'left')
                 .style('width', width+'px')
                 .style('height', height+'px');
+
+        div.append('div')
+            
+            .attr('class', 'parameterLabel')
+            .style('transform', d=>{
+                return 'translate(10px, '+(height*1.8-this.width/2)+'px) rotate(-90deg)';
+            })
+            .html(d);
 
         var svg = div.append('svg')
             .attr('width', (width))
