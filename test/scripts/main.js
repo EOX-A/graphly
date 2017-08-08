@@ -163,9 +163,32 @@ var dataSettings = {
 
 
 var filterSettings = {
-    relationMatrix: {
-
+    parameterMatrix: {
+        'height': [
+            'rayleigh_altitude_top', 'rayleigh_altitude_bottom'/*, 'mie_altitude_top', 'mie_altitude_bottom'*/
+        ],
+        'latitude': [
+            /*'mie_latitude', */'rayleigh_latitude'
+        ],
+        'longitude': [
+            /*'mie_longitude',*/ 'rayleigh_longitude'
+        ]
     },
+    filterRelation: [
+        [
+            'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
+            'mie_datetime_start', 'mie_datetime_stop', 'mie_startlat',
+            'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
+            'mie_geo_height', 'mie_wind_velocity'
+        ],
+        [
+            'rayleigh_latitude', 'rayleigh_longitude', 'rayleigh_altitude',
+            'rayleigh_dem_altitude', 'rayleigh_datetime_start',
+            'rayleigh_datetime_stop', 'rayleigh_startlat', 'rayleigh_endlat',
+            'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'height',
+            'rayleigh_geo_height', 'rayleigh_wind_velocity'
+        ]
+    ],
     dataSettings: dataSettings,
     visibleFilters: [
         'T_elec',
@@ -173,7 +196,12 @@ var filterSettings = {
         'Measurement_Response',
         'Measurement_Error_Mie_Response',
         'Reference_Pulse_Response',
-        'Reference_Pulse_Error_Mie_Response'
+        'Reference_Pulse_Error_Mie_Response',
+        'height',
+        'latitude',
+        'longitude',
+        'rayleigh_wind_velocity',
+        'mie_wind_velocity'
     ]
 };
 

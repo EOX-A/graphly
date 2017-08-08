@@ -1,4 +1,5 @@
 
+
 class FilterManager {
 
     constructor(params) {
@@ -8,6 +9,7 @@ class FilterManager {
         this.data = defaultFor(params.data, {});
         this.filters = {};
         this.brushes = {};
+        this.extents = {};
 
         this.margin = defaultFor(
             params.margin,
@@ -19,9 +21,32 @@ class FilterManager {
 
     }
 
+    _initData() {
+
+        // Create grouped data item for related products if necessary
+        for (var g in this.filterSettings.parameterMatrix){
+            var items = this.filterSettings.parameterMatrix[g];
+            for (var i = 0; i < items.length; i++) {
+                if(this.data.hasOwnProperty(items[i])){
+                    if(this.data.hasOwnProperty(g)){
+                        this.data[g].push(this.data[items[i]]);
+                    }else{
+                        this.data[g] = this.data[items[i]];
+                    }
+                }
+            }
+        }
+
+        this.extents = {};
+        for (var d in this.data){
+            this.extents[d] = d3.extent(this.data[d]);
+        }
+    }
+
     _brushEnd() {
         var filters = {}; 
         this.visibleFilters.forEach(d => {
+            // Check if axis available for parameter and with a brush extent
             if(this.y.hasOwnProperty(d) && !this.y[d].brush.empty()){
                 var ext = this.y[d].brush.extent();
                 this.brushes[d] = ext;
@@ -68,10 +93,11 @@ class FilterManager {
                 .attr("display", "block")
                 .attr("transform", "translate(" + (this.margin.left) + "," + (this.margin.top) + ")");
 
+        var extents = this.extents;
         var heightRange = (height-this.margin.top-this.margin.bottom);
         this.y[d] = d3.scale.linear()
             .range([heightRange, 0])
-            .domain(d3.extent(this.data[d])).nice();
+            .domain(extents[d]).nice();
 
         this.y[d].brush = d3.svg.brush()
             .y(this.y[d])
@@ -155,11 +181,31 @@ class FilterManager {
 
 
         for (var f in this.filters){
+            var filter = this.filters[f];
             var currentDataset = data[f];
             for (var p in data){
-                data[p] = data[p].filter((e,i)=>{
-                    return this.filters[f](currentDataset[i]);
-                });
+                var applicableFilter = true;
+                if(this.filterSettings.hasOwnProperty('filterRelation')){
+                    applicableFilter = false;
+                    var filterRel = this.filterSettings.filterRelation;
+
+                    for (var i = 0; i < filterRel.length; i++) {
+                        // If one of the items is in the defined set and the
+                        //  other is not (e.g. filter id is in collection but 
+                        // current data id is not)
+                        if( (filterRel[i].indexOf(p)!==-1) === 
+                            (filterRel[i].indexOf(f)!==-1)){
+
+                            applicableFilter = true;
+                            break;
+                        }
+                    }
+                }
+                if(applicableFilter){
+                    data[p] = data[p].filter((e,i)=>{
+                        return filter(currentDataset[i]);
+                    });
+                }
             }
         }
 
@@ -178,6 +224,7 @@ class FilterManager {
 
     loadData(data){
         this.data = data;
+        this._initData();
         this._renderFilters();
     }
 

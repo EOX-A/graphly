@@ -697,7 +697,10 @@ var graphly = (function() {
 
     graph.prototype.renderRegression = function(data, reg, color, thickness) {
         var result;
-        var c = defaultFor(color, [0.1, 0.4,0.9]);
+        var c = defaultFor(color, [0.1, 0.4, 0.9]);
+        if(c.length === 3){
+            c.push(1.0);
+        }
         thickness = defaultFor(thickness, 1);
 
         // Use current xAxis in combination with yAxis selection
@@ -726,7 +729,7 @@ var graphly = (function() {
                 this.batchDrawer.addLine(
                     xPoints[1], yPoints[1],
                     xPoints[0], yPoints[0], 1,
-                    c[0], c[1], c[2], 1.0
+                    c[0], c[1], c[2], c[3]
                 );
             break;
             case 'polynomial':
@@ -765,18 +768,19 @@ var graphly = (function() {
                     this.batchDrawer.addLine(
                         x1, y1,
                         x2, y2, 1,
-                        c[0], c[1], c[2], 1.0
+                        c[0], c[1], c[2], c[3]
                     );
                 }
             break;
         }
     };
 
-    graph.prototype.createRegression = function(data, xScaleItem, yScaleItem) {
+    graph.prototype.createRegression = function(data, xScaleItem, yScaleItem, inactive) {
 
         var xAxRen = this.renderSettings.xAxis;
         var yAxRen = this.renderSettings.yAxis;
         var resultData;
+        inactive = defaultFor(inactive, false);
         var reg = {
             type: this.dataSettings[yAxRen[yScaleItem]].regression,
             degree: this.dataSettings[yAxRen[yScaleItem]].regressionDegree
@@ -807,7 +811,11 @@ var graphly = (function() {
 
                 var rC = this.getIdColor(xScaleItem, id);
 
-                this.renderRegression(resultData, reg, rC);
+                if(!inactive){
+                    this.renderRegression(resultData, reg, rC);
+                }else{
+                    this.renderRegression(resultData, reg, [0.2,0.2,0.2,0.4]);
+                }
             }
             
         }else{
@@ -823,7 +831,11 @@ var graphly = (function() {
                     data[yAxRen[yScaleItem]]
                 );
             }
-            this.renderRegression(resultData, reg);
+            if(!inactive){
+                this.renderRegression(resultData, reg);
+            }else{
+                this.renderRegression(resultData, reg, [0.2,0.2,0.2,0.4]);
+            }
         }
     };
 
@@ -897,17 +909,44 @@ var graphly = (function() {
 
 
         for(var p in this.data){
+            if( Object.keys(this.filters).length > 0 ){
+                inactiveData[p] = this.data[p];
+            }else{
+                inactiveData[p] = [];
+            }
             data[p] = this.data[p];
-            inactiveData[p] = this.data[p];
         }
 
         for (var f in this.filters){
+            var filter = this.filters[f];
             var currentDataset = data[f];
+
             for (var p in data){
-                data[p] = data[p].filter((e,i)=>{
-                    return this.filters[f](currentDataset[i]);
-                });
-                //inactiveData[k] = inactiveData[k].filter(e=>!this.filters[k](e));
+
+                var applicableFilter = true;
+
+                if(this.filterManager.filterSettings.hasOwnProperty('filterRelation')){
+                    applicableFilter = false;
+                    var filterRel = this.filterManager.filterSettings.filterRelation;
+                    for (var i = 0; i < filterRel.length; i++) {
+                        if( (filterRel[i].indexOf(p)!==-1) === (filterRel[i].indexOf(f)!==-1)){
+                            applicableFilter = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if(applicableFilter){
+                    data[p] = data[p].filter((e,i)=>{
+                        return filter(currentDataset[i]);
+                    });
+                    inactiveData[p] = inactiveData[p].filter((e,i)=>{
+                        return !filter(currentDataset[i]);
+                    });
+                }else{
+                    inactiveData[p] = [];
+                }
+                
             }
         }
 
@@ -1069,7 +1108,7 @@ var graphly = (function() {
                                 if(parSett.hasOwnProperty('symbol')){
                                     if(parSett.symbol === 'dot'){
                                         this.batchDrawer.addDot(
-                                            x, y, 6, rC[0], rC[1], rC[2], 0.5
+                                            x, y, 6, rC[0], rC[1], rC[2], 0.8
                                         );
                                         this.batchDrawerReference.addDot(
                                             x, y, 6, nCol[0], nCol[1], nCol[2], -1.0
@@ -1084,9 +1123,50 @@ var graphly = (function() {
                             p_y = y;
                         }
 
+                        // Draw filtered out 'points' for x,y 
+                        var lp = inactiveData[xAxRen[xScaleItem]].length;
+                        for (var j=0;j<=lp; j++) {
+                            var x = (this.xScale(inactiveData[xAxRen[xScaleItem]][j]));
+                            var y = (this.yScale(inactiveData[yAxRen[yScaleItem]][j]));
+                            var rC = [0.3,0.3,0.3];
+
+                            c = genColor();
+
+                            par_properties = {
+                                x: {
+                                    val: x, id: xAxRen[xScaleItem], coord: x
+                                },
+                                y: {
+                                    val: y, id: yAxRen[yScaleItem], coord: y
+                                },
+                            };
+
+                            nCol = c.map(function(c){return c/255;});
+                            parSett = this.dataSettings[yAxRen[yScaleItem]];
+
+                            if (parSett){
+
+                                if(parSett.hasOwnProperty('symbol')){
+                                    if(parSett.symbol === 'dot'){
+                                        this.batchDrawer.addDot(
+                                            x, y, 6, rC[0], rC[1], rC[2], 0.1
+                                        );
+                                        this.batchDrawerReference.addDot(
+                                            x, y, 6, nCol[0], nCol[1], nCol[2], -1.0
+                                        );
+                                    }
+                                }
+                            }
+
+                            this.colourToNode[c.join('-')] = par_properties;
+                        }
+
                         // Check if any regression type is selected for parameter
                         if(this.dataSettings[yAxRen[yScaleItem]].hasOwnProperty('regression')){
                             this.createRegression(data, xScaleItem, yScaleItem);
+                        }
+                        if(inactiveData[yAxRen[yScaleItem]].length>0){
+                            this.createRegression(this.data, xScaleItem, yScaleItem, true);
                         }
                     }
 
