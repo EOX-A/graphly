@@ -335,6 +335,7 @@ var graphly = (function() {
 
     graph.prototype.loadData = function (data){
         
+        this.filters = {};
         this.data = data;
         // Check for longest array and set buffer size accordingly 
         var max = 0;
@@ -344,7 +345,11 @@ var graphly = (function() {
           }
         }
 
-        max = max +400;
+        max = (max +400);
+
+        // Multiply by number of y axis elements as for each one all data points
+        // for the selected parameter is drawn
+        max = max * this.renderSettings.yAxis.length;
 
         this.updateBuffers(this.batchDrawer, ++max);
         this.updateBuffers(this.batchDrawerReference, ++max);
@@ -871,7 +876,12 @@ var graphly = (function() {
             );
             rC = rC.map(function(c){return c/255;});
         }else{
-            rC = [0.258, 0.525, 0.956];
+            // Check if color has been defined for specific parameter
+            if(this.dataSettings[this.renderSettings.yAxis[param]].hasOwnProperty('color')){
+                rC = this.dataSettings[this.renderSettings.yAxis[param]].color;
+            }else{ 
+                rC = [0.258, 0.525, 0.956];
+            }
         }
         return rC;
     };
@@ -1069,7 +1079,7 @@ var graphly = (function() {
                         for (var j=0;j<=lp; j++) {
                             var x = (this.xScale(data[xAxRen[xScaleItem]][j]));
                             var y = (this.yScale(data[yAxRen[yScaleItem]][j]));
-                            var rC = this.getColor(xScaleItem, j, data);
+                            var rC = this.getColor(yScaleItem, j, data);
 
                             c = genColor();
 
@@ -1115,7 +1125,7 @@ var graphly = (function() {
                                 if(parSett.hasOwnProperty('symbol')){
                                     if(parSett.symbol === 'dot'){
                                         this.batchDrawer.addDot(
-                                            x, y, 6, rC[0], rC[1], rC[2], 0.8
+                                            x, y, 6, rC[0], rC[1], rC[2], rC[3]
                                         );
                                         this.batchDrawerReference.addDot(
                                             x, y, 6, nCol[0], nCol[1], nCol[2], -1.0

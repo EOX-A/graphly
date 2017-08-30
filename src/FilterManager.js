@@ -6,10 +6,10 @@ class FilterManager {
         this.el = d3.select(params.el);
         this.filterSettings = params.filterSettings;
         this.visibleFilters = this.filterSettings.visibleFilters;
+        this.boolParameter = defaultFor(this.filterSettings.boolParameter, []);
         this.data = defaultFor(params.data, {});
-        this.filters = {};
-        this.brushes = {};
-        this.extents = {};
+        
+        this.initManager();
 
         this.margin = defaultFor(
             params.margin,
@@ -19,6 +19,15 @@ class FilterManager {
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
 
+    }
+
+    initManager(){
+        this.filters = {};
+        this.brushes = {};
+        this.boolFilters = {};
+        this.extents = {};
+        /*var cEv = new CustomEvent('change', {detail: {}});
+            this.el.node().dispatchEvent(cEv);*/
     }
 
     _initData() {
@@ -40,6 +49,18 @@ class FilterManager {
         this.extents = {};
         for (var d in this.data){
             this.extents[d] = d3.extent(this.data[d]);
+            // Check if min and max extent is the same, if yes pad it with 1/4
+            // the size, same min and max create display issues in scales.
+            // Only do this if it is not a flag filter
+            if(this.boolParameter.indexOf(d) === -1 &&
+               this.extents[d][0]===this.extents[d][1]){
+                var offset = this.extents[d][0]/4;
+                if(offset===0){
+                    offset = 1;
+                }
+                this.extents[d][0] = this.extents[d][0] - offset;
+                this.extents[d][1] = this.extents[d][1] + offset;
+            }
         }
     }
 
@@ -176,6 +197,58 @@ class FilterManager {
     }
 
 
+    _createBoolFilterElements() {
+        var height = 252;
+        var width = 120;
+        var that = this;
+
+        var div = this.el.append('div')
+                .attr('class', 'filterContainer')
+                .style('float', 'left')
+                .style('width', width+'px')
+                .style('height', height+'px');
+
+        for (var i = 0; i < this.boolParameter.length; i++) {
+            var d = this.boolParameter[i];
+            // If parameter is actually available in the dataset render it
+            if(this.data.hasOwnProperty(d)){
+                var container = div.append('div')
+                    .attr('class', 'boolParameterContainer');
+
+                container.append('label')
+                        .attr('for', d)
+                        .text(d);
+
+                var input = container.append("input")
+                        .property(
+                            'checked', defaultFor(that.boolFilters[d], true)
+                        )
+                        .attr("type", "checkbox")
+                        .attr("id", d);
+      
+                input.on('click', function(){
+                    var checked = this.checked;
+                    var id = this.id;
+                    that.boolFilters[id] = checked;
+                    that.filters[id] = (val)=>{
+                        return val === checked;
+                    };
+                    that._renderFilters();
+                    var cEv = new CustomEvent('change', {detail: that.filters});
+                    that.el.node().dispatchEvent(cEv);
+                    
+                });
+            }
+        }
+
+        // If element is empty because the provided parameters are not in the 
+        // current dataset, remove the div
+        if(div.selectAll('*')[0].length === 0){
+            div.remove();
+        }
+    }
+
+
     _renderFilters() {
 
         this.el.selectAll('*').remove();
@@ -238,10 +311,14 @@ class FilterManager {
         }
 
         this.visibleFilters.forEach(d=>{
-            if(this.data.hasOwnProperty(d)){
+            if(this.data.hasOwnProperty(d) && 
+               this.boolParameter.indexOf(d) === -1){
                 this._createFilterElement(d, data);
             }
         });
+
+        // Render bool filter elements
+        this._createBoolFilterElements();
 
 
     }
@@ -252,6 +329,7 @@ class FilterManager {
 
     loadData(data){
         this.data = data;
+        //this._initManager();
         this._initData();
         this._renderFilters();
     }

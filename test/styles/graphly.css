@@ -51,7 +51,18 @@ svg {
     outline-style: solid;*/
     box-shadow: 3px 3px 2px #ccc;
     margin-left: 4px;
+    padding-top: 10px;
 
+}
+
+.boolParameterContainer{
+    font-size: 0.7em;
+    margin-top: 6px;
+}
+
+.boolParameterContainer input {
+    float: left;
+    margin-top: 0px;
 }
 
 
