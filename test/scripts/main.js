@@ -62,14 +62,15 @@ var renderSettingsRRC = {
 
 var dataSettings = {
     rayleigh_dem_altitude: {
-        symbol: 'dot',
+        symbol: null,
         uom: 'm',
         lineConnect: true,
         color: [0.2, 0.2, 1.0, 0.8]
     },
     rayleigh_wind_velocity: {
         uom: 'cm/s',
-        colorscale: 'viridis'
+        colorscale: 'viridis',
+        extent: [-5000,5000]
         //outline: false
     },
     rayleigh_datetime_start: {
@@ -90,7 +91,8 @@ var dataSettings = {
     },
     mie_wind_velocity: {
         uom: 'cm/s',
-        colorscale: 'plasma'
+        colorscale: 'plasma',
+        extent: [-5000,5000]
         //outline: false
     },
     mie_datetime_start: {
@@ -165,13 +167,13 @@ var dataSettings = {
 var filterSettings = {
     parameterMatrix: {
         'height': [
-            'rayleigh_altitude_top', 'rayleigh_altitude_bottom'/*, 'mie_altitude_top', 'mie_altitude_bottom'*/
+            'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'mie_altitude_top', 'mie_altitude_bottom'
         ],
         'latitude': [
-            /*'mie_latitude', */'rayleigh_latitude'
+            'mie_latitude', 'rayleigh_latitude'
         ],
         'longitude': [
-            /*'mie_longitude',*/ 'rayleigh_longitude'
+           'mie_longitude', 'rayleigh_longitude'
         ]
     },
     filterRelation: [

@@ -50,9 +50,21 @@ class FilterManager {
             if(this.y.hasOwnProperty(d) && !this.y[d].brush.empty()){
                 var ext = this.y[d].brush.extent();
                 this.brushes[d] = ext;
-                filters[d] = (val)=>{
-                    return val <= ext[1] && val >= ext[0];
-                };
+                // Check if the current item is a grouped item, if yes
+                // go through related filter items and find match
+                if (this.filterSettings.parameterMatrix.hasOwnProperty(d)){
+                    // Grouped item, use corresponding filters
+                    var relFilters = this.filterSettings.parameterMatrix[d];
+                    for (var f=0; f<relFilters.length; f++){
+                        filters[relFilters[f]] = (val)=>{
+                            return val <= ext[1] && val >= ext[0];
+                        };
+                    }
+                }else{
+                    filters[d] = (val)=>{
+                        return val <= ext[1] && val >= ext[0];
+                    };
+                }
             }else{
                 if (this.brushes.hasOwnProperty(d)){
                     delete this.brushes[d];
@@ -201,10 +213,26 @@ class FilterManager {
                         }
                     }
                 }
+                // Check if filter is a grouped filter
+                if (this.filterSettings.parameterMatrix.hasOwnProperty(p)){
+                    applicableFilter = false;
+                }
+
                 if(applicableFilter){
                     data[p] = data[p].filter((e,i)=>{
                         return filter(currentDataset[i]);
                     });
+                }
+            }
+        }
+
+        // Recreate grouped data from filtered data
+        for (var g in this.filterSettings.parameterMatrix){
+            var items = this.filterSettings.parameterMatrix[g];
+            data[g] = [];
+            for (var i = 0; i < items.length; i++) {
+                if(this.data.hasOwnProperty(items[i])){
+                    data[g].pushArray(data[items[i]]);
                 }
             }
         }

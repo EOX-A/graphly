@@ -439,9 +439,16 @@ var graphly = (function() {
             }
             for (var ca = cAxis.length - 1; ca >= 0; ca--) {
                 if(cAxis[ca]){
-                    domain = d3.extent(
-                        this.data[cAxis[ca]]
-                    );
+                    // Check if an extent is already configured
+                    if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
+                       this.dataSettings[cAxis[ca]].hasOwnProperty('extent')){
+                        domain = this.dataSettings[cAxis[ca]].extent;
+                    }else{
+                        domain = d3.extent(
+                            this.data[cAxis[ca]]
+                        );
+                    }
+                    
                 }
             }
         }
