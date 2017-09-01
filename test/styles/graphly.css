@@ -35,3 +35,69 @@ svg {
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAMAAAAMCGV4AAAAqFBMVEUAAABFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFeFYaAAAAN3RSTlMAAQIDBAUGBwoLDA0ODxASHiUmKSw7Q0VJUlVrc3uOoqiqsre5ury+xczOz9XX2dze6e319/v91oit4gAAAH5JREFUCFttz0cKwgAARNEfjb3E3nvvNfrvfzNXoqBvNzAwDAAkYg+8ldpEajLopQDKN6dbdblxFwItPyoAEzXeP9UBEDXO2g9IjnRezaJ6BQhVVz+5UDt9+vUcMFbj/UMdAjS/9qpA/upspy7WHtMAhQ5FNQy6mfeF4O6Fv14GKhgEaCOP+AAAAABJRU5ErkJggg==")
 }
 
+#filters .axis path,
+#filters .axis line {
+    fill: none;
+    stroke: black;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+    stroke-dasharray: none 
+}
+
+
+.filterContainer{
+    /*outline: black;
+    outline-width: 1px;
+    outline-style: solid;*/
+    box-shadow: 3px 3px 2px #ccc;
+    margin-left: 4px;
+    padding-top: 10px;
+
+}
+
+.boolParameterContainer{
+    font-size: 0.7em;
+    margin-top: 6px;
+}
+
+.boolParameterContainer input {
+    float: left;
+    margin-top: 0px;
+}
+
+
+.brush .extent{
+    fill-opacity: 0.6;
+}
+
+.parameterLabel {
+    font-size: 0.8em;
+    position: absolute;
+    transform-origin: left;
+}
+
+
+.editButton{
+    text-align: center;
+    width: 11px;
+    height: 11px;
+    float: right;
+    margin-right: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #555;
+}
+
+.editButton.add:before {
+    content: "+";
+    line-height: 12px;
+}
+
+
+.editButton.remove:before {
+    content: "–";
+
+}
