@@ -25,9 +25,8 @@ class FilterManager {
         this.filters = {};
         this.brushes = {};
         this.boolFilters = {};
+        this.boolFilStat = {};
         this.extents = {};
-        /*var cEv = new CustomEvent('change', {detail: {}});
-            this.el.node().dispatchEvent(cEv);*/
     }
 
     _initData() {
@@ -66,6 +65,7 @@ class FilterManager {
 
     _brushEnd() {
         var filters = {}; 
+        // TODO: Im wiping here the bool filters need to think how to solve this
         this.visibleFilters.forEach(d => {
             // Check if axis available for parameter and with a brush extent
             if(this.y.hasOwnProperty(d) && !this.y[d].brush.empty()){
@@ -92,11 +92,8 @@ class FilterManager {
                 }
             }
         });
-
-        var cEv = new CustomEvent('change', {detail: filters});
-        this.el.node().dispatchEvent(cEv);
         this.filters = filters;
-        this._renderFilters();
+        this._filtersChanged();
     }
 
     _createFilterElement(d, data) {
@@ -115,7 +112,9 @@ class FilterManager {
             
             .attr('class', 'parameterLabel')
             .style('transform', d=>{
-                return 'translate(10px, '+(height*1.8-this.width/2)+'px) rotate(-90deg)';
+                return 'translate(10px, '+
+                (height*1.8-this.width/2)+
+                'px) rotate(-90deg)';
             })
             .html(d);
 
@@ -124,7 +123,10 @@ class FilterManager {
             .attr('height', (height))
             .append("g")
                 .attr("display", "block")
-                .attr("transform", "translate(" + (this.margin.left) + "," + (this.margin.top) + ")");
+                .attr("transform", "translate(" + 
+                    (this.margin.left) + "," + 
+                    (this.margin.top) + ")"
+                );
 
         var extents = this.extents;
         var heightRange = (height-this.margin.top-this.margin.bottom);
@@ -137,7 +139,10 @@ class FilterManager {
             .on("brushend", this._brushEnd.bind(this))
             .on("brush", function(param){});
 
-        var tempScale = d3.scale.linear().domain([0, bins+1]).range(this.y[d].domain());
+        var tempScale = d3.scale.linear()
+            .domain([0, bins+1])
+            .range(this.y[d].domain());
+
         var tickArray = d3.range(bins+1).map(tempScale);
 
         this.hist_data[d] = d3.layout.histogram()
@@ -196,6 +201,13 @@ class FilterManager {
             .attr("width", 16);
     }
 
+    _filtersChanged(){
+        var filters = Object.assign({}, this.filters, this.boolFilters);
+        this._renderFilters();
+        var cEv = new CustomEvent('change', {detail: filters});
+        this.el.node().dispatchEvent(cEv);
+    }
+
 
     _createBoolFilterElements() {
         var height = 252;
@@ -212,31 +224,80 @@ class FilterManager {
             var d = this.boolParameter[i];
             // If parameter is actually available in the dataset render it
             if(this.data.hasOwnProperty(d)){
+
+                if(!this.boolFilStat.hasOwnProperty(d)){
+                    this.boolFilStat[d] = {
+                        enabled: false,
+                        checked: true
+                    };
+                }
                 var container = div.append('div')
                     .attr('class', 'boolParameterContainer');
 
-                container.append('label')
+                var label = container.append('label')
                         .attr('for', d)
+                        .style('color', '#555')
                         .text(d);
 
+                container.append('div')
+                        .attr('class', function(){
+                            if (!that.boolFilStat[d].enabled){
+                                return 'editButton add';
+                            }else{
+                                return 'editButton remove';
+                            }
+                        })
+                        .style('line-height', '10px')
+                        .on('click', function(){
+                            var id = d3.select(this.parentNode)
+                                .select('input')
+                                .attr('id');
+
+                            if(!that.boolFilStat[id].enabled){
+                                that.boolFilStat[id].enabled = true;
+                                d3.select(this.parentNode).select('input')
+                                    .attr('disabled', null);
+                                d3.select(this.parentNode).select('label')
+                                    .style('color', null);
+                                d3.select(this)
+                                    .attr('class', 'editButton remove');
+                                var checked = that.boolFilStat[id].checked;
+                                that.boolFilters[id] = (val)=>{
+                                    return val === checked;
+                                };
+                                that._filtersChanged();
+                            }else{
+                                that.boolFilStat[id].enabled = false;
+                                d3.select(this.parentNode).select('input')
+                                    .attr('disabled', true);
+                                d3.select(this.parentNode).select('label')
+                                    .style('color', '#555');
+                                d3.select(this)
+                                    .attr('class', 'editButton add');
+                                delete that.boolFilters[id];
+                                that._filtersChanged();
+                            }
+                        });
+
                 var input = container.append("input")
-                        .property(
-                            'checked', defaultFor(that.boolFilters[d], true)
-                        )
+                        .property('checked', that.boolFilStat[d].checked)
                         .attr("type", "checkbox")
                         .attr("id", d);
+
+                if(that.boolFilStat[d].enabled){
+                    label.style('color', null);
+                }else{
+                    input.attr('disabled', true);
+                }
       
                 input.on('click', function(){
                     var checked = this.checked;
                     var id = this.id;
-                    that.boolFilters[id] = checked;
-                    that.filters[id] = (val)=>{
+                    that.boolFilStat[id].checked = checked;
+                    that.boolFilters[id] = (val)=>{
                         return val === checked;
                     };
-                    that._renderFilters();
-                    var cEv = new CustomEvent('change', {detail: that.filters});
-                    that.el.node().dispatchEvent(cEv);
-                    
+                    that._filtersChanged();
                 });
             }
         }
@@ -264,9 +325,9 @@ class FilterManager {
             data[p] = this.data[p];
         }
 
-
-        for (var f in this.filters){
-            var filter = this.filters[f];
+        var currentFilters = Object.assign({}, this.filters, this.boolFilters);
+        for (var f in currentFilters){
+            var filter = currentFilters[f];
             var currentDataset = data[f];
             for (var p in data){
                 var applicableFilter = true;
@@ -329,7 +390,6 @@ class FilterManager {
 
     loadData(data){
         this.data = data;
-        //this._initManager();
         this._initData();
         this._renderFilters();
     }
@@ -337,10 +397,6 @@ class FilterManager {
     updateFilterSettings(settings){
         this.filterSettings = settings;
         this._renderFilters();
-    }
-
-    getFilters() {
-
     }
 
 }

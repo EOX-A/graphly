@@ -926,12 +926,8 @@ var graphly = (function() {
 
 
         for(var p in this.data){
-            if( Object.keys(this.filters).length > 0 ){
-                inactiveData[p] = this.data[p];
-            }else{
-                inactiveData[p] = [];
-            }
             data[p] = this.data[p];
+            inactiveData[p] = [];
         }
 
         for (var f in this.filters){
@@ -954,15 +950,19 @@ var graphly = (function() {
                 }
                 
                 if(applicableFilter){
+                    var tmpArray = data[p];
                     data[p] = data[p].filter((e,i)=>{
                         return filter(currentDataset[i]);
                     });
-                    inactiveData[p] = inactiveData[p].filter((e,i)=>{
-                        return !filter(currentDataset[i]);
-                    });
-                }else{
+                    inactiveData[p].pushArray(
+                        tmpArray.filter((e,i)=>{
+                            return !filter(currentDataset[i]);
+                        })
+                    );
+
+                }/*else{
                     inactiveData[p] = [];
-                }
+                }*/
                 
             }
         }
