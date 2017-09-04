@@ -112,8 +112,8 @@ class FilterManager {
             
             .attr('class', 'parameterLabel')
             .style('transform', d=>{
-                return 'translate(10px, '+
-                (height*1.8-this.width/2)+
+                return 'translate(10px,'+
+                (height-20)+
                 'px) rotate(-90deg)';
             })
             .html(d);
