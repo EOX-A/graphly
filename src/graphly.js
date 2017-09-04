@@ -141,7 +141,6 @@ var graphly = (function() {
         this.referenceContext = this.batchDrawerReference.getContext();
 
         this.svg = this.el.append('svg')
-        //this.el.insert('svg',':first-child')
             .attr('width', this.width + this.margin.left + this.margin.right)
             .attr('height', this.height + this.margin.top + this.margin.bottom)
             .style('position', 'absolute')
@@ -160,8 +159,6 @@ var graphly = (function() {
             .append('g')
             .attr('transform', 'translate(' + (this.margin.left+1) + ',' +
                 (this.margin.top+1) + ')');
-
-        this.createHelperObjects();
 
 
         this.renderCanvas.on('mousemove', function() {
@@ -236,6 +233,21 @@ var graphly = (function() {
 
     };
 
+    graph.prototype.createLabels = function (){
+
+        this.svg.append('text')
+            .attr('class', 'yAxisLabel axisLabel')
+            .attr('text-anchor', 'middle')
+            .attr('transform', 'translate('+ -(this.margin.left/2+10) +','+(this.height/2)+')rotate(-90)')
+            .text(this.renderSettings.yAxis.join());
+
+        this.svg.append('text')
+            .attr('class', 'xAxisLabel axisLabel')
+            .attr('text-anchor', 'middle')
+            .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-10))+')')
+            .text(this.renderSettings.xAxis.join());
+    };
+
 
     graph.prototype.createHelperObjects = function (){
 
@@ -276,11 +288,11 @@ var graphly = (function() {
             .attr('height', this.height);
         };
 
-    // Returns a function, that, as long as it continues to be invoked, will not
-    // be triggered. The function will be called after it stops being called for
-    // N milliseconds. If `immediate` is passed, trigger the function on the
-    // leading edge, instead of the trailing.
-    var debounce = function(func, wait, immediate) {
+        // Returns a function, that, as long as it continues to be invoked, will not
+        // be triggered. The function will be called after it stops being called for
+        // N milliseconds. If `immediate` is passed, trigger the function on the
+        // leading edge, instead of the trailing.
+        var debounce = function(func, wait, immediate) {
         var timeout;
         return function() {
             var context = this, args = arguments;
@@ -546,6 +558,7 @@ var graphly = (function() {
         ]);*/
 
         this.createHelperObjects();
+        
 
         if (this.xTimeScale){
             this.addTimeInformation();
@@ -554,6 +567,8 @@ var graphly = (function() {
         this.renderCanvas.call(this.xyzoom);
         d3.select('#zoomXBox').call(this.xzoom);
         d3.select('#zoomYBox').call(this.yzoom);
+
+        this.createLabels();
 
     };
 
@@ -882,6 +897,9 @@ var graphly = (function() {
             }else{ 
                 rC = [0.258, 0.525, 0.956];
             }
+        }
+        if(rC.length == 3){
+            rC.push(0.8);
         }
         return rC;
     };

@@ -99,5 +99,11 @@ svg {
 
 .editButton.remove:before {
     content: "–";
+}
+
+
+.axisLabel{
+    pointer-events: all;
+    cursor: pointer;
 
 }
