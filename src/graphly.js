@@ -887,13 +887,75 @@ var graphly = (function() {
     };
 
     graph.prototype.resize = function (){
-        // TODO: NOT working correctly more or less a placeholder here
+        debounceResize.bind(this)();
         this.dim = this.el.node().getBoundingClientRect();
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
-        this.initAxis();
-        this.renderData();
+        this.resize_update();
     };
+
+
+    graph.prototype.resize_update = function() {
+
+        this.xScale.range([0, this.width]);
+        this.yScale.range([this.height, 0]);
+        this.xAxisSvg.attr('transform', 'translate(0,' + this.height + ')');
+        this.xAxis.tickSize(-this.height);
+        this.yAxis.innerTickSize(-this.width);
+        this.xAxisSvg.call(this.xAxis);
+        this.yAxisSvg.call(this.yAxis);
+
+        this.renderCanvas
+            .attr('width', this.width - 1)
+            .attr('height', this.height - 1);
+   
+        this.referenceCanvas
+            .attr('width', this.width - 1)
+            .attr('height', this.height - 1);
+           
+        // TODO: in this.svg actually the first g element is saved, this is 
+        // confusing and shoulg maybe be changed, maybe change name?
+        d3.select(this.svg.node().parentNode)
+            .attr('width', this.width + this.margin.left + this.margin.right)
+            .attr('height', this.height + this.margin.top + this.margin.bottom);
+           
+        d3.select(this.topSvg.node().parentNode)
+            .attr('width', this.width + this.margin.left + this.margin.right)
+            .attr('height', this.height + this.margin.top + this.margin.bottom);
+
+        d3.select('#clip').select('rect')
+            .attr('width', this.width)
+            .attr('height', this.height);
+
+        d3.select('#zoomXBox')
+            .attr('width', this.width)
+            .attr('height', this.margin.bottom)
+            .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
+
+        d3.select('#zoomYBox')
+            .attr('width', this.margin.left)
+            .attr('height', this.height );
+            
+        d3.select('#rectangleOutline')
+            .attr('width', this.width)
+            .attr('height', this.height);
+
+        this.el.select('#previewImage')
+            .attr('width',  this.width)
+            .attr('height', this.height);
+
+    };
+
+    graph.prototype.onResize = function() {
+        this.batchDrawer.updateCanvasSize(this.width, this.height);
+        this.batchDrawerReference.updateCanvasSize(this.width, this.height);
+        this.renderData();
+        this.zoom_update();
+    };
+
+    var debounceResize = debounce(function() {
+        this.onResize();
+    }, 500);
 
 
     /**
@@ -959,11 +1021,7 @@ var graphly = (function() {
                             return !filter(currentDataset[i]);
                         })
                     );
-
-                }/*else{
-                    inactiveData[p] = [];
-                }*/
-                
+                }
             }
         }
 
@@ -1077,18 +1135,22 @@ var graphly = (function() {
                         // Draw normal 'points' for x,y coordinates using defined symbol
                         var lp = data[xAxRen[xScaleItem]].length;
                         for (var j=0;j<=lp; j++) {
-                            var x = (this.xScale(data[xAxRen[xScaleItem]][j]));
-                            var y = (this.yScale(data[yAxRen[yScaleItem]][j]));
+                            var x = this.xScale(data[xAxRen[xScaleItem]][j]);
+                            var y = this.yScale(data[yAxRen[yScaleItem]][j]);
                             var rC = this.getColor(yScaleItem, j, data);
 
                             c = genColor();
 
                             par_properties = {
                                 x: {
-                                    val: x, id: xAxRen[xScaleItem], coord: x
+                                    val: data[xAxRen[xScaleItem]][j],
+                                    id: xAxRen[xScaleItem],
+                                    coord: x
                                 },
                                 y: {
-                                    val: y, id: yAxRen[yScaleItem], coord: y
+                                    val: data[yAxRen[yScaleItem]][j],
+                                    id: yAxRen[yScaleItem],
+                                    coord: y
                                 },
                             };
 

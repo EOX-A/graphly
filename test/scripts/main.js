@@ -262,7 +262,6 @@ var filterSettings = {
     visibleFilters: [
         'T_elec',
         'Latitude',
-        'Measurement_Response',
         'Measurement_Error_Mie_Response',
         'Reference_Pulse_Response',
         'Reference_Pulse_Error_Mie_Response',
