@@ -107,3 +107,12 @@ svg {
     cursor: pointer;
 
 }
+
+#regressionInfo{
+    font-family: arial;
+    font-size: 1em;
+    background-color: rgba(255, 255, 255, 0.8);
+    position: absolute;
+    width: 350px;
+    text-align: center;
+}

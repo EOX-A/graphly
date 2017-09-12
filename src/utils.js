@@ -32,6 +32,39 @@ function resetColor(){
     nextCol = 1;
 }
 
+function rgbToHex(r, g, b) {
+    r = Math.ceil(r*255);
+    g = Math.ceil(g*255);
+    b = Math.ceil(b*255);
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+
+function createSuperscript(string){
+    // Adding subscript elements to string which contain underscores
+    var superscriptString = "";
+    var parts = string.split(" ");
+    if (parts.length>1){
+        superscriptString = parts[0];
+        for (var i=1; i<parts.length; i++){
+            if(parts[i].indexOf('^')!==-1){
+                var index = parts[i].indexOf('^');
+                superscriptString += 
+                    parts[i].substring(0, index) + 
+                    '<sup>'+ parts[i].substring(index+1)+'</sup>'+' ';
+            }else{
+                superscriptString += parts[i]+' ';
+            }
+            
+        }
+    }else{
+        superscriptString = string;
+    }
+
+    return superscriptString;
+}
+
+
 
 function hasOwnProperty(obj, prop) {
     var proto = obj.__proto__ || obj.constructor.prototype; // jshint ignore:line

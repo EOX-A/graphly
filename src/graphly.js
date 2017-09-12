@@ -800,6 +800,17 @@ var graphly = (function() {
                 }
             break;
         }
+
+        if(typeof reg.type !== 'undefined'){
+            // render regression label
+            var regrString = 
+                result.string + '  (r^2: '+ (result.r2).toPrecision(3)+')';
+            d3.select('#regressionInfo')
+                .append('div')
+                .style('color', rgbToHex(c[0], c[1], c[2]))
+                .style("opacity", c[3])
+                .html(createSuperscript(regrString));
+        }
     };
 
     graph.prototype.createRegression = function(data, xScaleItem, yScaleItem, inactive) {
@@ -812,6 +823,7 @@ var graphly = (function() {
             type: this.dataSettings[yAxRen[yScaleItem]].regression,
             degree: this.dataSettings[yAxRen[yScaleItem]].regressionDegree
         };
+
 
         //Check if data has identifier creating multiple datasets
         if (this.renderSettings.hasOwnProperty('dataIdentifier')){
@@ -1009,6 +1021,13 @@ var graphly = (function() {
             data[p] = this.data[p];
             inactiveData[p] = [];
         }
+
+        // Setup div for regression info rendering
+        d3.select('#regressionInfo').remove();
+        this.el.append('div')
+            .attr('id', 'regressionInfo')
+            .style('bottom', this.margin.bottom*2+'px')
+            .style('left', (this.width/2-this.margin.left)+'px');
 
         for (var f in this.filters){
             var filter = this.filters[f];
