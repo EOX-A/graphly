@@ -262,15 +262,11 @@ var filterSettings = {
     visibleFilters: [
         'T_elec',
         'Latitude',
-        'Measurement_Error_Mie_Response',
-        'Reference_Pulse_Response',
-        'Reference_Pulse_Error_Mie_Response',
         'height',
         'latitude',
         'longitude',
         'rayleigh_wind_velocity',
         'mie_wind_velocity',
-        'Measurement_Response',
         'Laser_Freq_Offset',
         'Mie_Valid',
         'Rayleigh_Valid',
@@ -280,13 +276,39 @@ var filterSettings = {
         'Num_Mie_Used',
         'Num_Rayleigh_Used',
         'Num_Corrupt_Mie',
-        'Num_Corrupt_Rayleigh'
+        'Num_Corrupt_Rayleigh',
+
+        'Frequency_Offset',
+        'Frequency_Valid',
+        'Measurement_Response_Valid',
+        'Reference_Pulse_Response_Valid',
+        'Measurement_Response',
+        'Measurement_Error_Mie_Response',
+        'Reference_Pulse_Response',
+        'Reference_Pulse_Error_Mie_Response',
+        /*'Num_Valid_Measurements',
+        'Num_Measurements_Usable',
+        'Num_Reference_Pulses_Usable',
+        'Num_Measurement_Invalid',
+        'Num_Pulse_Validity_Status_Flag_False',
+        'Num_Sat_Not_on_Target_Measurements',*/
+        'Num_Corrupt_Measurement_Bins',
+        'Num_Corrupt_Reference_Pulses',
+        'Num_Mie_Core_Algo_Fails_Measurements',
+        //'Num_Ground_Echo_Not_Detected_Measurements'
+
+
     ],
-    boolParameter: ['Mie_Valid', 'Rayleigh_Valid'],
+    boolParameter: [
+        'Mie_Valid', 'Rayleigh_Valid',
+        'Frequency_Valid', 'Measurement_Response_Valid','Reference_Pulse_Response_Valid'
+    ],
     maskParameter: {
 
     }
 };
+
+
 
 var filterManager = new FilterManager({
     el:'#filters',

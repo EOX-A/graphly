@@ -6,7 +6,8 @@
     "papaparse": "^4.3.2",
     "plotty": "santilland/plotty#^0.2.0",
     "msgpack-lite": "^0.1.26",
-    "regression-js": "^1.4.0"
+    "regression-js": "^1.4.0",
+    "choices.js": "^3.0.2"
   },
   "devDependencies": {},
   "ignore": [

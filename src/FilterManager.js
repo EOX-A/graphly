@@ -211,7 +211,7 @@ class FilterManager {
 
     _createBoolFilterElements() {
         var height = 252;
-        var width = 120;
+        var width = 244;
         var that = this;
 
         var div = this.el.append('div')

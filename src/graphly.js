@@ -241,6 +241,35 @@ var graphly = (function() {
             .attr('transform', 'translate('+ -(this.margin.left/2+10) +','+(this.height/2)+')rotate(-90)')
             .text(this.renderSettings.yAxis.join());
 
+        this.el.append('div')
+            .attr('id', 'ySettings')
+            .style('top', this.height/2+'px')
+            .style('left', this.margin.left+15+'px')
+            .append('select')
+                .attr('id', 'yScaleChoices');
+
+        document.getElementById("yScaleChoices").multiple = true;
+
+        d3.select('.yAxisLabel.axisLabel').on('click', function(){
+            if(d3.select('#ySettings').style('display') === 'block'){
+                d3.select('#ySettings').style('display', 'none');
+            }else{
+                d3.select('#ySettings').style('display', 'block');
+            }
+        });
+
+        
+
+        var example = new Choices(d3.select('#yScaleChoices').node(), {
+          choices: [
+            {value: 'One', label: 'Label One'},
+            {value: 'Two', label: 'Label Two', disabled: true},
+            {value: 'Three', label: 'Label Three'},
+          ],
+          removeItemButton: true,
+        });
+
+
         this.svg.append('text')
             .attr('class', 'xAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
