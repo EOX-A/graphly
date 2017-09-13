@@ -1,3 +1,5 @@
+/*jshint esversion: 6 */
+
 /**
  * The main graphly module.
  * @module graphly
@@ -6,12 +8,26 @@
  */
 
 
+import regression from 'regression';
+//import * as d3 from "d3";
+var d3 = require("d3");
+//var d3 = Object.assign({}, require("d3-format"), require("d3-geo"), require("d3-geo-projection"));
+//import {scaleLinear} from "d3-scale";
+import msgpack from 'msgpack-lite';
+
+//require('msgpack-lite');
+
+require('./utils.js');
+require('./BatchDraw.js');
+//var FilterManager = require('./FilterManager.js');
+require('./FilterManager.js');
+
 
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
 
-var graphly = (function() {
+class graphly {
 
     /**
     * @lends graphly
@@ -31,7 +47,7 @@ var graphly = (function() {
     * @param {Object[]} [options.dataset] passing of dataset instead of CSV url
     *
     */
-    var graph = function(options) {
+    constructor(options) {
 
         // Passed options
         this.el = d3.select(options.el);
@@ -69,7 +85,7 @@ var graphly = (function() {
                 }
             );
         }
-        var self = this;
+        let self = this;
 
         //plotty.addColorScale('divergent1', ['#2f3895', '#ffffff', '#a70125'], [0, 0.41, 1]);
 
@@ -80,7 +96,7 @@ var graphly = (function() {
 
 
         // move tooltip
-        var tooltip = this.el.append('pre')
+        let tooltip = this.el.append('pre')
             .attr('id', 'tooltip')
             .style('position', 'absolute')
             .style('background-color', 'white')
@@ -88,7 +104,7 @@ var graphly = (function() {
             .style('z-index', 10);
 
         window.onmousemove = function (e) {
-            var x = e.clientX,
+            let x = e.clientX,
                 y = e.clientY;
             tooltip.style('top', (y + 20) + 'px');
             tooltip.style('left', (x + 20) + 'px');
@@ -108,7 +124,7 @@ var graphly = (function() {
 
 
         // Set parameters
-        var params = {
+        let params = {
             forceGL1: false, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             coordinateSystem: 'pixels',
@@ -163,25 +179,25 @@ var graphly = (function() {
 
         this.renderCanvas.on('mousemove', function() {
             // Get mouse positions from the main canvas.
-            var mouseX = d3.event.offsetX; 
-            var mouseY = d3.event.offsetY;
+            let mouseX = d3.event.offsetX; 
+            let mouseY = d3.event.offsetY;
             // Pick the colour from the mouse position. 
-            var gl = self.referenceContext;
-            var pixels = new Uint8Array(4);
+            let gl = self.referenceContext;
+            let pixels = new Uint8Array(4);
             gl.readPixels(
                 mouseX, (this.height-mouseY),
                 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels
             ); 
-            var col = [pixels[0], pixels[1], pixels[2]];
-            var colKey = col.join('-');
+            let col = [pixels[0], pixels[1], pixels[2]];
+            let colKey = col.join('-');
             // Get the data from our map! 
-            var nodeId = self.colourToNode[colKey];
+            let nodeId = self.colourToNode[colKey];
             self.topSvg.selectAll('.highlightItem').remove();
             tooltip.style('display', 'none');
 
             if(nodeId){
-                var obj = {};
-                for (var key in nodeId) {
+                let obj = {};
+                for (let key in nodeId) {
                     obj[nodeId[key].id] = nodeId[key].val;
                 }
                 // Check if parameter has multi values for x and y
@@ -231,9 +247,9 @@ var graphly = (function() {
             }
         });
 
-    };
+    }
 
-    graph.prototype.createLabels = function (){
+    createLabels(){
 
         this.svg.append('text')
             .attr('class', 'yAxisLabel axisLabel')
@@ -246,17 +262,17 @@ var graphly = (function() {
             .attr('text-anchor', 'middle')
             .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-10))+')')
             .text(this.renderSettings.xAxis.join());
-    };
+    }
 
 
-    graph.prototype.createHelperObjects = function (){
+    createHelperObjects(){
 
         this.renderingContainer = this.svg.append('g')
             .attr('id','renderingContainer')
             .style('clip-path','url(#clip)');
 
         // Add clip path so only points in the area are shown
-        var clippath = this.svg.append('defs').append('clipPath')
+        let clippath = this.svg.append('defs').append('clipPath')
             .attr('id', 'clip')
             .append('rect')
                 .attr('width', this.width)
@@ -286,40 +302,41 @@ var graphly = (function() {
             .attr('id', 'rectangleOutline')
             .attr('width', this.width)
             .attr('height', this.height);
-        };
+    }
 
-        // Returns a function, that, as long as it continues to be invoked, will not
-        // be triggered. The function will be called after it stops being called for
-        // N milliseconds. If `immediate` is passed, trigger the function on the
-        // leading edge, instead of the trailing.
-        var debounce = function(func, wait, immediate) {
-        var timeout;
+    // Returns a function, that, as long as it continues to be invoked, will not
+    // be triggered. The function will be called after it stops being called for
+    // N milliseconds. If `immediate` is passed, trigger the function on the
+    // leading edge, instead of the trailing.
+
+    debounce(func, wait, immediate) {
+        let timeout;
         return function() {
-            var context = this, args = arguments;
-            var later = function() {
+            let context = this, args = arguments;
+            let later = function() {
                 timeout = null;
                 if (!immediate) func.apply(context, args);
             };
-            var callNow = immediate && !timeout;
+            let callNow = immediate && !timeout;
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
             if (callNow) func.apply(context, args);
         };
-    };
+    }
 
 
-    graph.prototype.loadCSV = function (csv){
-        var self = this;
+    loadCSV(csv){
+        let self = this;
         // Parse local CSV file
         Papa.parse(csv, {
             download: true,
             header: true,
             dynamicTyping: true,
             complete: function(results) {
-                var data = {};
-                for (var i = 0; i < results.data.length; i++) {
-                    var d = results.data[i];
-                    for (var prop in d) {
+                let data = {};
+                for (let i = 0; i < results.data.length; i++) {
+                    let d = results.data[i];
+                    for (let prop in d) {
                         if (data.hasOwnProperty(prop)){
                             data[prop].push(d[prop]);
                         }else{
@@ -335,23 +352,22 @@ var graphly = (function() {
                 }
             }
         });
+    }
 
-    };
-
-    graph.prototype.updateBuffers = function (drawer, amount){
+    updateBuffers(drawer, amount){
         drawer.maxLines = amount;
         drawer.maxDots = amount;
         drawer.maxRects = amount;
         drawer._initBuffers();
-    };
+    }
 
-    graph.prototype.loadData = function (data){
+    loadData(data){
         
         this.filters = {};
         this.data = data;
         // Check for longest array and set buffer size accordingly 
-        var max = 0;
-        for (var prop in this.data) {
+        let max = 0;
+        for (let prop in this.data) {
           if(max < this.data[prop].length){
             max = this.data[prop].length;
           }
@@ -368,23 +384,23 @@ var graphly = (function() {
 
 
         // Check for special formatting of data
-        var ds = this.dataSettings;
-        for (var key in ds) {
+        let ds = this.dataSettings;
+        for (let key in ds) {
             if (ds[key].hasOwnProperty('scaleFormat')){
                 if (ds[key].scaleFormat === 'time'){
-                    var format = defaultFor(ds[key].timeFormat, 'default');
+                    let format = defaultFor(ds[key].timeFormat, 'default');
 
                     // Check if key is available in data first
                     if(this.data.hasOwnProperty(key)){
                         switch(format){
                             case 'default':
-                            for (var i = 0; i < this.data[key].length; i++) {
+                            for (let i = 0; i < this.data[key].length; i++) {
                                 this.data[key][i] = new Date(this.data[key][i]);
                             }
                             break;
                             case 'MJD2000_S':
-                            for (var j = 0; j < this.data[key].length; j++) {
-                                var d = new Date('2000-01-01');
+                            for (let j = 0; j < this.data[key].length; j++) {
+                                let d = new Date('2000-01-01');
                                 d.setSeconds(d.getSeconds() + this.data[key][j]);
                                 this.data[key][j] = d;
                             }
@@ -396,18 +412,18 @@ var graphly = (function() {
         }
         this.initAxis();
         this.renderData();
-    };
+    }
 
-    graph.prototype.initAxis = function (){
+    initAxis(){
 
         this.svg.selectAll('*').remove();
 
-        var xExtent, yExtent;
-        var xSelection = [].concat.apply([], this.renderSettings.xAxis);
-        var ySelection = [].concat.apply([], this.renderSettings.yAxis);
+        let xExtent, yExtent;
+        let xSelection = [].concat.apply([], this.renderSettings.xAxis);
+        let ySelection = [].concat.apply([], this.renderSettings.yAxis);
 
-        for (var i = xSelection.length - 1; i >= 0; i--) {
-            var xExt = d3.extent(this.data[xSelection[i]]);
+        for (let i = xSelection.length - 1; i >= 0; i--) {
+            let xExt = d3.extent(this.data[xSelection[i]]);
             if(xExtent){
                 if(xExt[0]<xExtent){
                     xExtent[0] = xExt[0];
@@ -421,8 +437,8 @@ var graphly = (function() {
 
         }
 
-        for (var j = ySelection.length - 1; j >= 0; j--) {
-            var yExt = d3.extent(this.data[ySelection[j]]);
+        for (let j = ySelection.length - 1; j >= 0; j--) {
+            let yExt = d3.extent(this.data[ySelection[j]]);
             if(yExtent){
                 if(yExt[0]<yExtent[0]){
                     yExtent[0] = yExt[0];
@@ -435,15 +451,15 @@ var graphly = (function() {
             } 
         }
 
-        var xRange = xExtent[1] - xExtent[0];
-        var yRange = yExtent[1] - yExtent[0];
+        let xRange = xExtent[1] - xExtent[0];
+        let yRange = yExtent[1] - yExtent[0];
 
-        var domain;
+        let domain;
         if(this.renderSettings.hasOwnProperty('colorAxis')){
-            var cAxis = this.renderSettings.colorAxis;
+            let cAxis = this.renderSettings.colorAxis;
             // Check to see if linear colorscale or ordinal colorscale (e.g. IDs)
             if (this.dataSettings.hasOwnProperty(cAxis)){
-                var ds = this.dataSettings[cAxis];
+                let ds = this.dataSettings[cAxis];
                 if(
                     ds.hasOwnProperty('scaleType') && 
                     ds.scaleType === 'ordinal' &&
@@ -454,7 +470,7 @@ var graphly = (function() {
                         .domain(ds.categories);
                 }
             }
-            for (var ca = cAxis.length - 1; ca >= 0; ca--) {
+            for (let ca = cAxis.length - 1; ca >= 0; ca--) {
                 if(cAxis[ca]){
                     // Check if an extent is already configured
                     if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
@@ -476,7 +492,7 @@ var graphly = (function() {
         }
 
 
-        var xScaleType, yScaleType;
+        let xScaleType, yScaleType;
         // TODO: how to handle multiple different scale types
         // For now just check first object of scale
         this.xTimeScale = false;
@@ -569,11 +585,10 @@ var graphly = (function() {
         d3.select('#zoomYBox').call(this.yzoom);
 
         this.createLabels();
+    }
 
-    };
 
-
-    graph.prototype.zoom_update = function() {
+    zoom_update() {
         this.xyzoom = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScale)
@@ -588,20 +603,22 @@ var graphly = (function() {
         this.renderCanvas.call(this.xyzoom);
         d3.select('#zoomXBox').call(this.xzoom);
         d3.select('#zoomYBox').call(this.yzoom);
-    };
+    }
 
-    graph.prototype.onZoom = function() {
+    onZoom() {
         this.renderData();
         this.zoom_update();
-    };
+    }
 
-    var debounceZoom = debounce(function() {
-        this.onZoom();
-    }, 250);
+    debounceZoom(){
+        debounce(()=>{
+            this.onZoom();
+        }, 250);
+    }
 
-    graph.prototype.addTimeInformation = function() {
+    addTimeInformation() {
 
-        var dateFormat = d3.time.format.utc('%Y-%m-%dT%H:%M:%S');
+        let dateFormat = d3.time.format.utc('%Y-%m-%dT%H:%M:%S');
 
         d3.selectAll('.start-date').remove();
         d3.selectAll('.x.axis>.tick:nth-of-type(2)')
@@ -618,10 +635,9 @@ var graphly = (function() {
             .attr('dx', '-64px')
             .attr('class', 'end-date')
             .text(function(d){return dateFormat(d);});
+    }
 
-    };
-
-    graph.prototype.previewZoom = function() {
+    previewZoom() {
 
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
@@ -637,13 +653,13 @@ var graphly = (function() {
             this.xyzoom.scale()*1.1
         ]);*/
 
-        var xScale = this.xzoom.scale();
-        var yScale = this.yzoom.scale();
-        var xyScale = this.xyzoom.scale();
+        let xScale = this.xzoom.scale();
+        let yScale = this.yzoom.scale();
+        let xyScale = this.xyzoom.scale();
 
-        var transXY = this.xyzoom.translate();
-        var transX = this.xzoom.translate();
-        var transY = this.yzoom.translate();
+        let transXY = this.xyzoom.translate();
+        let transX = this.xzoom.translate();
+        let transY = this.yzoom.translate();
 
         this.topSvg.selectAll('.highlightItem').remove();
 
@@ -687,24 +703,22 @@ var graphly = (function() {
         }else{
             this.onZoom();
         }
+    }
 
 
-    };
-
-
-    graph.prototype.drawCircle = function(renderer, cx, cy, r, num_segments) { 
-        var theta = 2 * 3.1415926 / num_segments; 
-        var c = Math.cos(theta);//precalculate the sine and cosine
-        var s = Math.sin(theta);
+    drawCircle(renderer, cx, cy, r, num_segments) { 
+        let theta = 2 * 3.1415926 / num_segments; 
+        let c = Math.cos(theta);//precalculate the sine and cosine
+        let s = Math.sin(theta);
 
         x = r;//we start at angle = 0 
         y = 0; 
         
-        var prev_point = null;
-        for(var i = 0; i <= num_segments; i++) 
+        let prev_point = null;
+        for(let i = 0; i <= num_segments; i++) 
         { 
             if(prev_point){
-                var next_point = [x + cx, y + cy];
+                let next_point = [x + cx, y + cy];
                 renderer.addLine(
                     prev_point[0], prev_point[1], next_point[0],
                     next_point[1], 5, 0.258, 0.525, 0.956, 1.0
@@ -718,20 +732,19 @@ var graphly = (function() {
             t = x;
             x = c * x - s * y;
             y = s * t + c * y;
-        } 
-        
-    };
+        }
+    }
 
-    graph.prototype.renderRegression = function(data, reg, color, thickness) {
-        var result;
-        var c = defaultFor(color, [0.1, 0.4, 0.9]);
+    renderRegression(data, reg, color, thickness) {
+        let result;
+        let c = defaultFor(color, [0.1, 0.4, 0.9]);
         if(c.length === 3){
             c.push(1.0);
         }
         thickness = defaultFor(thickness, 1);
 
         // Use current xAxis in combination with yAxis selection
-        var xPoints = this.xScale.domain();
+        let xPoints = this.xScale.domain();
         if(this.xTimeScale){
             xPoints = [
                 xPoints[0].getTime(),
@@ -742,10 +755,10 @@ var graphly = (function() {
         switch(reg.type){
             case 'linear':
                 result = regression('linear', data);
-                var slope = result.equation[0];
-                var yIntercept = result.equation[1];
+                let slope = result.equation[0];
+                let yIntercept = result.equation[1];
 
-                var yPoints = [
+                let yPoints = [
                     xPoints[0]*slope + yIntercept,
                     xPoints[1]*slope + yIntercept,
                 ];
@@ -760,19 +773,19 @@ var graphly = (function() {
                 );
             break;
             case 'polynomial':
-                var degree = defaultFor(reg.degree, 3);
+                let degree = defaultFor(reg.degree, 3);
                 result = regression('polynomial', data, degree);
-                var lineAmount = 200;
-                var extent = Math.abs(xPoints[1]-xPoints[0]);
-                var delta = extent/lineAmount;
-                for(var l=0; l<lineAmount-1;l++){
-                    var x1, x2, y1, y2;
+                let lineAmount = 200;
+                let extent = Math.abs(xPoints[1]-xPoints[0]);
+                let delta = extent/lineAmount;
+                for(let l=0; l<lineAmount-1;l++){
+                    let x1, x2, y1, y2;
                     x1 = xPoints[0] + l*delta;
                     x2 = xPoints[0] + (l+1)*delta;
                     y1 = 0;
                     y2 = 0;
-                    var eql = result.equation.length-1;
-                    for (var i = eql; i >= 0; i--) {
+                    let eql = result.equation.length-1;
+                    for (let i = eql; i >= 0; i--) {
                         y1 = y1 + (
                             result.equation[i] *
                             Math.pow(x1, i)
@@ -803,7 +816,7 @@ var graphly = (function() {
 
         if(typeof reg.type !== 'undefined'){
             // render regression label
-            var regrString = 
+            let regrString = 
                 result.string + '  (r^2: '+ (result.r2).toPrecision(3)+')';
             d3.select('#regressionInfo')
                 .append('div')
@@ -811,15 +824,15 @@ var graphly = (function() {
                 .style("opacity", c[3])
                 .html(createSuperscript(regrString));
         }
-    };
+    }
 
-    graph.prototype.createRegression = function(data, xScaleItem, yScaleItem, inactive) {
+    createRegression(data, xScaleItem, yScaleItem, inactive) {
 
-        var xAxRen = this.renderSettings.xAxis;
-        var yAxRen = this.renderSettings.yAxis;
-        var resultData;
+        let xAxRen = this.renderSettings.xAxis;
+        let yAxRen = this.renderSettings.yAxis;
+        let resultData;
         inactive = defaultFor(inactive, false);
-        var reg = {
+        let reg = {
             type: this.dataSettings[yAxRen[yScaleItem]].regression,
             degree: this.dataSettings[yAxRen[yScaleItem]].regressionDegree
         };
@@ -828,17 +841,17 @@ var graphly = (function() {
         //Check if data has identifier creating multiple datasets
         if (this.renderSettings.hasOwnProperty('dataIdentifier')){
 
-            for (var i = 0; i < this.renderSettings.dataIdentifier.identifiers.length; i++) {
+            for (let i = 0; i < this.renderSettings.dataIdentifier.identifiers.length; i++) {
 
-                var id = this.renderSettings.dataIdentifier.identifiers[i];
-                var parId = this.renderSettings.dataIdentifier.parameter;
+                let id = this.renderSettings.dataIdentifier.identifiers[i];
+                let parId = this.renderSettings.dataIdentifier.parameter;
 
-                var filterFunc = function (d,i){
+                let filterFunc = function (d,i){
                     return data[parId][i] === id;
                 };
 
-                var filteredX = data[xAxRen[xScaleItem]].filter(filterFunc.bind(this));
-                var filteredY = data[yAxRen[yScaleItem]].filter(filterFunc.bind(this));
+                let filteredX = data[xAxRen[xScaleItem]].filter(filterFunc.bind(this));
+                let filteredY = data[yAxRen[yScaleItem]].filter(filterFunc.bind(this));
 
                 if(this.xTimeScale){
 
@@ -848,7 +861,7 @@ var graphly = (function() {
                     data = filteredX.zip(filteredY);
                 }
 
-                var rC = this.getIdColor(xScaleItem, id);
+                let rC = this.getIdColor(xScaleItem, id);
 
                 if(!inactive){
                     this.renderRegression(resultData, reg, rC);
@@ -876,11 +889,11 @@ var graphly = (function() {
                 this.renderRegression(resultData, reg, [0.2,0.2,0.2,0.4]);
             }
         }
-    };
+    }
 
-    graph.prototype.getIdColor = function(param, id) {
-        var rC;
-        var colorParam = this.renderSettings.colorAxis[param];
+    getIdColor(param, id) {
+        let rC;
+        let colorParam = this.renderSettings.colorAxis[param];
         cA = this.dataSettings[colorParam];
 
         if (cA && cA.hasOwnProperty('colorscaleFunction')){
@@ -890,11 +903,11 @@ var graphly = (function() {
             rC = [0.258, 0.525, 0.956];
         }
         return rC;
-    };
+    }
 
-    graph.prototype.getColor = function(param, index, data) {
-        var rC;
-        var colorParam = this.renderSettings.colorAxis[param];
+    getColor(param, index, data) {
+        let rC;
+        let colorParam = this.renderSettings.colorAxis[param];
         cA = this.dataSettings[colorParam];
 
         if (cA && cA.hasOwnProperty('colorscaleFunction')){
@@ -914,18 +927,18 @@ var graphly = (function() {
             rC.push(0.8);
         }
         return rC;
-    };
+    }
 
-    graph.prototype.resize = function (){
+    resize(){
         debounceResize.bind(this)();
         this.dim = this.el.node().getBoundingClientRect();
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
         this.resize_update();
-    };
+    }
 
 
-    graph.prototype.resize_update = function() {
+    resize_update() {
 
         this.xScale.range([0, this.width]);
         this.yScale.range([this.height, 0]);
@@ -974,18 +987,20 @@ var graphly = (function() {
             .attr('width',  this.width)
             .attr('height', this.height);
 
-    };
+    }
 
-    graph.prototype.onResize = function() {
+    onResize() {
         this.batchDrawer.updateCanvasSize(this.width, this.height);
         this.batchDrawerReference.updateCanvasSize(this.width, this.height);
         this.renderData();
         this.zoom_update();
-    };
+    }
 
-    var debounceResize = debounce(function() {
-        this.onResize();
-    }, 500);
+    debounceResize(){
+        debounce(()=> {
+            this.onResize();
+        }, 500);
+    }
 
 
     /**
@@ -994,30 +1009,30 @@ var graphly = (function() {
     * @param {String} name the name of the color scale to render
     * @param {HTMLCanvasElement} canvas the canvas to render to
     */
-    graph.prototype.renderData = function() {
+    renderData() {
 
         this.colourToNode = {}; // Map to track the colour of nodes.
 
-        var vertices = [];
-        var colors = [];
-        var idColors = [];
-        var indices = [];
-        var radius = 5;
+        let vertices = [];
+        let colors = [];
+        let idColors = [];
+        let indices = [];
+        let radius = 5;
 
         // reset color count
         resetColor();
-        var p_x, p_y;
+        let p_x, p_y;
 
-        var xAxRen = this.renderSettings.xAxis;
-        var yAxRen = this.renderSettings.yAxis;
+        let xAxRen = this.renderSettings.xAxis;
+        let yAxRen = this.renderSettings.yAxis;
 
-        var c, nCol, par_properties, cA;
+        let c, nCol, par_properties, cA;
 
-        var data = {};
-        var inactiveData = {};
+        let data = {};
+        let inactiveData = {};
 
 
-        for(var p in this.data){
+        for(let p in this.data){
             data[p] = this.data[p];
             inactiveData[p] = [];
         }
@@ -1029,18 +1044,18 @@ var graphly = (function() {
             .style('bottom', this.margin.bottom*2+'px')
             .style('left', (this.width/2-this.margin.left)+'px');
 
-        for (var f in this.filters){
-            var filter = this.filters[f];
-            var currentDataset = data[f];
+        for (let f in this.filters){
+            let filter = this.filters[f];
+            let currentDataset = data[f];
 
-            for (var p in data){
+            for (let p in data){
 
-                var applicableFilter = true;
+                let applicableFilter = true;
 
                 if(this.filterManager.filterSettings.hasOwnProperty('filterRelation')){
                     applicableFilter = false;
-                    var filterRel = this.filterManager.filterSettings.filterRelation;
-                    for (var i = 0; i < filterRel.length; i++) {
+                    let filterRel = this.filterManager.filterSettings.filterRelation;
+                    for (let i = 0; i < filterRel.length; i++) {
                         if( (filterRel[i].indexOf(p)!==-1) === (filterRel[i].indexOf(f)!==-1)){
                             applicableFilter = true;
                             break;
@@ -1049,7 +1064,7 @@ var graphly = (function() {
                 }
                 
                 if(applicableFilter){
-                    var tmpArray = data[p];
+                    let tmpArray = data[p];
                     data[p] = data[p].filter((e,i)=>{
                         return filter(currentDataset[i]);
                     });
@@ -1062,9 +1077,10 @@ var graphly = (function() {
             }
         }
 
-        for (var xScaleItem=0; xScaleItem<xAxRen.length; xScaleItem++){
-            for (var yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
+        for (let xScaleItem=0; xScaleItem<xAxRen.length; xScaleItem++){
+            for (let yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
 
+                let lp;
                 // If an array is provided as element we need to render either
                 // a line or a rectangle as we have two parameters per item
                 if(xAxRen[xScaleItem].constructor === Array){
@@ -1073,22 +1089,22 @@ var graphly = (function() {
 
                         // TODO: How to decide which item to take for counting
                         // should we compare changes and look for errors in config?
-                        var l = data[xAxRen[xScaleItem][0]].length;
-                        for (var i=0; i<=l; i++) {
-                            var x1 = (this.xScale(
+                        let l = data[xAxRen[xScaleItem][0]].length;
+                        for (let i=0; i<=l; i++) {
+                            let x1 = (this.xScale(
                                 data[xAxRen[xScaleItem][0]][i])
                             );
-                            var x2 = (this.xScale(
+                            let x2 = (this.xScale(
                                 data[xAxRen[xScaleItem][1]][i])
                             );
-                            var y1 = (this.yScale(
+                            let y1 = (this.yScale(
                                 data[yAxRen[yScaleItem][0]][i])
                             );
-                            var y2 = (this.yScale(
+                            let y2 = (this.yScale(
                                 data[yAxRen[yScaleItem][1]][i])
                             );
 
-                            var idC = genColor();
+                            let idC = genColor();
 
                             par_properties = {
                                 x1: {
@@ -1114,7 +1130,7 @@ var graphly = (function() {
                             if(this.renderSettings.colorAxis[xScaleItem]){
                                 // Check if a colorscale is defined for this 
                                 // attribute, if not use default (plasma)
-                                var cs = 'viridis';
+                                let cs = 'viridis';
                                 cA = this.dataSettings[
                                     this.renderSettings.colorAxis[xScaleItem]
                                 ];
@@ -1170,11 +1186,11 @@ var graphly = (function() {
                         // TODO: drawing of lines
                     } else {
                         // Draw normal 'points' for x,y coordinates using defined symbol
-                        var lp = data[xAxRen[xScaleItem]].length;
-                        for (var j=0;j<=lp; j++) {
-                            var x = this.xScale(data[xAxRen[xScaleItem]][j]);
-                            var y = this.yScale(data[yAxRen[yScaleItem]][j]);
-                            var rC = this.getColor(yScaleItem, j, data);
+                        lp = data[xAxRen[xScaleItem]].length;
+                        for (let j=0;j<=lp; j++) {
+                            let x = this.xScale(data[xAxRen[xScaleItem]][j]);
+                            let y = this.yScale(data[yAxRen[yScaleItem]][j]);
+                            let rC = this.getColor(yScaleItem, j, data);
 
                             c = genColor();
 
@@ -1192,7 +1208,7 @@ var graphly = (function() {
                             };
 
                             nCol = c.map(function(c){return c/255;});
-                            var parSett = this.dataSettings[yAxRen[yScaleItem]];
+                            let parSett = this.dataSettings[yAxRen[yScaleItem]];
 
                             if (parSett){
 
@@ -1240,11 +1256,11 @@ var graphly = (function() {
                         }
 
                         // Draw filtered out 'points' for x,y 
-                        var lp = inactiveData[xAxRen[xScaleItem]].length;
-                        for (var j=0;j<=lp; j++) {
-                            var x = (this.xScale(inactiveData[xAxRen[xScaleItem]][j]));
-                            var y = (this.yScale(inactiveData[yAxRen[yScaleItem]][j]));
-                            var rC = [0.3,0.3,0.3];
+                        lp = inactiveData[xAxRen[xScaleItem]].length;
+                        for (let j=0;j<=lp; j++) {
+                            let x = (this.xScale(inactiveData[xAxRen[xScaleItem]][j]));
+                            let y = (this.yScale(inactiveData[yAxRen[yScaleItem]][j]));
+                            let rC = [0.3,0.3,0.3];
 
                             c = genColor();
 
@@ -1298,8 +1314,8 @@ var graphly = (function() {
 
         if(this.debounceActive){
             this.renderCanvas.style('opacity','1');
-            var prevImg = this.el.select('#previewImage');
-            var img = this.renderCanvas.node().toDataURL();
+            let prevImg = this.el.select('#previewImage');
+            let img = this.renderCanvas.node().toDataURL();
             if(!prevImg.empty()){
                 prevImg.attr('xlink:href', img)
                     .attr('transform', null)
@@ -1316,15 +1332,19 @@ var graphly = (function() {
             }
             this.previewActive = false;
         }
+    }
 
-    };
-
-    return {
-        graph: graph
-    };
-
-})();
-
-if (typeof module !== 'undefined') {
-  module.exports = graphly;
 }
+
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
+    module.exports = graphly;
+else
+    window.graphly = graphly;
+
+/*if (typeof module !== 'undefined') {
+  module.exports = graphly;
+}*/
+
+//module.exports = graphly;
+// register the symbols to be exported at the 'global' object (to be replaced by browserify)
+// global.graphly = { graph };

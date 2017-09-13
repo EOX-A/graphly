@@ -1045,3 +1045,5 @@ class BatchDrawer {
         return (this.lineProgram != false && this.dotProgram != false && this.rectProgram != false);
     }
 }
+
+module.exports = BatchDrawer; 

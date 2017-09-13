@@ -1,5 +1,4 @@
 
-
 class FilterManager {
 
     constructor(params) {
@@ -400,3 +399,9 @@ class FilterManager {
     }
 
 }
+
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
+    module.exports = FilterManager;
+else
+    window.FilterManager = FilterManager;
+

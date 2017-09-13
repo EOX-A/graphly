@@ -3,6 +3,7 @@
 
 
 
+
 var renderSettings_mie = {
     xAxis: [
         ['mie_datetime_start', 'mie_datetime_stop'],
@@ -317,7 +318,7 @@ xhr.onload = function(e) {
     
 };
 
-xhr.send();
+//xhr.send();
 
 
 d3.select('#datafiles').on('change', function(e){
