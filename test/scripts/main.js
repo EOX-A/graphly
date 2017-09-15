@@ -116,7 +116,7 @@ var dataSettings = {
     T_elec: {
         symbol: 'dot',
         uom: 'n',
-        regression: 'polynomial',
+        //regression: 'polynomial',
         //lineConnect: true,
         color: [0.2, 0.2, 1.0, 0.8]
     },

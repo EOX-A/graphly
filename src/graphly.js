@@ -235,14 +235,69 @@ var graphly = (function() {
 
     graph.prototype.createLabels = function (){
 
+         var yChoices = [];
+         var xChoices = [];
+
+         var xHidden, yHidden;
+
+         if(!d3.select('#xSettings').empty()){
+            xHidden = (d3.select('#xSettings').style('display') == 'block' ) ? 
+                false : true;
+        }else{
+            xHidden = true;
+        }
+
+        if(!d3.select('#ySettings').empty()){
+            yHidden = (d3.select('#ySettings').style('display') == 'block' ) ? 
+                false : true; 
+        }else{
+            yHidden = true;
+        }
+         
+         
+
+        // Go through data settings and find currently available ones
+        var ds = this.dataSettings;
+        for (var key in ds) {
+            // Check if key is available in data first
+            if(this.data.hasOwnProperty(key)){
+                var obj1 = {
+                    value: key,
+                    label: key
+                };
+                var obj2 = {
+                    value: key,
+                    label: key
+                };
+
+                yChoices.push(obj1);
+                xChoices.push(obj2);
+
+                if(this.renderSettings.yAxis.indexOf(key)!==-1){
+                    yChoices[yChoices.length-1].selected = true;
+                }
+                if(this.renderSettings.xAxis.indexOf(key)!==-1){
+                    xChoices[xChoices.length-1].selected = true;
+                }
+            }
+        }
+
+        d3.selectAll('.axisLabel').on('click',null);
+        d3.selectAll('.axisLabel').remove();
+
         this.svg.append('text')
             .attr('class', 'yAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 'translate('+ -(this.margin.left/2+10) +','+(this.height/2)+')rotate(-90)')
             .text(this.renderSettings.yAxis.join());
 
+        d3.select('#ySettings').remove();
+
         this.el.append('div')
             .attr('id', 'ySettings')
+            .style('display', function(){
+                return yHidden ? 'none' : 'block';
+            })
             .style('top', this.height/2+'px')
             .style('left', this.margin.left+15+'px')
             .append('select')
@@ -258,16 +313,33 @@ var graphly = (function() {
             }
         });
 
-        
-
-        var example = new Choices(d3.select('#yScaleChoices').node(), {
-          choices: [
-            {value: 'One', label: 'Label One'},
-            {value: 'Two', label: 'Label Two', disabled: true},
-            {value: 'Three', label: 'Label Three'},
-          ],
+        var ySettingParameters = new Choices(d3.select('#yScaleChoices').node(), {
+          choices: yChoices,
           removeItemButton: true,
+          placeholderValue: ' select ...',
+          itemSelectText: '',
         });
+
+        var that = this;
+
+        ySettingParameters.passedElement.addEventListener('addItem', function(event) {
+            that.renderSettings.yAxis.push(event.detail.value);
+            that.recalculateBufferSize();
+            that.initAxis();
+            that.renderData();
+            that.createLabels(false);
+        },false);
+        ySettingParameters.passedElement.addEventListener('removeItem', function(event) {
+            var index = that.renderSettings.yAxis.indexOf(event.detail.value);
+            // TODO: Should it happen that the removed item is not in the list?
+            // Do we need to handle this case? 
+            if(index!==-1){
+                that.renderSettings.yAxis.splice(index, 1);
+                that.initAxis();
+                that.renderData();
+                that.createLabels();
+            }
+        },false);
 
 
         this.svg.append('text')
@@ -275,6 +347,40 @@ var graphly = (function() {
             .attr('text-anchor', 'middle')
             .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-10))+')')
             .text(this.renderSettings.xAxis.join());
+
+        d3.select('#xSettings').remove();
+
+        this.el.append('div')
+            .attr('id', 'xSettings')
+            .style('display', function(){
+                return xHidden ? 'none' : 'block'; 
+            })
+            .style('bottom', this.margin.bottom+20+'px')
+            .style('left', this.width/2-this.margin.left+50+'px')
+            .append('select')
+                .attr('id', 'xScaleChoices');
+
+        d3.select('.xAxisLabel.axisLabel').on('click', function(){
+            if(d3.select('#xSettings').style('display') === 'block'){
+                d3.select('#xSettings').style('display', 'none');
+            }else{
+                d3.select('#xSettings').style('display', 'block');
+            }
+        });
+
+        var xSettingParameters = new Choices(d3.select('#xScaleChoices').node(), {
+          choices: xChoices,
+          placeholderValue: ' select ...',
+          itemSelectText: '',
+        });
+
+        xSettingParameters.passedElement.addEventListener('change', function(event) {
+            that.renderSettings.xAxis = [event.detail.value];
+            that.recalculateBufferSize();
+            that.initAxis();
+            that.renderData();
+            that.createLabels();
+        },false);
     };
 
 
@@ -374,10 +480,7 @@ var graphly = (function() {
         drawer._initBuffers();
     };
 
-    graph.prototype.loadData = function (data){
-        
-        this.filters = {};
-        this.data = data;
+    graph.prototype.recalculateBufferSize = function (){
         // Check for longest array and set buffer size accordingly 
         var max = 0;
         for (var prop in this.data) {
@@ -394,7 +497,14 @@ var graphly = (function() {
 
         this.updateBuffers(this.batchDrawer, ++max);
         this.updateBuffers(this.batchDrawerReference, ++max);
+    };
 
+    graph.prototype.loadData = function (data){
+        
+        this.filters = {};
+        this.data = data;
+
+        this.recalculateBufferSize();
 
         // Check for special formatting of data
         var ds = this.dataSettings;
