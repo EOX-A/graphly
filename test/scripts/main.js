@@ -5,14 +5,18 @@
 
 var renderSettings_mie = {
     xAxis: [
-        ['mie_datetime_start', 'mie_datetime_stop'],
-        'mie_datetime_start'
+        'mie_datetime',
+        //'mie_datetime'
     ],
     yAxis: [
-        ['mie_altitude_bottom', 'mie_altitude_top'],
+         'mie_altitude',
          'mie_dem_altitude'
     ],
     //y2Axis: [],
+    combinedParameters: {
+        mie_datetime: ['mie_datetime_start', 'mie_datetime_stop'],
+        mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
+    },
     colorAxis: [
         'mie_wind_velocity',
         null
@@ -22,17 +26,23 @@ var renderSettings_mie = {
 
 var renderSettings_ray = {
     xAxis: [
-        ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
-        'rayleigh_datetime_start'
+        'rayleigh_datetime',
+        'rayleigh_datetime',
     ],
     yAxis: [
-        ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
-         'rayleigh_dem_altitude'
+        'rayleigh_altitude',
+        'rayleigh_dem_altitude'
     ],
     //y2Axis: [],
+    combinedParameters: {
+        rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
+        rayleigh_altitude: ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
+        /*mie_datetime: ['mie_datetime_start', 'mie_datetime_stop'],
+        mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']*/
+    },
     colorAxis: [
         'rayleigh_wind_velocity',
-        null
+        //'mie_wind_velocity',
     ],
 
 };
@@ -61,16 +71,16 @@ var renderSettingsRRC = {
 
 
 var renderSettingsISR = {
-    xAxis: ['Laser_Freq_Offset'],
+    xAxis: ['Laser_Freq_Offset', 'Laser_Freq_Offset'],
     //yAxis: ['Mie_Response'],
     yAxis: ['Rayleigh_A_Response', 'Rayleigh_B_Response'],
-    colorAxis: [ null ],
+    colorAxis: [ null, null ],
 };
 
 
 var dataSettings = {
     rayleigh_dem_altitude: {
-        symbol: null,
+        symbol: 'dot',
         uom: 'm',
         lineConnect: true,
         color: [0.2, 0.2, 1.0, 0.8]
@@ -78,13 +88,14 @@ var dataSettings = {
     rayleigh_wind_velocity: {
         uom: 'cm/s',
         colorscale: 'viridis',
-        extent: [-5000,5000]
+        extent: [-3000,3000]
         //outline: false
     },
     rayleigh_datetime_start: {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
+
     rayleigh_datetime_stop: {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
@@ -112,6 +123,17 @@ var dataSettings = {
         timeFormat: 'MJD2000_S'
     },
 
+    rayleigh_altitude_top: {
+    },
+    rayleigh_altitude_bottom: {
+    },
+    mie_altitude_start:{
+    },
+    mie_altitude_bottom:{
+    },
+
+
+
 
     T_elec: {
         symbol: 'dot',
@@ -138,26 +160,29 @@ var dataSettings = {
     Mie_Response: {
         symbol: 'dot',
         lineConnect: true,
-        color: [0.2, 0.8, 0.2, 0.8]
+        regression: 'polynomial',
+        color: [0.02, 1.0, 0.02, 0.8]
     },
     Measurement_Error_Mie_Response: {
         symbol: 'dot',
         uom: 'Pixel',
         lineConnect: false,
         regression: 'polynomial',
-        color: [0.2, 0.2, 1.0, 0.8]
+        color: [1.0, 0.0, 0.0, 0.8]
     },
     Reference_Pulse_Response: {
         symbol: 'dot',
         uom: 'Pixel',
         lineConnect: false,
+
         color: [0.2, 0.2, 1.0, 0.8]
     },
     Reference_Pulse_Error_Mie_Response: {
         symbol: 'dot',
         uom: 'Pixel',
         lineConnect: false,
-        color: [0.2, 0.2, 1.0, 0.8]
+        regression: 'polynomial',
+        color: [0.0, 0.0, 1.0, 0.8]
     },
     Frequency_Offset: {
         uom: 'GHZ'
@@ -178,7 +203,7 @@ var dataSettings = {
         symbol: 'dot',
         uom: 'Pixel',
         lineConnect: false,
-        regression: 'linear',
+        regression: 'polynomial',
         color: [0.2, 0.2, 1.0, 0.8]
     },
     Laser_Freq_Offset: {
@@ -248,7 +273,7 @@ var filterSettings = {
             'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
             'mie_datetime_start', 'mie_datetime_stop', 'mie_startlat',
             'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
-            'mie_geo_height', 'mie_wind_velocity'
+            'mie_geo_height', 'mie_wind_velocity', 'mie_observation_type'
         ],
         [
             'rayleigh_latitude', 'rayleigh_longitude', 'rayleigh_altitude',
@@ -267,6 +292,7 @@ var filterSettings = {
         'longitude',
         'rayleigh_wind_velocity',
         'mie_wind_velocity',
+        'mie_observation_type',
         'Laser_Freq_Offset',
         'Mie_Valid',
         'Rayleigh_Valid',
@@ -305,6 +331,9 @@ var filterSettings = {
     ],
     maskParameter: {
 
+    },
+    choiceParameter: {
+
     }
 };
 
@@ -319,7 +348,7 @@ var filterManager = new FilterManager({
 var graph = new graphly.graph({
     el: '#graph',
     dataSettings: dataSettings,
-    renderSettings: renderSettingsISR,
+    renderSettings: renderSettings_ray,
     filterManager: filterManager
 });
 
@@ -327,7 +356,7 @@ var graph = new graphly.graph({
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/AE_OPER_AUX_ISR_1B_20071002T103629_20071002T110541_0002.MSP', true);
+xhr.open('GET', 'data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP', true);
 xhr.responseType = 'arraybuffer';
 
 xhr.onload = function(e) {
@@ -355,7 +384,7 @@ d3.select('#datafiles').on('change', function(e){
         }else if (sel_value.indexOf('ISR') !== -1){
             graph.renderSettings = renderSettingsISR;
         }else {
-            graph.renderSettings = renderSettings_ray;
+            graph.renderSettings = renderSettings_mie;
         }
         xhr.open('GET', sel_value, true);
         xhr.send();
