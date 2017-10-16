@@ -8,19 +8,26 @@
  */
 
 
-import regression from 'regression';
-//import * as d3 from "d3";
+//require('css!../styles/graphly.css');
+var styleNode = require('../styles/graphly.css');
+
+//import from './colorscales';
+import * as u from './utils';
+
+var regression = require('regression');
 var d3 = require("d3");
-//var d3 = Object.assign({}, require("d3-format"), require("d3-geo"), require("d3-geo-projection"));
-//import {scaleLinear} from "d3-scale";
-import msgpack from 'msgpack-lite';
+global.d3 = d3;
+var msgpack = require('msgpack-lite');
+global.msgpack = msgpack;
+var plotty = require('plotty');
 
 //require('msgpack-lite');
 
-require('./utils.js');
-require('./BatchDraw.js');
+//require('./utils.js');
+var BatchDrawer = require('./BatchDraw.js');
 //var FilterManager = require('./FilterManager.js');
-require('./FilterManager.js');
+var FilterManager = require('./FilterManager.js');
+global.FilterManager = FilterManager;
 
 
 
@@ -894,7 +901,7 @@ class graphly {
     getIdColor(param, id) {
         let rC;
         let colorParam = this.renderSettings.colorAxis[param];
-        cA = this.dataSettings[colorParam];
+        let cA = this.dataSettings[colorParam];
 
         if (cA && cA.hasOwnProperty('colorscaleFunction')){
             rC = cA.colorscaleFunction(id);
@@ -908,7 +915,7 @@ class graphly {
     getColor(param, index, data) {
         let rC;
         let colorParam = this.renderSettings.colorAxis[param];
-        cA = this.dataSettings[colorParam];
+        let cA = this.dataSettings[colorParam];
 
         if (cA && cA.hasOwnProperty('colorscaleFunction')){
             rC = cA.colorscaleFunction(
@@ -1020,7 +1027,7 @@ class graphly {
         let radius = 5;
 
         // reset color count
-        resetColor();
+        u.resetColor();
         let p_x, p_y;
 
         let xAxRen = this.renderSettings.xAxis;
@@ -1104,7 +1111,7 @@ class graphly {
                                 data[yAxRen[yScaleItem][1]][i])
                             );
 
-                            let idC = genColor();
+                            let idC = u.genColor();
 
                             par_properties = {
                                 x1: {
@@ -1192,7 +1199,7 @@ class graphly {
                             let y = this.yScale(data[yAxRen[yScaleItem]][j]);
                             let rC = this.getColor(yScaleItem, j, data);
 
-                            c = genColor();
+                            c = u.genColor();
 
                             par_properties = {
                                 x: {
@@ -1262,7 +1269,7 @@ class graphly {
                             let y = (this.yScale(inactiveData[yAxRen[yScaleItem]][j]));
                             let rC = [0.3,0.3,0.3];
 
-                            c = genColor();
+                            c = u.genColor();
 
                             par_properties = {
                                 x: {
@@ -1274,7 +1281,7 @@ class graphly {
                             };
 
                             nCol = c.map(function(c){return c/255;});
-                            parSett = this.dataSettings[yAxRen[yScaleItem]];
+                            let parSett = this.dataSettings[yAxRen[yScaleItem]];
 
                             if (parSett){
 
@@ -1336,10 +1343,10 @@ class graphly {
 
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
+/*if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
     module.exports = graphly;
 else
-    window.graphly = graphly;
+    window.graphly = graphly;*/
 
 /*if (typeof module !== 'undefined') {
   module.exports = graphly;
@@ -1348,3 +1355,6 @@ else
 //module.exports = graphly;
 // register the symbols to be exported at the 'global' object (to be replaced by browserify)
 // global.graphly = { graph };
+
+// register the symbols to be exported at the 'global' object (to be replaced by browserify)
+ global.graphly = graphly;

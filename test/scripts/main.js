@@ -2,8 +2,6 @@
 
 
 
-
-
 var renderSettings_mie = {
     xAxis: [
         ['mie_datetime_start', 'mie_datetime_stop'],
@@ -295,7 +293,7 @@ var filterManager = new FilterManager({
 });
 
 
-var graph = new graphly.graph({
+var graph = new graphly({
     el: '#graph',
     dataSettings: dataSettings,
     renderSettings: renderSettingsISR,
@@ -318,7 +316,7 @@ xhr.onload = function(e) {
     
 };
 
-//xhr.send();
+xhr.send();
 
 
 d3.select('#datafiles').on('change', function(e){

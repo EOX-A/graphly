@@ -1,4 +1,8 @@
 
+
+require('./utils.js');
+
+function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 class FilterManager {
 
     constructor(params) {

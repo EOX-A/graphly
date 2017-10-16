@@ -1,5 +1,7 @@
 
 
+var d3 = require("d3");
+
 Array.prototype.zip = function (arr) {
     return this.map(function (e, i) {
         return [e, arr[i]];
@@ -17,7 +19,7 @@ Array.prototype.pushArray = function() {
 
 // Function to create new colours for the picking.
 var nextCol = 1;
-function genColor(){ 
+export function genColor(){ 
     var ret = [];
     if(nextCol < 16777215){ 
         ret.push(nextCol & 0xff); // R 
@@ -28,7 +30,7 @@ function genColor(){
     return ret;
 }
 
-function resetColor(){ 
+export function resetColor(){ 
     nextCol = 1;
 }
 
