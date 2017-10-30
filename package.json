@@ -11,14 +11,15 @@
     "msgpack-lite": "^0.1.26",
     "papaparse": "^4.3.6",
     "plotty": "^0.2.0",
-    "regression": "^2.0.0"
+    "regression": "^2.0.0",
+    "choices.js": "^3.0.2"
   },
   "devDependencies": {
     "babel-preset-env": "^1.4.0",
     "babelify": "^7.3.0",
     "browserify": "^14.3.0",
+    "browserify-css": "^0.12.0",
     "budo": "^10.0.3",
-    "cssify": "^1.0.3",
     "eslint": "^3.19.0",
     "eslint-config-airbnb": "^15.0.1",
     "eslint-plugin-import": "^2.2.0",
@@ -34,9 +35,9 @@
     "node": ">=0.8.0"
   },
   "scripts": {
-    "build-min": "browserify -t babelify -g uglifyify src/graphly.js -o dist/graphly.min.js --standalone window",
-    "build": "browserify -t babelify src/graphly.js -o dist/graphly.js --standalone window",
+    "build-min": "browserify -t babelify -g browserify-css -g uglifyify src/graphly.js -o dist/graphly.min.js --standalone window",
+    "build": "browserify -t babelify -g browserify-css src/graphly.js -o dist/graphly.js --standalone window",
     "watch": "watchify -d -t babelify src/graphly.js -o dist/graphly.js -v --standalone window",
-    "start": "budo src/graphly.js:graphly.js -l -d test/ -d dist/ -o -- -t cssify -t babelify --standalone window"
+    "start": "budo src/graphly.js:graphly.js -l -d dist/ -d node_modules/ -d test/  -o -- -t babelify -g browserify-css --standalone window"
   }
 }

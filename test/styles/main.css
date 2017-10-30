@@ -42,3 +42,6 @@ span label {
     padding: 25px;
 }
 
+#filters{
+    overflow-y: scroll;
+}

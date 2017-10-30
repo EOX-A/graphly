@@ -2,6 +2,23 @@
 
 var d3 = require("d3");
 
+// Returns a function, that, as long as it continues to be invoked, will not
+// be triggered. The function will be called after it stops being called for
+// N milliseconds. If `immediate` is passed, trigger the function on the
+// leading edge, instead of the trailing.
+
+export default function debounce(func, wait, immediate) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      timeout = null;
+      if (!immediate) func.apply(this, args);
+    }, wait);
+    if (immediate && !timeout) func.apply(this, [...args])
+  }
+}
+
 Array.prototype.zip = function (arr) {
     return this.map(function (e, i) {
         return [e, arr[i]];
