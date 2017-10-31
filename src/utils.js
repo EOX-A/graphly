@@ -1,5 +1,24 @@
 
 
+var d3 = require("d3");
+
+// Returns a function, that, as long as it continues to be invoked, will not
+// be triggered. The function will be called after it stops being called for
+// N milliseconds. If `immediate` is passed, trigger the function on the
+// leading edge, instead of the trailing.
+
+export default function debounce(func, wait, immediate) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      timeout = null;
+      if (!immediate) func.apply(this, args);
+    }, wait);
+    if (immediate && !timeout) func.apply(this, [...args])
+  }
+}
+
 Array.prototype.zip = function (arr) {
     return this.map(function (e, i) {
         return [e, arr[i]];
@@ -17,7 +36,7 @@ Array.prototype.pushArray = function() {
 
 // Function to create new colours for the picking.
 var nextCol = 1;
-function genColor(){ 
+export function genColor(){ 
     var ret = [];
     if(nextCol < 16777215){ 
         ret.push(nextCol & 0xff); // R 
@@ -28,11 +47,11 @@ function genColor(){
     return ret;
 }
 
-function resetColor(){ 
+export function resetColor(){ 
     nextCol = 1;
 }
 
-function rgbToHex(r, g, b) {
+export function rgbToHex(r, g, b) {
     r = Math.ceil(r*255);
     g = Math.ceil(g*255);
     b = Math.ceil(b*255);
@@ -40,7 +59,7 @@ function rgbToHex(r, g, b) {
 }
 
 
-function createSuperscript(string){
+export function createSuperscript(string){
     // Adding subscript elements to string which contain underscores
     var superscriptString = "";
     var parts = string.split(" ");
@@ -76,7 +95,7 @@ function hasOwnProperty(obj, prop) {
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
 
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? [
         parseInt(result[1], 16),

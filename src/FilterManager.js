@@ -1,5 +1,8 @@
 
 
+require('./utils.js');
+
+function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 class FilterManager {
 
     constructor(params) {
@@ -211,7 +214,7 @@ class FilterManager {
 
     _createBoolFilterElements() {
         var height = 252;
-        var width = 120;
+        var width = 244;
         var that = this;
 
         var div = this.el.append('div')
@@ -400,3 +403,9 @@ class FilterManager {
     }
 
 }
+
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
+    module.exports = FilterManager;
+else
+    window.FilterManager = FilterManager;
+

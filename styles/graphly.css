@@ -32,7 +32,7 @@ svg {
 .cogIcon{
     width: 15px;
     height: 15px;
-    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAMAAAAMCGV4AAAAqFBMVEUAAABFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFeFYaAAAAN3RSTlMAAQIDBAUGBwoLDA0ODxASHiUmKSw7Q0VJUlVrc3uOoqiqsre5ury+xczOz9XX2dze6e319/v91oit4gAAAH5JREFUCFttz0cKwgAARNEfjb3E3nvvNfrvfzNXoqBvNzAwDAAkYg+8ldpEajLopQDKN6dbdblxFwItPyoAEzXeP9UBEDXO2g9IjnRezaJ6BQhVVz+5UDt9+vUcMFbj/UMdAjS/9qpA/upspy7WHtMAhQ5FNQy6mfeF4O6Fv14GKhgEaCOP+AAAAABJRU5ErkJggg==")
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAMAAADXqc3KAAAA1VBMVEUAAAAAff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff9i1YelAAAARnRSTlMAAQIDBAYHCAkNDxYXGBkeISIjJCYnMzY9QVJcXV5fZGZnaGlrbG11jJGXmp2go6Wqq6+0t7nIys/R19na3unt7/H19/v98ZT2GAAAANNJREFUGBltwYlWglAYRtEDRBANNs9zaTZnRRNmovC9/yP1c7NcK9ibP9GjikufumuZI2q8QuaDmgU5EVNzp7vz0JXTwWvtH4aYYCBpPNREXkh6wRyowTbwqQZ3wIMatIGoL6e/5gdbQzmpj4kymTLBbKjy7OMsy6Q4I5mYHy2ZFGckE+OEbzJlgllXpedjwnc52arnb37J6XnAjRocAwM1uAfaarADzAwkjXNN5IWkVyrJxd4SdOV08FZOzmeZWpQT8Z9XymTU3cqcURc/qbwK+PUN9JxSzFViTw0AAAAASUVORK5CYII=")
 }
 
 #filters .axis path,
@@ -49,6 +49,7 @@ svg {
     /*outline: black;
     outline-width: 1px;
     outline-style: solid;*/
+    position: relative;
     box-shadow: 3px 3px 2px #ccc;
     margin-left: 4px;
     padding-top: 10px;
@@ -71,6 +72,7 @@ svg {
 }
 
 .parameterLabel {
+    position: absolute;
     font-size: 0.8em;
     position: absolute;
     transform-origin: left;
@@ -116,3 +118,40 @@ svg {
     width: 350px;
     text-align: center;
 }
+
+
+#ySettings{
+    position: absolute;
+    z-index: 500;
+    width: 210px;
+    padding: 5px;
+    padding-right: 24px;
+    min-height: 200px;
+    border-color: #999;
+    border-style: solid;
+    border-width: 1px;
+    background-color: white;
+}
+
+
+#xSettings{
+    position: absolute;
+    z-index: 500;
+    width: 210px;
+    padding: 5px;
+    padding-right: 24px;
+    min-height: 200px;
+    border-color: #999;
+    border-style: solid;
+    border-width: 1px;
+    background-color: white;
+}
+
+.choices__inner{
+    min-height: 22px!important;
+}
+
+.choices__list--dropdown .choices__item--selectable {
+    padding-right: 5px!important;
+}
+
