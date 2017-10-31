@@ -138,7 +138,7 @@ var dataSettings = {
         symbol: 'dot',
         uom: 'n',
         //regression: 'polynomial',
-        //lineConnect: true,
+        lineConnect: true,
         color: [0.2, 0.2, 1.0, 0.8]
     },
     Timestamp: {

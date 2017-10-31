@@ -51,7 +51,7 @@ export function resetColor(){
     nextCol = 1;
 }
 
-function rgbToHex(r, g, b) {
+export function rgbToHex(r, g, b) {
     r = Math.ceil(r*255);
     g = Math.ceil(g*255);
     b = Math.ceil(b*255);
@@ -59,7 +59,7 @@ function rgbToHex(r, g, b) {
 }
 
 
-function createSuperscript(string){
+export function createSuperscript(string){
     // Adding subscript elements to string which contain underscores
     var superscriptString = "";
     var parts = string.split(" ");
@@ -95,7 +95,7 @@ function hasOwnProperty(obj, prop) {
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
 
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? [
         parseInt(result[1], 16),

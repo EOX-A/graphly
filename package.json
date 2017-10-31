@@ -7,12 +7,12 @@
   },
   "license": "MIT",
   "dependencies": {
+    "choices.js": "^3.0.2",
     "d3": "~3.5.3",
     "msgpack-lite": "^0.1.26",
     "papaparse": "^4.3.6",
     "plotty": "^0.2.0",
-    "regression": "^2.0.0",
-    "choices.js": "^3.0.2"
+    "regression": "^1.4.0"
   },
   "devDependencies": {
     "babel-preset-env": "^1.4.0",

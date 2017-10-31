@@ -21,6 +21,7 @@ global.d3 = d3;
 let msgpack = require('msgpack-lite');
 global.msgpack = msgpack;
 let plotty = require('plotty');
+let Papa = require('papaparse');
 
 //require('msgpack-lite');
 
@@ -668,7 +669,7 @@ class graphly {
                     ds.hasOwnProperty('categories') ){
 
                     ds.colorscaleFunction = d3.scale.ordinal()
-                        .range(d3.scale.category10().range().map(hexToRgb))
+                        .range(d3.scale.category10().range().map(u.hexToRgb))
                         .domain(ds.categories);
                 }
             }
@@ -975,13 +976,15 @@ class graphly {
                 let lineAmount = 200;
                 let extent = Math.abs(xPoints[1]-xPoints[0]);
                 let delta = extent/lineAmount;
+                let x1, x2, y1, y2;
                 for(let l=0; l<lineAmount-1;l++){
-                    let x1, x2, y1, y2;
+                    
                     x1 = xPoints[0] + l*delta;
                     x2 = xPoints[0] + (l+1)*delta;
                     y1 = 0;
                     y2 = 0;
                     let eql = result.equation.length-1;
+
                     for (let i = eql; i >= 0; i--) {
                         y1 = y1 + (
                             result.equation[i] *
@@ -992,19 +995,21 @@ class graphly {
                             Math.pow(x2, i)
                         );
                     }
+
+                    let px1, px2, py1, py2;
                     if(!this.xTimeScale){
-                        x1 = this.xScale(x1);
-                        x2 = this.xScale(x2);
+                        px1 = this.xScale(x1);
+                        px2 = this.xScale(x2);
                     }else{
-                        x1 = this.xScale(new Date(Math.ceil(x1)));
-                        x2 = this.xScale(new Date(Math.ceil(x2)));
+                        px1 = this.xScale(new Date(Math.ceil(x1)));
+                        px2 = this.xScale(new Date(Math.ceil(x2)));
                     }
-                    y1 = this.yScale(y1);
-                    y2 = this.yScale(y2);
+                    py1 = this.yScale(y1);
+                    py2 = this.yScale(y2);
 
                     this.batchDrawer.addLine(
-                        x1, y1,
-                        x2, y2, 1,
+                        px1, py1,
+                        px2, py2, 1,
                         c[0], c[1], c[2], c[3]
                     );
                 }
@@ -1015,11 +1020,12 @@ class graphly {
             // render regression label
             let regrString = 
                 result.string + '  (r^2: '+ (result.r2).toPrecision(3)+')';
+
             d3.select('#regressionInfo')
                 .append('div')
-                .style('color', rgbToHex(c[0], c[1], c[2]))
+                .style('color', u.rgbToHex(c[0], c[1], c[2]))
                 .style("opacity", c[3])
-                .html(createSuperscript(regrString));
+                .html(u.createSuperscript(regrString));
         }
     }
 
@@ -1350,6 +1356,9 @@ class graphly {
             };
 
             let parSett = this.dataSettings[yAxRen[parPos]];
+            let cA = this.dataSettings[
+                    this.renderSettings.colorAxis[parPos]
+                ];
 
             if (parSett){
 
@@ -1359,8 +1368,9 @@ class graphly {
                     // Check if using ordinal scale (multiple
                     // parameters), do not connect if different
 
-                    /*if(cA && cA.hasOwnProperty('scaleType') && 
+                    if(cA && cA.hasOwnProperty('scaleType') && 
                         cA.scaleType === 'ordinal'){
+                        let colorParam = this.renderSettings.colorAxis[parPos];
 
                         if(data[colorParam][i-1] === 
                             data[colorParam][i])
@@ -1375,7 +1385,7 @@ class graphly {
                             p_x, p_y, x, y, 1, 
                             rC[0], rC[1], rC[2], 0.8
                         );
-                    }*/
+                    }
                 }
 
                 if(parSett.hasOwnProperty('symbol')){
@@ -1404,6 +1414,7 @@ class graphly {
         let xAxRen = this.renderSettings.xAxis;
         let yAxRen = this.renderSettings.yAxis;
         let lp = data[xAxRen[parPos]].length;
+        let p_x, p_y;
 
         for (let j=0;j<=lp; j++) {
 
@@ -1411,9 +1422,9 @@ class graphly {
             let y = this.yScale(data[yAxRen[parPos]][j]);
             let rC = this.getColor(parPos, j, data);
 
-            c = u.genColor();
+            let c = u.genColor();
 
-            par_properties = {
+            let par_properties = {
                 x: {
                     val: data[xAxRen[parPos]][j],
                     id: xAxRen[parPos],
@@ -1426,8 +1437,11 @@ class graphly {
                 },
             };
 
-            nCol = c.map(function(c){return c/255;});
+            let nCol = c.map(function(c){return c/255;});
             let parSett = this.dataSettings[yAxRen[parPos]];
+            let cA = this.dataSettings[
+                this.renderSettings.colorAxis[parPos]
+            ];
 
             if (parSett){
 
@@ -1440,6 +1454,7 @@ class graphly {
                     if(cA && cA.hasOwnProperty('scaleType') && 
                         cA.scaleType === 'ordinal'){
 
+                        let colorParam = this.renderSettings.colorAxis[parPos];
                         if(data[colorParam][j-1] === data[colorParam][j])
                         {
                             this.batchDrawer.addLine(
@@ -1592,9 +1607,9 @@ class graphly {
                         let y = (this.yScale(inactiveData[yAxRen[parPos]][j]));
                         let rC = [0.3,0.3,0.3];
 
-                        c = u.genColor();
+                        let c = u.genColor();
 
-                        par_properties = {
+                        let par_properties = {
                             x: {
                                 val: x, id: xAxRen[parPos], coord: x
                             },
@@ -1603,8 +1618,8 @@ class graphly {
                             },
                         };
 
-                        nCol = c.map(function(c){return c/255;});
-                        parSett = this.dataSettings[yAxRen[parPos]];
+                        let nCol = c.map(function(c){return c/255;});
+                        let parSett = this.dataSettings[yAxRen[parPos]];
 
                         if (parSett){
 
