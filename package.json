@@ -37,7 +37,7 @@
   "scripts": {
     "build-min": "browserify -t babelify -g browserify-css -g uglifyify src/graphly.js -o dist/graphly.min.js --standalone window",
     "build": "browserify -t babelify -g browserify-css src/graphly.js -o dist/graphly.js --standalone window",
-    "watch": "watchify -d -t babelify src/graphly.js -o dist/graphly.js -v --standalone window",
+    "watch": "watchify -d -t babelify -g browserify-css src/graphly.js -o dist/graphly.js -v --standalone window",
     "start": "budo src/graphly.js:graphly.js -l -d dist/ -d node_modules/ -d test/  -o -- -t babelify -g browserify-css --standalone window"
   }
 }
