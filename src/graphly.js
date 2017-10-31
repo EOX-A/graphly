@@ -8,6 +8,8 @@
  */
 
 
+let DOTTYPE = 1.7;
+let DOTSIZE = 8;
 
 let styleNode = require('../styles/graphly.css');
 //let styleNodeChoices = require('../node_modules/choices.js/assets/styles/css/choices.css');
@@ -1391,10 +1393,10 @@ class graphly {
                 if(parSett.hasOwnProperty('symbol')){
                     if(parSett.symbol === 'dot'){
                         this.batchDrawer.addDot(
-                            x, y, 6, rC[0], rC[1], rC[2], rC[3]
+                            x, y, DOTSIZE, DOTTYPE, rC[0], rC[1], rC[2], rC[3]
                         );
                         this.batchDrawerReference.addDot(
-                            x, y, 6, nCol[0], nCol[1], nCol[2], -1.0
+                            x, y, DOTSIZE, DOTTYPE, nCol[0], nCol[1], nCol[2], -1.0
                         );
                     }
                 }
@@ -1473,10 +1475,10 @@ class graphly {
                 if(parSett.hasOwnProperty('symbol')){
                     if(parSett.symbol === 'dot'){
                         this.batchDrawer.addDot(
-                            x, y, 6, rC[0], rC[1], rC[2], rC[3]
+                            x, y, DOTSIZE, DOTTYPE, rC[0], rC[1], rC[2], rC[3]
                         );
                         this.batchDrawerReference.addDot(
-                            x, y, 6, nCol[0], nCol[1], nCol[2], -1.0
+                            x, y, DOTSIZE, DOTTYPE, nCol[0], nCol[1], nCol[2], -1.0
                         );
                     }
                 }
@@ -1626,10 +1628,10 @@ class graphly {
                             if(parSett.hasOwnProperty('symbol')){
                                 if(parSett.symbol === 'dot'){
                                     this.batchDrawer.addDot(
-                                        x, y, 6, rC[0], rC[1], rC[2], 0.1
+                                        x, y, DOTSIZE, DOTTYPE, rC[0], rC[1], rC[2], 0.1
                                     );
                                     this.batchDrawerReference.addDot(
-                                        x, y, 6, nCol[0], nCol[1], nCol[2], -1.0
+                                        x, y, DOTSIZE, DOTTYPE, nCol[0], nCol[1], nCol[2], -1.0
                                     );
                                 }
                             }
