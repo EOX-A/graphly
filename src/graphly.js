@@ -8,8 +8,8 @@
  */
 
 
-let DOTTYPE = 1.7;
-let DOTSIZE = 8;
+let DOTTYPE = 6.0;
+let DOTSIZE =9;
 
 let styleNode = require('../styles/graphly.css');
 //let styleNodeChoices = require('../node_modules/choices.js/assets/styles/css/choices.css');
@@ -118,7 +118,11 @@ class graphly {
 
         this.debounceZoom = debounce(function(){
             this.onZoom();
-        }, 250);
+        }, 350);
+
+       this.debounceResize = debounce(function(){
+            this.onResize();
+        }, 500);
 
         let self = this;
 
@@ -160,7 +164,7 @@ class graphly {
 
         // Set parameters
         let params = {
-            forceGL1: false, // use WebGL 1 even if WebGL 2 is available
+            forceGL1: true, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             coordinateSystem: 'pixels',
             contextParams: {
@@ -1145,7 +1149,7 @@ class graphly {
     }
 
     resize(){
-        debounceResize.bind(this)();
+        this.debounceResize.bind(this)();
         this.dim = this.el.node().getBoundingClientRect();
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
@@ -1210,13 +1214,6 @@ class graphly {
         this.renderData();
         this.zoom_update();
     }
-
-    debounceResize(){
-        debounce(()=> {
-            this.onResize();
-        }, 500);
-    }
-
 
     renderRectangles(data, parPos, xGroup, yGroup) {
 
