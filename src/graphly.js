@@ -8,18 +8,27 @@
  */
 
 
-let DOTTYPE = 6.0;
+/*let TYPE = {
+    circle: 1.0,
+    triangle: 2.0,
+    rectangle: 3.0
+
+};*/
+
+//graphly.TYPE[settingvariable]
+
+let DOTTYPE = 4.0;
 let DOTSIZE =9;
 
-let styleNode = require('../styles/graphly.css');
-//let styleNodeChoices = require('../node_modules/choices.js/assets/styles/css/choices.css');
+require('../styles/graphly.css');
+require('../node_modules/choices.js/assets/styles/css/choices.css');
 
 //import from './colorscales';
 import * as u from './utils';
 
 let regression = require('regression');
 let d3 = require("d3");
-global.d3 = d3;
+//global.d3 = d3;
 let msgpack = require('msgpack-lite');
 global.msgpack = msgpack;
 let plotty = require('plotty');
@@ -1678,18 +1687,4 @@ class graphly {
 
 }
 
-/*if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
-    module.exports = graphly;
-else
-    window.graphly = graphly;*/
-
-/*if (typeof module !== 'undefined') {
-  module.exports = graphly;
-}*/
-
-//module.exports = graphly;
-// register the symbols to be exported at the 'global' object (to be replaced by browserify)
-// global.graphly = { graph };
-
-// register the symbols to be exported at the 'global' object (to be replaced by browserify)
- global.graphly = graphly;
+export {graphly};

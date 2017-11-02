@@ -344,7 +344,7 @@ var filterManager = new FilterManager({
 });
 
 
-var graph = new graphly({
+var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: dataSettings,
     renderSettings: renderSettingsISR,
