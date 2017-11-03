@@ -119,6 +119,40 @@ svg {
     text-align: center;
 }
 
+#parameterInfo{
+    font-family: arial;
+    font-size: 0.8em;
+    background-color: white;
+    position: relative;
+    width: 260px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #444;
+    padding: 5px;
+    text-align: center;
+    z-index: 5;
+}
+
+.labelitem{
+    margin: 5px;
+    cursor: pointer;
+}
+
+#parameterSettings{
+    font-family: arial;
+    font-size: 0.8em;
+    background-color: white;
+    position: relative;
+    width: 260px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #444;
+    padding: 5px;
+    text-align: center;
+    z-index: 5;
+    margin-top: 14px;
+}
+
 
 #ySettings{
     position: absolute;

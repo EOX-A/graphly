@@ -696,6 +696,35 @@ class BatchDrawer {
 
                     } else if(dotType == 3.0){
 
+                        // Circle empty
+
+                        float border = 0.05;
+                        float radius = 0.5;
+                        vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                        float dis = 0.0;
+
+                        vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                        float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+
+                        float t = 0.0;
+                        if((color.a >= 0.0) && dist*dotSize>=1.2){
+                            discard;
+                        }else if (dist > border){
+                            t = 1.0;
+                        } else if (dist > 0.0){
+                            t = 1.0;
+                            if(dis < 0.5){
+                                t = dist / border;
+                            }else{
+                                discard;
+                            }
+                        }
+                        // float centerDist = length(gl_PointCoord - 0.5);
+                        // works for overlapping circles if blending is enabled
+                        fragmentColor = mix(color0, color_out, t);
+
+                    }else if(dotType == 4.0){
+
                         // + Symbol
 
                         vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.5))*dotSize;
@@ -707,7 +736,7 @@ class BatchDrawer {
 
                         fragmentColor = color_out;
 
-                    } else if(dotType == 4.0){
+                    } else if(dotType == 5.0){
 
                         // x Symbol
 
@@ -718,7 +747,7 @@ class BatchDrawer {
 
                         fragmentColor = color_out;
 
-                    } else if(dotType == 5.0){
+                    } else if(dotType == 6.0){
 
                        // Triangle filled
 
@@ -728,7 +757,7 @@ class BatchDrawer {
                         }
                         fragmentColor = color_out;
 
-                    } else if(dotType == 6.0){
+                    } else if(dotType == 7.0){
 
                         // Triangle empty
 
@@ -742,29 +771,6 @@ class BatchDrawer {
                         }
                         fragmentColor = color_out;
                     }
-
-
-                     // Concept for multi polygon 
-                    // TODO: not working ideally, how could we integrate it
-                    /*vec2 st = 2.0 * gl_PointCoord.xy - 1.0;
-                    st.y = st.y * -1.0;
-                    vec3 color2 = vec3(0.0);
-                    float d = 0.0;
-
-                    // Number of sides of your shape
-                    int N = int(dotType);
-
-                    // Angle and radius from the current pixel
-                    float a = atan(st.x,st.y)+PI;
-                    float r = TWO_PI/float(N);
-
-                    // Shaping function that modulate the distance
-                    d = cos(floor(.5+a/r)*r-a)*length(st);
-                    //float alpha = 1.0-smoothstep(.4,.41,d);
-                    float alpha = 1.0-round(d);
-                    fragmentColor = color_out * alpha;*/
-
-
 
                 }`;
 
@@ -964,6 +970,33 @@ class BatchDrawer {
 
                     } else if(dotType == 3.0){
 
+                        // Circle empty
+
+                        float border = 0.05;
+                        float radius = 0.5;
+                        vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                        float dis = 0.0;
+
+                        vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                        float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+
+                        float t = 0.0;
+                        if (dist > border){
+                            t = 1.0;
+                        } else if (dist > 0.0){
+                            t = 1.0;
+                            if(dis < 0.5){
+                                t = dist / border;
+                            }else{
+                                discard;
+                            }
+                        }
+                        // float centerDist = length(gl_PointCoord - 0.5);
+                        // works for overlapping circles if blending is enabled
+                        gl_FragColor = mix(color0, color_out, t);
+
+                    }else if(dotType == 4.0){
+
                         // + Symbol
 
                         vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.5))*dotSize;
@@ -975,7 +1008,7 @@ class BatchDrawer {
 
                         gl_FragColor = color_out;
 
-                    } else if(dotType == 4.0){
+                    } else if(dotType == 5.0){
 
                         // x Symbol
 
@@ -986,7 +1019,7 @@ class BatchDrawer {
 
                         gl_FragColor = color_out;
 
-                    } else if(dotType == 5.0){
+                    } else if(dotType == 6.0){
 
                        // Triangle filled
 
@@ -996,7 +1029,7 @@ class BatchDrawer {
                         }
                         gl_FragColor = color_out;
 
-                    } else if(dotType == 6.0){
+                    } else if(dotType == 7.0){
 
                         // Triangle empty
 

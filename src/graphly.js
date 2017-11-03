@@ -8,12 +8,17 @@
  */
 
 
-/*let TYPE = {
-    circle: 1.0,
-    triangle: 2.0,
-    rectangle: 3.0
-
-};*/
+let dotType = {
+    rectangle: 0.0,
+    rectangle_empty: 1.0,
+    circle: 2.0,
+    circle_empty: 3.0,
+    plus: 4.0,
+    x: 5.0,
+    triangle: 6.0,
+    triangle_empty: 7.0,
+    //circle: 7.0,
+};
 
 //graphly.TYPE[settingvariable]
 
@@ -173,7 +178,7 @@ class graphly {
 
         // Set parameters
         let params = {
-            forceGL1: true, // use WebGL 1 even if WebGL 2 is available
+            forceGL1: false, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             coordinateSystem: 'pixels',
             contextParams: {
@@ -1397,14 +1402,13 @@ class graphly {
                 }
 
                 if(parSett.hasOwnProperty('symbol')){
-                    if(parSett.symbol === 'dot'){
-                        this.batchDrawer.addDot(
-                            x, y, DOTSIZE, DOTTYPE, rC[0], rC[1], rC[2], rC[3]
-                        );
-                        this.batchDrawerReference.addDot(
-                            x, y, DOTSIZE, DOTTYPE, nCol[0], nCol[1], nCol[2], -1.0
-                        );
-                    }
+                    var sym = defaultFor(dotType[parSett['symbol']], 2.0);
+                    this.batchDrawer.addDot(
+                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
+                    );
+                    this.batchDrawerReference.addDot(
+                        x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                    );
                 }
             }
 
@@ -1479,14 +1483,13 @@ class graphly {
                 }
 
                 if(parSett.hasOwnProperty('symbol')){
-                    if(parSett.symbol === 'dot'){
-                        this.batchDrawer.addDot(
-                            x, y, DOTSIZE, DOTTYPE, rC[0], rC[1], rC[2], rC[3]
-                        );
-                        this.batchDrawerReference.addDot(
-                            x, y, DOTSIZE, DOTTYPE, nCol[0], nCol[1], nCol[2], -1.0
-                        );
-                    }
+                    var sym = defaultFor(dotType[parSett.symbol], 2.0);
+                    this.batchDrawer.addDot(
+                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
+                    );
+                    this.batchDrawerReference.addDot(
+                        x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                    );
                 }
             }
 
@@ -1540,6 +1543,18 @@ class graphly {
             .style('bottom', this.margin.bottom*2+'px')
             .style('left', (this.width/2-this.margin.left)+'px');
 
+        d3.select('#parameterInfo').remove();
+        this.el.append('div')
+            .attr('id', 'parameterInfo')
+            .style('top', this.margin.top*2+'px')
+            .style('left', (this.width/2)+'px');
+
+        d3.select('#parameterSettings').remove();
+        this.el.append('div')
+            .attr('id', 'parameterSettings')
+            .style('left', (this.width/2)+'px')
+            .style('display', 'none');
+
         for (let f in this.filters){
             let filter = this.filters[f];
             let currentDataset = data[f];
@@ -1575,6 +1590,28 @@ class graphly {
 
         for (let parPos=0; parPos<xAxRen.length; parPos++){
             //for (let yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
+
+            // Add item to labels
+            let id = yAxRen[parPos];
+            let that = this;
+            d3.select('#parameterInfo').append('div')
+                .attr('class', 'labelitem')
+                .append('div')
+                    .attr('id', id)
+                    .html(defaultFor(this.dataSettings[id].displayName, id))
+                    .on('click', function(){
+                        //console.log(this.id);
+                        d3.select('#parameterSettings')
+                            .style('display', 'block');
+                        d3.select('#parameterSettings')
+                            .html(JSON.stringify(that.dataSettings[this.id]));
+                    });
+            // Change height of settings panel to be just under labels
+            
+            let dim = d3.select('#parameterSettings').node().getBoundingClientRect();
+
+            d3.select('#parameterSettings')
+                .style('top', (this.margin.top+dim.height-5)+'px');
 
             // If a combined parameter is provided we need to render either
             // a line or a rectangle as we have two parameters per item
@@ -1632,14 +1669,14 @@ class graphly {
                         if (parSett){
 
                             if(parSett.hasOwnProperty('symbol')){
-                                if(parSett.symbol === 'dot'){
-                                    this.batchDrawer.addDot(
-                                        x, y, DOTSIZE, DOTTYPE, rC[0], rC[1], rC[2], 0.1
-                                    );
-                                    this.batchDrawerReference.addDot(
-                                        x, y, DOTSIZE, DOTTYPE, nCol[0], nCol[1], nCol[2], -1.0
-                                    );
-                                }
+                                var sym = defaultFor(dotType[parSett.symbol], 2.0);
+                                this.batchDrawer.addDot(
+                                    x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.1
+                                );
+                                this.batchDrawerReference.addDot(
+                                    x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                                );
+                                
                             }
                         }
 
