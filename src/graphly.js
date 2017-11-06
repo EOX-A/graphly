@@ -27,17 +27,21 @@ let DOTSIZE =9;
 
 require('../styles/graphly.css');
 require('../node_modules/choices.js/assets/styles/css/choices.css');
+require('../node_modules/c-p/color-picker.css');
 
 //import from './colorscales';
 import * as u from './utils';
 
 let regression = require('regression');
-let d3 = require("d3");
+let d3 = require('d3');
 //global.d3 = d3;
 let msgpack = require('msgpack-lite');
 global.msgpack = msgpack;
 let plotty = require('plotty');
 let Papa = require('papaparse');
+
+require('c-p');
+
 
 //require('msgpack-lite');
 
@@ -1588,24 +1592,143 @@ class graphly {
             }
         }
 
+        let that = this;
+
+        let addApply = function(){
+            if(d3.select('#applyButton').empty()){
+                let applyButtonCont = d3.select('#parameterSettings')
+                    .attr('class', 'buttonContainer')
+                    .append('div');
+                    
+                applyButtonCont.append('button')
+                    .attr('type', 'button')
+                    .attr('id', 'applyButton')
+                    .text('Apply')
+                    .on('click', function(){
+                        d3.select(this).remove();
+                        that.renderData();
+                    });
+            }
+        };
+
         for (let parPos=0; parPos<xAxRen.length; parPos++){
             //for (let yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
 
             // Add item to labels
             let id = yAxRen[parPos];
-            let that = this;
+            
             d3.select('#parameterInfo').append('div')
                 .attr('class', 'labelitem')
                 .append('div')
                     .attr('id', id)
                     .html(defaultFor(this.dataSettings[id].displayName, id))
                     .on('click', function(){
+                        let id = this.id;
                         //console.log(this.id);
+                        d3.select('#parameterSettings').selectAll("*").remove();
                         d3.select('#parameterSettings')
                             .style('display', 'block');
+
                         d3.select('#parameterSettings')
-                            .html(JSON.stringify(that.dataSettings[this.id]));
+                            .append('label')
+                            .attr('for', 'displayName')
+                            .text('Label');
+                            
+
+                        d3.select('#parameterSettings')
+                            .append('input')
+                            .attr('id', 'displayName')
+                            .attr('type', 'text')
+                            .attr('value', that.dataSettings[id].displayName)
+                            .on('input', function(){
+                                that.dataSettings[id].displayName = this.value;
+                                addApply();
+                            });
+
+                        d3.select('#parameterSettings')
+                            .append('label')
+                            .attr('for', 'symbolSelect')
+                            .text('Symbol');
+                            
+
+                        let data = [
+                            { name:'Rectangle', value: 'rectangle' },
+                            { name:'Rectangle outline', value: 'rectangle_empty'},
+                            { name:'Circle', value: 'circle'},
+                            { name:'Circle outline', value: 'circle_empty'},
+                            { name:'Plus', value: 'plus'},
+                            { name:'X', value: 'x'},
+                            { name:'Triangle', value: 'triangle'},
+                            { name:'Triangle outline', value: 'triangle_empty'}
+                        ];
+
+
+                        let select = d3.select('#parameterSettings')
+                          .append('select')
+                            .attr('id','symbolSelect')
+                            .on('change',onchange);
+
+                        let options = select
+                          .selectAll('option')
+                            .data(data).enter()
+                            .append('option')
+                                .text(function (d) { return d.name; })
+                                .attr('value', function (d) { return d.value; })
+                                .property('selected', function(d){
+                                    return d.value === that.dataSettings[id].symbol;
+                                });
+
+                        function onchange() {
+                            let selectValue = d3.select('#symbolSelect').property('value');
+                            that.dataSettings[id].symbol = selectValue;
+                            addApply();
+                        }
+
+                        d3.select('#parameterSettings')
+                            .append('label')
+                            .attr('for', 'colorSelection')
+                            .text('Color');
+
+                        let colorSelect = d3.select('#parameterSettings')
+                            .append('input')
+                            .attr('id', 'colorSelection')
+                            .attr('type', 'text')
+                            .attr('value', 
+                                '#'+CP.RGB2HEX(
+                                    that.dataSettings[id].color.slice(0,-1)
+                                    .map(function(c){return Math.round(c*255);})
+                                )
+                            );
+
+                        let picker = new CP(colorSelect.node());
+
+                        let firstChange = true;
+
+                        picker.on("change", function(color) {
+                            this.target.value = '#' + color;
+                            let c = CP.HEX2RGB(color);
+                            c = c.map(function(c){return c/255;});
+                            c.push(0.8);
+                            if(!firstChange){
+                                that.dataSettings[id].color = c;
+                                addApply();
+                            }else{
+                                firstChange = false;
+                            }
+                            
+                        });
+
+                        let x = document.createElement('a');
+                            x.href = 'javascript:;';
+                            x.innerHTML = 'Close';
+                            x.addEventListener("click", function() {
+                                picker.exit();
+                            }, false);
+
+                        picker.picker.appendChild(x);
+
                     });
+
             // Change height of settings panel to be just under labels
             
             let dim = d3.select('#parameterSettings').node().getBoundingClientRect();

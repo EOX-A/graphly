@@ -133,9 +133,30 @@ svg {
     z-index: 5;
 }
 
+.color-picker-h, .color-picker-sv{
+    top: 0 !important;
+}
+
 .labelitem{
     margin: 5px;
     cursor: pointer;
+}
+
+#parameterSettings label{
+    margin-right: 10px;
+    width: 35%
+}
+
+#parameterSettings input{
+    width: 80%;
+}
+
+#parameterSettings select{
+    width: 75%;
+}
+
+#parameterSettings input, select{
+    margin-bottom: 10px;
 }
 
 #parameterSettings{
@@ -148,9 +169,18 @@ svg {
     border-style: solid;
     border-color: #444;
     padding: 5px;
-    text-align: center;
+    padding-top: 15px;
+    //text-align: center;
     z-index: 5;
     margin-top: 14px;
+}
+
+.buttonContainer{
+    width: 100%;
+}
+
+#applyButton{
+    width: 100%;
 }
 
 
