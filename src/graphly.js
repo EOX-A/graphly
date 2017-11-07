@@ -995,7 +995,7 @@ class graphly {
                 );
             break;
             case 'polynomial':
-                let degree = defaultFor(reg.degree, 3);
+                let degree = defaultFor(reg.order, 3);
                 result = regression('polynomial', data, degree);
                 let lineAmount = 200;
                 let extent = Math.abs(xPoints[1]-xPoints[0]);
@@ -1061,7 +1061,7 @@ class graphly {
         inactive = defaultFor(inactive, false);
         var reg = {
             type: this.dataSettings[yAxRen[parPos]].regression,
-            degree: this.dataSettings[yAxRen[parPos]].regressionDegree
+            order: this.dataSettings[yAxRen[parPos]].regressionOrder
         };
 
 
@@ -1405,7 +1405,7 @@ class graphly {
                     }
                 }
 
-                if(parSett.hasOwnProperty('symbol')){
+                if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
                     var sym = defaultFor(dotType[parSett['symbol']], 2.0);
                     this.batchDrawer.addDot(
                         x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
@@ -1486,7 +1486,7 @@ class graphly {
                     }
                 }
 
-                if(parSett.hasOwnProperty('symbol')){
+                if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
                         x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
@@ -1502,6 +1502,98 @@ class graphly {
             p_x = x;
             p_y = y;
         }
+    }
+
+
+     addApply() {
+        if(!d3.select('#applyButton').empty()){
+            d3.select('#applyButton').remove();
+        }
+        if(d3.select('#applyButton').empty()){
+            let applyButtonCont = d3.select('#parameterSettings')
+                .attr('class', 'buttonContainer')
+                .append('div');
+                
+            applyButtonCont.append('button')
+                .attr('type', 'button')
+                .attr('id', 'applyButton')
+                .text('Apply')
+                .on('click', ()=>{
+                    this.renderData();
+                });
+        }
+    }
+
+
+    renderRegressionOptions(id, regressionTypes) {
+        let checked = d3.select('#regressionCheckbox').property('checked');
+        let that = this;
+
+        if(checked){
+
+            d3.select('#parameterSettings')
+                .append('label')
+                .attr('id', 'labelRegression')
+                .attr('for', 'regressionSelect')
+                .text('Approach');
+
+            let regressionSelect = d3.select('#parameterSettings')
+              .append('select')
+                .attr('id','regressionSelect')
+                .on('change',onregressionChange);
+
+            let options = regressionSelect
+              .selectAll('option')
+                .data(regressionTypes).enter()
+                .append('option')
+                    .text(function (d) { return d.name; })
+                    .attr('value', function (d) { return d.value; })
+                    .property('selected', function(d){
+                        return d.value === that.dataSettings[id].regression;
+                    });
+
+            addOrder();
+
+            function onregressionChange() {
+                let selectValue = 
+                    d3.select('#regressionSelect').property('value');
+                that.dataSettings[id].regression = selectValue;
+                addOrder();
+                that.addApply();
+            }
+
+            function addOrder(){
+                d3.select('#regressionOrderLabel').remove();
+                d3.select('#regressionOrder').remove();
+                if(that.dataSettings[id].regression === 'polynomial'){
+                    d3.select('#parameterSettings')
+                        .append('label')
+                        .attr('id', 'regressionOrderLabel')
+                        .attr('for', 'regressionOrder')
+                        .text('Order');
+
+                    d3.select('#parameterSettings')
+                    .append('input')
+                    .attr('id', 'regressionOrder')
+                    .attr('type', 'text')
+                    .attr('value', defaultFor(that.dataSettings[id].regressionOrder, 3))
+                    .on('input', function(){
+                        that.dataSettings[id].regressionOrder = Number(this.value);
+                        //that.renderRegressionOptions(id, regressionTypes);
+                        that.addApply();
+                    });
+                }
+            }
+
+
+        }else{
+            d3.select('#labelRegression').remove();
+            d3.select('#regressionSelect').remove();
+            delete that.dataSettings[id].regression;
+            delete that.dataSettings[id].regressionOrder;
+            this.addApply();
+        }
+
     }
 
 
@@ -1571,7 +1663,8 @@ class graphly {
                     applicableFilter = false;
                     let filterRel = this.filterManager.filterSettings.filterRelation;
                     for (let i = 0; i < filterRel.length; i++) {
-                        if( (filterRel[i].indexOf(p)!==-1) === (filterRel[i].indexOf(f)!==-1)){
+                        if( (filterRel[i].indexOf(p)!==-1) === 
+                            (filterRel[i].indexOf(f)!==-1)){
                             applicableFilter = true;
                             break;
                         }
@@ -1594,23 +1687,6 @@ class graphly {
 
         let that = this;
 
-        let addApply = function(){
-            if(d3.select('#applyButton').empty()){
-                let applyButtonCont = d3.select('#parameterSettings')
-                    .attr('class', 'buttonContainer')
-                    .append('div');
-                    
-                applyButtonCont.append('button')
-                    .attr('type', 'button')
-                    .attr('id', 'applyButton')
-                    .text('Apply')
-                    .on('click', function(){
-                        d3.select(this).remove();
-                        that.renderData();
-                    });
-            }
-        };
-
         for (let parPos=0; parPos<xAxRen.length; parPos++){
             //for (let yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
 
@@ -1626,8 +1702,20 @@ class graphly {
                         let id = this.id;
                         //console.log(this.id);
                         d3.select('#parameterSettings').selectAll("*").remove();
+
                         d3.select('#parameterSettings')
                             .style('display', 'block');
+
+                        d3.select('#parameterSettings')
+                            .append('div')
+                            .attr('class', 'closeButton')
+                            .text('x')
+                            .on('click', ()=>{
+                                d3.select('#parameterSettings')
+                                    .selectAll("*").remove();
+                                d3.select('#parameterSettings')
+                                    .style('display', 'none');
+                            });
 
                         d3.select('#parameterSettings')
                             .append('label')
@@ -1642,7 +1730,7 @@ class graphly {
                             .attr('value', that.dataSettings[id].displayName)
                             .on('input', function(){
                                 that.dataSettings[id].displayName = this.value;
-                                addApply();
+                                that.addApply();
                             });
 
                         d3.select('#parameterSettings')
@@ -1652,6 +1740,7 @@ class graphly {
                             
 
                         let data = [
+                            { name:'None', value: 'none' },
                             { name:'Rectangle', value: 'rectangle' },
                             { name:'Rectangle outline', value: 'rectangle_empty'},
                             { name:'Circle', value: 'circle'},
@@ -1681,7 +1770,7 @@ class graphly {
                         function onchange() {
                             let selectValue = d3.select('#symbolSelect').property('value');
                             that.dataSettings[id].symbol = selectValue;
-                            addApply();
+                            that.addApply();
                         }
 
                         d3.select('#parameterSettings')
@@ -1711,7 +1800,7 @@ class graphly {
                             c.push(0.8);
                             if(!firstChange){
                                 that.dataSettings[id].color = c;
-                                addApply();
+                                that.addApply();
                             }else{
                                 firstChange = false;
                             }
@@ -1726,6 +1815,59 @@ class graphly {
                             }, false);
 
                         picker.picker.appendChild(x);
+
+                        d3.select('#parameterSettings')
+                            .append('label')
+                            .attr('for', 'lineConnect')
+                            .text('Line connect');
+                            
+
+                        d3.select('#parameterSettings')
+                            .append('input')
+                            .attr('id', 'lineConnect')
+                            .attr('type', 'checkbox')
+                            .property('checked', 
+                                defaultFor(that.dataSettings[id].lineConnect, false)
+                            )
+                            .on('change', function(){
+                                that.dataSettings[id].lineConnect = 
+                                    !defaultFor(that.dataSettings[id].lineConnect, false);
+                                that.addApply();
+                            });
+
+                        d3.select('#parameterSettings')
+                            .append('label')
+                            .attr('for', 'regressionCheckbox')
+                            .text('Regression');
+                            
+                        let regressionTypes = [
+                            {name: 'Linear', value: 'linear'},
+                            {name: 'Polynomial', value: 'polynomial'}
+                        ];
+
+
+                        d3.select('#parameterSettings')
+                            .append('input')
+                            .attr('id', 'regressionCheckbox')
+                            .attr('type', 'checkbox')
+                            .property('checked', 
+                                that.dataSettings[id].hasOwnProperty('regression')
+                            )
+                            .on('change', function(){
+                                // If activated there is no type defined so we
+                                // define a defualt one, for now linear
+                                if(d3.select('#regressionCheckbox').property('checked')){
+                                     that.dataSettings[id].regression = defaultFor(
+                                        that.dataSettings[id].regression,
+                                        'linear'
+                                    );
+                                }
+
+                                that.renderRegressionOptions(id, regressionTypes);
+                                that.addApply();
+                            });
+
+                        that.renderRegressionOptions(id, regressionTypes);
 
                     });
 
@@ -1791,7 +1933,7 @@ class graphly {
 
                         if (parSett){
 
-                            if(parSett.hasOwnProperty('symbol')){
+                            if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
                                 var sym = defaultFor(dotType[parSett.symbol], 2.0);
                                 this.batchDrawer.addDot(
                                     x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.1

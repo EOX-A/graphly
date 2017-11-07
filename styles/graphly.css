@@ -111,12 +111,15 @@ svg {
 }
 
 #regressionInfo{
+    font-weight: bold;
     font-family: arial;
-    font-size: 1em;
-    background-color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9em;
+    background-color: white;
     position: absolute;
-    width: 350px;
     text-align: center;
+    padding-right: 10px;
+    padding-left: 10px;
+    z-index: 5;
 }
 
 #parameterInfo{
@@ -142,22 +145,44 @@ svg {
     cursor: pointer;
 }
 
-#parameterSettings label{
-    margin-right: 10px;
-    width: 35%
+.closeButton{
+    float: right;
+    margin-top: -13px;
+    cursor: pointer;
 }
 
-#parameterSettings input{
-    width: 80%;
+#parameterSettings label, 
+#parameterSettings input,
+#parameterSettings select {
+    display: inline-block;
 }
 
-#parameterSettings select{
-    width: 75%;
+#parameterSettings label {
+    width: 30%;
+    text-align: right;
 }
 
-#parameterSettings input, select{
+#parameterSettings label + input{
+    width: 55%;
+    margin: 0 5% 10px 4%;
+}
+
+#parameterSettings label + select{
+    width: 57%;
+    margin: 0 3% 10px 4%;
+}
+
+#parameterSettings input + input {
+    float: right;
+}
+
+#parameterSettings input + select {
+    float: right;
+}
+
+/*#parameterSettings input, select{
     margin-bottom: 10px;
-}
+}*/
 
 #parameterSettings{
     font-family: arial;
