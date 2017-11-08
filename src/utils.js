@@ -34,6 +34,99 @@ Array.prototype.pushArray = function() {
 };
 
 
+export function addSymbol(el, symbol, color, center, stroke, size ){
+
+    let s = defaultFor(size, 10);
+    let c = defaultFor(center, {x: s, y: s/2});
+    let sW = defaultFor(stroke, 1.5);
+
+    let triangleData = [ 
+        {"x": c.x-s/2, "y": c.y+s/2}, 
+        {"x": c.x, "y": c.y-s/2},
+        {"x": c.x+s/2, "y": c.y+s/2},
+        {"x": c.x-s/2, "y": c.y+s/2}
+    ];
+
+    let triangleFunction = d3.svg.line()
+         .x(function(d) { return d.x; })
+         .y(function(d) { return d.y; })
+         .interpolate("linear");
+
+
+    switch(symbol){
+        case 'rectangle':
+            el.append("rect")
+                .attr("x", c.x-s/2).attr("y", c.y-s/2)
+                .attr("width", s).attr("height", s)
+                .attr('fill', color);
+            break;
+        case 'rectangle_empty':
+             el.append("rect")
+                .attr("x", c.x-s/2).attr("y", c.y-s/2)
+                .attr("width", s-1).attr("height", s-1)
+                .attr('fill', 'none')
+                .attr("stroke-width", sW)
+                .attr("stroke", color);
+            break;
+        case 'circle':
+            el.append("ellipse")
+                .attr("cx", c.x).attr("cy", c.y)
+                .attr("rx", s/2).attr("ry", s/2)
+                .attr('fill', color);
+            break;
+        case 'circle_empty':
+            el.append("ellipse")
+                .attr("cx", c.x).attr("cy", c.y)
+                .attr("rx", s/2-1).attr("ry", s/2-1)
+                .attr('fill', 'none')
+                .attr("stroke-width", sW)
+                .attr("stroke", color);
+            break;
+        case 'plus':
+            el.append('line')
+                .attr('x1', c.x).attr('y1', c.y-s/2)
+                .attr('x2', c.x).attr('y2', c.y+s/2)
+                .attr("stroke-width", sW)
+                .attr("stroke", color);
+            el.append('line')
+                .attr('x1', c.x-s/2).attr('y1', c.y)
+                .attr('x2', c.x+s/2).attr('y2', c.y)
+                .attr("stroke-width", sW)
+                .attr("stroke", color);
+            break;
+        case 'x':
+            el.append('line')
+                .attr('x1', c.x-s/2).attr('y1', c.y-s/2)
+                .attr('x2', c.x+s/2).attr('y2', c.y+s/2)
+                .attr("stroke-width", sW)
+                .attr("stroke", color);
+            el.append('line')
+                .attr('x1', c.x+s/2).attr('y1', c.y-s/2)
+                .attr('x2', c.x-s/2).attr('y2', c.y+s/2)
+                .attr("stroke-width", sW)
+                .attr("stroke", color);
+            break;
+
+        case 'triangle':
+            el.append("path")
+                .attr("d", triangleFunction(triangleData))
+                .attr("stroke-width", sW)
+                .attr("stroke", color)
+                .attr("fill", color);
+
+            break;
+        case 'triangle_empty':
+            el.append("path")
+                .attr("d", triangleFunction(triangleData))
+                .attr("stroke-width", sW)
+                .attr("stroke", color)
+                .attr("fill", "none");
+
+            break;
+    }
+}
+
+
 // Function to create new colours for the picking.
 var nextCol = 1;
 export function genColor(){ 

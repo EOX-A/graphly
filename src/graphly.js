@@ -235,6 +235,9 @@ class graphly {
 
 
         this.renderCanvas.on('mousemove', function() {
+
+            // Clean anything inside top svg
+            self.topSvg.selectAll('*').remove();
             // Get mouse positions from the main canvas.
             let mouseX = d3.event.offsetX; 
             let mouseY = d3.event.offsetY;
@@ -285,14 +288,10 @@ class graphly {
                 // Check if parameter has one value for x and y (points)
                 if (nodeId.hasOwnProperty('x')){
                     if(nodeId.hasOwnProperty('y')){
-                        // Draw point for selection
-                        self.topSvg.append('circle')
-                            .attr('class', 'highlightItem')
-                            .attr('r', 3)
-                            .attr('cx', nodeId.x.coord)
-                            .attr('cy', nodeId.y.coord)
-                            .style('fill', 'rgba(0,0,0,0.2)')
-                            .style('stroke', 'rgba(0,0,200,1');
+                        u.addSymbol( 
+                            self.topSvg, nodeId.symbol, '#00ff00',
+                            {x: nodeId.x.coord, y: nodeId.y.coord}, 3.0
+                        );
                     }
                 }
 
@@ -392,7 +391,7 @@ class graphly {
             .append('select')
                 .attr('id', 'yScaleChoices');
 
-        document.getElementById("yScaleChoices").multiple = true;
+        document.getElementById('yScaleChoices').multiple = true;
 
         d3.select('.yAxisLabel.axisLabel').on('click', function(){
             if(d3.select('#ySettings').style('display') === 'block'){
@@ -1048,7 +1047,7 @@ class graphly {
             d3.select('#regressionInfo')
                 .append('div')
                 .style('color', u.rgbToHex(c[0], c[1], c[2]))
-                .style("opacity", c[3])
+                .style('opacity', c[3])
                 .html(u.createSuperscript(regrString));
         }
     }
@@ -1406,6 +1405,7 @@ class graphly {
                 }
 
                 if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
+                    par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett['symbol']], 2.0);
                     this.batchDrawer.addDot(
                         x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
@@ -1487,6 +1487,7 @@ class graphly {
                 }
 
                 if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
+                    par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
                         x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
@@ -1690,18 +1691,42 @@ class graphly {
         for (let parPos=0; parPos<xAxRen.length; parPos++){
             //for (let yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
 
-            // Add item to labels
             let id = yAxRen[parPos];
-            
-            d3.select('#parameterInfo').append('div')
-                .attr('class', 'labelitem')
-                .append('div')
+
+            // Add item to labels if there is no coloraxis is defined
+            if(this.renderSettings.colorAxis[parPos] === null){
+
+                let parDiv = d3.select('#parameterInfo').append('div')
+                    .attr('class', 'labelitem');
+
+                let iconSvg = parDiv.append('div')
+                    .attr('class', 'svgIcon')
+                    .style('display', 'inline')
+                    .append('svg')
+                    .attr('width', 20).attr('height', 10);
+
+                let symbolColor = '#'+ CP.RGB2HEX(
+                    that.dataSettings[id].color.slice(0,-1)
+                    .map(function(c){return Math.round(c*255);})
+                );
+
+                if(this.dataSettings[id].lineConnect){
+                    iconSvg.append('line')
+                        .attr('x1', 0).attr('y1', 5)
+                        .attr('x2', 20).attr('y2', 5)
+                        .attr("stroke-width", 1.5)
+                        .attr("stroke", symbolColor);
+                }
+
+                u.addSymbol(iconSvg, this.dataSettings[id].symbol, symbolColor);
+
+                parDiv.append('div')
+                    .style('display', 'inline')
                     .attr('id', id)
                     .html(defaultFor(this.dataSettings[id].displayName, id))
                     .on('click', function(){
                         let id = this.id;
-                        //console.log(this.id);
-                        d3.select('#parameterSettings').selectAll("*").remove();
+                        d3.select('#parameterSettings').selectAll('*').remove();
 
                         d3.select('#parameterSettings')
                             .style('display', 'block');
@@ -1712,7 +1737,7 @@ class graphly {
                             .text('x')
                             .on('click', ()=>{
                                 d3.select('#parameterSettings')
-                                    .selectAll("*").remove();
+                                    .selectAll('*').remove();
                                 d3.select('#parameterSettings')
                                     .style('display', 'none');
                             });
@@ -1793,7 +1818,7 @@ class graphly {
 
                         let firstChange = true;
 
-                        picker.on("change", function(color) {
+                        picker.on('change', function(color) {
                             this.target.value = '#' + color;
                             let c = CP.HEX2RGB(color);
                             c = c.map(function(c){return c/255;});
@@ -1810,7 +1835,7 @@ class graphly {
                         let x = document.createElement('a');
                             x.href = 'javascript:;';
                             x.innerHTML = 'Close';
-                            x.addEventListener("click", function() {
+                            x.addEventListener('click', function() {
                                 picker.exit();
                             }, false);
 
@@ -1870,6 +1895,14 @@ class graphly {
                         that.renderRegressionOptions(id, regressionTypes);
 
                     });
+
+            }else{
+                
+            }
+
+            if(d3.select('#parameterInfo').selectAll('*').empty()){
+                d3.select('#parameterInfo').style('display', 'none');
+            }
 
             // Change height of settings panel to be just under labels
             

@@ -2,7 +2,7 @@
 
 svg {
   font: 12px sans-serif;
-  shape-rendering: crispEdges;
+  //shape-rendering: crispEdges;
 }
 
 #zoomXBox {
@@ -138,6 +138,10 @@ svg {
 
 .color-picker-h, .color-picker-sv{
     top: 0 !important;
+}
+
+.svgIcon{
+    margin-right: 5px;
 }
 
 .labelitem{
