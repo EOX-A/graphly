@@ -81,8 +81,7 @@ var dataSettings = {
     rayleigh_dem_altitude: {
         symbol: 'circle',
         uom: 'm',
-        lineConnect: true,
-        color: [0.2, 0.2, 1.0, 0.8]
+        lineConnect: true
     },
     rayleigh_wind_velocity: {
         uom: 'cm/s',
@@ -104,8 +103,7 @@ var dataSettings = {
     mie_dem_altitude: {
         symbol: null,
         uom: 'm',
-        lineConnect: true,
-        color: [0.2, 0.2, 1.0, 0.8]
+        lineConnect: true
     },
     mie_wind_velocity: {
         uom: 'cm/s',
@@ -138,8 +136,7 @@ var dataSettings = {
         symbol: 'circle',
         uom: 'n',
         //regression: 'polynomial',
-        lineConnect: true,
-        color: [0.2, 0.2, 1.0, 0.8]
+        lineConnect: true
     },
     Timestamp: {
         scaleFormat: 'time'
@@ -159,29 +156,24 @@ var dataSettings = {
     Mie_Response: {
         symbol: 'circle',
         lineConnect: true,
-        regression: 'polynomial',
-        color: [0.02, 1.0, 0.02, 0.8]
+        regression: 'polynomial'
     },
     Measurement_Error_Mie_Response: {
         symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
-        regression: 'polynomial',
-        color: [1.0, 0.0, 0.0, 0.8]
+        regression: 'polynomial'
     },
     Reference_Pulse_Response: {
         symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
-
-        color: [0.2, 0.2, 1.0, 0.8]
     },
     Reference_Pulse_Error_Mie_Response: {
         symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
-        regression: 'polynomial',
-        color: [0.0, 0.0, 1.0, 0.8]
+        regression: 'polynomial'
     },
     Frequency_Offset: {
         uom: 'GHZ'
@@ -191,8 +183,7 @@ var dataSettings = {
         symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
-        regression: 'polynomial',
-        color: [0.2, 0.2, 1.0, 0.8]
+        regression: 'polynomial'
     },
 
 
@@ -202,8 +193,7 @@ var dataSettings = {
         symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
-        regression: 'polynomial',
-        color: [0.2, 0.2, 1.0, 0.8]
+        regression: 'polynomial'
     },
     Laser_Freq_Offset: {
         uom: 'GHZ'
@@ -216,41 +206,34 @@ var dataSettings = {
         flag: 'boolean'
     },
     Fizeau_Transmission: {
-        symbol: 'circle',
-        color: [0.2, 0.2, 1.0, 0.8]
+        symbol: 'circle'
     },
     Rayleigh_A_Response: {
         displayName: 'Channel A',
         symbol: 'circle_empty',
-        lineConnect: true,
-        color: [0.7, 0.2, 0.2, 0.8]
+        lineConnect: true
     },
 
     Rayleigh_B_Response: {
         displayName: 'Channel B',
         symbol: 'rectangle_empty',
-        lineConnect: true,
-        color: [0.2, 0.2, 0.7, 0.8]
+        lineConnect: true
     },
 
     Num_Mie_Used: {
-        symbol: 'circle',
-        color: [0.2, 0.2, 0.7, 1.0]
+        symbol: 'circle'
     },
 
     Num_Rayleigh_Used: {
-        symbol: 'circle',
-        color: [0.2, 0.2, 0.7, 0.8]
+        symbol: 'circle'
     },
 
     Num_Corrupt_Mie: {
-        symbol: 'circle',
-        color: [0.2, 0.2, 0.7, 0.8]
+        symbol: 'circle'
     },
 
     Num_Corrupt_Rayleigh: {
-        symbol: 'circle',
-        color: [0.2, 0.2, 0.7, 0.8]
+        symbol: 'circle'
     }
 
 

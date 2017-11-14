@@ -266,3 +266,13 @@ svg {
     padding-right: 5px!important;
 }
 
+
+.choices__item{
+    font-size: 12px !important;
+    padding-top: 5px!important;
+    padding-bottom: 5px!important;
+}
+
+.choices__list--single {
+    padding: 0px!important;
+}

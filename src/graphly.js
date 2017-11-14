@@ -109,6 +109,25 @@ class graphly {
         this.dataSettings = defaultFor(options.dataSettings, {});
         this.renderSettings = defaultFor(options.renderSettings, {});
 
+        // Go through rendersettings and provide default colors if not defined
+        let rKeys = Object.keys(this.dataSettings);
+        let cGen = d3.scale.category10();
+        if(rKeys.length > 10){
+            cGen = d3.scale.category20();
+        }
+
+        for (var i = 0; i < rKeys.length; i++) {
+            let k = rKeys[i];
+            if(!this.dataSettings[k].hasOwnProperty('color') || 
+                typeof this.dataSettings[k].color === 'undefined'){
+                let col = cGen(i);
+                col = CP.HEX2RGB(col);
+                col = col.map(function(c){return c/255;});
+                col.push(0.8);
+                this.dataSettings[k].color = col;
+            }
+        }
+
         this.renderSettings.combinedParameters = defaultFor(
             this.renderSettings.combinedParameters, {}
         );
@@ -416,6 +435,7 @@ class graphly {
         ySettingParameters.passedElement.addEventListener('addItem', function(event) {
             that.renderSettings.yAxis.push(event.detail.value);
             that.renderSettings.xAxis.push(that.renderSettings.xAxis[0]);
+            that.renderSettings.colorAxis.push(null);
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
@@ -428,6 +448,7 @@ class graphly {
             if(index!==-1){
                 that.renderSettings.yAxis.splice(index, 1);
                 that.renderSettings.xAxis.pop();
+                that.renderSettings.colorAxis.splice(index, 1);
                 that.initAxis();
                 that.renderData();
                 that.createLabels();
@@ -435,12 +456,13 @@ class graphly {
         },false);
 
         let uniqX = [ ...new Set(this.renderSettings.xAxis) ];
+        //let uniqX = this.renderSettings.xAxis[0];
 
         this.svg.append('text')
             .attr('class', 'xAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-10))+')')
-            .text(this.renderSettings.xAxis.join());
+            .text(uniqX.join());
 
         d3.select('#xSettings').remove();
 
