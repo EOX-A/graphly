@@ -79,7 +79,7 @@ var renderSettingsISR = {
 
 var dataSettings = {
     rayleigh_dem_altitude: {
-        symbol: 'dot',
+        symbol: 'circle',
         uom: 'm',
         lineConnect: true,
         color: [0.2, 0.2, 1.0, 0.8]
@@ -135,7 +135,7 @@ var dataSettings = {
 
 
     T_elec: {
-        symbol: 'dot',
+        symbol: 'circle',
         uom: 'n',
         //regression: 'polynomial',
         lineConnect: true,
@@ -157,27 +157,27 @@ var dataSettings = {
 
 
     Mie_Response: {
-        symbol: 'dot',
+        symbol: 'circle',
         lineConnect: true,
         regression: 'polynomial',
         color: [0.02, 1.0, 0.02, 0.8]
     },
     Measurement_Error_Mie_Response: {
-        symbol: 'dot',
+        symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
         regression: 'polynomial',
         color: [1.0, 0.0, 0.0, 0.8]
     },
     Reference_Pulse_Response: {
-        symbol: 'dot',
+        symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
 
         color: [0.2, 0.2, 1.0, 0.8]
     },
     Reference_Pulse_Error_Mie_Response: {
-        symbol: 'dot',
+        symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
         regression: 'polynomial',
@@ -188,7 +188,7 @@ var dataSettings = {
     },
 
     Measurement_Error_Rayleigh_Response: {
-        symbol: 'dot',
+        symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
         regression: 'polynomial',
@@ -199,7 +199,7 @@ var dataSettings = {
 
 
     Measurement_Response: {
-        symbol: 'dot',
+        symbol: 'circle',
         uom: 'Pixel',
         lineConnect: false,
         regression: 'polynomial',
@@ -216,38 +216,40 @@ var dataSettings = {
         flag: 'boolean'
     },
     Fizeau_Transmission: {
-        symbol: 'dot',
+        symbol: 'circle',
         color: [0.2, 0.2, 1.0, 0.8]
     },
     Rayleigh_A_Response: {
-        symbol: 'dot',
+        displayName: 'Channel A',
+        symbol: 'circle_empty',
         lineConnect: true,
-        color: [0.7, 0.2, 0.2, 0.6]
+        color: [0.7, 0.2, 0.2, 0.8]
     },
 
     Rayleigh_B_Response: {
-        symbol: 'dot',
+        displayName: 'Channel B',
+        symbol: 'rectangle_empty',
         lineConnect: true,
-        color: [0.2, 0.2, 0.7, 0.6]
-    },
-
-    Num_Mie_Used: {
-        symbol: 'dot',
         color: [0.2, 0.2, 0.7, 0.8]
     },
 
+    Num_Mie_Used: {
+        symbol: 'circle',
+        color: [0.2, 0.2, 0.7, 1.0]
+    },
+
     Num_Rayleigh_Used: {
-        symbol: 'dot',
+        symbol: 'circle',
         color: [0.2, 0.2, 0.7, 0.8]
     },
 
     Num_Corrupt_Mie: {
-        symbol: 'dot',
+        symbol: 'circle',
         color: [0.2, 0.2, 0.7, 0.8]
     },
 
     Num_Corrupt_Rayleigh: {
-        symbol: 'dot',
+        symbol: 'circle',
         color: [0.2, 0.2, 0.7, 0.8]
     }
 
@@ -344,10 +346,10 @@ var filterManager = new FilterManager({
 });
 
 
-var graph = new graphly({
+var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: dataSettings,
-    renderSettings: renderSettings_ray,
+    renderSettings: renderSettingsISR,
     filterManager: filterManager
 });
 
@@ -355,7 +357,9 @@ var graph = new graphly({
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP', true);
+//xhr.open('GET', 'data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP', true);
+xhr.open('GET', 'data/AE_OPER_AUX_ISR_1B_20071002T103629_20071002T110541_0002.MSP', true);
+
 xhr.responseType = 'arraybuffer';
 
 xhr.onload = function(e) {

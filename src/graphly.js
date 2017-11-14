@@ -8,20 +8,40 @@
  */
 
 
+let dotType = {
+    rectangle: 0.0,
+    rectangle_empty: 1.0,
+    circle: 2.0,
+    circle_empty: 3.0,
+    plus: 4.0,
+    x: 5.0,
+    triangle: 6.0,
+    triangle_empty: 7.0,
+    //circle: 7.0,
+};
 
-let styleNode = require('../styles/graphly.css');
-//let styleNodeChoices = require('../node_modules/choices.js/assets/styles/css/choices.css');
+//graphly.TYPE[settingvariable]
+
+let DOTTYPE = 4.0;
+let DOTSIZE =9;
+
+require('../styles/graphly.css');
+require('../node_modules/choices.js/assets/styles/css/choices.css');
+require('../node_modules/c-p/color-picker.css');
 
 //import from './colorscales';
 import * as u from './utils';
 
 let regression = require('regression');
-let d3 = require("d3");
-global.d3 = d3;
+let d3 = require('d3');
+//global.d3 = d3;
 let msgpack = require('msgpack-lite');
 global.msgpack = msgpack;
 let plotty = require('plotty');
 let Papa = require('papaparse');
+
+require('c-p');
+
 
 //require('msgpack-lite');
 
@@ -116,7 +136,11 @@ class graphly {
 
         this.debounceZoom = debounce(function(){
             this.onZoom();
-        }, 250);
+        }, 350);
+
+       this.debounceResize = debounce(function(){
+            this.onResize();
+        }, 500);
 
         let self = this;
 
@@ -211,6 +235,9 @@ class graphly {
 
 
         this.renderCanvas.on('mousemove', function() {
+
+            // Clean anything inside top svg
+            self.topSvg.selectAll('*').remove();
             // Get mouse positions from the main canvas.
             let mouseX = d3.event.offsetX; 
             let mouseY = d3.event.offsetY;
@@ -261,14 +288,10 @@ class graphly {
                 // Check if parameter has one value for x and y (points)
                 if (nodeId.hasOwnProperty('x')){
                     if(nodeId.hasOwnProperty('y')){
-                        // Draw point for selection
-                        self.topSvg.append('circle')
-                            .attr('class', 'highlightItem')
-                            .attr('r', 3)
-                            .attr('cx', nodeId.x.coord)
-                            .attr('cy', nodeId.y.coord)
-                            .style('fill', 'rgba(0,0,0,0.2)')
-                            .style('stroke', 'rgba(0,0,200,1');
+                        u.addSymbol( 
+                            self.topSvg, nodeId.symbol, '#00ff00',
+                            {x: nodeId.x.coord, y: nodeId.y.coord}, 3.0
+                        );
                     }
                 }
 
@@ -368,7 +391,7 @@ class graphly {
             .append('select')
                 .attr('id', 'yScaleChoices');
 
-        document.getElementById("yScaleChoices").multiple = true;
+        document.getElementById('yScaleChoices').multiple = true;
 
         d3.select('.yAxisLabel.axisLabel').on('click', function(){
             if(d3.select('#ySettings').style('display') === 'block'){
@@ -971,7 +994,7 @@ class graphly {
                 );
             break;
             case 'polynomial':
-                let degree = defaultFor(reg.degree, 3);
+                let degree = defaultFor(reg.order, 3);
                 result = regression('polynomial', data, degree);
                 let lineAmount = 200;
                 let extent = Math.abs(xPoints[1]-xPoints[0]);
@@ -1024,7 +1047,7 @@ class graphly {
             d3.select('#regressionInfo')
                 .append('div')
                 .style('color', u.rgbToHex(c[0], c[1], c[2]))
-                .style("opacity", c[3])
+                .style('opacity', c[3])
                 .html(u.createSuperscript(regrString));
         }
     }
@@ -1037,7 +1060,7 @@ class graphly {
         inactive = defaultFor(inactive, false);
         var reg = {
             type: this.dataSettings[yAxRen[parPos]].regression,
-            degree: this.dataSettings[yAxRen[parPos]].regressionDegree
+            order: this.dataSettings[yAxRen[parPos]].regressionOrder
         };
 
 
@@ -1143,7 +1166,7 @@ class graphly {
     }
 
     resize(){
-        debounceResize.bind(this)();
+        this.debounceResize.bind(this)();
         this.dim = this.el.node().getBoundingClientRect();
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
@@ -1208,13 +1231,6 @@ class graphly {
         this.renderData();
         this.zoom_update();
     }
-
-    debounceResize(){
-        debounce(()=> {
-            this.onResize();
-        }, 500);
-    }
-
 
     renderRectangles(data, parPos, xGroup, yGroup) {
 
@@ -1388,15 +1404,15 @@ class graphly {
                     }
                 }
 
-                if(parSett.hasOwnProperty('symbol')){
-                    if(parSett.symbol === 'dot'){
-                        this.batchDrawer.addDot(
-                            x, y, 6, rC[0], rC[1], rC[2], rC[3]
-                        );
-                        this.batchDrawerReference.addDot(
-                            x, y, 6, nCol[0], nCol[1], nCol[2], -1.0
-                        );
-                    }
+                if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
+                    par_properties.symbol = parSett.symbol;
+                    var sym = defaultFor(dotType[parSett['symbol']], 2.0);
+                    this.batchDrawer.addDot(
+                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
+                    );
+                    this.batchDrawerReference.addDot(
+                        x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                    );
                 }
             }
 
@@ -1470,15 +1486,15 @@ class graphly {
                     }
                 }
 
-                if(parSett.hasOwnProperty('symbol')){
-                    if(parSett.symbol === 'dot'){
-                        this.batchDrawer.addDot(
-                            x, y, 6, rC[0], rC[1], rC[2], rC[3]
-                        );
-                        this.batchDrawerReference.addDot(
-                            x, y, 6, nCol[0], nCol[1], nCol[2], -1.0
-                        );
-                    }
+                if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
+                    par_properties.symbol = parSett.symbol;
+                    var sym = defaultFor(dotType[parSett.symbol], 2.0);
+                    this.batchDrawer.addDot(
+                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
+                    );
+                    this.batchDrawerReference.addDot(
+                        x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                    );
                 }
             }
 
@@ -1487,6 +1503,98 @@ class graphly {
             p_x = x;
             p_y = y;
         }
+    }
+
+
+     addApply() {
+        if(!d3.select('#applyButton').empty()){
+            d3.select('#applyButton').remove();
+        }
+        if(d3.select('#applyButton').empty()){
+            let applyButtonCont = d3.select('#parameterSettings')
+                .attr('class', 'buttonContainer')
+                .append('div');
+                
+            applyButtonCont.append('button')
+                .attr('type', 'button')
+                .attr('id', 'applyButton')
+                .text('Apply')
+                .on('click', ()=>{
+                    this.renderData();
+                });
+        }
+    }
+
+
+    renderRegressionOptions(id, regressionTypes) {
+        let checked = d3.select('#regressionCheckbox').property('checked');
+        let that = this;
+
+        if(checked){
+
+            d3.select('#parameterSettings')
+                .append('label')
+                .attr('id', 'labelRegression')
+                .attr('for', 'regressionSelect')
+                .text('Approach');
+
+            let regressionSelect = d3.select('#parameterSettings')
+              .append('select')
+                .attr('id','regressionSelect')
+                .on('change',onregressionChange);
+
+            let options = regressionSelect
+              .selectAll('option')
+                .data(regressionTypes).enter()
+                .append('option')
+                    .text(function (d) { return d.name; })
+                    .attr('value', function (d) { return d.value; })
+                    .property('selected', function(d){
+                        return d.value === that.dataSettings[id].regression;
+                    });
+
+            addOrder();
+
+            function onregressionChange() {
+                let selectValue = 
+                    d3.select('#regressionSelect').property('value');
+                that.dataSettings[id].regression = selectValue;
+                addOrder();
+                that.addApply();
+            }
+
+            function addOrder(){
+                d3.select('#regressionOrderLabel').remove();
+                d3.select('#regressionOrder').remove();
+                if(that.dataSettings[id].regression === 'polynomial'){
+                    d3.select('#parameterSettings')
+                        .append('label')
+                        .attr('id', 'regressionOrderLabel')
+                        .attr('for', 'regressionOrder')
+                        .text('Order');
+
+                    d3.select('#parameterSettings')
+                    .append('input')
+                    .attr('id', 'regressionOrder')
+                    .attr('type', 'text')
+                    .attr('value', defaultFor(that.dataSettings[id].regressionOrder, 3))
+                    .on('input', function(){
+                        that.dataSettings[id].regressionOrder = Number(this.value);
+                        //that.renderRegressionOptions(id, regressionTypes);
+                        that.addApply();
+                    });
+                }
+            }
+
+
+        }else{
+            d3.select('#labelRegression').remove();
+            d3.select('#regressionSelect').remove();
+            delete that.dataSettings[id].regression;
+            delete that.dataSettings[id].regressionOrder;
+            this.addApply();
+        }
+
     }
 
 
@@ -1532,6 +1640,18 @@ class graphly {
             .style('bottom', this.margin.bottom*2+'px')
             .style('left', (this.width/2-this.margin.left)+'px');
 
+        d3.select('#parameterInfo').remove();
+        this.el.append('div')
+            .attr('id', 'parameterInfo')
+            .style('top', this.margin.top*2+'px')
+            .style('left', (this.width/2)+'px');
+
+        d3.select('#parameterSettings').remove();
+        this.el.append('div')
+            .attr('id', 'parameterSettings')
+            .style('left', (this.width/2)+'px')
+            .style('display', 'none');
+
         for (let f in this.filters){
             let filter = this.filters[f];
             let currentDataset = data[f];
@@ -1544,7 +1664,8 @@ class graphly {
                     applicableFilter = false;
                     let filterRel = this.filterManager.filterSettings.filterRelation;
                     for (let i = 0; i < filterRel.length; i++) {
-                        if( (filterRel[i].indexOf(p)!==-1) === (filterRel[i].indexOf(f)!==-1)){
+                        if( (filterRel[i].indexOf(p)!==-1) === 
+                            (filterRel[i].indexOf(f)!==-1)){
                             applicableFilter = true;
                             break;
                         }
@@ -1565,8 +1686,230 @@ class graphly {
             }
         }
 
+        let that = this;
+
         for (let parPos=0; parPos<xAxRen.length; parPos++){
             //for (let yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
+
+            let id = yAxRen[parPos];
+
+            // Add item to labels if there is no coloraxis is defined
+            if(this.renderSettings.colorAxis[parPos] === null){
+
+                let parDiv = d3.select('#parameterInfo').append('div')
+                    .attr('class', 'labelitem');
+
+                let iconSvg = parDiv.append('div')
+                    .attr('class', 'svgIcon')
+                    .style('display', 'inline')
+                    .append('svg')
+                    .attr('width', 20).attr('height', 10);
+
+                let symbolColor = '#'+ CP.RGB2HEX(
+                    that.dataSettings[id].color.slice(0,-1)
+                    .map(function(c){return Math.round(c*255);})
+                );
+
+                if(this.dataSettings[id].lineConnect){
+                    iconSvg.append('line')
+                        .attr('x1', 0).attr('y1', 5)
+                        .attr('x2', 20).attr('y2', 5)
+                        .attr("stroke-width", 1.5)
+                        .attr("stroke", symbolColor);
+                }
+
+                u.addSymbol(iconSvg, this.dataSettings[id].symbol, symbolColor);
+
+                parDiv.append('div')
+                    .style('display', 'inline')
+                    .attr('id', id)
+                    .html(defaultFor(this.dataSettings[id].displayName, id))
+                    .on('click', function(){
+                        let id = this.id;
+                        d3.select('#parameterSettings').selectAll('*').remove();
+
+                        d3.select('#parameterSettings')
+                            .style('display', 'block');
+
+                        d3.select('#parameterSettings')
+                            .append('div')
+                            .attr('class', 'closeButton')
+                            .text('x')
+                            .on('click', ()=>{
+                                d3.select('#parameterSettings')
+                                    .selectAll('*').remove();
+                                d3.select('#parameterSettings')
+                                    .style('display', 'none');
+                            });
+
+                        d3.select('#parameterSettings')
+                            .append('label')
+                            .attr('for', 'displayName')
+                            .text('Label');
+                            
+
+                        d3.select('#parameterSettings')
+                            .append('input')
+                            .attr('id', 'displayName')
+                            .attr('type', 'text')
+                            .attr('value', that.dataSettings[id].displayName)
+                            .on('input', function(){
+                                that.dataSettings[id].displayName = this.value;
+                                that.addApply();
+                            });
+
+                        d3.select('#parameterSettings')
+                            .append('label')
+                            .attr('for', 'symbolSelect')
+                            .text('Symbol');
+                            
+
+                        let data = [
+                            { name:'None', value: 'none' },
+                            { name:'Rectangle', value: 'rectangle' },
+                            { name:'Rectangle outline', value: 'rectangle_empty'},
+                            { name:'Circle', value: 'circle'},
+                            { name:'Circle outline', value: 'circle_empty'},
+                            { name:'Plus', value: 'plus'},
+                            { name:'X', value: 'x'},
+                            { name:'Triangle', value: 'triangle'},
+                            { name:'Triangle outline', value: 'triangle_empty'}
+                        ];
+
+
+                        let select = d3.select('#parameterSettings')
+                          .append('select')
+                            .attr('id','symbolSelect')
+                            .on('change',onchange);
+
+                        let options = select
+                          .selectAll('option')
+                            .data(data).enter()
+                            .append('option')
+                                .text(function (d) { return d.name; })
+                                .attr('value', function (d) { return d.value; })
+                                .property('selected', function(d){
+                                    return d.value === that.dataSettings[id].symbol;
+                                });
+
+                        function onchange() {
+                            let selectValue = d3.select('#symbolSelect').property('value');
+                            that.dataSettings[id].symbol = selectValue;
+                            that.addApply();
+                        }
+
+                        d3.select('#parameterSettings')
+                            .append('label')
+                            .attr('for', 'colorSelection')
+                            .text('Color');
+
+                        let colorSelect = d3.select('#parameterSettings')
+                            .append('input')
+                            .attr('id', 'colorSelection')
+                            .attr('type', 'text')
+                            .attr('value', 
+                                '#'+CP.RGB2HEX(
+                                    that.dataSettings[id].color.slice(0,-1)
+                                    .map(function(c){return Math.round(c*255);})
+                                )
+                            );
+
+                        let picker = new CP(colorSelect.node());
+
+                        let firstChange = true;
+
+                        picker.on('change', function(color) {
+                            this.target.value = '#' + color;
+                            let c = CP.HEX2RGB(color);
+                            c = c.map(function(c){return c/255;});
+                            c.push(0.8);
+                            if(!firstChange){
+                                that.dataSettings[id].color = c;
+                                that.addApply();
+                            }else{
+                                firstChange = false;
+                            }
+                            
+                        });
+
+                        let x = document.createElement('a');
+                            x.href = 'javascript:;';
+                            x.innerHTML = 'Close';
+                            x.addEventListener('click', function() {
+                                picker.exit();
+                            }, false);
+
+                        picker.picker.appendChild(x);
+
+                        d3.select('#parameterSettings')
+                            .append('label')
+                            .attr('for', 'lineConnect')
+                            .text('Line connect');
+                            
+
+                        d3.select('#parameterSettings')
+                            .append('input')
+                            .attr('id', 'lineConnect')
+                            .attr('type', 'checkbox')
+                            .property('checked', 
+                                defaultFor(that.dataSettings[id].lineConnect, false)
+                            )
+                            .on('change', function(){
+                                that.dataSettings[id].lineConnect = 
+                                    !defaultFor(that.dataSettings[id].lineConnect, false);
+                                that.addApply();
+                            });
+
+                        d3.select('#parameterSettings')
+                            .append('label')
+                            .attr('for', 'regressionCheckbox')
+                            .text('Regression');
+                            
+                        let regressionTypes = [
+                            {name: 'Linear', value: 'linear'},
+                            {name: 'Polynomial', value: 'polynomial'}
+                        ];
+
+
+                        d3.select('#parameterSettings')
+                            .append('input')
+                            .attr('id', 'regressionCheckbox')
+                            .attr('type', 'checkbox')
+                            .property('checked', 
+                                that.dataSettings[id].hasOwnProperty('regression')
+                            )
+                            .on('change', function(){
+                                // If activated there is no type defined so we
+                                // define a defualt one, for now linear
+                                if(d3.select('#regressionCheckbox').property('checked')){
+                                     that.dataSettings[id].regression = defaultFor(
+                                        that.dataSettings[id].regression,
+                                        'linear'
+                                    );
+                                }
+
+                                that.renderRegressionOptions(id, regressionTypes);
+                                that.addApply();
+                            });
+
+                        that.renderRegressionOptions(id, regressionTypes);
+
+                    });
+
+            }else{
+                
+            }
+
+            if(d3.select('#parameterInfo').selectAll('*').empty()){
+                d3.select('#parameterInfo').style('display', 'none');
+            }
+
+            // Change height of settings panel to be just under labels
+            
+            let dim = d3.select('#parameterSettings').node().getBoundingClientRect();
+
+            d3.select('#parameterSettings')
+                .style('top', (this.margin.top+dim.height-5)+'px');
 
             // If a combined parameter is provided we need to render either
             // a line or a rectangle as we have two parameters per item
@@ -1623,15 +1966,15 @@ class graphly {
 
                         if (parSett){
 
-                            if(parSett.hasOwnProperty('symbol')){
-                                if(parSett.symbol === 'dot'){
-                                    this.batchDrawer.addDot(
-                                        x, y, 6, rC[0], rC[1], rC[2], 0.1
-                                    );
-                                    this.batchDrawerReference.addDot(
-                                        x, y, 6, nCol[0], nCol[1], nCol[2], -1.0
-                                    );
-                                }
+                            if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
+                                var sym = defaultFor(dotType[parSett.symbol], 2.0);
+                                this.batchDrawer.addDot(
+                                    x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.1
+                                );
+                                this.batchDrawerReference.addDot(
+                                    x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                                );
+                                
                             }
                         }
 
@@ -1679,18 +2022,4 @@ class graphly {
 
 }
 
-/*if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
-    module.exports = graphly;
-else
-    window.graphly = graphly;*/
-
-/*if (typeof module !== 'undefined') {
-  module.exports = graphly;
-}*/
-
-//module.exports = graphly;
-// register the symbols to be exported at the 'global' object (to be replaced by browserify)
-// global.graphly = { graph };
-
-// register the symbols to be exported at the 'global' object (to be replaced by browserify)
- global.graphly = graphly;
+export {graphly};

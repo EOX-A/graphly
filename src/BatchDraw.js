@@ -54,6 +54,7 @@ class BatchDrawer {
         this.DOT_POS_BUF = 1;
         this.DOT_SIZE_BUF = 2;
         this.DOT_COLOR_BUF = 3;
+        this.DOT_TYPE_BUF = 4;
 
         this.RECT_VX_BUF = 0;
         this.RECT_START_BUF = 1;
@@ -141,6 +142,7 @@ class BatchDrawer {
         this.dotPosArray = new Float32Array(this.maxDots * 2);
         this.dotSizeArray = new Float32Array(this.maxDots);
         this.dotColorArray = new Float32Array(this.maxDots * 4);
+        this.dotTypeArray = new Float32Array(this.maxDots);
 
         this.rectStartArray = new Float32Array(this.maxRects * 2);
         this.rectEndArray = new Float32Array(this.maxRects * 2);
@@ -155,6 +157,7 @@ class BatchDrawer {
         this.dotPosBuffer = this._initArrayBuffer(this.dotPosArray, 2);
         this.dotSizeBuffer = this._initArrayBuffer(this.dotSizeArray, 1);
         this.dotColorBuffer = this._initArrayBuffer(this.dotColorArray, 4);
+        this.dotTypeBuffer = this._initArrayBuffer(this.dotTypeArray, 1);
 
         this.rectStartBuffer = this._initArrayBuffer(this.rectStartArray, 2);
         this.rectEndBuffer = this._initArrayBuffer(this.rectEndArray, 2);
@@ -192,6 +195,7 @@ class BatchDrawer {
             this.GL.bindAttribLocation(program, this.DOT_POS_BUF, 'inDotPos');
             this.GL.bindAttribLocation(program, this.DOT_SIZE_BUF, 'inDotSize');
             this.GL.bindAttribLocation(program, this.DOT_COLOR_BUF, 'dotColor');
+            this.GL.bindAttribLocation(program, this.DOT_TYPE_BUF, 'dotType');
         } else if (shape === 'rect') {
             this.GL.bindAttribLocation(program, this.RECT_VX_BUF, 'vertexPos');
             this.GL.bindAttribLocation(program, this.RECT_START_BUF, 'inRectStart');
@@ -291,7 +295,7 @@ class BatchDrawer {
     }
 
 
-    addDot(posX, posY, size, colorR, colorG, colorB, colorA) {
+    addDot(posX, posY, size, type, colorR, colorG, colorB, colorA) {
         this.dotPosArray[2*this.numDots] = posX;
         this.dotPosArray[2*this.numDots+1] = posY;
         this.dotSizeArray[this.numDots] = size;
@@ -299,6 +303,7 @@ class BatchDrawer {
         this.dotColorArray[4*this.numDots+1] = colorG;
         this.dotColorArray[4*this.numDots+2] = colorB;
         this.dotColorArray[4*this.numDots+3] = colorA;
+        this.dotTypeArray[this.numDots] = type;
         this.numDots++;
     }
 
@@ -387,6 +392,9 @@ class BatchDrawer {
 
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotColorBuffer);
         this.GL.bufferSubData(this.GL.ARRAY_BUFFER, 0, this.dotColorArray, 0, this.numDots * 4);
+
+        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotTypeBuffer);
+        this.GL.bufferSubData(this.GL.ARRAY_BUFFER, 0, this.dotTypeArray, 0, this.numDots * 1);
     }
 
     _updateRectBuffers() {
@@ -448,6 +456,7 @@ class BatchDrawer {
         this.GL.enableVertexAttribArray(this.DOT_POS_BUF);
         this.GL.enableVertexAttribArray(this.DOT_SIZE_BUF);
         this.GL.enableVertexAttribArray(this.DOT_COLOR_BUF);
+        this.GL.enableVertexAttribArray(this.DOT_TYPE_BUF);
 
         // Bind all line vertex buffers:
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotVertexBuffer);
@@ -464,6 +473,10 @@ class BatchDrawer {
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotColorBuffer);
         this.GL.vertexAttribPointer(this.DOT_COLOR_BUF, 4, this.GL.FLOAT, false, 16, 0);
         this.GL.vertexAttribDivisor(this.DOT_COLOR_BUF, 1);
+
+        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotTypeBuffer);
+        this.GL.vertexAttribPointer(this.DOT_TYPE_BUF, 1, this.GL.FLOAT, false, 4, 0);
+        this.GL.vertexAttribDivisor(this.DOT_TYPE_BUF, 1);
 
         // Draw all dot instances:
         this.GL.drawArraysInstanced(this.GL.POINT, 0, 4, this.numDots);
@@ -550,6 +563,7 @@ class BatchDrawer {
         this.GL.enableVertexAttribArray(this.DOT_POS_BUF);
         this.GL.enableVertexAttribArray(this.DOT_SIZE_BUF);
         this.GL.enableVertexAttribArray(this.DOT_COLOR_BUF);
+        this.GL.enableVertexAttribArray(this.DOT_TYPE_BUF);
 
         // Bind all line vertex buffers:
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotVertexBuffer);
@@ -566,6 +580,10 @@ class BatchDrawer {
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotColorBuffer);
         this.GL.vertexAttribPointer(this.DOT_COLOR_BUF, 4, this.GL.FLOAT, false, 16, 0);
         this.ext.vertexAttribDivisorANGLE(this.DOT_COLOR_BUF, 1);
+
+        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotTypeBuffer);
+        this.GL.vertexAttribPointer(this.DOT_TYPE_BUF, 1, this.GL.FLOAT, false, 4, 0);
+        this.ext.vertexAttribDivisorANGLE(this.DOT_TYPE_BUF, 1);
 
         // Draw all dot instances:
         this.ext.drawArraysInstancedANGLE(this.GL.POINT, 0, 4, this.numDots);
@@ -617,153 +635,165 @@ class BatchDrawer {
                 #define PI 3.14159265359
                 #define TWO_PI 6.28318530718
 
-                precision highp float;
+                precision mediump float;
                 
                 in vec4 color;
+                in float dotType;
+                in float dotSize;
                 out vec4 fragmentColor;
                 
                 void main(void) {
 
-                    //fragmentColor = color;
-                    //fragmentColor = vec4(color.rgb * color.a, color.a);
-
-                    float border = 0.05;
-                    float radius = 0.5;
-                    vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
-                    vec4 color1 = vec4(color.rgb * color.a, color.a);
-                    float dis = 0.0;
-
+                    vec4 color_out = vec4(color.rgb * color.a, color.a);
                     if(color.a < 0.0){
-                        dis = 1.0;
-                        color1 = vec4(color.rgb, 1.0);
+                        color_out = vec4(color.rgb, 1.0);
                     }
-                    
 
-                    vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
-                    float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+                    if(dotType == 0.0){ 
 
-                    float t = 0.0;
-                    if (dist > border){
-                        t = 1.0;
-                    } else if (dist > 0.0){
-                        t = 1.0;
-                        if(dis < 0.5){
-                            t = dist / border;
-                        }else{
+                        // Rectangle
+                        fragmentColor = color_out;
+
+                    } else if(dotType == 1.0){
+
+                        // Empty Rectangle
+                        vec2 m = gl_PointCoord.xy*dotSize;
+
+                        if( (color.a > 0.0) && 
+                            (m.x >= 1.2 && m.x <= dotSize-1.2) && 
+                            (m.y >= 1.2 && m.y <= dotSize-1.2) ) {
                             discard;
                         }
+                        
+                        fragmentColor = color_out;
+
+                    } else if(dotType == 2.0){
+
+                        // Circle
+
+                        float border = 0.05;
+                        float radius = 0.5;
+                        vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                        float dis = 0.0;
+
+                        vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                        float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+
+                        float t = 0.0;
+                        if (dist > border){
+                            t = 1.0;
+                        } else if (dist > 0.0){
+                            t = 1.0;
+                            if(dis < 0.5){
+                                t = dist / border;
+                            }else{
+                                discard;
+                            }
+                        }
+                        // float centerDist = length(gl_PointCoord - 0.5);
+                        // works for overlapping circles if blending is enabled
+                        fragmentColor = mix(color0, color_out, t);
+
+                    } else if(dotType == 3.0){
+
+                        // Circle empty
+
+                        float border = 0.05;
+                        float radius = 0.5;
+                        vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                        float dis = 0.0;
+
+                        vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                        float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+
+                        float t = 0.0;
+                        if((color.a >= 0.0) && dist*dotSize>=1.2){
+                            discard;
+                        }else if (dist > border){
+                            t = 1.0;
+                        } else if (dist > 0.0){
+                            t = 1.0;
+                            if(dis < 0.5){
+                                t = dist / border;
+                            }else{
+                                discard;
+                            }
+                        }
+                        // float centerDist = length(gl_PointCoord - 0.5);
+                        // works for overlapping circles if blending is enabled
+                        fragmentColor = mix(color0, color_out, t);
+
+                    }else if(dotType == 4.0){
+
+                        // + Symbol
+
+                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.5))*dotSize;
+                        if( m.x <= 0.5 && m.x >= -0.5 ){
+                        } else if( m.y <= 0.5 && m.y >= -0.5){
+                        } else {
+                            discard;
+                        }
+
+                        fragmentColor = color_out;
+
+                    } else if(dotType == 5.0){
+
+                        // x Symbol
+
+                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.5))*dotSize;
+                        if( abs(abs(m.x)-abs(m.y)) >= 0.5 ) {
+                            discard;
+                        }
+
+                        fragmentColor = color_out;
+
+                    } else if(dotType == 6.0){
+
+                       // Triangle filled
+
+                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.0))*dotSize;
+                        if( abs(m.x)*2.0 > m.y ) {
+                            discard;
+                        }
+                        fragmentColor = color_out;
+
+                    } else if(dotType == 7.0){
+
+                        // Triangle empty
+
+                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.0))*dotSize;
+                        if( abs(m.x)*2.0 > m.y ) {
+                            discard;
+                        }
+                        if( (m.y < dotSize-1.0 ) && (abs(m.x)*2.0 < m.y-1.0) &&
+                             (color.a >= 0.0) ) {
+                            discard;
+                        }
+                        fragmentColor = color_out;
                     }
 
-                    // float centerDist = length(gl_PointCoord - 0.5);
-                    // works for overlapping circles if blending is enabled
-
-                    fragmentColor = mix(color0, color1, t);
-
-
-
-
-
-
-
-                    /*vec2 st = 2.0 * gl_PointCoord.xy - 1.0;
-                    st.y = st.y * -1.0;
-                    vec3 color2 = vec3(0.0);
-                    float d = 0.0;
-
-                    // Number of sides of your shape
-                    int N = 3;
-
-                    // Angle and radius from the current pixel
-                    float a = atan(st.x,st.y)+PI;
-                    float r = TWO_PI/float(N);
-
-                    // Shaping function that modulate the distance
-                    d = cos(floor(.5+a/r)*r-a)*length(st);
-                    float alpha = 1.0-smoothstep(.4,.41,d);
-                    fragmentColor = color * alpha;*/
-
-
-                    /*float innerPercent = 0.5;
-                    vec4 outlineColor = color;
-                    float distanceToCenter = length(gl_PointCoord.xy - vec2(0.5));
-                    //float maxDistance = max(0.0, 0.5 - v_pixelDistance);
-                    float maxDistance = 0.4;
-                    float wholeAlpha = 1.0 - smoothstep(maxDistance, 0.5, distanceToCenter);
-                    float innerAlpha = 1.0 - smoothstep(maxDistance * innerPercent, 0.5 * innerPercent, distanceToCenter);
-                    vec4 o_color = mix(outlineColor, color, innerAlpha);
-                    o_color.a *= wholeAlpha;
-                    if (o_color.a < 0.005){
-                        discard;
-                    }
-                    #ifdef GL_EXT_frag_depth
-                        float z = gl_FragCoord.z;
-                        gl_FragDepthEXT = z + ((1.0 - z) * (1.0 - wholeAlpha));
-                    #endif
-                    
-                    fragmentColor = o_color;*/
-
-
-
-                    /*float r = 0.0, delta = 0.0, alpha = 1.0;
-                        vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-                        r = dot(cxy, cxy);
-                    #ifdef GL_OES_standard_derivatives
-                        delta = fwidth(r);
-                        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
-                    #endif
-
-                    fragmentColor = color * alpha;*/
-
-
-                    /*float border = 0.05;
-                    float radius = 0.5;
-                    vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
-                    vec4 color1 = vec4(color[0], color[1], color[2], 1.0);
-
-                    vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
-                    float dist = radius - sqrt(m.x * m.x + m.y * m.y);
-
-                    float t = 0.0;
-                    if (dist > border)
-                    t = 1.0;
-                    else if (dist > 0.0)
-                    t = dist / border;
-
-                    // float centerDist = length(gl_PointCoord - 0.5);
-                    // works for overlapping circles if blending is enabled
-                    fragmentColor = mix(color0, color1, t);*/
-
-
-                    
-                    /*float r = 0.0, delta = 0.0, alpha = 1.0;
-                    vec2 cxy = 2.0 * gl_PointCoord.xy - 1.0;
-                    r = dot(cxy, cxy);
-                    if (r > 1.0) {
-                        discard;
-                    } else if (r < 1.0 && r >= 0.9){
-                        fragmentColor = color * 0.2;
-                    } else {
-                        fragmentColor = color;
-                    }*/
-
-                    
                 }`;
 
                 dotVertexSource =
                     `#version 300 es
-                    precision highp float;
+                    precision mediump float;
                     layout(location = 0) in vec3 vertexPos;
                     layout(location = 1) in vec2 inDotPos;
                     layout(location = 2) in float inDotSize;
                     layout(location = 3) in vec4 dotColor;
+                    layout(location = 4) in float inDotType;
 
                     out vec4 color;
+                    out float dotSize;
+                    out float dotType;
 
                     uniform mat3 projection;
                     uniform vec2 resolutionScale;
 
                     void main(void) {
                         color = dotColor;
+                        dotSize = inDotSize;
+                        dotType = inDotType;
                         gl_PointSize =  inDotSize;
                         vec2 dotPos = resolutionScale * inDotPos;
                         float dotSize = resolutionScale.x * inDotSize;
@@ -777,7 +807,7 @@ class BatchDrawer {
 
                 lineFragSource =
                    `#version 300 es
-                    precision highp float;
+                    precision mediump float;
                     in vec4 color;
                     out vec4 fragmentColor;
                     void main(void) {
@@ -786,7 +816,7 @@ class BatchDrawer {
             
                 lineVertexSource = 
                    `#version 300 es
-                    precision highp float;
+                    precision mediump float;
                     layout(location = 0) in vec3 vertexPos;
                     layout(location = 1) in vec2 inLineStart;
                     layout(location = 2) in vec2 inLineEnd;
@@ -828,7 +858,7 @@ class BatchDrawer {
 
                 rectFragSource =
                    `#version 300 es
-                    precision highp float;
+                    precision mediump float;
                     in vec4 color;
                     out vec4 fragmentColor;
                     void main(void) {
@@ -838,7 +868,7 @@ class BatchDrawer {
                 rectVertexSource = 
                    `#version 300 es
                     #define M_PI 3.1415926535897932384626433832795
-                    precision highp float;
+                    precision mediump float;
                     layout(location = 0) in vec3 vertexPos;
                     layout(location = 1) in vec2 inRectStart;
                     layout(location = 2) in vec2 inRectEnd;
@@ -876,45 +906,184 @@ class BatchDrawer {
         } else if (this.GLVersion == 1) {
             dotFragSource = 
                `#version 100
-                precision highp float;
-                varying vec4 color;
-                void main(void) {
-                    float border = 0.05;
-                    float radius = 0.5;
-                    vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
-                    vec4 color1 = vec4(color.rgb * color.a, color.a);
-                    float dis = 0.0;
 
-                    if(color.a < 0.0){
-                        dis = 1.0;
-                        color1 = vec4(color.rgb, 1.0);
-                    }
+                #define PI 3.14159265359
+                #define TWO_PI 6.28318530718
+
+                precision mediump float;
                 
+                varying vec4 color;
+                varying float dotType;
+                varying float dotSize;
+                
+                void main(void) {
 
-                    vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
-                    float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+                    vec4 color_out = vec4(color.rgb * color.a, color.a);
+                    if(color.a < 0.0){
+                        color_out = vec4(color.rgb, 1.0);
+                    }
 
-                    float t = 0.0;
-                    if (dist > border){
-                        t = 1.0;
-                    } else if (dist > 0.0){
-                        t = 1.0;
-                        if(dis < 0.5){
-                            t = dist / border;
-                        }else{
+                    if(dotType == 0.0){ 
+
+                        // Rectangle
+                        gl_FragColor = color_out;
+
+                    } else if(dotType == 1.0){
+
+                        // Empty Rectangle
+                        vec2 m = gl_PointCoord.xy*dotSize;
+
+                        if( (color.a > 0.0) && 
+                            (m.x >= 1.2 && m.x <= dotSize-1.2) && 
+                            (m.y >= 1.2 && m.y <= dotSize-1.2) ) {
                             discard;
                         }
+                        
+                        gl_FragColor = color_out;
+
+                    } else if(dotType == 2.0){
+
+                        // Circle
+
+                        float border = 0.05;
+                        float radius = 0.5;
+                        vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                        float dis = 0.0;
+
+                        vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                        float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+
+                        float t = 0.0;
+                        if (dist > border){
+                            t = 1.0;
+                        } else if (dist > 0.0){
+                            t = 1.0;
+                            if(dis < 0.5){
+                                t = dist / border;
+                            }else{
+                                discard;
+                            }
+                        }
+                        // float centerDist = length(gl_PointCoord - 0.5);
+                        // works for overlapping circles if blending is enabled
+                        gl_FragColor = mix(color0, color_out, t);
+
+                    } else if(dotType == 3.0){
+
+                        // Circle empty
+
+                        float border = 0.05;
+                        float radius = 0.5;
+                        vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
+                        float dis = 0.0;
+
+                        vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                        float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+
+                        float t = 0.0;
+                        if (dist > border){
+                            t = 1.0;
+                        } else if (dist > 0.0){
+                            t = 1.0;
+                            if(dis < 0.5){
+                                t = dist / border;
+                            }else{
+                                discard;
+                            }
+                        }
+                        // float centerDist = length(gl_PointCoord - 0.5);
+                        // works for overlapping circles if blending is enabled
+                        gl_FragColor = mix(color0, color_out, t);
+
+                    }else if(dotType == 4.0){
+
+                        // + Symbol
+
+                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.5))*dotSize;
+                        if( m.x <= 0.5 && m.x >= -0.5 ){
+                        } else if( m.y <= 0.5 && m.y >= -0.5){
+                        } else {
+                            discard;
+                        }
+
+                        gl_FragColor = color_out;
+
+                    } else if(dotType == 5.0){
+
+                        // x Symbol
+
+                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.5))*dotSize;
+                        if( abs(abs(m.x)-abs(m.y)) >= 0.5 ) {
+                            discard;
+                        }
+
+                        gl_FragColor = color_out;
+
+                    } else if(dotType == 6.0){
+
+                       // Triangle filled
+
+                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.0))*dotSize;
+                        if( abs(m.x)*2.0 > m.y ) {
+                            discard;
+                        }
+                        gl_FragColor = color_out;
+
+                    } else if(dotType == 7.0){
+
+                        // Triangle empty
+
+                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.0))*dotSize;
+                        if( abs(m.x)*2.0 > m.y ) {
+                            discard;
+                        }
+                        if( (m.y < dotSize-1.0 ) && (abs(m.x)*2.0 < m.y-1.0) &&
+                             (color.a >= 0.0) ) {
+                            discard;
+                        }
+                        gl_FragColor = color_out;
                     }
 
-                    // float centerDist = length(gl_PointCoord - 0.5);
-                    // works for overlapping circles if blending is enabled
 
-                    gl_FragColor = mix(color0, color1, t);
+
+                }`;
+
+            dotVertexSource = 
+                `#version 100
+                
+                precision mediump float;
+
+                attribute vec3 vertexPos;
+                attribute vec2 inDotPos;
+                attribute float inDotSize;
+                attribute vec4 dotColor;
+                attribute float inDotType;
+
+                varying vec4 color;
+                varying float dotSize;
+                varying float dotType;
+
+                uniform mat3 projection;
+                uniform vec2 resolutionScale;
+
+                void main(void) {
+                    color = dotColor;
+                    dotSize = inDotSize;
+                    dotType = inDotType;
+                    gl_PointSize =  inDotSize;
+                    vec2 dotPos = resolutionScale * inDotPos;
+                    float dotSize = resolutionScale.x * inDotSize;
+                    mat3 translate = mat3(
+                      1, 0, 0,
+                      0, 1, 0,
+                      dotPos.x, dotPos.y, 1);
+
+                    gl_Position = vec4(projection * translate * vertexPos, 1.0);
                 }`;
 
             lineFragSource =
                 `#version 100
-                precision highp float;
+                precision mediump float;
                 varying vec4 color;
 
                 void main(void) {
@@ -923,7 +1092,7 @@ class BatchDrawer {
 
             lineVertexSource = 
                 `#version 100
-                precision highp float;
+                precision mediump float;
 
                 attribute vec3 vertexPos;
                 attribute vec2 inLineStart;
@@ -964,36 +1133,10 @@ class BatchDrawer {
                     gl_Position = vec4(projection * translate *  rotate *  scale * vertexPos, 1.0);
                 }`;
 
-            dotVertexSource = 
-                `#version 100
-                precision highp float;
-
-                attribute vec3 vertexPos;
-                attribute vec2 inDotPos;
-                attribute float inDotSize;
-                attribute vec4 dotColor;
-
-                varying vec4 color;
-
-                uniform mat3 projection;
-                uniform vec2 resolutionScale;
-
-                void main(void) {
-                    color = dotColor;
-                    gl_PointSize =  10.0;
-                    vec2 dotPos = resolutionScale * inDotPos;
-                    float dotSize = resolutionScale.x * inDotSize;
-                    mat3 translate = mat3(
-                      1, 0, 0,
-                      0, 1, 0,
-                      dotPos.x, dotPos.y, 1);
-
-                    gl_Position = vec4(projection * translate * vertexPos, 1.0);
-                }`;
 
             rectFragSource =
                 `#version 100
-                precision highp float;
+                precision mediump float;
                 varying vec4 color;
 
                 void main(void) {
@@ -1002,7 +1145,7 @@ class BatchDrawer {
                 
             rectVertexSource = 
                `#version 100
-                precision highp float;
+                precision mediump float;
 
                 attribute vec3 vertexPos;
                 attribute vec2 inRectStart;

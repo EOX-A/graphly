@@ -2,7 +2,7 @@
 
 svg {
   font: 12px sans-serif;
-  shape-rendering: crispEdges;
+  //shape-rendering: crispEdges;
 }
 
 #zoomXBox {
@@ -111,12 +111,105 @@ svg {
 }
 
 #regressionInfo{
+    font-weight: bold;
     font-family: arial;
-    font-size: 1em;
-    background-color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9em;
+    background-color: white;
     position: absolute;
-    width: 350px;
     text-align: center;
+    padding-right: 10px;
+    padding-left: 10px;
+    z-index: 5;
+}
+
+#parameterInfo{
+    font-family: arial;
+    font-size: 0.8em;
+    background-color: white;
+    position: relative;
+    width: 260px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #444;
+    padding: 5px;
+    text-align: center;
+    z-index: 5;
+}
+
+.color-picker-h, .color-picker-sv{
+    top: 0 !important;
+}
+
+.svgIcon{
+    margin-right: 5px;
+}
+
+.labelitem{
+    margin: 5px;
+    cursor: pointer;
+}
+
+.closeButton{
+    float: right;
+    margin-top: -13px;
+    cursor: pointer;
+}
+
+#parameterSettings label, 
+#parameterSettings input,
+#parameterSettings select {
+    display: inline-block;
+}
+
+#parameterSettings label {
+    width: 30%;
+    text-align: right;
+}
+
+#parameterSettings label + input{
+    width: 55%;
+    margin: 0 5% 10px 4%;
+}
+
+#parameterSettings label + select{
+    width: 57%;
+    margin: 0 3% 10px 4%;
+}
+
+#parameterSettings input + input {
+    float: right;
+}
+
+#parameterSettings input + select {
+    float: right;
+}
+
+/*#parameterSettings input, select{
+    margin-bottom: 10px;
+}*/
+
+#parameterSettings{
+    font-family: arial;
+    font-size: 0.8em;
+    background-color: white;
+    position: relative;
+    width: 260px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #444;
+    padding: 5px;
+    padding-top: 15px;
+    //text-align: center;
+    z-index: 5;
+    margin-top: 14px;
+}
+
+.buttonContainer{
+    width: 100%;
+}
+
+#applyButton{
+    width: 100%;
 }
 
 
