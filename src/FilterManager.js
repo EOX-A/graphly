@@ -10,6 +10,7 @@ class FilterManager {
         this.filterSettings = params.filterSettings;
         this.visibleFilters = this.filterSettings.visibleFilters;
         this.boolParameter = defaultFor(this.filterSettings.boolParameter, []);
+        this.choiceParameter = defaultFor(this.filterSettings.choiceParameter, []);
         this.data = defaultFor(params.data, {});
         
         this.initManager();
@@ -211,6 +212,90 @@ class FilterManager {
         this.el.node().dispatchEvent(cEv);
     }
 
+    _createChoiceFilterElements(el){
+
+        let keys = Object.keys(this.choiceParameter);
+        var that = this;
+
+        for (var i = 0; i < keys.length; i++) {
+
+            var id = keys[i];
+            var data = this.choiceParameter[id];
+
+            if(!this.boolFilStat.hasOwnProperty(id)){
+                this.boolFilStat[id] = {
+                    enabled: false
+                };
+            }
+
+
+            var selected = data.selected;
+            // If parameter is actually available in the dataset render it
+            if(this.data.hasOwnProperty(id)){
+
+                var container = el.append('div')
+                    .attr('class', 'choiceParameterContainer');
+
+                var label = container.append('label')
+                        .attr('for', id)
+                        .text(id);
+
+                let choiceSelect = container
+                    .append('select')
+                        .attr('id',id)
+                        .on('change',onChoiceChange);
+
+                let options = choiceSelect
+                    .selectAll('option')
+                        .data(data.options).enter()
+                            .append('option')
+                            .text(function (d) { return d.name; })
+                            .attr('value', function (d) { return d.value; })
+                            .property('selected', function(d){
+                                return d.value === selected;
+                            });
+
+                let disabled = choiceSelect.insert('option',':first-child')
+                            .text('no filter')
+                            .attr('value', -1);
+
+                if(selected === -1){
+                    disabled.property('selected', true);
+                }
+
+                function onChoiceChange() {
+
+                    var id = this.id;
+                    let selectValue = 
+                        Number(d3.select('#'+id).property('value'));
+
+                    data.selected = selectValue;
+
+                    if(selectValue === -1){
+                        if(that.boolFilters.hasOwnProperty(id)){
+                            delete that.boolFilters[id];
+                        }
+                    }else{
+                        that.boolFilters[id] = (val)=>{
+                            return val === selectValue;
+                        };
+                    }
+                    that._filtersChanged();
+                }
+
+                // TODO: This should probably be done once during initialization
+                // making sure all configured filters are used initially
+                // for now i will check here if the filter applys and will
+                // call a filterchange event
+                if(selected!==-1 && !this.boolFilters.hasOwnProperty(id)){
+                    this.boolFilters[id] = (val)=>{
+                        return val === selected;
+                    };
+                    this._filtersChanged();
+                }
+            }
+        }
+    }
 
     _createBoolFilterElements() {
         var height = 252;
@@ -305,6 +390,12 @@ class FilterManager {
             }
         }
 
+        // Check if there are choice filter parameters if yes create them 
+        // also here
+        if(Object.keys(this.choiceParameter).length>0){
+            this._createChoiceFilterElements(div);
+        }
+
         // If element is empty because the provided parameters are not in the 
         // current dataset, remove the div
         if(div.selectAll('*')[0].length === 0){
@@ -374,9 +465,12 @@ class FilterManager {
             }
         }
 
+        let choiceKeys = Object.keys(this.choiceParameter);
+        
         this.visibleFilters.forEach(d=>{
             if(this.data.hasOwnProperty(d) && 
-               this.boolParameter.indexOf(d) === -1){
+               this.boolParameter.indexOf(d) === -1 &&
+               choiceKeys.indexOf(d) === -1){
                 this._createFilterElement(d, data);
             }
         });

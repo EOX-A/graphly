@@ -66,6 +66,24 @@ svg {
     margin-top: 0px;
 }
 
+.choiceParameterContainer {
+    font-size: 0.8em;
+    margin-top: 6px;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+.choiceParameterContainer label{
+    margin-left: 5px;
+    margin-right: 5px;
+    float: left;
+    margin-top: 2px;
+}
+
+.choiceParameterContainer select{
+    float: right;
+}
+
 
 .brush .extent{
     fill-opacity: 0.6;
