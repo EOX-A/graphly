@@ -128,8 +128,11 @@ class graphly {
             this.filterManager.getNode().addEventListener(
                 'change',
                 (evt)=>{
-                    this.filters = evt.detail;
-                    this.renderData();
+                    // Check if event comes directly from el with filters id
+                    if(evt.target.id === 'filters'){
+                        this.filters = evt.detail;
+                        this.renderData();
+                    }
                 }
             );
         }
@@ -1342,9 +1345,7 @@ class graphly {
 
             let rC = this.getColor(parPos, i, data);
 
-            let idC = u.genColor();
-
-            let nCol = idC.map(function(c){return c/255;});
+            let c = u.genColor();
 
             let xVal;
             if (data[xGroup[0]][i] instanceof Date){
@@ -1371,10 +1372,11 @@ class graphly {
                 },
             };
 
+            let nCol = c.map(function(c){return c/255;});
             let parSett = this.dataSettings[yAxRen[parPos]];
             let cA = this.dataSettings[
-                    this.renderSettings.colorAxis[parPos]
-                ];
+                this.renderSettings.colorAxis[parPos]
+            ];
 
             if (parSett){
 
@@ -1386,10 +1388,9 @@ class graphly {
 
                     if(cA && cA.hasOwnProperty('scaleType') && 
                         cA.scaleType === 'ordinal'){
-                        let colorParam = this.renderSettings.colorAxis[parPos];
 
-                        if(data[colorParam][i-1] === 
-                            data[colorParam][i])
+                        let colorParam = this.renderSettings.colorAxis[parPos];
+                        if(data[colorParam][i-1] === data[colorParam][i])
                         {
                             this.batchDrawer.addLine(
                                 p_x, p_y, x, y, 1, 
@@ -1404,9 +1405,12 @@ class graphly {
                     }
                 }
 
-                if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
+                 if(!parSett.hasOwnProperty('symbol')){
+                    parSett.symbol = 'circle';
+                }
+                if(parSett.symbol !== null){
                     par_properties.symbol = parSett.symbol;
-                    var sym = defaultFor(dotType[parSett['symbol']], 2.0);
+                    var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
                         x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
                     );
@@ -1416,7 +1420,7 @@ class graphly {
                 }
             }
 
-            this.colourToNode[idC.join('-')] = par_properties;
+            this.colourToNode[c.join('-')] = par_properties;
 
             p_x = x;
             p_y = y;
@@ -1486,7 +1490,10 @@ class graphly {
                     }
                 }
 
-                if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
+                if(!parSett.hasOwnProperty('symbol')){
+                    parSett.symbol = 'circle';
+                }
+                if(parSett.symbol !== null){
                     par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
@@ -1496,6 +1503,7 @@ class graphly {
                         x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
                     );
                 }
+                
             }
 
             this.colourToNode[c.join('-')] = par_properties;

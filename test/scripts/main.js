@@ -9,7 +9,7 @@ var renderSettings_mie = {
     ],
     yAxis: [
          'mie_altitude',
-         'mie_dem_altitude'
+         //'mie_dem_altitude'
     ],
     //y2Axis: [],
     combinedParameters: {
@@ -18,7 +18,7 @@ var renderSettings_mie = {
     },
     colorAxis: [
         'mie_wind_velocity',
-        null
+        //null
     ],
 
 };
@@ -334,7 +334,14 @@ var filterSettings = {
 
     },
     choiceParameter: {
-
+        'mie_observation_type': {
+            options: [
+                {'name': 'undefined', value:0},
+                {'name': 'cloudy', value:1},
+                {'name': 'clear', value:2}
+            ],
+            selected: 2
+        }
     }
 };
 
