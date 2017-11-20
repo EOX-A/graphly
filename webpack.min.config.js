@@ -17,7 +17,8 @@ module.exports = {
         // TODO: Do not include dependencies in release?
         "d3": "d3",
         "papaparse": "papaparse",
-        "plotty": "plotty"
+        "plotty": "plotty",
+        "msgpack": "msgpack-lite"
     },
     plugins: [
         new webpack.optimize.UglifyJsPlugin()
