@@ -7,7 +7,7 @@ const webpack = require('webpack');
 
 module.exports = {
 
-    entry: './src/graphly.js',
+    entry: ['babel-polyfill', './src/graphly.js'],
     output: {
         filename: 'dist/graphly.js',
         library: 'graphly',
@@ -15,6 +15,7 @@ module.exports = {
     },
     plugins: [],
     devServer: {
+      host:'0.0.0.0',
       compress: true,
       port: 9000,
       filename: 'graphly.js',
@@ -34,6 +35,16 @@ module.exports = {
                 loader: 'url-loader',
                 options: {
                     limit: 10000
+                }
+            },
+            {
+                test: /\.js$/,
+                exclude: /(node_modules|bower_components)/,
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                         presets: ['es2015'],
+                    }
                 }
             }
         ]

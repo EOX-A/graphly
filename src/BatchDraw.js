@@ -4,6 +4,7 @@
  * License: MIT
  */
 
+function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
 class BatchDrawer {
     constructor(canvas, params) {
@@ -13,12 +14,13 @@ class BatchDrawer {
 
         // Get optional parameters or defaults
         this.canvas = canvas;
-        this.maxLines = params.maxLines === null ? 10000 : params.maxLines;
-        this.maxDots = params.maxDots === null ? 10000 : params.maxDots;
-        this.maxRects = params.maxRects === null ? 10000 : params.maxRects;
-        this.forceGL1 = params.forceGL1 === null ? false : params.forceGL1;
-        this.clearColor = params.clearColor === null ? {r: 0, g: 0, b: 0, a: 0} : params.clearColor;
-        this.contextParams = params.contextParams === null ? {} : params.contextParams;
+        this.maxLines = defaultFor(params.maxLines, 10000);
+        this.maxDots = defaultFor(params.maxDots, 10000); 
+        this.maxRects = defaultFor(params.maxRects, 10000); 
+        this.forceGL1 = defaultFor(params.forceGL1, false); 
+        this.clearColor = defaultFor(params.clearColor, {r: 0, g: 0, b: 0, a: 0});
+        this.contextParams = defaultFor(params.contextParams, {});
+        
         switch(params.coordinateSystem) {
         case null:
         case "pixels":

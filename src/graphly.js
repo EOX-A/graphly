@@ -8,6 +8,8 @@
  */
 
 
+import 'babel-polyfill';
+
 let dotType = {
     rectangle: 0.0,
     rectangle_empty: 1.0,
@@ -23,7 +25,7 @@ let dotType = {
 //graphly.TYPE[settingvariable]
 
 let DOTTYPE = 4.0;
-let DOTSIZE =9;
+let DOTSIZE = 9;
 
 require('../styles/graphly.css');
 require('../node_modules/choices.js/assets/styles/css/choices.css');
@@ -227,9 +229,8 @@ class graphly {
 
 
         // Initialize BatchDrawer:
-        params.contextParams = {
-            antialias: false
-        };
+        params.contextParams.antialias = false;
+
         this.batchDrawerReference = new BatchDrawer(
             this.referenceCanvas.node(), params
         );
@@ -257,6 +258,7 @@ class graphly {
 
 
         this.renderCanvas.on('mousemove', function() {
+
 
             // Clean anything inside top svg
             self.topSvg.selectAll('*').remove();
@@ -393,7 +395,8 @@ class graphly {
         d3.selectAll('.axisLabel').on('click',null);
         d3.selectAll('.axisLabel').remove();
 
-        let uniqY = [ ...new Set(this.renderSettings.yAxis) ];
+        //let uniqY = [ ...new Set(this.renderSettings.yAxis) ];
+        let uniqY = this.renderSettings.yAxis;
 
         this.svg.append('text')
             .attr('class', 'yAxisLabel axisLabel')
@@ -455,8 +458,8 @@ class graphly {
             }
         },false);
 
-        let uniqX = [ ...new Set(this.renderSettings.xAxis) ];
-        //let uniqX = this.renderSettings.xAxis[0];
+        //let uniqX = [ ...new Set(this.renderSettings.xAxis) ];
+        let uniqX = [this.renderSettings.xAxis[0]];
 
         this.svg.append('text')
             .attr('class', 'xAxisLabel axisLabel')
@@ -1515,7 +1518,7 @@ class graphly {
                 if(!parSett.hasOwnProperty('symbol')){
                     parSett.symbol = 'circle';
                 }
-                if(parSett.symbol !== null){
+                if(parSett.symbol !== null && parSett.symbol !== 'none'){
                     par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(

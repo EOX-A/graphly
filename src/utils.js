@@ -9,13 +9,13 @@ var d3 = require("d3");
 
 export default function debounce(func, wait, immediate) {
   let timeout;
-  return function(...args) {
+  return function(func, wait, immediate) {
     clearTimeout(timeout);
     timeout = setTimeout(() => {
       timeout = null;
       if (!immediate) func.apply(this, args);
     }, wait);
-    if (immediate && !timeout) func.apply(this, [...args])
+    if (immediate && !timeout) func.apply(this, [func, wait, immediate])
   }
 }
 

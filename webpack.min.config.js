@@ -7,7 +7,7 @@ const webpack = require('webpack');
 
 module.exports = {
 
-    entry: './src/graphly.js',
+    entry: ['babel-polyfill', './src/graphly.js'],
     output: {
         filename: 'dist/graphly.min.js',
         library: 'graphly',
