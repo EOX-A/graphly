@@ -99,7 +99,9 @@ class graphly {
         this.el = d3.select(options.el);
 
         window.onresize = ()=> {
-            this.resize();
+            if(!this.fixedSize){
+                this.resize();
+            }
         };
 
         this.margin = defaultFor(
@@ -142,9 +144,14 @@ class graphly {
         this.currentTranlate = [0,0];
         this.colourToNode = {}; // Map to track the colour of nodes.
         this.previewActive = false;
-
+        this.fixedSize = defaultFor(options.fixedSize, false);
+        if(this.fixedSize){
+            this.width = defaultFor(options.fixedWidth, 1000);
+            this.height = defaultFor(options.fixedHeight, 500);
+        }
         this.filters = {};
         this.filterManager = defaultFor(options.filterManager, false);
+
         if(this.filterManager){
             this.filterManager.getNode().addEventListener(
                 'change',
@@ -191,7 +198,6 @@ class graphly {
             tooltip.style('left', (x + 20) + 'px');
         };
 
-
         this.renderCanvas = this.el.append('canvas')
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
@@ -218,23 +224,24 @@ class graphly {
         this.batchDrawer = new BatchDrawer(this.renderCanvas.node(), params);
 
 
-        this.referenceCanvas = this.el.append('canvas')
-            .classed('hiddenCanvas', true) 
-            .attr('width', this.width - 1)
-            .attr('height', this.height - 1)
-            .style('position', 'absolute')
-            .style('display', 'none')
-            .style('transform', 'translate(' + (this.margin.left + 1) +
-              'px' + ',' + (this.margin.top + 1) + 'px' + ')');
+        if(!this.fixedSize){
+            this.referenceCanvas = this.el.append('canvas')
+                .classed('hiddenCanvas', true) 
+                .attr('width', this.width - 1)
+                .attr('height', this.height - 1)
+                .style('position', 'absolute')
+                .style('display', 'none')
+                .style('transform', 'translate(' + (this.margin.left + 1) +
+                  'px' + ',' + (this.margin.top + 1) + 'px' + ')');
 
+            // Initialize BatchDrawer:
+            params.contextParams.antialias = false;
 
-        // Initialize BatchDrawer:
-        params.contextParams.antialias = false;
-
-        this.batchDrawerReference = new BatchDrawer(
-            this.referenceCanvas.node(), params
-        );
-        this.referenceContext = this.batchDrawerReference.getContext();
+            this.batchDrawerReference = new BatchDrawer(
+                this.referenceCanvas.node(), params
+            );
+            this.referenceContext = this.batchDrawerReference.getContext();
+        }
 
         this.svg = this.el.append('svg')
             .attr('width', this.width + this.margin.left + this.margin.right)
@@ -257,76 +264,76 @@ class graphly {
                 (this.margin.top+1) + ')');
 
 
-        this.renderCanvas.on('mousemove', function() {
+        if(!this.fixedSize){
+            this.renderCanvas.on('mousemove', function() {
 
+                // Clean anything inside top svg
+                self.topSvg.selectAll('*').remove();
+                // Get mouse positions from the main canvas.
+                let mouseX = d3.event.offsetX; 
+                let mouseY = d3.event.offsetY;
+                // Pick the colour from the mouse position. 
+                let gl = self.referenceContext;
+                let pixels = new Uint8Array(4);
+                gl.readPixels(
+                    mouseX, (this.height-mouseY),
+                    1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels
+                ); 
+                let col = [pixels[0], pixels[1], pixels[2]];
+                let colKey = col.join('-');
+                // Get the data from our map! 
+                let nodeId = self.colourToNode[colKey];
+                self.topSvg.selectAll('.highlightItem').remove();
+                tooltip.style('display', 'none');
 
-            // Clean anything inside top svg
-            self.topSvg.selectAll('*').remove();
-            // Get mouse positions from the main canvas.
-            let mouseX = d3.event.offsetX; 
-            let mouseY = d3.event.offsetY;
-            // Pick the colour from the mouse position. 
-            let gl = self.referenceContext;
-            let pixels = new Uint8Array(4);
-            gl.readPixels(
-                mouseX, (this.height-mouseY),
-                1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels
-            ); 
-            let col = [pixels[0], pixels[1], pixels[2]];
-            let colKey = col.join('-');
-            // Get the data from our map! 
-            let nodeId = self.colourToNode[colKey];
-            self.topSvg.selectAll('.highlightItem').remove();
-            tooltip.style('display', 'none');
-
-            if(nodeId){
-                let obj = {};
-                for (let key in nodeId) {
-                    obj[nodeId[key].id] = nodeId[key].val;
-                }
-                // Check if parameter has multi values for x and y
-                if (nodeId.hasOwnProperty('x1')){
-                    if(nodeId.hasOwnProperty('y1')){
-                        // Draw rectangle for selection
-                        // make sure all coords are available
-                        if(nodeId.hasOwnProperty('x2') && 
-                           nodeId.hasOwnProperty('y2')) {
-                            //Draw the Rectangle
-                             self.topSvg.append('rect')
-                                .attr('class', 'highlightItem')
-                                .attr('x', nodeId.x1.coord)
-                                .attr('y', nodeId.y2.coord)
-                                .attr(
-                                    'width', (nodeId.x2.coord - nodeId.x1.coord)
-                                )
-                                .attr(
-                                    'height', 
-                                    Math.abs(nodeId.y1.coord - nodeId.y2.coord)
-                                )
-                                .style('fill', 'rgba(0,0,0,0.2)')
-                                .style('stroke', 'rgba(0,0,200,1');
+                if(nodeId){
+                    let obj = {};
+                    for (let key in nodeId) {
+                        obj[nodeId[key].id] = nodeId[key].val;
+                    }
+                    // Check if parameter has multi values for x and y
+                    if (nodeId.hasOwnProperty('x1')){
+                        if(nodeId.hasOwnProperty('y1')){
+                            // Draw rectangle for selection
+                            // make sure all coords are available
+                            if(nodeId.hasOwnProperty('x2') && 
+                               nodeId.hasOwnProperty('y2')) {
+                                //Draw the Rectangle
+                                self.topSvg.append('rect')
+                                    .attr('class', 'highlightItem')
+                                    .attr('x', nodeId.x1.coord)
+                                    .attr('y', nodeId.y2.coord)
+                                    .attr(
+                                        'width', (nodeId.x2.coord - nodeId.x1.coord)
+                                    )
+                                    .attr(
+                                        'height', 
+                                        Math.abs(nodeId.y1.coord - nodeId.y2.coord)
+                                    )
+                                    .style('fill', 'rgba(0,0,0,0.2)')
+                                    .style('stroke', 'rgba(0,0,200,1');
+                            }
                         }
                     }
-                }
 
-                // Check if parameter has one value for x and y (points)
-                if (nodeId.hasOwnProperty('x')){
-                    if(nodeId.hasOwnProperty('y')){
-                        u.addSymbol( 
-                            self.topSvg, nodeId.symbol, '#00ff00',
-                            {x: nodeId.x.coord, y: nodeId.y.coord}, 3.0
-                        );
+                    // Check if parameter has one value for x and y (points)
+                    if (nodeId.hasOwnProperty('x')){
+                        if(nodeId.hasOwnProperty('y')){
+                            u.addSymbol( 
+                                self.topSvg, nodeId.symbol, '#00ff00',
+                                {x: nodeId.x.coord, y: nodeId.y.coord}, 3.0
+                            );
+                        }
                     }
+
+                    tooltip.style('display', 'inline-block');
+                    tooltip.html(
+                        document.createElement('pre').innerHTML = 
+                            JSON.stringify(obj, null, 2)
+                    );
                 }
-
-                tooltip.style('display', 'inline-block');
-                tooltip.html(
-                    document.createElement('pre').innerHTML = 
-                        JSON.stringify(obj, null, 2)
-                );
-            }
-        });
-
+            });
+        }
     }
 
     createLabels(){
@@ -604,7 +611,10 @@ class graphly {
         max = max * this.renderSettings.yAxis.length * this.renderSettings.xAxis.length;
 
         this.updateBuffers(this.batchDrawer, ++max);
-        this.updateBuffers(this.batchDrawerReference, ++max);
+
+        if(!this.fixedSize){
+            this.updateBuffers(this.batchDrawerReference, ++max);
+        }
     }
 
     loadData(data){
@@ -765,15 +775,18 @@ class graphly {
         }
 
         // Adapt domain so that data is not directly at border
-        yExtent[0] = yExtent[0] - yRange*0.03;
-        yExtent[1] = yExtent[1] + yRange*0.03;
-        if(this.xTimeScale){
-            xRange = xExtent[1].getTime() - xExtent[0].getTime();
-            xExtent[0] = new Date(xExtent[0].getTime() - xRange*0.03);
-            xExtent[1] = new Date(xExtent[1].getTime() + xRange*0.03);
-        }else{
-            xExtent[0] = xExtent[0] - xRange*0.03;
-            xExtent[1] = xExtent[1] + xRange*0.03;
+        if(!this.fixedSize){
+            yExtent[0] = yExtent[0] - yRange*0.03;
+            yExtent[1] = yExtent[1] + yRange*0.03;
+
+            if(this.xTimeScale){
+                xRange = xExtent[1].getTime() - xExtent[0].getTime();
+                xExtent[0] = new Date(xExtent[0].getTime() - xRange*0.03);
+                xExtent[1] = new Date(xExtent[1].getTime() + xRange*0.03);
+            }else{
+                xExtent[0] = xExtent[0] - xRange*0.03;
+                xExtent[1] = xExtent[1] + xRange*0.03;
+            }
         }
 
         this.xScale = xScaleType
@@ -1340,9 +1353,11 @@ class graphly {
             this.colourToNode[idC.join('-')] = par_properties;
 
             this.batchDrawer.addRect(x1,y1,x2,y2, c[0], c[1], c[2], 1.0);
-            this.batchDrawerReference.addRect(
-                x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0
-            );
+            if(!this.fixedSize){
+                this.batchDrawerReference.addRect(
+                    x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0
+                );
+            }
         }
     }
 
@@ -1439,9 +1454,11 @@ class graphly {
                     this.batchDrawer.addDot(
                         x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
                     );
-                    this.batchDrawerReference.addDot(
-                        x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
-                    );
+                    if(!this.fixedSize){
+                        this.batchDrawerReference.addDot(
+                            x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                        );
+                    }
                 }
             }
 
@@ -1524,9 +1541,11 @@ class graphly {
                     this.batchDrawer.addDot(
                         x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
                     );
-                    this.batchDrawerReference.addDot(
-                        x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
-                    );
+                    if(!this.fixedSize){
+                        this.batchDrawerReference.addDot(
+                            x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                        );
+                    }
                 }
                 
             }
@@ -2004,9 +2023,11 @@ class graphly {
                                 this.batchDrawer.addDot(
                                     x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.1
                                 );
-                                this.batchDrawerReference.addDot(
-                                    x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
-                                );
+                                if(!this.fixedSize){
+                                    this.batchDrawerReference.addDot(
+                                        x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                                    );
+                                }
                                 
                             }
                         }
@@ -2027,7 +2048,9 @@ class graphly {
 
 
         this.batchDrawer.draw();
-        this.batchDrawerReference.draw();
+        if(!this.fixedSize){
+            this.batchDrawerReference.draw();
+        }
 
         
 
