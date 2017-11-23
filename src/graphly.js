@@ -344,15 +344,15 @@ class graphly {
 
          let xHidden, yHidden;
 
-         if(!d3.select('#xSettings').empty()){
-            xHidden = (d3.select('#xSettings').style('display') == 'block' ) ? 
+         if(!this.el.select('#xSettings').empty()){
+            xHidden = (this.el.select('#xSettings').style('display') == 'block' ) ? 
                 false : true;
         }else{
             xHidden = true;
         }
 
-        if(!d3.select('#ySettings').empty()){
-            yHidden = (d3.select('#ySettings').style('display') == 'block' ) ? 
+        if(!this.el.select('#ySettings').empty()){
+            yHidden = (this.el.select('#ySettings').style('display') == 'block' ) ? 
                 false : true; 
         }else{
             yHidden = true;
@@ -400,8 +400,8 @@ class graphly {
             }
         }
 
-        d3.selectAll('.axisLabel').on('click',null);
-        d3.selectAll('.axisLabel').remove();
+        this.el.selectAll('.axisLabel').on('click',null);
+        this.el.selectAll('.axisLabel').remove();
 
         //let uniqY = [ ...new Set(this.renderSettings.yAxis) ];
         let uniqY = this.renderSettings.yAxis;
@@ -412,7 +412,7 @@ class graphly {
             .attr('transform', 'translate('+ -(this.margin.left/2+10) +','+(this.height/2)+')rotate(-90)')
             .text(uniqY.join());
 
-        d3.select('#ySettings').remove();
+        this.el.select('#ySettings').remove();
 
         this.el.append('div')
             .attr('id', 'ySettings')
@@ -426,15 +426,15 @@ class graphly {
 
         document.getElementById('yScaleChoices').multiple = true;
 
-        d3.select('.yAxisLabel.axisLabel').on('click', function(){
-            if(d3.select('#ySettings').style('display') === 'block'){
-                d3.select('#ySettings').style('display', 'none');
+        this.el.select('.yAxisLabel.axisLabel').on('click', function(){
+            if(this.el.select('#ySettings').style('display') === 'block'){
+                this.el.select('#ySettings').style('display', 'none');
             }else{
-                d3.select('#ySettings').style('display', 'block');
+                this.el.select('#ySettings').style('display', 'block');
             }
         });
 
-        let ySettingParameters = new Choices(d3.select('#yScaleChoices').node(), {
+        let ySettingParameters = new Choices(this.el.select('#yScaleChoices').node(), {
           choices: yChoices,
           removeItemButton: true,
           placeholderValue: ' select ...',
@@ -475,7 +475,7 @@ class graphly {
             .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-10))+')')
             .text(uniqX.join());
 
-        d3.select('#xSettings').remove();
+        this.el.select('#xSettings').remove();
 
         this.el.append('div')
             .attr('id', 'xSettings')
@@ -487,15 +487,15 @@ class graphly {
             .append('select')
                 .attr('id', 'xScaleChoices');
 
-        d3.select('.xAxisLabel.axisLabel').on('click', function(){
-            if(d3.select('#xSettings').style('display') === 'block'){
-                d3.select('#xSettings').style('display', 'none');
+        this.el.select('.xAxisLabel.axisLabel').on('click', function(){
+            if(this.el.select('#xSettings').style('display') === 'block'){
+                this.el.select('#xSettings').style('display', 'none');
             }else{
-                d3.select('#xSettings').style('display', 'block');
+                this.el.select('#xSettings').style('display', 'block');
             }
         });
 
-        var xSettingParameters = new Choices(d3.select('#xScaleChoices').node(), {
+        var xSettingParameters = new Choices(this.el.select('#xScaleChoices').node(), {
           choices: xChoices,
           placeholderValue: ' select ...',
           itemSelectText: '',
@@ -857,8 +857,8 @@ class graphly {
         }
 
         this.renderCanvas.call(this.xyzoom);
-        d3.select('#zoomXBox').call(this.xzoom);
-        d3.select('#zoomYBox').call(this.yzoom);
+        this.el.select('#zoomXBox').call(this.xzoom);
+        this.el.select('#zoomYBox').call(this.yzoom);
 
         this.createLabels();
     }
@@ -877,8 +877,8 @@ class graphly {
             .on('zoom', this.previewZoom.bind(this));
 
         this.renderCanvas.call(this.xyzoom);
-        d3.select('#zoomXBox').call(this.xzoom);
-        d3.select('#zoomYBox').call(this.yzoom);
+        this.el.select('#zoomXBox').call(this.xzoom);
+        this.el.select('#zoomYBox').call(this.yzoom);
     }
 
     onZoom() {
@@ -891,16 +891,16 @@ class graphly {
 
         let dateFormat = d3.time.format.utc('%Y-%m-%dT%H:%M:%S');
 
-        d3.selectAll('.start-date').remove();
-        d3.selectAll('.x.axis>.tick:nth-of-type(2)')
+        this.el.selectAll('.start-date').remove();
+        this.el.selectAll('.x.axis>.tick:nth-of-type(2)')
             .append('text')
             .attr('dy', '28px')
             .attr('dx', '-64px')
             .attr('class', 'start-date')
             .text(function(d){return dateFormat(d);});
 
-        d3.selectAll('.end-date').remove();
-        d3.selectAll('.x.axis>.tick:nth-last-of-type(2)')
+        this.el.selectAll('.end-date').remove();
+        this.el.selectAll('.x.axis>.tick:nth-last-of-type(2)')
             .append('text')
             .attr('dy', '28px')
             .attr('dx', '-64px')
@@ -1094,7 +1094,7 @@ class graphly {
             let regrString = 
                 result.string + '  (r^2: '+ (result.r2).toPrecision(3)+')';
 
-            d3.select('#regressionInfo')
+            this.el.select('#regressionInfo')
                 .append('div')
                 .style('color', u.rgbToHex(c[0], c[1], c[2]))
                 .style('opacity', c[3])
@@ -1244,28 +1244,28 @@ class graphly {
            
         // TODO: in this.svg actually the first g element is saved, this is 
         // confusing and shoulg maybe be changed, maybe change name?
-        d3.select(this.svg.node().parentNode)
+        this.el.select(this.svg.node().parentNode)
             .attr('width', this.width + this.margin.left + this.margin.right)
             .attr('height', this.height + this.margin.top + this.margin.bottom);
            
-        d3.select(this.topSvg.node().parentNode)
+        this.el.select(this.topSvg.node().parentNode)
             .attr('width', this.width + this.margin.left + this.margin.right)
             .attr('height', this.height + this.margin.top + this.margin.bottom);
 
-        d3.select('#clip').select('rect')
+        this.el.select('#clip').select('rect')
             .attr('width', this.width)
             .attr('height', this.height);
 
-        d3.select('#zoomXBox')
+        this.el.select('#zoomXBox')
             .attr('width', this.width)
             .attr('height', this.margin.bottom)
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
-        d3.select('#zoomYBox')
+        this.el.select('#zoomYBox')
             .attr('width', this.margin.left)
             .attr('height', this.height );
             
-        d3.select('#rectangleOutline')
+        this.el.select('#rectangleOutline')
             .attr('width', this.width)
             .attr('height', this.height);
 
@@ -1568,11 +1568,11 @@ class graphly {
 
 
      addApply() {
-        if(!d3.select('#applyButton').empty()){
-            d3.select('#applyButton').remove();
+        if(!this.el.select('#applyButton').empty()){
+            this.el.select('#applyButton').remove();
         }
-        if(d3.select('#applyButton').empty()){
-            let applyButtonCont = d3.select('#parameterSettings')
+        if(this.el.select('#applyButton').empty()){
+            let applyButtonCont = this.el.select('#parameterSettings')
                 .attr('class', 'buttonContainer')
                 .append('div');
                 
@@ -1588,18 +1588,18 @@ class graphly {
 
 
     renderRegressionOptions(id, regressionTypes) {
-        let checked = d3.select('#regressionCheckbox').property('checked');
+        let checked = this.el.select('#regressionCheckbox').property('checked');
         let that = this;
 
         if(checked){
 
-            d3.select('#parameterSettings')
+            this.el.select('#parameterSettings')
                 .append('label')
                 .attr('id', 'labelRegression')
                 .attr('for', 'regressionSelect')
                 .text('Approach');
 
-            let regressionSelect = d3.select('#parameterSettings')
+            let regressionSelect = this.el.select('#parameterSettings')
               .append('select')
                 .attr('id','regressionSelect')
                 .on('change',onregressionChange);
@@ -1618,23 +1618,23 @@ class graphly {
 
             function onregressionChange() {
                 let selectValue = 
-                    d3.select('#regressionSelect').property('value');
+                    this.el.select('#regressionSelect').property('value');
                 that.dataSettings[id].regression = selectValue;
                 addOrder();
                 that.addApply();
             }
 
             function addOrder(){
-                d3.select('#regressionOrderLabel').remove();
-                d3.select('#regressionOrder').remove();
+                this.el.select('#regressionOrderLabel').remove();
+                this.el.select('#regressionOrder').remove();
                 if(that.dataSettings[id].regression === 'polynomial'){
-                    d3.select('#parameterSettings')
+                    this.el.select('#parameterSettings')
                         .append('label')
                         .attr('id', 'regressionOrderLabel')
                         .attr('for', 'regressionOrder')
                         .text('Order');
 
-                    d3.select('#parameterSettings')
+                    this.el.select('#parameterSettings')
                     .append('input')
                     .attr('id', 'regressionOrder')
                     .attr('type', 'text')
@@ -1649,8 +1649,8 @@ class graphly {
 
 
         }else{
-            d3.select('#labelRegression').remove();
-            d3.select('#regressionSelect').remove();
+            this.el.select('#labelRegression').remove();
+            this.el.select('#regressionSelect').remove();
             delete that.dataSettings[id].regression;
             delete that.dataSettings[id].regressionOrder;
             this.addApply();
@@ -1695,19 +1695,19 @@ class graphly {
         }
 
         // Setup div for regression info rendering
-        d3.select('#regressionInfo').remove();
+        this.el.select('#regressionInfo').remove();
         this.el.append('div')
             .attr('id', 'regressionInfo')
             .style('bottom', this.margin.bottom*2+'px')
             .style('left', (this.width/2-this.margin.left)+'px');
 
-        d3.select('#parameterInfo').remove();
+        this.el.select('#parameterInfo').remove();
         this.el.append('div')
             .attr('id', 'parameterInfo')
             .style('top', this.margin.top*2+'px')
             .style('left', (this.width/2)+'px');
 
-        d3.select('#parameterSettings').remove();
+        this.el.select('#parameterSettings').remove();
         this.el.append('div')
             .attr('id', 'parameterSettings')
             .style('left', (this.width/2)+'px')
@@ -1757,7 +1757,7 @@ class graphly {
             // Add item to labels if there is no coloraxis is defined
             if(this.renderSettings.colorAxis[parPos] === null){
 
-                let parDiv = d3.select('#parameterInfo').append('div')
+                let parDiv = this.el.select('#parameterInfo').append('div')
                     .attr('class', 'labelitem');
 
                 let iconSvg = parDiv.append('div')
@@ -1787,29 +1787,29 @@ class graphly {
                     .html(defaultFor(this.dataSettings[id].displayName, id))
                     .on('click', function(){
                         let id = this.id;
-                        d3.select('#parameterSettings').selectAll('*').remove();
+                        this.el.select('#parameterSettings').selectAll('*').remove();
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .style('display', 'block');
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .append('div')
                             .attr('class', 'closeButton')
                             .text('x')
                             .on('click', ()=>{
-                                d3.select('#parameterSettings')
+                                this.el.select('#parameterSettings')
                                     .selectAll('*').remove();
-                                d3.select('#parameterSettings')
+                                this.el.select('#parameterSettings')
                                     .style('display', 'none');
                             });
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .append('label')
                             .attr('for', 'displayName')
                             .text('Label');
                             
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .append('input')
                             .attr('id', 'displayName')
                             .attr('type', 'text')
@@ -1819,7 +1819,7 @@ class graphly {
                                 that.addApply();
                             });
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .append('label')
                             .attr('for', 'symbolSelect')
                             .text('Symbol');
@@ -1838,7 +1838,7 @@ class graphly {
                         ];
 
 
-                        let select = d3.select('#parameterSettings')
+                        let select = this.el.select('#parameterSettings')
                           .append('select')
                             .attr('id','symbolSelect')
                             .on('change',onchange);
@@ -1854,17 +1854,17 @@ class graphly {
                                 });
 
                         function onchange() {
-                            let selectValue = d3.select('#symbolSelect').property('value');
+                            let selectValue = this.el.select('#symbolSelect').property('value');
                             that.dataSettings[id].symbol = selectValue;
                             that.addApply();
                         }
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .append('label')
                             .attr('for', 'colorSelection')
                             .text('Color');
 
-                        let colorSelect = d3.select('#parameterSettings')
+                        let colorSelect = this.el.select('#parameterSettings')
                             .append('input')
                             .attr('id', 'colorSelection')
                             .attr('type', 'text')
@@ -1902,13 +1902,13 @@ class graphly {
 
                         picker.picker.appendChild(x);
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .append('label')
                             .attr('for', 'lineConnect')
                             .text('Line connect');
                             
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .append('input')
                             .attr('id', 'lineConnect')
                             .attr('type', 'checkbox')
@@ -1921,7 +1921,7 @@ class graphly {
                                 that.addApply();
                             });
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .append('label')
                             .attr('for', 'regressionCheckbox')
                             .text('Regression');
@@ -1932,7 +1932,7 @@ class graphly {
                         ];
 
 
-                        d3.select('#parameterSettings')
+                        this.el.select('#parameterSettings')
                             .append('input')
                             .attr('id', 'regressionCheckbox')
                             .attr('type', 'checkbox')
@@ -1942,7 +1942,7 @@ class graphly {
                             .on('change', function(){
                                 // If activated there is no type defined so we
                                 // define a defualt one, for now linear
-                                if(d3.select('#regressionCheckbox').property('checked')){
+                                if(this.el.select('#regressionCheckbox').property('checked')){
                                      that.dataSettings[id].regression = defaultFor(
                                         that.dataSettings[id].regression,
                                         'linear'
@@ -1961,15 +1961,15 @@ class graphly {
                 
             }
 
-            if(d3.select('#parameterInfo').selectAll('*').empty()){
-                d3.select('#parameterInfo').style('display', 'none');
+            if(this.el.select('#parameterInfo').selectAll('*').empty()){
+                this.el.select('#parameterInfo').style('display', 'none');
             }
 
             // Change height of settings panel to be just under labels
             
-            let dim = d3.select('#parameterSettings').node().getBoundingClientRect();
+            let dim = this.el.select('#parameterSettings').node().getBoundingClientRect();
 
-            d3.select('#parameterSettings')
+            this.el.select('#parameterSettings')
                 .style('top', (this.margin.top+dim.height-5)+'px');
 
             // If a combined parameter is provided we need to render either
