@@ -199,6 +199,7 @@ class graphly {
         };
 
         this.renderCanvas = this.el.append('canvas')
+            .attr('id', 'renderCanvas')
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
             .style('opacity', 1.0)
@@ -514,6 +515,14 @@ class graphly {
             that.createLabels();
         },false);
 
+    }
+
+    getCanvasImage(){
+        return this.renderCanvas.toDataURL();
+    }
+
+    getCanvas(){
+        return this.renderCanvas;
     }
 
 
