@@ -518,11 +518,11 @@ class graphly {
     }
 
     getCanvasImage(){
-        return this.renderCanvas.toDataURL();
+        return this.renderCanvas.node().toDataURL();
     }
 
     getCanvas(){
-        return this.renderCanvas;
+        return this.renderCanvas.node();
     }
 
 
