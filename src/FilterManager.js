@@ -10,7 +10,7 @@ class FilterManager extends EventEmitter {
 
     constructor(params) {
         super();
-        
+
         this.el = d3.select(params.el);
         this.filterSettings = params.filterSettings;
         this.visibleFilters = this.filterSettings.visibleFilters;
@@ -24,10 +24,11 @@ class FilterManager extends EventEmitter {
             params.margin,
             {top: 10, right: 10, bottom: 10, left: 70}
         );
-        this.dim = this.el.node().getBoundingClientRect();
-        this.width = this.dim.width - this.margin.left - this.margin.right;
-        this.height = this.dim.height - this.margin.top - this.margin.bottom;
-
+        if(!this.el.empty()){
+            this.dim = this.el.node().getBoundingClientRect();
+            this.width = this.dim.width - this.margin.left - this.margin.right;
+            this.height = this.dim.height - this.margin.top - this.margin.bottom;
+        }
     }
 
     initManager(){
@@ -414,6 +415,12 @@ class FilterManager extends EventEmitter {
 
     _renderFilters() {
 
+        if(this.el.empty()){
+            // If no element is defined to render the filters into do not 
+            // render the filter elements
+            return;
+        }
+
         this.el.selectAll('*').remove();
 
         this.y = {};
@@ -487,6 +494,11 @@ class FilterManager extends EventEmitter {
         this._createBoolFilterElements();
 
 
+    }
+
+    setRenderNode(el){
+        this.el = d3.select(el);
+        this._renderFilters();
     }
 
     getNode(){

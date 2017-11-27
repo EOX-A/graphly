@@ -331,7 +331,7 @@ var filterSettings = {
 
 
 var filterManager = new FilterManager({
-    el:'#filters',
+    //el:'#filters',
     filterSettings: filterSettings,
 });
 
@@ -378,6 +378,8 @@ d3.select('#datafiles').on('change', function(e){
 
     var sel = document.getElementById('datafiles');
     var sel_value = sel.options[sel.selectedIndex].value;
+
+    filterManager.setRenderNode('#filters');
 
     if (sel_value.indexOf('testdata') === -1){
         if (sel_value.indexOf('MRC') !== -1){
