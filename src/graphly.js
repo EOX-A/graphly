@@ -31,6 +31,8 @@ require('../styles/graphly.css');
 require('../node_modules/choices.js/assets/styles/css/choices.css');
 require('../node_modules/c-p/color-picker.css');
 
+const EventEmitter = require('events');
+
 //import from './colorscales';
 import * as u from './utils';
 
@@ -73,7 +75,7 @@ function debounce(func, wait, immediate) {
 }
 
 
-class graphly {
+class graphly extends EventEmitter {
 
     /**
     * @lends graphly
@@ -94,6 +96,7 @@ class graphly {
     *
     */
     constructor(options) {
+        super();
 
         // Passed options
         this.el = d3.select(options.el);
@@ -153,16 +156,10 @@ class graphly {
         this.filterManager = defaultFor(options.filterManager, false);
 
         if(this.filterManager){
-            this.filterManager.getNode().addEventListener(
-                'change',
-                (evt)=>{
-                    // Check if event comes directly from el with filters id
-                    if(evt.target.id === 'filters'){
-                        this.filters = evt.detail;
-                        this.renderData();
-                    }
-                }
-            );
+            this.filterManager.on('filterChange', (filters) => {
+                this.filters = filters;
+                this.renderData();
+            });
         }
 
         this.debounceZoom = debounce(function(){
@@ -2061,7 +2058,6 @@ class graphly {
             this.batchDrawerReference.draw();
         }
 
-        
 
         if(this.debounceActive){
             this.renderCanvas.style('opacity','1');
@@ -2083,7 +2079,9 @@ class graphly {
             }
             this.previewActive = false;
         }
+        this.emit('rendered');
     }
+
 
 }
 

@@ -3,9 +3,14 @@
 require('./utils.js');
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
-class FilterManager {
+
+const EventEmitter = require('events');
+
+class FilterManager extends EventEmitter {
 
     constructor(params) {
+        super();
+        
         this.el = d3.select(params.el);
         this.filterSettings = params.filterSettings;
         this.visibleFilters = this.filterSettings.visibleFilters;
@@ -207,9 +212,12 @@ class FilterManager {
 
     _filtersChanged(){
         var filters = Object.assign({}, this.filters, this.boolFilters);
+        this.emit('filterChange', filters);
         this._renderFilters();
-        var cEv = new CustomEvent('change', {detail: filters});
-        this.el.node().dispatchEvent(cEv);
+        /*var cEv = new CustomEvent('change', {detail: filters});
+        this.el.node().dispatchEvent(cEv);*/
+
+        
     }
 
     _createChoiceFilterElements(el){

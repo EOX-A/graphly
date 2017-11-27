@@ -339,16 +339,26 @@ var filterManager = new FilterManager({
 var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: dataSettings,
-    renderSettings: renderSettingsISR,
-    filterManager: filterManager
+    renderSettings: renderSettings_ray,
+    filterManager: filterManager,
+    //fixedSize: true,
+    //fixedWidth: 12000
 });
 
+
+graph.on('rendered', function() {
+    console.log('rendered');
+});
+
+filterManager.on('filterChange', function(filters){
+    console.log(filters);
+});
 
 
 var xhr = new XMLHttpRequest();
 
-//xhr.open('GET', 'data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP', true);
-xhr.open('GET', 'data/AE_OPER_AUX_ISR_1B_20071002T103629_20071002T110541_0002.MSP', true);
+xhr.open('GET', 'data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP', true);
+//xhr.open('GET', 'data/AE_OPER_AUX_ISR_1B_20071002T103629_20071002T110541_0002.MSP', true);
 
 xhr.responseType = 'arraybuffer';
 
