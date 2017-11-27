@@ -643,19 +643,22 @@ class graphly extends EventEmitter {
 
                     // Check if key is available in data first
                     if(this.data.hasOwnProperty(key)){
-                        switch(format){
-                            case 'default':
-                            for (let i = 0; i < this.data[key].length; i++) {
-                                this.data[key][i] = new Date(this.data[key][i]);
+                        // Sanity check to see if data already a date object
+                        if (!(this.data[key][0] instanceof Date)){
+                            switch(format){
+                                case 'default':
+                                for (let i = 0; i < this.data[key].length; i++) {
+                                    this.data[key][i] = new Date(this.data[key][i]);
+                                }
+                                break;
+                                case 'MJD2000_S':
+                                for (let j = 0; j < this.data[key].length; j++) {
+                                    let d = new Date('2000-01-01');
+                                    d.setMilliseconds(d.getMilliseconds() + this.data[key][j]*1000);
+                                    this.data[key][j] = d;
+                                }
+                                break;
                             }
-                            break;
-                            case 'MJD2000_S':
-                            for (let j = 0; j < this.data[key].length; j++) {
-                                let d = new Date('2000-01-01');
-                                d.setMilliseconds(d.getMilliseconds() + this.data[key][j]*1000);
-                                this.data[key][j] = d;
-                            }
-                            break;
                         }
                     }
                 }

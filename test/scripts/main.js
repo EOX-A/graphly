@@ -26,11 +26,11 @@ var renderSettings_mie = {
 var renderSettings_ray = {
     xAxis: [
         'rayleigh_datetime',
-        'rayleigh_datetime',
+        //'rayleigh_datetime',
     ],
     yAxis: [
         'rayleigh_altitude',
-        'rayleigh_dem_altitude'
+        //'rayleigh_dem_altitude'
     ],
     //y2Axis: [],
     combinedParameters: {
@@ -331,13 +331,22 @@ var filterSettings = {
 
 
 var filterManager = new FilterManager({
-    //el:'#filters',
+    el:'#filters',
     filterSettings: filterSettings,
 });
 
 
 var graph = new graphly.graphly({
     el: '#graph',
+    dataSettings: dataSettings,
+    renderSettings: renderSettings_ray,
+    filterManager: filterManager,
+    //fixedSize: true,
+    //fixedWidth: 12000
+});
+
+var graph2 = new graphly.graphly({
+    el: '#graph2',
     dataSettings: dataSettings,
     renderSettings: renderSettings_ray,
     filterManager: filterManager,
@@ -367,9 +376,12 @@ xhr.onload = function(e) {
     var data = msgpack.decode(tmp);
     filterManager.initManager();
     graph.loadData(data);
+    graph2.loadData(data);
     filterManager.loadData(data);
     
 };
+
+//filterManager.setRenderNode('#filters');
 
 xhr.send();
 
@@ -379,7 +391,7 @@ d3.select('#datafiles').on('change', function(e){
     var sel = document.getElementById('datafiles');
     var sel_value = sel.options[sel.selectedIndex].value;
 
-    filterManager.setRenderNode('#filters');
+    
 
     if (sel_value.indexOf('testdata') === -1){
         if (sel_value.indexOf('MRC') !== -1){
