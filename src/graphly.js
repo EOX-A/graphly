@@ -154,6 +154,7 @@ class graphly extends EventEmitter {
         }
         this.filters = {};
         this.filterManager = defaultFor(options.filterManager, false);
+        this.connectedGraph = defaultFor(options.connectedGraph, false);
 
         if(this.filterManager){
             this.filterManager.on('filterChange', (filters) => {
@@ -169,6 +170,30 @@ class graphly extends EventEmitter {
        this.debounceResize = debounce(function(){
             this.onResize();
         }, 500);
+
+        // Keep track if mouse is over main element to define if current
+        // graph is the one being interacted with when using multiple connected 
+        // graph elements
+        this.currentlyActive = false;
+        this.mouseDown = false;
+
+        window.addEventListener('mousedown', ()=>{
+            this.mouseDown = true;
+        });
+        window.addEventListener('mouseup', ()=>{
+            this.mouseDown = false;
+        });
+        this.el.on('mousemove',()=>{
+            if(!this.mouseDown){
+                this.currentlyActive = true;
+            }
+        });
+
+        this.el.on('mouseout',()=>{
+            if(!this.mouseDown){
+                this.currentlyActive = false;
+            }
+        });
 
         let self = this;
 
@@ -332,6 +357,10 @@ class graphly extends EventEmitter {
                 }
             });
         }
+    }
+
+    connectGraph(graph){
+        this.connectedGraph = graph;
     }
 
     createLabels(){
@@ -838,9 +867,14 @@ class graphly extends EventEmitter {
           .x(this.xScale)
           .on('zoom', this.previewZoom.bind(this));
 
+        /*if(this.connectedGraph){
+            this.connectedGraph.
+        }*/
+
         this.yzoom = d3.behavior.zoom()
           .y(this.yScale)
           .on('zoom', this.previewZoom.bind(this));
+
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
@@ -879,6 +913,8 @@ class graphly extends EventEmitter {
         this.renderCanvas.call(this.xyzoom);
         this.el.select('#zoomXBox').call(this.xzoom);
         this.el.select('#zoomYBox').call(this.yzoom);
+
+
     }
 
     onZoom() {
@@ -908,7 +944,38 @@ class graphly extends EventEmitter {
             .text(function(d){return dateFormat(d);});
     }
 
+
+    triggerZoomPreview(xZoom, xyZoom, xAxis, xScale){
+
+        if(this.currentlyActive){
+            // This is the graph activating the zoom event we stop here to 
+            // not have an endless loop
+            return;
+        }
+
+        this.xzoom = xZoom;
+
+        var xytrns = xyZoom.translate();
+
+        if(xyZoom.scale() !== 1 || (xytrns[0]!==0 && xytrns[1]!==0) ){
+            this.xzoom = xyZoom;
+        }
+
+        this.xAxis = xAxis;
+        this.xScale = xScale;
+
+        this.previewZoom();
+
+    }
+
     previewZoom() {
+
+        if(this.connectedGraph){
+            this.connectedGraph.triggerZoomPreview(
+                this.xzoom, this.xyzoom,
+                this.xAxis, this.xScale
+            );
+        }
 
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
@@ -931,6 +998,7 @@ class graphly extends EventEmitter {
         let transXY = this.xyzoom.translate();
         let transX = this.xzoom.translate();
         let transY = this.yzoom.translate();
+
 
         this.topSvg.selectAll('.highlightItem').remove();
 

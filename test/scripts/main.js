@@ -331,7 +331,7 @@ var filterSettings = {
 
 
 var filterManager = new FilterManager({
-    el:'#filters',
+    //el:'#filters',
     filterSettings: filterSettings,
 });
 
@@ -345,14 +345,21 @@ var graph = new graphly.graphly({
     //fixedWidth: 12000
 });
 
+filterManager.setRenderNode('#filters');
+
 var graph2 = new graphly.graphly({
     el: '#graph2',
     dataSettings: dataSettings,
-    renderSettings: renderSettings_ray,
+    renderSettings: renderSettings_mie,
     filterManager: filterManager,
     //fixedSize: true,
     //fixedWidth: 12000
+    connectedGraph: graph
 });
+
+graph.connectGraph(graph2);
+
+
 
 
 graph.on('rendered', function() {
@@ -378,7 +385,6 @@ xhr.onload = function(e) {
     graph.loadData(data);
     graph2.loadData(data);
     filterManager.loadData(data);
-    
 };
 
 //filterManager.setRenderNode('#filters');
