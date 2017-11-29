@@ -171,29 +171,10 @@ class graphly extends EventEmitter {
             this.onResize();
         }, 500);
 
-        // Keep track if mouse is over main element to define if current
-        // graph is the one being interacted with when using multiple connected 
-        // graph elements
-        this.currentlyActive = false;
-        this.mouseDown = false;
-
-        window.addEventListener('mousedown', ()=>{
-            this.mouseDown = true;
-        });
-        window.addEventListener('mouseup', ()=>{
-            this.mouseDown = false;
-        });
-        this.el.on('mousemove',()=>{
-            if(!this.mouseDown){
-                this.currentlyActive = true;
-            }
-        });
-
-        this.el.on('mouseout',()=>{
-            if(!this.mouseDown){
-                this.currentlyActive = false;
-            }
-        });
+        // Keep track if graph is the one emitting the zoom event or not for use
+        // when synchronizing multiple graphs in x axis
+        this.slaveGraph = false;
+        
 
         let self = this;
 
@@ -964,21 +945,26 @@ class graphly extends EventEmitter {
         this.xAxis = xAxis;
         this.xScale = xScale;
 
+        this.slaveGraph = true;
         this.previewZoom();
 
     }
 
     previewZoom() {
 
-        if(this.connectedGraph){
+        if(this.connectedGraph && !this.slaveGraph){
             this.connectedGraph.triggerZoomPreview(
                 this.xzoom, this.xyzoom,
                 this.xAxis, this.xScale
             );
+        }else if(this.slaveGraph){
+            this.slaveGraph = false;
         }
+
 
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
+
 
         if (this.xTimeScale){
             this.addTimeInformation();
