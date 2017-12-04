@@ -101,11 +101,21 @@ class graphly extends EventEmitter {
         // Passed options
         this.el = d3.select(options.el);
 
-        window.onresize = ()=> {
+        // We need to container to be relative to make sure all otherabsolute
+        // parameters inside are relative to parent
+        this.el.style('position', 'relative');
+        let contId = this.el.attr('id');
+
+        // If an event listener was already registered for the same type on
+        // the selected element, the existing listener is removed before the 
+        // new listener is added.
+        // Meaning if we have multiple graphs instanciated only the last one
+        // will resize, so we use the div ID to namespace the event listener
+        d3.select(window).on('resize.'+contId, ()=> {
             if(!this.fixedSize){
                 this.resize();
             }
-        };
+        });
 
         this.margin = defaultFor(
             options.margin,
@@ -114,26 +124,7 @@ class graphly extends EventEmitter {
 
         // TOOO: How could some defaults be guessed for rendering?
         this.dataSettings = defaultFor(options.dataSettings, {});
-        this.renderSettings = defaultFor(options.renderSettings, {});
-
-        // Go through rendersettings and provide default colors if not defined
-        let rKeys = Object.keys(this.dataSettings);
-        let cGen = d3.scale.category10();
-        if(rKeys.length > 10){
-            cGen = d3.scale.category20();
-        }
-
-        for (var i = 0; i < rKeys.length; i++) {
-            let k = rKeys[i];
-            if(!this.dataSettings[k].hasOwnProperty('color') || 
-                typeof this.dataSettings[k].color === 'undefined'){
-                let col = cGen(i);
-                col = CP.HEX2RGB(col);
-                col = col.map(function(c){return c/255;});
-                col.push(0.8);
-                this.dataSettings[k].color = col;
-            }
-        }
+        this.setRenderSettings(options.renderSettings);
 
         this.renderSettings.combinedParameters = defaultFor(
             this.renderSettings.combinedParameters, {}
@@ -340,11 +331,38 @@ class graphly extends EventEmitter {
         }
     }
 
+    setRenderSettings(settings){
+        this.renderSettings = defaultFor(settings, {});
+
+        // Go through rendersettings and provide default colors if not defined
+        let rKeys = Object.keys(this.dataSettings);
+        let cGen = d3.scale.category10();
+        if(rKeys.length > 10){
+            cGen = d3.scale.category20();
+        }
+
+        for (var i = 0; i < rKeys.length; i++) {
+            let k = rKeys[i];
+            if(!this.dataSettings[k].hasOwnProperty('color') || 
+                typeof this.dataSettings[k].color === 'undefined'){
+                let col = cGen(i);
+                col = CP.HEX2RGB(col);
+                col = col.map(function(c){return c/255;});
+                col.push(0.8);
+                this.dataSettings[k].color = col;
+            }
+        }
+    }
+
+    setDataSettings(settings){
+        this.dataSettings = defaultFor(settings, {});
+    }
+
     connectGraph(graph){
         this.connectedGraph = graph;
     }
 
-    createLabels(){
+    createAxisLabels(){
 
          let yChoices = [];
          let xChoices = [];
@@ -386,7 +404,7 @@ class graphly extends EventEmitter {
                     }
                     if(xChoices.indexOf(comKey) === -1){
                         xChoices.push({value:comKey,label:comKey});
-                        if(this.renderSettings.xAxis.indexOf(comKey)!==-1){
+                        if(this.renderSettings.xAxis === comKey){
                             xChoices[xChoices.length-1].selected = true;
                         }
                     }
@@ -401,7 +419,7 @@ class graphly extends EventEmitter {
                 if(this.renderSettings.yAxis.indexOf(key)!==-1){
                     yChoices[yChoices.length-1].selected = true;
                 }
-                if(this.renderSettings.xAxis.indexOf(key)!==-1){
+                if(this.renderSettings.xAxis === key){
                     xChoices[xChoices.length-1].selected = true;
                 }
             }
@@ -433,7 +451,7 @@ class graphly extends EventEmitter {
 
         document.getElementById('yScaleChoices').multiple = true;
 
-        this.el.select('.yAxisLabel.axisLabel').on('click', function(){
+        this.el.select('.yAxisLabel.axisLabel').on('click', ()=>{
             if(this.el.select('#ySettings').style('display') === 'block'){
                 this.el.select('#ySettings').style('display', 'none');
             }else{
@@ -452,12 +470,11 @@ class graphly extends EventEmitter {
 
         ySettingParameters.passedElement.addEventListener('addItem', function(event) {
             that.renderSettings.yAxis.push(event.detail.value);
-            that.renderSettings.xAxis.push(that.renderSettings.xAxis[0]);
             that.renderSettings.colorAxis.push(null);
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
-            that.createLabels(false);
+            that.createAxisLabels();
         },false);
         ySettingParameters.passedElement.addEventListener('removeItem', function(event) {
             let index = that.renderSettings.yAxis.indexOf(event.detail.value);
@@ -465,22 +482,18 @@ class graphly extends EventEmitter {
             // Do we need to handle this case? 
             if(index!==-1){
                 that.renderSettings.yAxis.splice(index, 1);
-                that.renderSettings.xAxis.pop();
                 that.renderSettings.colorAxis.splice(index, 1);
                 that.initAxis();
                 that.renderData();
-                that.createLabels();
+                that.createAxisLabels();
             }
         },false);
-
-        //let uniqX = [ ...new Set(this.renderSettings.xAxis) ];
-        let uniqX = [this.renderSettings.xAxis[0]];
 
         this.svg.append('text')
             .attr('class', 'xAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-10))+')')
-            .text(uniqX.join());
+            .text(this.renderSettings.xAxis);
 
         this.el.select('#xSettings').remove();
 
@@ -494,7 +507,7 @@ class graphly extends EventEmitter {
             .append('select')
                 .attr('id', 'xScaleChoices');
 
-        this.el.select('.xAxisLabel.axisLabel').on('click', function(){
+        this.el.select('.xAxisLabel.axisLabel').on('click', ()=>{
             if(this.el.select('#xSettings').style('display') === 'block'){
                 this.el.select('#xSettings').style('display', 'none');
             }else{
@@ -513,13 +526,14 @@ class graphly extends EventEmitter {
             // TODO: For now rewrite all defined xAxis parameters as we define
             // one for each y axis parameter, maybe there is a better way to do
             // this
-            for (var i = 0; i < that.renderSettings.xAxis.length; i++) {
+            /*for (var i = 0; i < that.renderSettings.xAxis.length; i++) {
                 that.renderSettings.xAxis[i] = event.detail.value;
-            }
+            }*/
+            that.renderSettings.xAxis = event.detail.value;
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
-            that.createLabels();
+            that.createAxisLabels();
         },false);
 
     }
@@ -624,7 +638,7 @@ class graphly extends EventEmitter {
 
         // Multiply by number of y axis elements as for each one all data points
         // for the selected parameter is drawn
-        max = max * this.renderSettings.yAxis.length * this.renderSettings.xAxis.length;
+        max = max * this.renderSettings.yAxis.length * 2;
 
         this.updateBuffers(this.batchDrawer, ++max);
 
@@ -689,15 +703,21 @@ class graphly extends EventEmitter {
         let ySelection = [];
         let rs = this.renderSettings;
 
-        for (let i = 0; i < this.renderSettings.xAxis.length; i++) {
+        /*for (let i = 0; i < this.renderSettings.xAxis.length; i++) {
             if(rs.combinedParameters.hasOwnProperty(rs.xAxis[i])){
                 xSelection = [].concat.apply([], rs.combinedParameters[rs.xAxis[i]]);
             } else {
                 xSelection.push(this.renderSettings.xAxis[i]);
             }
+        }*/
+
+        if(rs.combinedParameters.hasOwnProperty(rs.xAxis)){
+            xSelection = [].concat.apply([], rs.combinedParameters[rs.xAxis]);
+        } else {
+            xSelection.push(this.renderSettings.xAxis);
         }
 
-        for (var h = 0; h < this.renderSettings.xAxis.length; h++) {
+        for (var h = 0; h < this.renderSettings.yAxis.length; h++) {
             if(rs.combinedParameters.hasOwnProperty(rs.yAxis[h])){
                 ySelection = [].concat.apply([], rs.combinedParameters[rs.yAxis[h]]);
             } else {
@@ -732,6 +752,10 @@ class graphly extends EventEmitter {
             }else{
                 yExtent = yExt;
             } 
+        }
+
+        if(ySelection.length === 0){
+            yExtent = [0,1];
         }
 
         let xRange = xExtent[1] - xExtent[0];
@@ -875,7 +899,7 @@ class graphly extends EventEmitter {
         this.el.select('#zoomXBox').call(this.xzoom);
         this.el.select('#zoomYBox').call(this.yzoom);
 
-        this.createLabels();
+        this.createAxisLabels();
     }
 
 
@@ -1180,7 +1204,7 @@ class graphly extends EventEmitter {
                     return data[parId][i] === id;
                 };
 
-                var filteredX = data[xAxRen[parPos]].filter(filterFunc.bind(this));
+                var filteredX = data[xAxRen].filter(filterFunc.bind(this));
                 var filteredY = data[yAxRen[parPos]].filter(filterFunc.bind(this));
 
                 if(this.xTimeScale){
@@ -1203,13 +1227,13 @@ class graphly extends EventEmitter {
         }else{
             // TODO: Check for size mismatch?
             if(this.xTimeScale){
-                resultData = data[xAxRen[parPos]]
+                resultData = data[xAxRen]
                     .map(function(d){return d.getTime();})
                     .zip(
                         data[yAxRen[parPos]]
                     );
             }else{
-                resultData = data[xAxRen[parPos]].zip(
+                resultData = data[xAxRen].zip(
                     data[yAxRen[parPos]]
                 );
             }
@@ -1298,11 +1322,11 @@ class graphly extends EventEmitter {
            
         // TODO: in this.svg actually the first g element is saved, this is 
         // confusing and shoulg maybe be changed, maybe change name?
-        this.el.select(this.svg.node().parentNode)
+        d3.select(this.svg.node().parentNode)
             .attr('width', this.width + this.margin.left + this.margin.right)
             .attr('height', this.height + this.margin.top + this.margin.bottom);
            
-        this.el.select(this.topSvg.node().parentNode)
+        d3.select(this.topSvg.node().parentNode)
             .attr('width', this.width + this.margin.left + this.margin.right)
             .attr('height', this.height + this.margin.top + this.margin.bottom);
 
@@ -1400,7 +1424,7 @@ class graphly extends EventEmitter {
                 // defined in data settings
                 // TODO: check for datasettings for yAxis parameter
                 // TODO: auto generate identifier color if nothing is defined
-                cA = this.dataSettings[
+                let cA = this.dataSettings[
                     this.renderSettings.colorAxis[parPos]
                 ];
                 if (cA && cA.hasOwnProperty('colorscaleFunction')){
@@ -1465,7 +1489,7 @@ class graphly extends EventEmitter {
             let par_properties = {
                 x: {
                     val: xVal,
-                    id: xAxRen[parPos],
+                    id: xAxRen,
                     coord: x
                 },
                 y: {
@@ -1538,12 +1562,12 @@ class graphly extends EventEmitter {
         // Draw normal 'points' for x,y coordinates using defined symbol
         let xAxRen = this.renderSettings.xAxis;
         let yAxRen = this.renderSettings.yAxis;
-        let lp = data[xAxRen[parPos]].length;
+        let lp = data[xAxRen].length;
         let p_x, p_y;
 
         for (let j=0;j<=lp; j++) {
 
-            let x = this.xScale(data[xAxRen[parPos]][j]);
+            let x = this.xScale(data[xAxRen][j]);
             let y = this.yScale(data[yAxRen[parPos]][j]);
             let rC = this.getColor(parPos, j, data);
 
@@ -1551,8 +1575,8 @@ class graphly extends EventEmitter {
 
             let par_properties = {
                 x: {
-                    val: data[xAxRen[parPos]][j],
-                    id: xAxRen[parPos],
+                    val: data[xAxRen][j],
+                    id: xAxRen,
                     coord: x
                 },
                 y: {
@@ -1672,32 +1696,32 @@ class graphly extends EventEmitter {
 
             function onregressionChange() {
                 let selectValue = 
-                    this.el.select('#regressionSelect').property('value');
+                    that.el.select('#regressionSelect').property('value');
                 that.dataSettings[id].regression = selectValue;
                 addOrder();
                 that.addApply();
             }
 
             function addOrder(){
-                this.el.select('#regressionOrderLabel').remove();
-                this.el.select('#regressionOrder').remove();
+                that.el.select('#regressionOrderLabel').remove();
+                that.el.select('#regressionOrder').remove();
                 if(that.dataSettings[id].regression === 'polynomial'){
-                    this.el.select('#parameterSettings')
+                    that.el.select('#parameterSettings')
                         .append('label')
                         .attr('id', 'regressionOrderLabel')
                         .attr('for', 'regressionOrder')
                         .text('Order');
 
-                    this.el.select('#parameterSettings')
-                    .append('input')
-                    .attr('id', 'regressionOrder')
-                    .attr('type', 'text')
-                    .attr('value', defaultFor(that.dataSettings[id].regressionOrder, 3))
-                    .on('input', function(){
-                        that.dataSettings[id].regressionOrder = Number(this.value);
-                        //that.renderRegressionOptions(id, regressionTypes);
-                        that.addApply();
-                    });
+                    that.el.select('#parameterSettings')
+                        .append('input')
+                        .attr('id', 'regressionOrder')
+                        .attr('type', 'text')
+                        .attr('value', defaultFor(that.dataSettings[id].regressionOrder, 3))
+                        .on('input', function(){
+                            that.dataSettings[id].regressionOrder = Number(this.value);
+                            //that.renderRegressionOptions(id, regressionTypes);
+                            that.addApply();
+                        });
                 }
             }
 
@@ -1705,6 +1729,8 @@ class graphly extends EventEmitter {
         }else{
             this.el.select('#labelRegression').remove();
             this.el.select('#regressionSelect').remove();
+            this.el.select('#regressionOrderLabel').remove();
+            this.el.select('#regressionOrder').remove();
             delete that.dataSettings[id].regression;
             delete that.dataSettings[id].regressionOrder;
             this.addApply();
@@ -1713,47 +1739,13 @@ class graphly extends EventEmitter {
     }
 
 
-    /**
-    * Render the colorscale to the specified canvas.
-    * @memberof module:plotty
-    * @param {String} name the name of the color scale to render
-    * @param {HTMLCanvasElement} canvas the canvas to render to
-    */
-    renderData() {
-
-        this.colourToNode = {}; // Map to track the colour of nodes.
-
-        let vertices = [];
-        let colors = [];
-        let idColors = [];
-        let indices = [];
-        let radius = 5;
-
-        // reset color count
-        u.resetColor();
-        let p_x, p_y;
-
-        let xAxRen = this.renderSettings.xAxis;
-        let yAxRen = this.renderSettings.yAxis;
-        let combPars = this.renderSettings.combinedParameters;
-
-        let c, nCol, par_properties, cA;
-
-        let data = {};
-        let inactiveData = {};
-
-
-        for(let p in this.data){
-            data[p] = this.data[p];
-            inactiveData[p] = [];
-        }
-
+    createRegressionInfo(){
         // Setup div for regression info rendering
         this.el.select('#regressionInfo').remove();
         this.el.append('div')
             .attr('id', 'regressionInfo')
-            .style('bottom', this.margin.bottom*2+'px')
-            .style('left', (this.width/2-this.margin.left)+'px');
+            .style('bottom', this.margin.bottom+'px')
+            .style('left', (this.width/2)+'px');
 
         this.el.select('#parameterInfo').remove();
         this.el.append('div')
@@ -1766,6 +1758,10 @@ class graphly extends EventEmitter {
             .attr('id', 'parameterSettings')
             .style('left', (this.width/2)+'px')
             .style('display', 'none');
+    }
+
+    applyDataFilters(data, inactiveData){
+
 
         for (let f in this.filters){
             let filter = this.filters[f];
@@ -1800,219 +1796,264 @@ class graphly extends EventEmitter {
                 }
             }
         }
+    }
+
+
+    addParameterLabel(id){
+
+        let parDiv = this.el.select('#parameterInfo').append('div')
+            .attr('class', 'labelitem');
+
+        let iconSvg = parDiv.append('div')
+            .attr('class', 'svgIcon')
+            .style('display', 'inline')
+            .append('svg')
+            .attr('width', 20).attr('height', 10);
+
+        let symbolColor = '#'+ CP.RGB2HEX(
+            this.dataSettings[id].color.slice(0,-1)
+            .map(function(c){return Math.round(c*255);})
+        );
+
+        if(this.dataSettings[id].lineConnect){
+            iconSvg.append('line')
+                .attr('x1', 0).attr('y1', 5)
+                .attr('x2', 20).attr('y2', 5)
+                .attr("stroke-width", 1.5)
+                .attr("stroke", symbolColor);
+        }
+
+        u.addSymbol(iconSvg, this.dataSettings[id].symbol, symbolColor);
+
+        var that = this;
+
+        parDiv.append('div')
+            .style('display', 'inline')
+            .attr('id', id)
+            .html(defaultFor(this.dataSettings[id].displayName, id))
+            .on('click', ()=>{
+
+                this.el.select('#parameterSettings').selectAll('*').remove();
+
+                this.el.select('#parameterSettings')
+                    .style('display', 'block');
+
+                this.el.select('#parameterSettings')
+                    .append('div')
+                    .attr('class', 'closeButton')
+                    .text('x')
+                    .on('click', ()=>{
+                        this.el.select('#parameterSettings')
+                            .selectAll('*').remove();
+                        this.el.select('#parameterSettings')
+                            .style('display', 'none');
+                    });
+
+                this.el.select('#parameterSettings')
+                    .append('label')
+                    .attr('for', 'displayName')
+                    .text('Label');
+                    
+
+                this.el.select('#parameterSettings')
+                    .append('input')
+                    .attr('id', 'displayName')
+                    .attr('type', 'text')
+                    .attr('value', that.dataSettings[id].displayName)
+                    .on('input', function(){
+                        that.dataSettings[id].displayName = this.value;
+                        that.addApply();
+                    });
+
+                this.el.select('#parameterSettings')
+                    .append('label')
+                    .attr('for', 'symbolSelect')
+                    .text('Symbol');
+                    
+
+                let data = [
+                    { name:'None', value: 'none' },
+                    { name:'Rectangle', value: 'rectangle' },
+                    { name:'Rectangle outline', value: 'rectangle_empty'},
+                    { name:'Circle', value: 'circle'},
+                    { name:'Circle outline', value: 'circle_empty'},
+                    { name:'Plus', value: 'plus'},
+                    { name:'X', value: 'x'},
+                    { name:'Triangle', value: 'triangle'},
+                    { name:'Triangle outline', value: 'triangle_empty'}
+                ];
+
+
+                let select = this.el.select('#parameterSettings')
+                  .append('select')
+                    .attr('id','symbolSelect')
+                    .on('change',onchange);
+
+                let options = select
+                  .selectAll('option')
+                    .data(data).enter()
+                    .append('option')
+                        .text(function (d) { return d.name; })
+                        .attr('value', function (d) { return d.value; })
+                        .property('selected', function(d){
+                            return d.value === that.dataSettings[id].symbol;
+                        });
+
+                function onchange() {
+                    let selectValue = that.el.select('#symbolSelect').property('value');
+                    that.dataSettings[id].symbol = selectValue;
+                    that.addApply();
+                }
+
+                this.el.select('#parameterSettings')
+                    .append('label')
+                    .attr('for', 'colorSelection')
+                    .text('Color');
+
+                let colorSelect = this.el.select('#parameterSettings')
+                    .append('input')
+                    .attr('id', 'colorSelection')
+                    .attr('type', 'text')
+                    .attr('value', 
+                        '#'+CP.RGB2HEX(
+                            that.dataSettings[id].color.slice(0,-1)
+                            .map(function(c){return Math.round(c*255);})
+                        )
+                    );
+
+                let picker = new CP(colorSelect.node());
+
+                let firstChange = true;
+
+                picker.on('change', function(color) {
+                    this.target.value = '#' + color;
+                    let c = CP.HEX2RGB(color);
+                    c = c.map(function(c){return c/255;});
+                    c.push(0.8);
+                    if(!firstChange){
+                        that.dataSettings[id].color = c;
+                        that.addApply();
+                    }else{
+                        firstChange = false;
+                    }
+                    
+                });
+
+                let x = document.createElement('a');
+                    x.href = 'javascript:;';
+                    x.innerHTML = 'Close';
+                    x.addEventListener('click', function() {
+                        picker.exit();
+                    }, false);
+
+                picker.picker.appendChild(x);
+
+                this.el.select('#parameterSettings')
+                    .append('label')
+                    .attr('for', 'lineConnect')
+                    .text('Line connect');
+                    
+
+                this.el.select('#parameterSettings')
+                    .append('input')
+                    .attr('id', 'lineConnect')
+                    .attr('type', 'checkbox')
+                    .property('checked', 
+                        defaultFor(that.dataSettings[id].lineConnect, false)
+                    )
+                    .on('change', function(){
+                        that.dataSettings[id].lineConnect = 
+                            !defaultFor(that.dataSettings[id].lineConnect, false);
+                        that.addApply();
+                    });
+
+                this.el.select('#parameterSettings')
+                    .append('label')
+                    .attr('for', 'regressionCheckbox')
+                    .text('Regression');
+                    
+                let regressionTypes = [
+                    {name: 'Linear', value: 'linear'},
+                    {name: 'Polynomial', value: 'polynomial'}
+                ];
+
+
+                this.el.select('#parameterSettings')
+                    .append('input')
+                    .attr('id', 'regressionCheckbox')
+                    .attr('type', 'checkbox')
+                    .property('checked', 
+                        that.dataSettings[id].hasOwnProperty('regression')
+                    )
+                    .on('change', function(){
+                        // If activated there is no type defined so we
+                        // define a defualt one, for now linear
+                        if(that.el.select('#regressionCheckbox').property('checked')){
+                             that.dataSettings[id].regression = defaultFor(
+                                that.dataSettings[id].regression,
+                                'linear'
+                            );
+                        }
+
+                        that.renderRegressionOptions(id, regressionTypes);
+                        that.addApply();
+                    });
+
+                that.renderRegressionOptions(id, regressionTypes);
+
+            });
+    }
+
+
+    /**
+    * Render the colorscale to the specified canvas.
+    * @memberof module:plotty
+    * @param {String} name the name of the color scale to render
+    * @param {HTMLCanvasElement} canvas the canvas to render to
+    */
+    renderData() {
+
+        this.colourToNode = {}; // Map to track the colour of nodes.
+
+        let vertices = [];
+        let colors = [];
+        let idColors = [];
+        let indices = [];
+        let radius = 5;
+
+        // reset color count
+        u.resetColor();
+        let p_x, p_y;
+
+        let xAxRen = this.renderSettings.xAxis;
+        let yAxRen = this.renderSettings.yAxis;
+        let combPars = this.renderSettings.combinedParameters;
+
+        let c, nCol, par_properties, cA;
+
+        let data = {};
+        let inactiveData = {};
+
+        for(let p in this.data){
+            data[p] = this.data[p];
+            inactiveData[p] = [];
+        }
+
+        this.applyDataFilters(data, inactiveData);
+
+        this.createRegressionInfo();
+
 
         let that = this;
 
-        for (let parPos=0; parPos<xAxRen.length; parPos++){
+        for (let parPos=0; parPos<yAxRen.length; parPos++){
             //for (let yScaleItem=0; yScaleItem<yAxRen.length; yScaleItem++){
 
             let id = yAxRen[parPos];
 
             // Add item to labels if there is no coloraxis is defined
             if(this.renderSettings.colorAxis[parPos] === null){
-
-                let parDiv = this.el.select('#parameterInfo').append('div')
-                    .attr('class', 'labelitem');
-
-                let iconSvg = parDiv.append('div')
-                    .attr('class', 'svgIcon')
-                    .style('display', 'inline')
-                    .append('svg')
-                    .attr('width', 20).attr('height', 10);
-
-                let symbolColor = '#'+ CP.RGB2HEX(
-                    that.dataSettings[id].color.slice(0,-1)
-                    .map(function(c){return Math.round(c*255);})
-                );
-
-                if(this.dataSettings[id].lineConnect){
-                    iconSvg.append('line')
-                        .attr('x1', 0).attr('y1', 5)
-                        .attr('x2', 20).attr('y2', 5)
-                        .attr("stroke-width", 1.5)
-                        .attr("stroke", symbolColor);
-                }
-
-                u.addSymbol(iconSvg, this.dataSettings[id].symbol, symbolColor);
-
-                parDiv.append('div')
-                    .style('display', 'inline')
-                    .attr('id', id)
-                    .html(defaultFor(this.dataSettings[id].displayName, id))
-                    .on('click', function(){
-                        let id = this.id;
-                        this.el.select('#parameterSettings').selectAll('*').remove();
-
-                        this.el.select('#parameterSettings')
-                            .style('display', 'block');
-
-                        this.el.select('#parameterSettings')
-                            .append('div')
-                            .attr('class', 'closeButton')
-                            .text('x')
-                            .on('click', ()=>{
-                                this.el.select('#parameterSettings')
-                                    .selectAll('*').remove();
-                                this.el.select('#parameterSettings')
-                                    .style('display', 'none');
-                            });
-
-                        this.el.select('#parameterSettings')
-                            .append('label')
-                            .attr('for', 'displayName')
-                            .text('Label');
-                            
-
-                        this.el.select('#parameterSettings')
-                            .append('input')
-                            .attr('id', 'displayName')
-                            .attr('type', 'text')
-                            .attr('value', that.dataSettings[id].displayName)
-                            .on('input', function(){
-                                that.dataSettings[id].displayName = this.value;
-                                that.addApply();
-                            });
-
-                        this.el.select('#parameterSettings')
-                            .append('label')
-                            .attr('for', 'symbolSelect')
-                            .text('Symbol');
-                            
-
-                        let data = [
-                            { name:'None', value: 'none' },
-                            { name:'Rectangle', value: 'rectangle' },
-                            { name:'Rectangle outline', value: 'rectangle_empty'},
-                            { name:'Circle', value: 'circle'},
-                            { name:'Circle outline', value: 'circle_empty'},
-                            { name:'Plus', value: 'plus'},
-                            { name:'X', value: 'x'},
-                            { name:'Triangle', value: 'triangle'},
-                            { name:'Triangle outline', value: 'triangle_empty'}
-                        ];
-
-
-                        let select = this.el.select('#parameterSettings')
-                          .append('select')
-                            .attr('id','symbolSelect')
-                            .on('change',onchange);
-
-                        let options = select
-                          .selectAll('option')
-                            .data(data).enter()
-                            .append('option')
-                                .text(function (d) { return d.name; })
-                                .attr('value', function (d) { return d.value; })
-                                .property('selected', function(d){
-                                    return d.value === that.dataSettings[id].symbol;
-                                });
-
-                        function onchange() {
-                            let selectValue = this.el.select('#symbolSelect').property('value');
-                            that.dataSettings[id].symbol = selectValue;
-                            that.addApply();
-                        }
-
-                        this.el.select('#parameterSettings')
-                            .append('label')
-                            .attr('for', 'colorSelection')
-                            .text('Color');
-
-                        let colorSelect = this.el.select('#parameterSettings')
-                            .append('input')
-                            .attr('id', 'colorSelection')
-                            .attr('type', 'text')
-                            .attr('value', 
-                                '#'+CP.RGB2HEX(
-                                    that.dataSettings[id].color.slice(0,-1)
-                                    .map(function(c){return Math.round(c*255);})
-                                )
-                            );
-
-                        let picker = new CP(colorSelect.node());
-
-                        let firstChange = true;
-
-                        picker.on('change', function(color) {
-                            this.target.value = '#' + color;
-                            let c = CP.HEX2RGB(color);
-                            c = c.map(function(c){return c/255;});
-                            c.push(0.8);
-                            if(!firstChange){
-                                that.dataSettings[id].color = c;
-                                that.addApply();
-                            }else{
-                                firstChange = false;
-                            }
-                            
-                        });
-
-                        let x = document.createElement('a');
-                            x.href = 'javascript:;';
-                            x.innerHTML = 'Close';
-                            x.addEventListener('click', function() {
-                                picker.exit();
-                            }, false);
-
-                        picker.picker.appendChild(x);
-
-                        this.el.select('#parameterSettings')
-                            .append('label')
-                            .attr('for', 'lineConnect')
-                            .text('Line connect');
-                            
-
-                        this.el.select('#parameterSettings')
-                            .append('input')
-                            .attr('id', 'lineConnect')
-                            .attr('type', 'checkbox')
-                            .property('checked', 
-                                defaultFor(that.dataSettings[id].lineConnect, false)
-                            )
-                            .on('change', function(){
-                                that.dataSettings[id].lineConnect = 
-                                    !defaultFor(that.dataSettings[id].lineConnect, false);
-                                that.addApply();
-                            });
-
-                        this.el.select('#parameterSettings')
-                            .append('label')
-                            .attr('for', 'regressionCheckbox')
-                            .text('Regression');
-                            
-                        let regressionTypes = [
-                            {name: 'Linear', value: 'linear'},
-                            {name: 'Polynomial', value: 'polynomial'}
-                        ];
-
-
-                        this.el.select('#parameterSettings')
-                            .append('input')
-                            .attr('id', 'regressionCheckbox')
-                            .attr('type', 'checkbox')
-                            .property('checked', 
-                                that.dataSettings[id].hasOwnProperty('regression')
-                            )
-                            .on('change', function(){
-                                // If activated there is no type defined so we
-                                // define a defualt one, for now linear
-                                if(this.el.select('#regressionCheckbox').property('checked')){
-                                     that.dataSettings[id].regression = defaultFor(
-                                        that.dataSettings[id].regression,
-                                        'linear'
-                                    );
-                                }
-
-                                that.renderRegressionOptions(id, regressionTypes);
-                                that.addApply();
-                            });
-
-                        that.renderRegressionOptions(id, regressionTypes);
-
-                    });
-
-            }else{
-                
+                this.addParameterLabel(id);
             }
 
             if(this.el.select('#parameterInfo').selectAll('*').empty()){
@@ -2028,13 +2069,13 @@ class graphly extends EventEmitter {
 
             // If a combined parameter is provided we need to render either
             // a line or a rectangle as we have two parameters per item
-            if(combPars.hasOwnProperty(xAxRen[parPos])){
+            if(combPars.hasOwnProperty(xAxRen)){
                 // If also the yAxis item is an array we render a rectangle
                 //if(yAxRen[yScaleItem].constructor === Array){
                 if(combPars.hasOwnProperty(yAxRen[parPos])){
 
                     let xGroup = this.renderSettings.combinedParameters[
-                        xAxRen[parPos]
+                        xAxRen
                     ];
                     let yGroup = this.renderSettings.combinedParameters[
                         yAxRen[parPos]
@@ -2044,7 +2085,7 @@ class graphly extends EventEmitter {
                 } else {
                     // Use middle value of composite xAxis parameter
                     // to render point
-                    let xGroup = this.renderSettings.combinedParameters[xAxRen[parPos]];
+                    let xGroup = this.renderSettings.combinedParameters[xAxRen];
                     this.renderMiddlePoints(data, parPos, xGroup);
 
                 }
@@ -2059,9 +2100,9 @@ class graphly extends EventEmitter {
                     this.renderPoints(data, parPos);
 
                     // Draw filtered out 'points' for x,y 
-                    let lp = inactiveData[xAxRen[parPos]].length;
+                    let lp = inactiveData[xAxRen].length;
                     for (let j=0;j<=lp; j++) {
-                        let x = (this.xScale(inactiveData[xAxRen[parPos]][j]));
+                        let x = (this.xScale(inactiveData[xAxRen][j]));
                         let y = (this.yScale(inactiveData[yAxRen[parPos]][j]));
                         let rC = [0.3,0.3,0.3];
 
@@ -2069,7 +2110,7 @@ class graphly extends EventEmitter {
 
                         let par_properties = {
                             x: {
-                                val: x, id: xAxRen[parPos], coord: x
+                                val: x, id: xAxRen, coord: x
                             },
                             y: {
                                 val: y, id: yAxRen[parPos], coord: y

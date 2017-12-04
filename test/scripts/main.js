@@ -36,8 +36,8 @@ var renderSettings_ray = {
     combinedParameters: {
         rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
         rayleigh_altitude: ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
-        /*mie_datetime: ['mie_datetime_start', 'mie_datetime_stop'],
-        mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']*/
+        mie_datetime: ['mie_datetime_start', 'mie_datetime_stop'],
+        mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
     },
     colorAxis: [
         'rayleigh_wind_velocity',
@@ -77,7 +77,7 @@ var renderSettingsISR = {
 };
 
 
-var dataSettings = {
+var ds_rayleigh = {
     rayleigh_dem_altitude: {
         symbol: 'circle',
         uom: 'm',
@@ -98,8 +98,11 @@ var dataSettings = {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
+    rayleigh_altitude: {
+    }
+};
 
-
+var ds_mie = {
     mie_dem_altitude: {
         symbol: null,
         uom: 'm',
@@ -119,19 +122,13 @@ var dataSettings = {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
-
-    rayleigh_altitude_top: {
-    },
-    rayleigh_altitude_bottom: {
-    },
-    mie_altitude_start:{
-    },
-    mie_altitude_bottom:{
-    },
+    mie_altitude:{
+    }
+};
 
 
-
-
+var otherds = {
+    
     T_elec: {
         symbol: 'circle',
         uom: 'n',
@@ -267,7 +264,7 @@ var filterSettings = {
             'rayleigh_geo_height', 'rayleigh_wind_velocity'
         ]
     ],
-    dataSettings: dataSettings,
+    dataSettings: otherds,
     visibleFilters: [
         'T_elec',
         'Latitude',
@@ -338,7 +335,7 @@ var filterManager = new FilterManager({
 
 var graph = new graphly.graphly({
     el: '#graph',
-    dataSettings: dataSettings,
+    dataSettings: ds_rayleigh,
     renderSettings: renderSettings_ray,
     filterManager: filterManager,
     //fixedSize: true,
@@ -347,9 +344,9 @@ var graph = new graphly.graphly({
 
 filterManager.setRenderNode('#filters');
 
-var graph2 = new graphly.graphly({
+/*var graph2 = new graphly.graphly({
     el: '#graph2',
-    dataSettings: dataSettings,
+    dataSettings: ds_mie,
     renderSettings: renderSettings_mie,
     filterManager: filterManager,
     //fixedSize: true,
@@ -357,18 +354,20 @@ var graph2 = new graphly.graphly({
     connectedGraph: graph
 });
 
-graph.connectGraph(graph2);
+graph.connectGraph(graph2);*/
 
 
 
 
 graph.on('rendered', function() {
-    console.log('rendered');
+    //console.log('rendered');
 });
 
 filterManager.on('filterChange', function(filters){
-    console.log(filters);
+    //console.log(filters);
 });
+
+var usesecond = false;
 
 
 var xhr = new XMLHttpRequest();
@@ -383,7 +382,9 @@ xhr.onload = function(e) {
     var data = msgpack.decode(tmp);
     filterManager.initManager();
     graph.loadData(data);
-    graph2.loadData(data);
+    if(usesecond){
+        graph2.loadData(data);
+    }
     filterManager.loadData(data);
 };
 
@@ -398,16 +399,22 @@ d3.select('#datafiles').on('change', function(e){
     var sel_value = sel.options[sel.selectedIndex].value;
 
     
-
+    graph.setDataSettings(otherds);
+    usesecond = false;
     if (sel_value.indexOf('testdata') === -1){
         if (sel_value.indexOf('MRC') !== -1){
-            graph.renderSettings = renderSettingsMRC;
+            graph.setRenderSettings(renderSettingsMRC);
         }else if (sel_value.indexOf('RRC') !== -1){
-            graph.renderSettings = renderSettingsRRC;
+            graph.setRenderSettings(renderSettingsRRC);
         }else if (sel_value.indexOf('ISR') !== -1){
-            graph.renderSettings = renderSettingsISR;
+            graph.setRenderSettings(renderSettingsISR);
         }else {
-            graph.renderSettings = renderSettings_mie;
+            usesecond = true;
+            graph2.setDataSettings(ds_mie);
+            graph2.setRenderSettings(renderSettings_mie);
+
+            graph.setDataSettings(ds_rayleigh);
+            graph.setRenderSettings(renderSettings_ray);
         }
         xhr.open('GET', sel_value, true);
         xhr.send();
