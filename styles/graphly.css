@@ -276,3 +276,9 @@ svg {
 .choices__list--single {
     padding: 0px!important;
 }
+
+
+#colorscaleContainer{
+    float: right;
+    height: 100%;
+}

@@ -9,7 +9,7 @@ var renderSettings_mie = {
     ],
     yAxis: [
          'mie_altitude',
-         //'mie_dem_altitude'
+         'mie_dem_altitude'
     ],
     //y2Axis: [],
     combinedParameters: {
@@ -18,7 +18,7 @@ var renderSettings_mie = {
     },
     colorAxis: [
         'mie_wind_velocity',
-        //null
+        null
     ],
 
 };
@@ -111,7 +111,7 @@ var ds_mie = {
     mie_wind_velocity: {
         uom: 'cm/s',
         colorscale: 'plasma',
-        extent: [-5000,5000]
+        //extent: [-5000,5000]
         //outline: false
     },
     mie_datetime_start: {
@@ -344,7 +344,7 @@ var graph = new graphly.graphly({
 
 filterManager.setRenderNode('#filters');
 
-/*var graph2 = new graphly.graphly({
+var graph2 = new graphly.graphly({
     el: '#graph2',
     dataSettings: ds_mie,
     renderSettings: renderSettings_mie,
@@ -354,7 +354,7 @@ filterManager.setRenderNode('#filters');
     connectedGraph: graph
 });
 
-graph.connectGraph(graph2);*/
+graph.connectGraph(graph2);
 
 
 
@@ -367,7 +367,7 @@ filterManager.on('filterChange', function(filters){
     //console.log(filters);
 });
 
-var usesecond = false;
+var usesecond = true;
 
 
 var xhr = new XMLHttpRequest();

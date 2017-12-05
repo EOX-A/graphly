@@ -119,7 +119,7 @@ class graphly extends EventEmitter {
 
         this.margin = defaultFor(
             options.margin,
-            {top: 10, left: 90, bottom: 50, right: 10}
+            {top: 10, left: 90, bottom: 50, right: 120}
         );
 
         // TOOO: How could some defaults be guessed for rendering?
@@ -178,19 +178,39 @@ class graphly extends EventEmitter {
 
 
         // move tooltip
-        let tooltip = this.el.append('pre')
-            .attr('id', 'tooltip')
-            .style('position', 'absolute')
-            .style('background-color', 'white')
-            .style('display', 'none')
-            .style('z-index', 10);
+        let tooltip = this.el.append('div')
+            .attr('class', 'tooltip')
+            .append('pre')
+                .style('position', 'absolute')
+                .style('background-color', 'white')
+                .style('display', 'none')
+                .style('z-index', 10);
 
-        window.onmousemove = function (e) {
-            let x = e.clientX,
-                y = e.clientY;
+        d3.select(window).on('mousemove.'+contId, ()=> {
+
+            // TODO: make sure tooltip is inside window
+            /*var topPos = d3.event.pageY + 3;
+            var clientHeight = d3.select('body').node().getBoundingClientRect().height;
+            if (topPos+300 > clientHeight){
+                topPos = topPos - 300;
+            }
+            var leftPos = (d3.event.pageX + 10);
+            var clientWidth = d3.select('body').node().getBoundingClientRect().width;
+            if(leftPos+240 > clientWidth ){
+                leftPos = leftPos - 265;
+            }*/
+
+            let e = d3.event;
+            let dim = this.el.node().getBoundingClientRect();
+
+            let x = e.clientX - dim.left;
+            let y = e.clientY - dim.top;
+
+            let tt = tooltip.node().getBoundingClientRect();
+
             tooltip.style('top', (y + 20) + 'px');
             tooltip.style('left', (x + 20) + 'px');
-        };
+        });
 
         this.renderCanvas = this.el.append('canvas')
             .attr('id', 'renderCanvas')
@@ -538,6 +558,92 @@ class graphly extends EventEmitter {
 
     }
 
+    createColorScale(id){
+
+        let ds = this.dataSettings[id];
+        let dataRange = [0,1];
+
+        if(ds.hasOwnProperty('extent')){
+            dataRange = ds.extent;
+        }
+        
+        let dim = this.el.select('#colorscaleContainer').node()
+            .getBoundingClientRect();
+        let height = dim.height;
+        let innerHeight = height-this.margin.bottom-this.margin.top;
+        let width = 100;
+
+        let csDiv = this.el.select('#colorscaleContainer')
+            .append('div')
+            .attr('class', 'colorscaleObject');
+
+        let csSVG = csDiv.append('svg')
+            .attr('height', height)
+            .attr('width', width);
+
+        let colorAxisScale = d3.scale.linear();
+        colorAxisScale.domain(dataRange);
+        colorAxisScale.range([innerHeight, 0]);
+
+        let colorAxis = d3.svg.axis()
+            .orient("right")
+            .tickSize(5)
+            .scale(colorAxisScale);
+
+        let step = (colorAxisScale.domain()[1] - colorAxisScale.domain()[0]) / 10;
+        colorAxis.tickValues(
+            d3.range(colorAxisScale.domain()[0],colorAxisScale.domain()[1]+step, step)
+        );
+
+        colorAxis.tickFormat(d3.format("g"));
+
+        let g = csSVG.append("g")
+            .attr("class", "color axis")
+            .attr("transform", "translate(" + (25) + ","+this.margin.top+")")
+            .call(colorAxis);
+
+        csSVG.selectAll('.color.axis path')
+            .attr("fill", "none")
+            .attr("shape-rendering", "crispEdges")
+            .attr("stroke", "#000")
+            .attr("stroke-width", "2");
+
+        csSVG.selectAll('.color.axis line')
+            .attr("stroke-width", "2")
+            .attr("shape-rendering", "crispEdges")
+            .attr("stroke", "#000");
+
+        let image = this.plotter.getColorScaleImage().toDataURL("image/jpg");
+
+        g.append("image")
+            .attr("class", "colorscaleimage")
+            .attr("width",  innerHeight)
+            .attr("height", 20)
+            .attr("transform", "translate(" + (-25) + " ,"+(innerHeight)+") rotate(270)")
+            .attr("preserveAspectRatio", "none")
+            .attr("xlink:href", image);
+    }
+
+    createColorScales(){
+
+        let filteredCol = this.renderSettings.colorAxis.filter(
+            (c)=>{return c!==null;}
+        );
+        
+        this.el.select('#colorscaleContainer').remove();
+
+        let csContainer = this.el.append('div')
+            .attr('id', 'colorscaleContainer')
+            .style('width', (filteredCol.length*100)+'px');
+
+        for (var i = 0; i < filteredCol.length; i++) {
+            this.createColorScale(filteredCol[i]);
+        }
+
+
+
+    }
+
     getCanvasImage(){
         return this.renderCanvas.node().toDataURL();
     }
@@ -787,6 +893,8 @@ class graphly extends EventEmitter {
                         domain = d3.extent(
                             this.data[cAxis[ca]]
                         );
+                        // Set current calculated extent to settings
+                        this.dataSettings[cAxis[ca]].extent = domain;
                     }
                     
                 }
@@ -2040,6 +2148,8 @@ class graphly extends EventEmitter {
         }
 
         this.applyDataFilters(data, inactiveData);
+
+        this.createColorScales();
 
         this.createRegressionInfo();
 
