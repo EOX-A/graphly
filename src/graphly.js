@@ -149,7 +149,28 @@ class graphly extends EventEmitter {
 
         if(this.filterManager){
             this.filterManager.on('filterChange', (filters) => {
+                // Reset colorscale range if filter changed for parameter with 
+                // colorscale
+                let filterKeys = Object.keys(filters);
+                for (var i = 0; i < filterKeys.length; i++) {
+                    if(this.filters.hasOwnProperty(filterKeys[i])){
+                        // New parameter has been added, reset color scale range
+                        // if available in datasettings
+                        if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
+                           this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
+                            delete this.dataSettings[filterKeys[i]].extent;
+                        }
+                    }else{
+                        // New parameter has been added, reset color scale range
+                        // if available in datasettings
+                        if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
+                           this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
+                            delete this.dataSettings[filterKeys[i]].extent;
+                        }
+                    }
+                }
                 this.filters = filters;
+
                 this.renderData();
             });
         }
@@ -616,7 +637,7 @@ class graphly extends EventEmitter {
         if(ds.colorscale){
             this.plotter.setColorScale(ds.colorscale);
         }
-        
+
         let image = this.plotter.getColorScaleImage().toDataURL("image/jpg");
 
         g.append("image")
@@ -1078,11 +1099,19 @@ class graphly extends EventEmitter {
 
     triggerZoomPreview(xZoom, xyZoom, xAxis, xScale){
 
-        if(this.currentlyActive){
-            // This is the graph activating the zoom event we stop here to 
-            // not have an endless loop
-            return;
-        }
+        // TODO: Only passing the zoom scale and translate is possible
+        // and should be the best way to synchronize axis, but with the debounce
+        // zoom the scale and translate is reset, to manage the overview image
+        // correctly which breaks the functionality...
+        
+        /*var xytrns = xyZoom.translate();
+        let xtrns = xZoom.translate();
+
+        if(xyZoom.scale() !== 1 || (xytrns[0]!==0 && xytrns[1]!==0) ){
+            this.xzoom.scale(xyZoom.scale()).translate(xyZoom.translate());
+        }else if(xZoom.scale() !== 1 || (xtrns[0]!==0 && xtrns[1]!==0) ){
+            this.xzoom.scale(xZoom.scale()).translate(xZoom.translate());
+        }*/
 
         this.xzoom = xZoom;
 
@@ -2172,6 +2201,21 @@ class graphly extends EventEmitter {
         }
 
         this.applyDataFilters(data, inactiveData);
+
+        // Check if we need to update extents which have been reset because
+        // of filtering on parameter
+        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
+            let ca = this.renderSettings.colorAxis[i];
+            if(ca !== null){
+                if(this.dataSettings.hasOwnProperty(ca)){
+                    if(!this.dataSettings[ca].hasOwnProperty('extent')){
+                        // Set current calculated extent to settings
+                        this.dataSettings[ca].extent = d3.extent(data[ca]);
+                        this.createColorScales();
+                    }
+                }
+            }
+        }
 
         this.createRegressionInfo();
 
