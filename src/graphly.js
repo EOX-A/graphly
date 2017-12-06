@@ -578,7 +578,7 @@ class graphly extends EventEmitter {
             .attr('class', 'colorscaleObject');
 
         let csSVG = csDiv.append('svg')
-            .attr('height', height)
+            .attr('height', height-this.margin.bottom+15)
             .attr('width', width);
 
         let colorAxisScale = d3.scale.linear();
@@ -591,9 +591,9 @@ class graphly extends EventEmitter {
             .scale(colorAxisScale);
 
         let step = (colorAxisScale.domain()[1] - colorAxisScale.domain()[0]) / 10;
-        colorAxis.tickValues(
+        /*colorAxis.tickValues(
             d3.range(colorAxisScale.domain()[0],colorAxisScale.domain()[1]+step, step)
-        );
+        );*/
 
         colorAxis.tickFormat(d3.format("g"));
 
@@ -613,6 +613,10 @@ class graphly extends EventEmitter {
             .attr("shape-rendering", "crispEdges")
             .attr("stroke", "#000");
 
+        if(ds.colorscale){
+            this.plotter.setColorScale(ds.colorscale);
+        }
+        
         let image = this.plotter.getColorScaleImage().toDataURL("image/jpg");
 
         g.append("image")
@@ -622,6 +626,18 @@ class graphly extends EventEmitter {
             .attr("transform", "translate(" + (-25) + " ,"+(innerHeight)+") rotate(270)")
             .attr("preserveAspectRatio", "none")
             .attr("xlink:href", image);
+
+        let csZoomEvent = ()=>{
+            g.call(colorAxis);
+            this.dataSettings[id].extent = colorAxisScale.domain();
+            this.renderData(false);
+        };
+
+        let csZoom = d3.behavior.zoom()
+          .y(colorAxisScale)
+          .on('zoom', csZoomEvent);
+
+        csSVG.call(csZoom);
     }
 
     createColorScales(){
@@ -690,6 +706,8 @@ class graphly extends EventEmitter {
             .attr('id', 'rectangleOutline')
             .attr('width', this.width)
             .attr('height', this.height);
+
+        this.createColorScales();
     }
 
     
@@ -1468,7 +1486,7 @@ class graphly extends EventEmitter {
         this.zoom_update();
     }
 
-    renderRectangles(data, parPos, xGroup, yGroup) {
+    renderRectangles(data, parPos, xGroup, yGroup, updateReferenceCanvas) {
 
         // TODO: How to decide which item to take for counting
         // should we compare changes and look for errors in config?
@@ -1514,6 +1532,10 @@ class graphly extends EventEmitter {
                 if (cA && cA.hasOwnProperty('colorscale')){
                     cs = cA.colorscale;
                 }
+                if(cA && cA.hasOwnProperty('extent')){
+                    this.plotter.setDomain(cA.extent);
+                }
+                // If current cs not equal to the set in the plotter update cs
                 if(cs !== this.plotter.name){
                     this.plotter.setColorScale(cs);
                 }
@@ -1548,7 +1570,7 @@ class graphly extends EventEmitter {
             this.colourToNode[idC.join('-')] = par_properties;
 
             this.batchDrawer.addRect(x1,y1,x2,y2, c[0], c[1], c[2], 1.0);
-            if(!this.fixedSize){
+            if(!this.fixedSize && updateReferenceCanvas){
                 this.batchDrawerReference.addRect(
                     x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0
                 );
@@ -1556,7 +1578,7 @@ class graphly extends EventEmitter {
         }
     }
 
-   renderMiddlePoints(data, parPos, xGroup) {
+   renderMiddlePoints(data, parPos, xGroup, updateReferenceCanvas) {
 
         let xAxRen = this.renderSettings.xAxis;
         let yAxRen = this.renderSettings.yAxis;
@@ -1649,7 +1671,7 @@ class graphly extends EventEmitter {
                     this.batchDrawer.addDot(
                         x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
                     );
-                    if(!this.fixedSize){
+                    if(!this.fixedSize && updateReferenceCanvas){
                         this.batchDrawerReference.addDot(
                             x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
                         );
@@ -1665,7 +1687,7 @@ class graphly extends EventEmitter {
     }
 
 
-    renderPoints(data, parPos) {
+    renderPoints(data, parPos, updateReferenceCanvas) {
 
         // Draw normal 'points' for x,y coordinates using defined symbol
         let xAxRen = this.renderSettings.xAxis;
@@ -1736,7 +1758,7 @@ class graphly extends EventEmitter {
                     this.batchDrawer.addDot(
                         x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
                     );
-                    if(!this.fixedSize){
+                    if(!this.fixedSize && updateReferenceCanvas){
                         this.batchDrawerReference.addDot(
                             x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
                         );
@@ -2119,7 +2141,9 @@ class graphly extends EventEmitter {
     * @param {String} name the name of the color scale to render
     * @param {HTMLCanvasElement} canvas the canvas to render to
     */
-    renderData() {
+    renderData(updateReferenceCanvas) {
+
+        updateReferenceCanvas = defaultFor(updateReferenceCanvas, true);
 
         this.colourToNode = {}; // Map to track the colour of nodes.
 
@@ -2148,8 +2172,6 @@ class graphly extends EventEmitter {
         }
 
         this.applyDataFilters(data, inactiveData);
-
-        this.createColorScales();
 
         this.createRegressionInfo();
 
@@ -2190,13 +2212,17 @@ class graphly extends EventEmitter {
                     let yGroup = this.renderSettings.combinedParameters[
                         yAxRen[parPos]
                     ];
-                    this.renderRectangles(data, parPos, xGroup, yGroup);
+                    this.renderRectangles(
+                        data, parPos, xGroup, yGroup, updateReferenceCanvas
+                    );
                     
                 } else {
                     // Use middle value of composite xAxis parameter
                     // to render point
                     let xGroup = this.renderSettings.combinedParameters[xAxRen];
-                    this.renderMiddlePoints(data, parPos, xGroup);
+                    this.renderMiddlePoints(
+                        data, parPos, xGroup, updateReferenceCanvas
+                    );
 
                 }
             } else {
@@ -2207,7 +2233,7 @@ class graphly extends EventEmitter {
                     // TODO: drawing of lines
                 } else {
 
-                    this.renderPoints(data, parPos);
+                    this.renderPoints(data, parPos, updateReferenceCanvas);
 
                     // Draw filtered out 'points' for x,y 
                     let lp = inactiveData[xAxRen].length;
@@ -2262,7 +2288,7 @@ class graphly extends EventEmitter {
 
 
         this.batchDrawer.draw();
-        if(!this.fixedSize){
+        if(!this.fixedSize && updateReferenceCanvas){
             this.batchDrawerReference.draw();
         }
 

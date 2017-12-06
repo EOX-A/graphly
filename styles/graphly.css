@@ -22,6 +22,19 @@ svg {
     stroke-dasharray: 2 
 }
 
+.color.axis path,
+.color.axis line {
+    fill: none;
+    stroke: #ccc;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+    stroke-dasharray: 0 
+}
+
+.colorscaleObject{
+    cursor: ns-resize;
+}
+
 #rectangleOutline{
     stroke: #ccc;
     stroke-width: 1;
