@@ -16,6 +16,7 @@ class FilterManager extends EventEmitter {
         this.visibleFilters = this.filterSettings.visibleFilters;
         this.boolParameter = defaultFor(this.filterSettings.boolParameter, []);
         this.choiceParameter = defaultFor(this.filterSettings.choiceParameter, []);
+        this.maskParameter = defaultFor(this.filterSettings.maskParameter, []);
         this.data = defaultFor(params.data, {});
         
         this.initManager();
@@ -35,6 +36,7 @@ class FilterManager extends EventEmitter {
         this.filters = {};
         this.brushes = {};
         this.boolFilters = {};
+        this.maskFilters = {};
         this.boolFilStat = {};
         this.extents = {};
     }
@@ -104,6 +106,110 @@ class FilterManager extends EventEmitter {
         });
         this.filters = filters;
         this._filtersChanged();
+    }
+
+    _createMaskFilterElement(d, data) {
+
+        var height = 252;
+        var width = 120;
+        var bins = 28;
+
+        var mP = this.maskParameter[d];
+        var enabled = mP.hasOwnProperty('selection');
+        var selection = 0;
+        if(enabled){
+           selection = mP.selection;
+        }
+
+        var that = this;
+
+        var div = this.el.append('div')
+                .attr('class', 'filterContainer maskfilter')
+                .style('float', 'left')
+                .style('width', width+'px')
+                .style('height', height+'px');
+
+        div.append('div')
+            .attr('class', function(){
+                if (!that.maskParameter[d].hasOwnProperty('selection')){
+                    return 'editButton add';
+                }else{
+                    return 'editButton remove';
+                }
+            })
+            .style('line-height', '10px')
+            .on('click', function(){
+
+                console.log(d);
+
+                if(!that.maskParameter[d].hasOwnProperty('selection')){
+                    that.maskParameter[d].selection = 0;
+                    that.maskFilters[d] = (val)=>{
+                        return (val === 0);
+                    };
+                }else{
+                    delete that.maskFilters[d];
+                    delete that.maskParameter[d].selection;
+                }
+                that._filtersChanged();
+
+            });
+
+        div.append('div')
+            .attr('class', 'parameterLabel')
+            .style('transform', d=>{
+                return 'translate(10px,'+
+                (height-20)+
+                'px) rotate(-90deg)';
+            })
+            .html(d);
+
+        var onInputClick = function(evt){
+            
+            var inputArray = d3.select(this.parentNode.parentElement)
+                .selectAll('input')[0];
+
+            var bits = '';
+            for (var i = 0; i < inputArray.length; i++) {
+                bits += Number(d3.select(inputArray[i]).property('checked'));
+            }
+
+            var filterMask = parseInt(bits, 2);
+            that.maskParameter[d].selection = filterMask;
+            that.maskFilters[d] = (val)=>{
+                return (val === filterMask);
+            };
+            that._filtersChanged();
+        };
+
+        var maskLength = mP.values.length-1;
+
+        div.selectAll("input")
+            .data(mP.values)
+            .enter()
+            .append('label')
+                .attr('for',function(d,i){ return d[0]; })
+                .attr('title',function(d,i){ return d[1]; })
+                .style('color', function(d){
+                    var color = '#000';
+                    if(!enabled){
+                        color = '#aaa';
+                    }
+                    return color;
+                })
+                .text(function(d) { return d[0]; })
+            .append("input")
+                .property("checked", function(d,i){
+                    return (selection & (0b1 << maskLength-i))>0;
+                })
+                .property('disabled', function(d){
+                    return !enabled;
+                })
+                .attr("class", "maskinput")
+                .attr("type", "checkbox")
+                .attr("id", function(d,i) { return d[0]; })
+                .on('click',onInputClick);
+
     }
 
     _createFilterElement(d, data) {
@@ -212,7 +318,9 @@ class FilterManager extends EventEmitter {
     }
 
     _filtersChanged(){
-        var filters = Object.assign({}, this.filters, this.boolFilters);
+        var filters = Object.assign(
+            {}, this.filters, this.boolFilters, this.maskFilters
+        );
         this.emit('filterChange', filters);
         this._renderFilters();
         /*var cEv = new CustomEvent('change', {detail: filters});
@@ -434,7 +542,9 @@ class FilterManager extends EventEmitter {
             data[p] = this.data[p];
         }
 
-        var currentFilters = Object.assign({}, this.filters, this.boolFilters);
+        var currentFilters = Object.assign(
+            {}, this.filters, this.boolFilters, this.maskFilters
+        );
         for (var f in currentFilters){
             var filter = currentFilters[f];
             var currentDataset = data[f];
@@ -486,7 +596,11 @@ class FilterManager extends EventEmitter {
             if(this.data.hasOwnProperty(d) && 
                this.boolParameter.indexOf(d) === -1 &&
                choiceKeys.indexOf(d) === -1){
-                this._createFilterElement(d, data);
+                if(this.maskParameter.hasOwnProperty(d)){
+                    this._createMaskFilterElement(d, data);
+                }else{
+                    this._createFilterElement(d, data);
+                }
             }
         });
 

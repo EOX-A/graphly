@@ -21,7 +21,7 @@ module.exports = {
         "msgpack": "msgpack-lite"
     },
     plugins: [
-        new webpack.optimize.UglifyJsPlugin()
+        //new webpack.optimize.UglifyJsPlugin()
     ],
     module: {
        loaders: [

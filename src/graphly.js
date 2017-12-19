@@ -200,7 +200,7 @@ class graphly extends EventEmitter {
 
         // move tooltip
         let tooltip = this.el.append('div')
-            .attr('class', 'tooltip')
+            .attr('class', 'graphlyTooltip')
             .append('pre')
                 .style('position', 'absolute')
                 .style('background-color', 'white')
@@ -298,6 +298,13 @@ class graphly extends EventEmitter {
             .append('g')
             .attr('transform', 'translate(' + (this.margin.left+1) + ',' +
                 (this.margin.top+1) + ')');
+
+        // Make sure we hide the tooltip as soon as we get out of the canvas
+        // else it can kind of "stick" when moving the mouse fast
+        this.renderCanvas.on('mouseout', ()=>{
+            tooltip.style('display', 'none');
+            self.topSvg.selectAll('*').remove();
+        });
 
 
         if(!this.fixedSize){
@@ -794,7 +801,7 @@ class graphly extends EventEmitter {
 
     loadData(data){
         
-        this.filters = {};
+        //this.filters = {};
         this.data = data;
 
         this.renderSettings.combinedParameters = defaultFor(

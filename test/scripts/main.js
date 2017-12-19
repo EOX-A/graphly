@@ -325,6 +325,103 @@ var filterSettings = {
     }
 };
 
+var renderSettings = {
+    xAxis: [
+        'time'
+    ],
+    yAxis: [
+        'mie_altitude'
+    ],
+    //y2Axis: [],
+    combinedParameters: {
+        mie_latitude: ['mie_latitude_start', 'mie_latitude_end'],
+        mie_altitude: ['mie_altitude_start', 'mie_altitude_end'],
+        latitude_of_DEM_intersection: [
+            'latitude_of_DEM_intersection_start',
+            'latitude_of_DEM_intersection_end'
+        ],
+        time: ['time_start', 'time_end'],
+    },
+    colorAxis: ['mie_wind_data']
+
+};
+
+var dataSettings = {
+   
+    time_start: {
+        scaleFormat: 'time',
+        timeFormat: 'MJD2000_S'
+    },
+    time_end: {
+        scaleFormat: 'time',
+        timeFormat: 'MJD2000_S'
+    },
+
+    time: {
+        scaleFormat: 'time',
+        timeFormat: 'MJD2000_S'
+    },
+
+    mie_wind_data: {
+        uom: 'cm/s',
+        colorscale: 'viridis',
+        extent: [-40,40]
+        //outline: false
+    }
+
+};
+
+var filterSettings = {
+    parameterMatrix: {
+        'height': [
+            'mie_altitude_start', 'mie_altitude_end'
+        ],
+        'latitude': [
+            'mie_latitude'
+        ],
+        'longitude': [
+           'mie_longitude'
+        ]
+    },
+    filterRelation: [
+        [
+            'mie_quality_flag_data', 'mie_wind_data', 'mie_latitude', 'mie_altitude',
+            'mie_latitude_start', 'mie_latitude_end', 'mie_altitude_start', 'mie_altitude_end',
+            'time', 'time_start', 'time_end', 'latitude_of_DEM_intersection_start',
+            'latitude_of_DEM_intersection_end', 'latitude_of_DEM_intersection'
+        ]
+    ],
+    visibleFilters: [
+        'mie_quality_flag_data',
+      
+    ],
+    //boolParameter: [],
+    maskParameter: {
+        'mie_quality_flag_data': {
+            values: [
+                ['Bit 1', 'Overall validity. Data invalid 1, otherwise 0 '],
+                ['Bit 2', 'Set to 1 if signal-to-noise below SNR_Threshold, default 0 '],
+                ['Bit 3', 'Data saturation found 1, otherwise 0 '],
+                ['Bit 4', 'Data spike found 1, otherwise 0 '],
+                ['Bit 5', 'Reference pulse invalid 1, otherwise 0 '],
+                ['Bit 6', 'Source packet invalid 1, otherwise 0 '],
+                ['Bit 7', 'Number of corresponding valid pulses is below Meas_Cavity_Lock_Status_Thresh 1, otherwise 0 '],
+                ['Bit 8', 'Spacecraft attitude not on target 1, otherwise 0 '],
+                ['Bit 9', 'For Mie, peak not found 1, otherwise 0. For Rayleigh, rayleigh response not found 1, otherwise 0 '],
+                ['Bit 10','Set to 1 if the absolute wind velocity above Wind_Velocity_Threshold, default 0 '],
+                ['Bit 11','Set to 1 if polynomial fit of error responses was used but no valid root of the polynomial was found, otherwise 0. '],
+                ['Bit 12','Bin was detected as ground bin, otherwise 0. '],
+                ['Bit 13','Spare, set to 0'],
+                ['Bit 14','Spare, set to 0'],
+                ['Bit 15','Spare, set to 0'],
+                ['Bit 16','Spare, set to 0']
+            ]
+        }
+    },
+    //choiceParameter: {}
+};
+
+
 
 
 var filterManager = new FilterManager({
@@ -335,16 +432,16 @@ var filterManager = new FilterManager({
 
 var graph = new graphly.graphly({
     el: '#graph',
-    dataSettings: ds_rayleigh,
-    renderSettings: renderSettings_ray,
+    dataSettings: dataSettings,
+    renderSettings: renderSettings,
     filterManager: filterManager,
     //fixedSize: true,
-    //fixedWidth: 12000
+    //fixedWidth: 2000
 });
 
 filterManager.setRenderNode('#filters');
 
-var graph2 = new graphly.graphly({
+/*var graph2 = new graphly.graphly({
     el: '#graph2',
     dataSettings: ds_mie,
     renderSettings: renderSettings_mie,
@@ -354,7 +451,7 @@ var graph2 = new graphly.graphly({
     connectedGraph: graph
 });
 
-graph.connectGraph(graph2);
+graph.connectGraph(graph2);*/
 
 
 
@@ -367,19 +464,107 @@ filterManager.on('filterChange', function(filters){
     //console.log(filters);
 });
 
-var usesecond = true;
+var usesecond = false;
 
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP', true);
+xhr.open('GET', 'data/level_1B_data_2.mp', true);
 //xhr.open('GET', 'data/AE_OPER_AUX_ISR_1B_20071002T103629_20071002T110541_0002.MSP', true);
 
 xhr.responseType = 'arraybuffer';
 
+
+
+
+
+
+
+
+function proxyFlattenObservationArraySE(input, proxy){
+    var start = [];
+    var end = [];
+    for (var i = 0; i < proxy.length-1; i++) {
+      for (var j = 0; j < proxy[i].length-1; j++) {
+        if (j===proxy[i].length-1){
+          start.push(input[i]);
+          end.push(input[i+1]);
+        }else{
+          start.push(input[i]);
+          end.push(input[i+1]);
+        }
+      }
+    }
+    return [start, end];
+}
+
+function flattenObservationArraySE(input){
+    var start = [];
+    var end = [];
+    for (var i = 0; i < input.length-1; i++) {
+      for (var j = 0; j < input[i].length-1; j++) {
+        if(j===input[i].length-1){
+          start.push(input[i][j]);
+          end.push(input[i+1][0]);
+        }else{
+          start.push(input[i][j]);
+          end.push(input[i][j+1]);
+        }
+      }
+    }
+    return [start, end];
+}
+
+function flattenObservationArray(input){
+    var output = [];
+    for (var i = 0; i < input.length-1; i++) {
+      for (var j = 0; j < input[i].length; j++) {
+        output.push(input[i][j]);
+      }
+    }
+    return output;
+}
+
+
+
+
+
+
+
+
+
+
 xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
     var data = msgpack.decode(tmp);
+
+
+
+    var ds = data.AEOLUS[0];
+
+   
+
+    var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
+    var mie_HLOS_wind_speed = flattenObservationArray(ds.mie_HLOS_wind_speed);
+    var latitude_of_DEM_intersection = proxyFlattenObservationArraySE(
+      ds.latitude_of_DEM_intersection,
+      ds.mie_altitude
+    );
+    var mie_altitude = flattenObservationArraySE(ds.mie_altitude);
+    var mie_bin_quality_flag = flattenObservationArray(ds.mie_bin_quality_flag);
+
+    data = {
+      time_start: time[0],
+      time_end: time[1],
+      latitude_of_DEM_intersection_start: latitude_of_DEM_intersection[1],
+      latitude_of_DEM_intersection_end: latitude_of_DEM_intersection[0],
+      mie_wind_data: mie_HLOS_wind_speed,
+      mie_quality_flag_data: mie_bin_quality_flag,
+      mie_altitude_start: mie_altitude[1],
+      mie_altitude_end: mie_altitude[0]
+    };
+
+
     filterManager.initManager();
     graph.loadData(data);
     if(usesecond){
@@ -401,6 +586,8 @@ d3.select('#datafiles').on('change', function(e){
     
     graph.setDataSettings(otherds);
     usesecond = false;
+    graph.connectGraph(false);
+    graph2.connectGraph(false);
     if (sel_value.indexOf('testdata') === -1){
         if (sel_value.indexOf('MRC') !== -1){
             graph.setRenderSettings(renderSettingsMRC);
@@ -410,6 +597,8 @@ d3.select('#datafiles').on('change', function(e){
             graph.setRenderSettings(renderSettingsISR);
         }else {
             usesecond = true;
+            graph.connectGraph(graph2);
+            graph2.connectGraph(graph);
             graph2.setDataSettings(ds_mie);
             graph2.setRenderSettings(renderSettings_mie);
 

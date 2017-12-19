@@ -295,3 +295,25 @@ svg {
     float: right;
     height: 100%;
 }
+
+
+.filterContainer.maskfilter {
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+.maskinput{
+    position:relative;
+    float: left!important;
+}
+
+.filterContainer label{
+    width: 120px;
+    font-size: 0.8em;
+
+    position:relative;
+    left: 30px;
+
+    display:inline-block;
+    vertical-align:middle;
+}
