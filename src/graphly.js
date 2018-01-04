@@ -479,11 +479,22 @@ class graphly extends EventEmitter {
         //let uniqY = [ ...new Set(this.renderSettings.yAxis) ];
         let uniqY = this.renderSettings.yAxis;
 
+        let listText = [];
+        // Add uom info to unique elements
+        for (var i = 0; i < uniqY.length; i++) {
+            if(this.dataSettings.hasOwnProperty(uniqY[i]) && 
+               this.dataSettings[uniqY[i]].hasOwnProperty('uom')){
+                listText.push(uniqY+' ['+this.dataSettings[uniqY[i]].uom+'] ');
+            }else{
+                listText.push(uniqY);
+            }
+        }
+
         this.svg.append('text')
             .attr('class', 'yAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 'translate('+ -(this.margin.left/2+10) +','+(this.height/2)+')rotate(-90)')
-            .text(uniqY.join());
+            .text(listText.join());
 
         this.el.select('#ySettings').remove();
 
@@ -627,7 +638,7 @@ class graphly extends EventEmitter {
 
         let g = csSVG.append("g")
             .attr("class", "color axis")
-            .attr("transform", "translate(" + (25) + ","+this.margin.top+")")
+            .attr("transform", "translate(" + (45) + ","+this.margin.top+")")
             .call(colorAxis);
 
         csSVG.selectAll('.color.axis path')
@@ -654,6 +665,19 @@ class graphly extends EventEmitter {
             .attr("transform", "translate(" + (-25) + " ,"+(innerHeight)+") rotate(270)")
             .attr("preserveAspectRatio", "none")
             .attr("xlink:href", image);
+
+        let label = id;
+
+        if(this.dataSettings.hasOwnProperty(id) && 
+           this.dataSettings[id].hasOwnProperty('uom')){
+            label += ' ['+this.dataSettings[id].uom+'] ';
+        }
+
+        g.append('text')
+            //.attr('class', 'axisLabel')
+            .attr('text-anchor', 'middle')
+            .attr('transform', 'translate(' + (-35) + ' ,'+(innerHeight/2)+') rotate(270)')
+            .text(label);
 
         let csZoomEvent = ()=>{
             g.call(colorAxis);

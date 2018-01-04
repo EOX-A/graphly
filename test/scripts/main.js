@@ -84,7 +84,7 @@ var ds_rayleigh = {
         lineConnect: true
     },
     rayleigh_wind_velocity: {
-        uom: 'cm/s',
+        uom: 'm/s',
         colorscale: 'viridis',
         extent: [-3000,3000]
         //outline: false
@@ -99,6 +99,7 @@ var ds_rayleigh = {
         timeFormat: 'MJD2000_S'
     },
     rayleigh_altitude: {
+        uom: 'm'
     }
 };
 
@@ -109,7 +110,7 @@ var ds_mie = {
         lineConnect: true
     },
     mie_wind_velocity: {
-        uom: 'cm/s',
+        uom: 'm/s',
         colorscale: 'plasma',
         //extent: [-5000,5000]
         //outline: false
@@ -123,6 +124,7 @@ var ds_mie = {
         timeFormat: 'MJD2000_S'
     },
     mie_altitude:{
+        uom: 'm'
     }
 };
 
@@ -363,10 +365,18 @@ var dataSettings = {
     },
 
     mie_wind_data: {
-        uom: 'cm/s',
+        uom: 'm/s',
         colorscale: 'viridis',
         extent: [-40,40]
         //outline: false
+    },
+
+    rayleigh_altitude: {
+        uom: 'm'
+    },
+
+    mie_altitude: {
+        uom: 'm'
     }
 
 };
