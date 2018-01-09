@@ -905,7 +905,7 @@ class graphly extends EventEmitter {
         for (var i = xSelection.length - 1; i >= 0; i--) {
             xExt = d3.extent(this.data[xSelection[i]]);
             if(xExtent){
-                if(xExt[0]<xExtent){
+                if(xExt[0]<xExtent[0]){
                     xExtent[0] = xExt[0];
                 }
                 if(xExt[1]>xExtent[1]){
