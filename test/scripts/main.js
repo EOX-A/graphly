@@ -401,8 +401,9 @@ var filterSettings = {
             'latitude_of_DEM_intersection_end', 'latitude_of_DEM_intersection'
         ]
     ],
+    dataSettings: dataSettings,
     visibleFilters: [
-        'mie_quality_flag_data',
+        'mie_quality_flag_data', 'mie_wind_data'
       
     ],
     //boolParameter: [],
@@ -445,6 +446,7 @@ var graph = new graphly.graphly({
     dataSettings: dataSettings,
     renderSettings: renderSettings,
     filterManager: filterManager,
+    //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000
 });

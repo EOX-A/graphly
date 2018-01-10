@@ -146,31 +146,33 @@ class graphly extends EventEmitter {
         this.filters = {};
         this.filterManager = defaultFor(options.filterManager, false);
         this.connectedGraph = defaultFor(options.connectedGraph, false);
+        this.autoColorExtent = defaultFor(options.autoColorExtent, false);
 
         if(this.filterManager){
             this.filterManager.on('filterChange', (filters) => {
                 // Reset colorscale range if filter changed for parameter with 
                 // colorscale
-                let filterKeys = Object.keys(filters);
-                for (var i = 0; i < filterKeys.length; i++) {
-                    if(this.filters.hasOwnProperty(filterKeys[i])){
-                        // New parameter has been added, reset color scale range
-                        // if available in datasettings
-                        if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
-                           this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
-                            delete this.dataSettings[filterKeys[i]].extent;
-                        }
-                    }else{
-                        // New parameter has been added, reset color scale range
-                        // if available in datasettings
-                        if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
-                           this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
-                            delete this.dataSettings[filterKeys[i]].extent;
+                if(this.autoColorExtent){
+                    let filterKeys = Object.keys(filters);
+                    for (var i = 0; i < filterKeys.length; i++) {
+                        if(this.filters.hasOwnProperty(filterKeys[i])){
+                            // New parameter has been added, reset color scale range
+                            // if available in datasettings
+                            if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
+                               this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
+                                delete this.dataSettings[filterKeys[i]].extent;
+                            }
+                        }else{
+                            // New parameter has been added, reset color scale range
+                            // if available in datasettings
+                            if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
+                               this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
+                                delete this.dataSettings[filterKeys[i]].extent;
+                            }
                         }
                     }
                 }
                 this.filters = filters;
-
                 this.renderData();
             });
         }
@@ -854,7 +856,7 @@ class graphly extends EventEmitter {
                                 case 'MJD2000_S':
                                 for (let j = 0; j < this.data[key].length; j++) {
                                     let d = new Date('2000-01-01');
-                                    d.setMilliseconds(d.getMilliseconds() + this.data[key][j]*1000);
+                                    d.setUTCMilliseconds(d.getUTCMilliseconds() + this.data[key][j]*1000);
                                     this.data[key][j] = d;
                                 }
                                 break;

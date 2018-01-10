@@ -18,6 +18,7 @@ class FilterManager extends EventEmitter {
         this.choiceParameter = defaultFor(this.filterSettings.choiceParameter, []);
         this.maskParameter = defaultFor(this.filterSettings.maskParameter, []);
         this.data = defaultFor(params.data, {});
+        this.dataSettings = defaultFor(this.filterSettings.dataSettings, {});
         
         this.initManager();
 
@@ -59,7 +60,20 @@ class FilterManager extends EventEmitter {
 
         this.extents = {};
         for (var d in this.data){
-            this.extents[d] = d3.extent(this.data[d]);
+            if(this.dataSettings.hasOwnProperty(d) &&
+                this.dataSettings[d].hasOwnProperty('extent')){
+                this.extents[d] = this.dataSettings[d].extent;
+            }else{
+                this.extents[d] = d3.extent(this.data[d]);
+            }
+            
+            // TODO: Possibility to use quantiles for extent if there are huge 
+            // jumps in the data? this approach is extremely slow....
+            /*var sArr = this.data[d].slice(0).sort(d3.ascending);
+            this.extents[d] = [
+                d3.quantile(sArr, 0.05), d3.quantile(sArr, 0.95)
+            ];*/
+
             // Check if min and max extent is the same, if yes pad it with 1/4
             // the size, same min and max create display issues in scales.
             // Only do this if it is not a flag filter
@@ -143,6 +157,12 @@ class FilterManager extends EventEmitter {
                 console.log(d);
 
                 if(!that.maskParameter[d].hasOwnProperty('selection')){
+                    // TODO: Decide on default value
+                    /*var mask = '';
+                    for (var i = 0; i < that.maskParameter[d].values.length; i++) {
+                        mask+='1';
+                    }
+                    that.maskParameter[d].selection = parseInt(mask, 2);*/
                     that.maskParameter[d].selection = 0;
                     that.maskFilters[d] = (val)=>{
                         return (val === 0);
@@ -155,6 +175,11 @@ class FilterManager extends EventEmitter {
 
             });
 
+        var label = d;
+        if(this.dataSettings.hasOwnProperty(d) && 
+            this.dataSettings[d].hasOwnProperty('uom')){
+            label += ' ['+this.dataSettings[d].uom + ']';
+        }
         div.append('div')
             .attr('class', 'parameterLabel')
             .style('transform', d=>{
@@ -162,7 +187,8 @@ class FilterManager extends EventEmitter {
                 (height-20)+
                 'px) rotate(-90deg)';
             })
-            .html(d);
+            .style('width', height-20+'px')
+            .html(label);
 
         var onInputClick = function(evt){
             
@@ -224,15 +250,21 @@ class FilterManager extends EventEmitter {
                 .style('width', width+'px')
                 .style('height', height+'px');
 
+        var label = d;
+        if(this.dataSettings.hasOwnProperty(d) && 
+            this.dataSettings[d].hasOwnProperty('uom')){
+            label += ' ['+this.dataSettings[d].uom + ']';
+        }
+
         div.append('div')
-            
             .attr('class', 'parameterLabel')
             .style('transform', d=>{
                 return 'translate(10px,'+
                 (height-20)+
                 'px) rotate(-90deg)';
             })
-            .html(d);
+            .style('width', height-20+'px')
+            .html(label);
 
         var svg = div.append('svg')
             .attr('width', (width))
@@ -326,7 +358,6 @@ class FilterManager extends EventEmitter {
         /*var cEv = new CustomEvent('change', {detail: filters});
         this.el.node().dispatchEvent(cEv);*/
 
-        
     }
 
     _createChoiceFilterElements(el){
@@ -627,6 +658,11 @@ class FilterManager extends EventEmitter {
 
     updateFilterSettings(settings){
         this.filterSettings = settings;
+        this._renderFilters();
+    }
+
+    updateDataSettings(settings){
+        this.dataSettings = settings;
         this._renderFilters();
     }
 
