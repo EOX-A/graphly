@@ -48,6 +48,13 @@ svg {
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAMAAADXqc3KAAAA1VBMVEUAAAAAff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff9i1YelAAAARnRSTlMAAQIDBAYHCAkNDxYXGBkeISIjJCYnMzY9QVJcXV5fZGZnaGlrbG11jJGXmp2go6Wqq6+0t7nIys/R19na3unt7/H19/v98ZT2GAAAANNJREFUGBltwYlWglAYRtEDRBANNs9zaTZnRRNmovC9/yP1c7NcK9ibP9GjikufumuZI2q8QuaDmgU5EVNzp7vz0JXTwWvtH4aYYCBpPNREXkh6wRyowTbwqQZ3wIMatIGoL6e/5gdbQzmpj4kymTLBbKjy7OMsy6Q4I5mYHy2ZFGckE+OEbzJlgllXpedjwnc52arnb37J6XnAjRocAwM1uAfaarADzAwkjXNN5IWkVyrJxd4SdOV08FZOzmeZWpQT8Z9XymTU3cqcURc/qbwK+PUN9JxSzFViTw0AAAAASUVORK5CYII=")
 }
 
+.eraserIcon{
+    width: 15px;
+    height: 15px;
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAALCAMAAACecocUAAAARVBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADc6ur3AAAAFnRSTlMAAgMKCxUbHjM0XWFim6CmtbnDxd7xXSXl0gAAAEZJREFUCFs9x0kCgCAMBMEOirvigvz/qSYRnct0ga0XP9tSjvBn+WBZMXsqhHG9KzouiS8myODQJLUOS+LeEDZPRcrn4PUAJlkEj+JsHDEAAAAASUVORK5CYII=");
+    background-position: 1px -1px;
+}
+
 #filters .axis path,
 #filters .axis line {
     fill: none;
@@ -114,7 +121,7 @@ svg {
     text-align: center;
     width: 11px;
     height: 11px;
-    float: right;
+    right: 1px;
     margin-right: 5px;
     font-size: 14px;
     cursor: pointer;
@@ -122,6 +129,8 @@ svg {
     border-style: solid;
     border-width: 1px;
     border-color: #555;
+    z-index: 5;
+    position: absolute;
 }
 
 .editButton.add:before {

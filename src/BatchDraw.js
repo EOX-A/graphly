@@ -270,6 +270,11 @@ class BatchDrawer {
 
     }
 
+    destroy(){
+        this.GL.getExtension('WEBGL_lose_context').loseContext(); 
+        this.GL = undefined;
+    }
+
 
     updateCanvasSize(width, height) {
         this.canvas.width = width;

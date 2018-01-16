@@ -149,32 +149,7 @@ class graphly extends EventEmitter {
         this.autoColorExtent = defaultFor(options.autoColorExtent, false);
 
         if(this.filterManager){
-            this.filterManager.on('filterChange', (filters) => {
-                // Reset colorscale range if filter changed for parameter with 
-                // colorscale
-                if(this.autoColorExtent){
-                    let filterKeys = Object.keys(filters);
-                    for (var i = 0; i < filterKeys.length; i++) {
-                        if(this.filters.hasOwnProperty(filterKeys[i])){
-                            // New parameter has been added, reset color scale range
-                            // if available in datasettings
-                            if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
-                               this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
-                                delete this.dataSettings[filterKeys[i]].extent;
-                            }
-                        }else{
-                            // New parameter has been added, reset color scale range
-                            // if available in datasettings
-                            if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
-                               this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
-                                delete this.dataSettings[filterKeys[i]].extent;
-                            }
-                        }
-                    }
-                }
-                this.filters = filters;
-                this.renderData();
-            });
+            this.filterManager.on('filterChange', this.onFilterChange.bind(this));
         }
 
         this.debounceZoom = debounce(function(){
@@ -379,6 +354,52 @@ class graphly extends EventEmitter {
                 }
             });
         }
+    }
+
+    onFilterChange(filters){
+        if(!this.batchDrawer){
+            return;
+        }
+        // Reset colorscale range if filter changed for parameter with 
+        // colorscale
+        if(this.autoColorExtent){
+            let filterKeys = Object.keys(filters);
+            for (var i = 0; i < filterKeys.length; i++) {
+                if(this.filters.hasOwnProperty(filterKeys[i])){
+                    // New parameter has been added, reset color scale range
+                    // if available in datasettings
+                    if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
+                       this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
+                        delete this.dataSettings[filterKeys[i]].extent;
+                    }
+                }else{
+                    // New parameter has been added, reset color scale range
+                    // if available in datasettings
+                    if(this.dataSettings.hasOwnProperty(filterKeys[i]) &&
+                       this.dataSettings[filterKeys[i]].hasOwnProperty('extent') ){
+                        delete this.dataSettings[filterKeys[i]].extent;
+                    }
+                }
+            }
+        }
+        this.filters = filters;
+        this.renderData();
+    }
+
+    destroy(){
+        let contId = this.el.attr('id');
+        d3.select(window).on('resize.'+contId, null);
+        d3.select(window).on('mousemove.'+contId, null);
+        this.renderCanvas.on('mouseout', null);
+        this.renderCanvas.on('mousemove', null);
+        this.filterManager.removeListener('filterChange', this.onFilterChange);
+
+        if(!this.fixedSize){
+            this.batchDrawerReference.destroy();
+        }
+        this.batchDrawer.destroy();
+        delete this.batchDrawer;
+        delete this.batchDrawerReference;
     }
 
     setRenderSettings(settings){
@@ -611,6 +632,12 @@ class graphly extends EventEmitter {
         let dim = this.el.select('#colorscaleContainer').node()
             .getBoundingClientRect();
         let height = dim.height;
+        if(height<=0){
+            // TODO: There can be some issues when getting the dimensions
+            // of the div, resulting in a negative height here.
+            // We probably need to handle this edgecase better
+            height = 100;
+        }
         let innerHeight = height-this.margin.bottom-this.margin.top;
         let width = 100;
 
@@ -724,6 +751,13 @@ class graphly extends EventEmitter {
 
 
     createHelperObjects(){
+
+        /*d3.select('#renderingContainer').remove();
+        this.svg.select('defs').remove();
+        d3.select('#clip').remove();
+        d3.select('#zoomXBox').remove();
+        d3.select('#zoomYBox').remove();
+        d3.select('#rectangleOutline').remove();*/
 
         this.renderingContainer = this.svg.append('g')
             .attr('id','renderingContainer')
@@ -1487,6 +1521,8 @@ class graphly extends EventEmitter {
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
         this.resize_update();
+        this.createColorScales();
+        this.createAxisLabels();
     }
 
 
@@ -1546,6 +1582,7 @@ class graphly extends EventEmitter {
         this.batchDrawerReference.updateCanvasSize(this.width, this.height);
         this.renderData();
         this.zoom_update();
+        //this.createHelperObjects();
     }
 
     renderRectangles(data, parPos, xGroup, yGroup, updateReferenceCanvas) {

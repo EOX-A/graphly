@@ -256,6 +256,16 @@ class FilterManager extends EventEmitter {
             label += ' ['+this.dataSettings[d].uom + ']';
         }
 
+        if(this.brushes.hasOwnProperty(d)){
+            div.append('div')
+                .attr('class', 'eraserIcon editButton')
+                .on('click', ()=>{
+                    this.y[d].brush.clear();
+                    this._brushEnd();
+                    }
+                );
+        }
+
         div.append('div')
             .attr('class', 'parameterLabel')
             .style('transform', d=>{
@@ -269,6 +279,7 @@ class FilterManager extends EventEmitter {
         var svg = div.append('svg')
             .attr('width', (width))
             .attr('height', (height))
+            .style('position', 'absolute')
             .append("g")
                 .attr("display", "block")
                 .attr("transform", "translate(" + 

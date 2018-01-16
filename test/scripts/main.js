@@ -367,7 +367,7 @@ var dataSettings = {
     mie_wind_data: {
         uom: 'm/s',
         colorscale: 'viridis',
-        extent: [-40,40]
+        extent: [-140,39]
         //outline: false
     },
 
