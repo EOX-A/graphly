@@ -90,6 +90,7 @@ class FilterManager extends EventEmitter {
     }
 
     _brushEnd() {
+
         var filters = {}; 
         // TODO: Im wiping here the bool filters need to think how to solve this
         this.visibleFilters.forEach(d => {
@@ -648,6 +649,9 @@ class FilterManager extends EventEmitter {
 
         // Render bool filter elements
         this._createBoolFilterElements();
+
+        // Resize brush background element to make selection of brush easier
+        d3.select('.brush .background').attr('x',-16).attr('width', 32);
 
 
     }
