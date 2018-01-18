@@ -1033,8 +1033,8 @@ class graphly extends EventEmitter {
 
         // Adapt domain so that data is not directly at border
         if(!this.fixedSize){
-            yExtent[0] = yExtent[0] - yRange*0.03;
-            yExtent[1] = yExtent[1] + yRange*0.03;
+            yExtent[0] = yExtent[0] - yRange*0.08;
+            yExtent[1] = yExtent[1] + yRange*0.1;
 
             if(this.xTimeScale){
                 xRange = xExtent[1].getTime() - xExtent[0].getTime();
@@ -2241,6 +2241,16 @@ class graphly extends EventEmitter {
     * @param {HTMLCanvasElement} canvas the canvas to render to
     */
     renderData(updateReferenceCanvas) {
+
+        // If data object is undefined or empty return
+        // TODO: There should be a cleaner way to do this, maybe clean all
+        // canvases among other things?
+
+        if(typeof this.data === 'undefined' ||
+            (Object.keys(this.data).length === 0 && 
+            this.data.constructor === Object)){
+            return;
+        }
 
         updateReferenceCanvas = defaultFor(updateReferenceCanvas, true);
 
