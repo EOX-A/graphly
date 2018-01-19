@@ -42,6 +42,11 @@ class FilterManager extends EventEmitter {
         this.extents = {};
     }
 
+    resetManager(){
+        this.initManager();
+        this.emit('filterChange', {});
+    }
+
     _initData() {
 
         // Create grouped data item for related products if necessary
