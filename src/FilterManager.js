@@ -437,8 +437,11 @@ class FilterManager extends EventEmitter {
                 function onChoiceChange() {
 
                     var id = this.id;
-                    let selectValue = 
-                        Number(d3.select('#'+id).property('value'));
+                    let selectValue = d3.select('#'+id).property('value');
+                    // Check if it is a number, if yes, convert it
+                    if(!isNaN(selectValue)){
+                        selectValue = Number(selectValue);
+                    }
 
                     data.selected = selectValue;
 

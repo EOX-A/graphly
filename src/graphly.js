@@ -134,6 +134,12 @@ class graphly extends EventEmitter {
         this.dim = this.el.node().getBoundingClientRect();
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
+        // Sometimes if the element is not jet completely created the height 
+        // might not be defined resulting in a negative value resulting
+        // in multiple error, we make sure here the value is not negative
+        if(this.height<0){
+            this.height = 10;
+        }
         this.currentScale = 1;
         this.currentTranlate = [0,0];
         this.colourToNode = {}; // Map to track the colour of nodes.
