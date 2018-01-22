@@ -340,7 +340,13 @@ class FilterManager extends EventEmitter {
                 Math.floor(heightRange/bins)-1
             )
             .attr("width", function(dat) {
-                return x_hist[d](dat.y);
+                // Make sure that non-zero height is shown to know where data
+                // is available (even if it is so small it would not show)
+                var size = x_hist[d](dat.y);
+                if(size !== 0){
+                    size = Math.max(size, 3);
+                }
+                return size;
             })
             .style("fill", "#1F77B4");
 
