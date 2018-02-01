@@ -476,6 +476,10 @@ filterManager.on('filterChange', function(filters){
     //console.log(filters);
 });
 
+d3.select('#save').on('click', function(){
+    graph.saveImage();
+});
+
 var usesecond = false;
 
 

@@ -13,6 +13,7 @@ svg {
     cursor: ns-resize;
 }
 
+
 .axis path,
 .axis line {
     fill: none;
@@ -31,7 +32,18 @@ svg {
     stroke-dasharray: 0 
 }
 
-.colorscaleObject{
+
+#filters .axis path,
+#filters .axis line {
+    fill: none;
+    stroke: black;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+    stroke-dasharray: none 
+}
+
+
+.color.axis{
     cursor: ns-resize;
 }
 
@@ -53,15 +65,6 @@ svg {
     height: 15px;
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAALCAMAAACecocUAAAARVBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADc6ur3AAAAFnRSTlMAAgMKCxUbHjM0XWFim6CmtbnDxd7xXSXl0gAAAEZJREFUCFs9x0kCgCAMBMEOirvigvz/qSYRnct0ga0XP9tSjvBn+WBZMXsqhHG9KzouiS8myODQJLUOS+LeEDZPRcrn4PUAJlkEj+JsHDEAAAAASUVORK5CYII=");
     background-position: 1px -1px;
-}
-
-#filters .axis path,
-#filters .axis line {
-    fill: none;
-    stroke: black;
-    stroke-width: 1;
-    shape-rendering: crispEdges;
-    stroke-dasharray: none 
 }
 
 

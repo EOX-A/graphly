@@ -46,13 +46,13 @@ let Papa = require('papaparse');
 
 require('c-p');
 
-
-//require('msgpack-lite');
-
-//require('./utils.js');
-let BatchDrawer = require('./BatchDraw.js');
+let FileSaver = require('file-saver');
 let Choices = require('choices.js');
+
+let BatchDrawer = require('./BatchDraw.js');
 let FilterManager = require('./FilterManager.js');
+let canvg = require('./vendor/canvg.js');
+
 global.FilterManager = FilterManager;
 
 
@@ -101,6 +101,10 @@ class graphly extends EventEmitter {
         // Passed options
         this.el = d3.select(options.el);
 
+        this.el.append('canvas')
+            .attr('id', 'imagerenderer')
+            .style('display', 'none');
+
         // We need to container to be relative to make sure all otherabsolute
         // parameters inside are relative to parent
         this.el.style('position', 'relative');
@@ -119,7 +123,7 @@ class graphly extends EventEmitter {
 
         this.margin = defaultFor(
             options.margin,
-            {top: 10, left: 90, bottom: 50, right: 120}
+            {top: 10, left: 90, bottom: 50, right: 20}
         );
 
         // TOOO: How could some defaults be guessed for rendering?
@@ -132,6 +136,17 @@ class graphly extends EventEmitter {
 
         this.debounceActive = true;
         this.dim = this.el.node().getBoundingClientRect();
+
+        // If there are colorscales to be rendered we need to apply additional
+        // margin to the right reducing the total width
+        let csAmount = 0;
+        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
+            if(this.renderSettings.colorAxis[i] !== null){
+                csAmount++;
+            }
+        }
+        this.margin.right += csAmount*100;
+        
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
         // Sometimes if the element is not jet completely created the height 
@@ -439,6 +454,67 @@ class graphly extends EventEmitter {
         this.connectedGraph = graph;
     }
 
+    saveImage(){
+
+        this.dim = this.el.select('svg').node().getBoundingClientRect();
+        let renderWidth = this.dim.width;
+        let renderHeight = this.dim.height;
+
+        this.svg.select('#previewImage').style('display', 'block');
+
+        // Apply all styles directly so they render as expected
+        // css styles are not applied to rendering
+
+        this.el.selectAll('.axis path, .axis line')
+            .attr('fill', 'none')
+            .attr('stroke', '#ccc')
+            .attr('stroke-width', 1)
+            .attr('shape-rendering', 'crispEdges')
+            .attr('stroke-dasharray', 2);
+
+        this.el.selectAll('.color.axis path, .color.axis line')
+            .attr('fill', 'none')
+            .attr('stroke', '#ccc')
+            .attr('stroke-width', 1)
+            .attr('shape-rendering', 'crispEdges')
+            .attr('stroke-dasharray', 0);
+
+        this.el.selectAll('#filters .axis path, #filters .axis line')
+            .attr('fill', 'none')
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1)
+            .attr('shape-rendering', 'crispEdges')
+            .attr('stroke-dasharray', 'none');
+
+        this.el.selectAll('text')
+            .attr('stroke', 'none')
+            .attr('shape-rendering', 'crispEdges');
+
+
+        var svg_html = this.el.select('svg')
+            .attr("version", 1.1)
+            .attr("xmlns", "http://www.w3.org/2000/svg")
+            .node().innerHTML;
+
+        this.el.select('#imagerenderer').attr('width', renderWidth);
+        this.el.select('#imagerenderer').attr('height', renderHeight);
+
+        var c = document.querySelector("#imagerenderer");
+        var ctx = c.getContext('2d');
+        
+        
+        ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
+
+        this.svg.select('#previewImage').style('display', 'none');
+
+        c.toBlob(function(blob) {
+            FileSaver.saveAs(blob, self.file_save_string);
+            //console.log(blob)
+        }, "image/png" ,1);
+
+
+    }
+
     createAxisLabels(){
 
          let yChoices = [];
@@ -634,26 +710,15 @@ class graphly extends EventEmitter {
         if(ds.hasOwnProperty('extent')){
             dataRange = ds.extent;
         }
-        
-        let dim = this.el.select('#colorscaleContainer').node()
-            .getBoundingClientRect();
-        let height = dim.height;
-        if(height<=0){
-            // TODO: There can be some issues when getting the dimensions
-            // of the div, resulting in a negative height here.
-            // We probably need to handle this edgecase better
-            height = 100;
-        }
-        let innerHeight = height-this.margin.bottom-this.margin.top;
+
+        let innerHeight = this.height;
         let width = 100;
 
-        let csDiv = this.el.select('#colorscaleContainer')
-            .append('div')
-            .attr('class', 'colorscaleObject');
-
-        let csSVG = csDiv.append('svg')
-            .attr('height', height-this.margin.bottom+15)
-            .attr('width', width);
+        // Ther are some situations where the object is not initialiezed 
+        // completely and size can be 0 or negative, this should prevent this
+        if(innerHeight<=0){
+            innerHeight = 100;
+        }
 
         let colorAxisScale = d3.scale.linear();
         colorAxisScale.domain(dataRange);
@@ -665,31 +730,15 @@ class graphly extends EventEmitter {
             .scale(colorAxisScale);
 
         let step = (colorAxisScale.domain()[1] - colorAxisScale.domain()[0]) / 10;
-        /*colorAxis.tickValues(
-            d3.range(colorAxisScale.domain()[0],colorAxisScale.domain()[1]+step, step)
-        );*/
 
         colorAxis.tickFormat(d3.format("g"));
 
-        let g = csSVG.append("g")
+        let g = this.el.select('svg').select('g').append("g")
+            .attr('id', ('colorscale_'+id))
             .attr("class", "color axis")
-            .attr("transform", "translate(" + (45) + ","+this.margin.top+")")
+            .style('pointer-events', 'all')
+            .attr("transform", "translate(" + (this.width+55) + ",0)")
             .call(colorAxis);
-
-        csSVG.selectAll('.color.axis path')
-            .attr("fill", "none")
-            .attr("shape-rendering", "crispEdges")
-            .attr("stroke", "#000")
-            .attr("stroke-width", "2");
-
-        csSVG.selectAll('.color.axis line')
-            .attr("stroke-width", "2")
-            .attr("shape-rendering", "crispEdges")
-            .attr("stroke", "#000");
-
-        if(ds.colorscale){
-            this.plotter.setColorScale(ds.colorscale);
-        }
 
         let image = this.plotter.getColorScaleImage().toDataURL("image/jpg");
 
@@ -709,7 +758,6 @@ class graphly extends EventEmitter {
         }
 
         g.append('text')
-            //.attr('class', 'axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 'translate(' + (-35) + ' ,'+(innerHeight/2)+') rotate(270)')
             .text(label);
@@ -724,7 +772,7 @@ class graphly extends EventEmitter {
           .y(colorAxisScale)
           .on('zoom', csZoomEvent);
 
-        csSVG.call(csZoom);
+        g.call(csZoom);
     }
 
     createColorScales(){
@@ -732,12 +780,8 @@ class graphly extends EventEmitter {
         let filteredCol = this.renderSettings.colorAxis.filter(
             (c)=>{return c!==null;}
         );
-        
-        this.el.select('#colorscaleContainer').remove();
 
-        let csContainer = this.el.append('div')
-            .attr('id', 'colorscaleContainer')
-            .style('width', (filteredCol.length*100)+'px');
+        this.el.selectAll('.color.axis').remove();
 
         for (var i = 0; i < filteredCol.length; i++) {
             this.createColorScale(filteredCol[i]);
@@ -758,21 +802,16 @@ class graphly extends EventEmitter {
 
     createHelperObjects(){
 
-        /*d3.select('#renderingContainer').remove();
-        this.svg.select('defs').remove();
-        d3.select('#clip').remove();
-        d3.select('#zoomXBox').remove();
-        d3.select('#zoomYBox').remove();
-        d3.select('#rectangleOutline').remove();*/
-
         this.renderingContainer = this.svg.append('g')
             .attr('id','renderingContainer')
+            .attr('fill', 'none')
             .style('clip-path','url(#clip)');
 
         // Add clip path so only points in the area are shown
         let clippath = this.svg.append('defs').append('clipPath')
             .attr('id', 'clip')
             .append('rect')
+                .attr('fill', 'none')
                 .attr('width', this.width)
                 .attr('height', this.height);
 
@@ -798,6 +837,10 @@ class graphly extends EventEmitter {
         // Add rectangle as 'outline' for plot
         this.svg.append('rect')
             .attr('id', 'rectangleOutline')
+            .attr('fill', 'none')
+            .attr('stroke', '#ccc')
+            .attr('stroke-width', 1)
+            .attr('shape-rendering', 'crispEdges')
             .attr('width', this.width)
             .attr('height', this.height);
 
@@ -2443,8 +2486,11 @@ class graphly extends EventEmitter {
             }
             this.previewActive = false;
         }
+
         this.emit('rendered');
     }
+
+
 
 
 }
