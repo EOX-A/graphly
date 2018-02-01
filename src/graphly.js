@@ -125,6 +125,7 @@ class graphly extends EventEmitter {
             options.margin,
             {top: 10, left: 90, bottom: 50, right: 20}
         );
+        this.originalMarginRight = this.margin.right;
 
         // TOOO: How could some defaults be guessed for rendering?
         this.dataSettings = defaultFor(options.dataSettings, {});
@@ -146,7 +147,7 @@ class graphly extends EventEmitter {
             }
         }
         this.margin.right += csAmount*100;
-        
+
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
         // Sometimes if the element is not jet completely created the height 
@@ -1567,6 +1568,16 @@ class graphly extends EventEmitter {
     resize(){
         this.debounceResize.bind(this)();
         this.dim = this.el.node().getBoundingClientRect();
+        // If there are colorscales to be rendered we need to apply additional
+        // margin to the right reducing the total width
+        let csAmount = 0;
+        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
+            if(this.renderSettings.colorAxis[i] !== null){
+                csAmount++;
+            }
+        }
+        this.margin.right = this.originalMarginRight;
+        this.margin.right += csAmount*100;
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
         this.resize_update();
