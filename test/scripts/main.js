@@ -3,10 +3,7 @@
 
 
 var renderSettings_mie = {
-    xAxis: [
-        'mie_datetime',
-        //'mie_datetime'
-    ],
+    xAxis: 'mie_datetime',
     yAxis: [
          'mie_altitude',
          'mie_dem_altitude'
@@ -24,10 +21,7 @@ var renderSettings_mie = {
 };
 
 var renderSettings_ray = {
-    xAxis: [
-        'rayleigh_datetime',
-        //'rayleigh_datetime',
-    ],
+    xAxis: 'rayleigh_datetime',
     yAxis: [
         'rayleigh_altitude',
         //'rayleigh_dem_altitude'
@@ -47,7 +41,7 @@ var renderSettings_ray = {
 };
 
 var renderSettingsSwarm = {
-    xAxis: ['Timestamp'],
+    xAxis: 'Timestamp',
     yAxis: ['T_elec'],
     colorAxis: [ 'id' ],
     dataIdentifier: {
@@ -57,20 +51,20 @@ var renderSettingsSwarm = {
 };
 
 var renderSettingsMRC = {
-    xAxis: ['Frequency_Offset'],
+    xAxis: 'Frequency_Offset',
     yAxis: ['Measurement_Error_Mie_Response'],
     colorAxis: [ null ],
 };
 
 var renderSettingsRRC = {
-    xAxis: ['Frequency_Offset'],
+    xAxis: 'Frequency_Offset',
     yAxis: ['Measurement_Error_Rayleigh_Response'],
     colorAxis: [ null ],
 };
 
 
 var renderSettingsISR = {
-    xAxis: ['Laser_Freq_Offset', 'Laser_Freq_Offset'],
+    xAxis: 'Laser_Freq_Offset',
     //yAxis: ['Mie_Response'],
     yAxis: ['Rayleigh_A_Response', 'Rayleigh_B_Response'],
     colorAxis: [ null, null ],
@@ -328,9 +322,7 @@ var filterSettings = {
 };
 
 var renderSettings = {
-    xAxis: [
-        'time'
-    ],
+    xAxis: 'time',
     yAxis: [
         'mie_altitude'
     ],
@@ -485,7 +477,7 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/level_1B_data_2.mp', true);
+xhr.open('GET', 'data/level_1B_data.mp', true);
 //xhr.open('GET', 'data/AE_OPER_AUX_ISR_1B_20071002T103629_20071002T110541_0002.MSP', true);
 
 xhr.responseType = 'arraybuffer';

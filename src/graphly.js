@@ -361,6 +361,12 @@ class graphly extends EventEmitter {
                     // Check if parameter has one value for x and y (points)
                     if (nodeId.hasOwnProperty('x')){
                         if(nodeId.hasOwnProperty('y')){
+                            if( Math.abs(nodeId.x.coord - mouseX) > 20 ||
+                                Math.abs(nodeId.y.coord - mouseY) > 20){
+                                // Picked element is far away from mouse
+                                // position, this is an antialias issue
+                                return;
+                            }
                             u.addSymbol( 
                                 self.topSvg, nodeId.symbol, '#00ff00',
                                 {x: nodeId.x.coord, y: nodeId.y.coord}, 3.0
@@ -544,28 +550,14 @@ class graphly extends EventEmitter {
         for (let key in ds) {
             // Check if key is part of a combined parameter
             let ignoreKey = false;
-            for (let comKey in this.renderSettings.combinedParameters){
+            let comKey = null;
+            for (comKey in this.renderSettings.combinedParameters){
                 if(this.renderSettings.combinedParameters[comKey].indexOf(key) !== -1){
-
                     ignoreKey = true;
-                    let tmp = yChoices.filter(function(e){return e.value === comKey});
-
-                    if(yChoices.filter(function(e){return e.value === comKey;}).length==0){
-                        yChoices.push({value:comKey,label:comKey});
-                        if(this.renderSettings.yAxis.indexOf(comKey)!==-1){
-                            yChoices[yChoices.length-1].selected = true;
-                        }
-                    }
-                    if(xChoices.indexOf(comKey) === -1){
-                        xChoices.push({value:comKey,label:comKey});
-                        if(this.renderSettings.xAxis === comKey){
-                            xChoices[xChoices.length-1].selected = true;
-                        }
-                    }
                 }
             }
             // Check if key is available in data first
-            if(!ignoreKey && this.data.hasOwnProperty(key)){
+            if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
 
                 yChoices.push({value: key, label: key});
                 xChoices.push({value: key, label: key});
@@ -574,6 +566,30 @@ class graphly extends EventEmitter {
                     yChoices[yChoices.length-1].selected = true;
                 }
                 if(this.renderSettings.xAxis === key){
+                    xChoices[xChoices.length-1].selected = true;
+                }
+            }
+        }
+
+        // Go through combined parameters and see if corresponding parameters
+        // are available in the current dataset, if they are add the combined
+        // parameter to the choices
+        let comPars =  this.renderSettings.combinedParameters;
+        for (let comKey in comPars){
+            let includePar = true;
+            for (let par=0; par<comPars[comKey].length; par++){
+                if(!this.data.hasOwnProperty(comPars[comKey][par])){
+                    includePar = false;
+                }
+            }
+            if(includePar){
+                yChoices.push({value: comKey, label: comKey});
+                xChoices.push({value: comKey, label: comKey});
+
+                if(this.renderSettings.yAxis.indexOf(comKey)!==-1){
+                    yChoices[yChoices.length-1].selected = true;
+                }
+                if(this.renderSettings.xAxis === comKey){
                     xChoices[xChoices.length-1].selected = true;
                 }
             }
@@ -604,7 +620,7 @@ class graphly extends EventEmitter {
 
         this.el.select('#ySettings').remove();
 
-        this.el.append('div')
+        let ySetDiv = this.el.append('div')
             .attr('id', 'ySettings')
             .style('display', function(){
                 return yHidden ? 'none' : 'block';
@@ -613,6 +629,12 @@ class graphly extends EventEmitter {
             .style('left', this.margin.left+15+'px')
             .append('select')
                 .attr('id', 'yScaleChoices');
+
+        this.el.select('#ySettings').append('div')
+            .attr('class', 'labelClose cross')
+            .on('click', ()=>{
+                this.el.select('#ySettings').style('display', 'none');
+            });
 
         document.getElementById('yScaleChoices').multiple = true;
 
@@ -667,10 +689,16 @@ class graphly extends EventEmitter {
             .style('display', function(){
                 return xHidden ? 'none' : 'block'; 
             })
-            .style('bottom', this.margin.bottom+20+'px')
+            .style('bottom', this.margin.bottom+'px')
             .style('left', this.width/2-this.margin.left+50+'px')
             .append('select')
                 .attr('id', 'xScaleChoices');
+
+        this.el.select('#xSettings').append('div')
+            .attr('class', 'labelClose cross')
+            .on('click', ()=>{
+                this.el.select('#xSettings').style('display', 'none');
+            });
 
         this.el.select('.xAxisLabel.axisLabel').on('click', ()=>{
             if(this.el.select('#xSettings').style('display') === 'block'){
@@ -687,13 +715,6 @@ class graphly extends EventEmitter {
         });
 
         xSettingParameters.passedElement.addEventListener('change', function(event) {
-            //that.renderSettings.xAxis = [event.detail.value];
-            // TODO: For now rewrite all defined xAxis parameters as we define
-            // one for each y axis parameter, maybe there is a better way to do
-            // this
-            /*for (var i = 0; i < that.renderSettings.xAxis.length; i++) {
-                that.renderSettings.xAxis[i] = event.detail.value;
-            }*/
             that.renderSettings.xAxis = event.detail.value;
             that.recalculateBufferSize();
             that.initAxis();
@@ -950,6 +971,31 @@ class graphly extends EventEmitter {
                 }
             }
         }
+
+        // Add some default values for datasettings if nothing is defined yet
+        let keys = Object.keys(data);
+        for (var i = 0; i < keys.length; i++) {
+            if( !this.dataSettings.hasOwnProperty(keys[i]) ){
+                this.dataSettings[keys[i]] = {
+                    uom: null,
+                    color: [Math.random(), Math.random(), Math.random(), 0.8]
+                };
+            }
+        }
+
+        // Add some default values for combined params datasettings if nothing 
+        // is defined yet
+        if(this.renderSettings.hasOwnProperty('combinedParameters')){
+            for (let cP in this.renderSettings.combinedParameters) {
+                if( !this.dataSettings.hasOwnProperty(cP) ){
+                    this.dataSettings[cP] = {
+                        uom: null,
+                        color: [Math.random(), Math.random(), Math.random(), 0.8]
+                    };
+                }
+            }
+        }
+        
         this.initAxis();
         this.renderData();
     }
@@ -2099,12 +2145,17 @@ class graphly extends EventEmitter {
             .append('svg')
             .attr('width', 20).attr('height', 10);
 
-        let symbolColor = '#'+ CP.RGB2HEX(
-            this.dataSettings[id].color.slice(0,-1)
-            .map(function(c){return Math.round(c*255);})
-        );
+        let symbolColor = '';
 
-        if(this.dataSettings[id].lineConnect){
+        if(this.dataSettings[id].hasOwnProperty('color')){
+            symbolColor = '#'+ CP.RGB2HEX(
+                this.dataSettings[id].color.slice(0,-1)
+                .map(function(c){return Math.round(c*255);})
+            );
+        }
+
+        if(this.dataSettings[id].hasOwnProperty('lineConnect') && 
+           this.dataSettings[id].lineConnect){
             iconSvg.append('line')
                 .attr('x1', 0).attr('y1', 5)
                 .attr('x2', 20).attr('y2', 5)
@@ -2129,8 +2180,7 @@ class graphly extends EventEmitter {
 
                 this.el.select('#parameterSettings')
                     .append('div')
-                    .attr('class', 'closeButton')
-                    .text('x')
+                    .attr('class', 'parameterClose cross')
                     .on('click', ()=>{
                         this.el.select('#parameterSettings')
                             .selectAll('*').remove();
@@ -2359,7 +2409,6 @@ class graphly extends EventEmitter {
 
         this.createRegressionInfo();
 
-
         let that = this;
 
         for (let parPos=0; parPos<yAxRen.length; parPos++){
@@ -2368,9 +2417,9 @@ class graphly extends EventEmitter {
             let id = yAxRen[parPos];
 
             // Add item to labels if there is no coloraxis is defined
-            if(this.renderSettings.colorAxis[parPos] === null){
-                this.addParameterLabel(id);
-            }
+            //if(this.renderSettings.colorAxis[parPos] === null){
+            this.addParameterLabel(id);
+            //}
 
             if(this.el.select('#parameterInfo').selectAll('*').empty()){
                 this.el.select('#parameterInfo').style('display', 'none');

@@ -192,9 +192,9 @@ svg {
     cursor: pointer;
 }
 
-.closeButton{
+.parameterClose{
     float: right;
-    margin-top: -13px;
+    margin-top: -9px;
     cursor: pointer;
 }
 
@@ -242,7 +242,6 @@ svg {
     border-color: #444;
     padding: 5px;
     padding-top: 15px;
-    //text-align: center;
     z-index: 5;
     margin-top: 14px;
 }
@@ -262,7 +261,7 @@ svg {
     width: 210px;
     padding: 5px;
     padding-right: 24px;
-    min-height: 200px;
+    max-height: 200px;
     border-color: #999;
     border-style: solid;
     border-width: 1px;
@@ -276,7 +275,7 @@ svg {
     width: 210px;
     padding: 5px;
     padding-right: 24px;
-    min-height: 200px;
+    max-height: 200px;
     border-color: #999;
     border-style: solid;
     border-width: 1px;
@@ -328,4 +327,40 @@ svg {
 
     display:inline-block;
     vertical-align:middle;
+}
+
+
+
+/* Label selection styles */
+.choices__inner{
+    padding: 0!important;
+    padding-left: 5px!important;
+}
+
+.choices__list{
+    padding-left: 5px!important;
+}
+
+.choices__item.choices__item--selectable{
+    margin-top: 3px!important;
+}
+
+.choices__item{
+    border-radius: 3px!important;
+}
+
+.cross {
+    width: 8px;
+    height: 8px;
+    background-size: 100%;
+    background-repeat-x: no-repeat;
+    background-repeat-y: no-repeat;
+    background-image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjEiIGhlaWdodD0iMjEiIHZpZXdCb3g9IjAgMCAyMSAyMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSIjMDAwIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0yLjU5Mi4wNDRsMTguMzY0IDE4LjM2NC0yLjU0OCAyLjU0OEwuMDQ0IDIuNTkyeiIvPjxwYXRoIGQ9Ik0wIDE4LjM2NEwxOC4zNjQgMGwyLjU0OCAyLjU0OEwyLjU0OCAyMC45MTJ6Ii8+PC9nPjwvc3ZnPg==);
+}
+
+.labelClose{
+    cursor: pointer;
+    position: absolute;
+    right: 3px;
+    top: 3px;
 }

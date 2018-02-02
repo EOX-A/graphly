@@ -334,6 +334,11 @@ class BatchDrawer {
         this.GL.clear(this.GL.COLOR_BUFFER_BIT);
 
         if (this.GLVersion == 2) {
+            if (this.numRects > 0) {
+                // Update all line vertex buffers with added lines and dots:
+                this._updateRectBuffers();
+                this._drawRectsGL2();
+            }
             if (this.numLines > 0) {
                 // Update all line vertex buffers with added lines and dots:
                 this._updateLineBuffers();
@@ -344,13 +349,13 @@ class BatchDrawer {
                 this._updateDotBuffers();
                 this._drawDotsGL2();
             }
+        } else if (this.GLVersion == 1) {
             if (this.numRects > 0) {
                 // Update all line vertex buffers with added lines and dots:
                 this._updateRectBuffers();
-                this._drawRectsGL2();
+                this._drawRectsGL1();
             }
-        } else if (this.GLVersion == 1) {
-            if (this.numLines > 0) {
+             if (this.numLines > 0) {
                 // Update all line vertex buffers with added lines and dots:
                 this._updateLineBuffers();
                 this._drawLinesGL1();
@@ -359,11 +364,6 @@ class BatchDrawer {
                 // Update all line vertex buffers with added lines and dots:
                 this._updateDotBuffers();
                 this._drawDotsGL1();
-            }
-            if (this.numRects > 0) {
-                // Update all line vertex buffers with added lines and dots:
-                this._updateRectBuffers();
-                this._drawRectsGL1();
             }
         }
         if (!keepOld) {
