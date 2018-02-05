@@ -2416,13 +2416,14 @@ class graphly extends EventEmitter {
 
             let id = yAxRen[parPos];
 
-            // Add item to labels if there is no coloraxis is defined
-            //if(this.renderSettings.colorAxis[parPos] === null){
-            this.addParameterLabel(id);
-            //}
-
             if(this.el.select('#parameterInfo').selectAll('*').empty()){
                 this.el.select('#parameterInfo').style('display', 'none');
+            }
+
+            // Add item to labels if there is no coloraxis is defined
+            if(this.renderSettings.colorAxis[parPos] === null){
+                this.addParameterLabel(id);
+                this.el.select('#parameterInfo').style('display', 'block');
             }
 
             // Change height of settings panel to be just under labels
