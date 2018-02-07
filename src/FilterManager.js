@@ -665,7 +665,7 @@ class FilterManager extends EventEmitter {
         this._createBoolFilterElements();
 
         // Resize brush background element to make selection of brush easier
-        d3.select('.brush .background').attr('x',-16).attr('width', 32);
+        this.el.select('.brush .background').attr('x',-16).attr('width', 32);
 
 
     }

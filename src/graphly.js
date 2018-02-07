@@ -506,7 +506,7 @@ class graphly extends EventEmitter {
         this.el.select('#imagerenderer').attr('width', renderWidth);
         this.el.select('#imagerenderer').attr('height', renderHeight);
 
-        var c = this.el.select('#imagerenderer');
+        var c = this.el.select('#imagerenderer').node();
         var ctx = c.getContext('2d');
         ctx.clearRect(0, 0, c.width, c.height);
         ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
