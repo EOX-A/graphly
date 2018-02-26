@@ -169,6 +169,7 @@ class graphly extends EventEmitter {
         this.filterManager = defaultFor(options.filterManager, false);
         this.connectedGraph = defaultFor(options.connectedGraph, false);
         this.autoColorExtent = defaultFor(options.autoColorExtent, false);
+        this.fixedXDomain = undefined;
 
         if(this.filterManager){
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
@@ -927,6 +928,14 @@ class graphly extends EventEmitter {
         }
     }
 
+    setXDomain(domain){
+        this.fixedXDomain = domain;
+    }
+
+    clearXDomain(){
+        this.fixedXDomain = undefined;
+    }
+
     loadData(data){
         
         //this.filters = {};
@@ -1031,19 +1040,24 @@ class graphly extends EventEmitter {
         }
 
 
-        for (var i = xSelection.length - 1; i >= 0; i--) {
-            xExt = d3.extent(this.data[xSelection[i]]);
-            if(xExtent){
-                if(xExt[0]<xExtent[0]){
-                    xExtent[0] = xExt[0];
+        if(this.fixedXDomain !== undefined){
+            xExtent = this.fixedXDomain;
+        } else {
+            for (var i = xSelection.length - 1; i >= 0; i--) {
+                xExt = d3.extent(this.data[xSelection[i]]);
+                if(xExtent){
+                    if(xExt[0]<xExtent[0]){
+                        xExtent[0] = xExt[0];
+                    }
+                    if(xExt[1]>xExtent[1]){
+                        xExtent[1] = xExt[1];
+                    }
+                }else{
+                    xExtent = xExt;
                 }
-                if(xExt[1]>xExtent[1]){
-                    xExtent[1] = xExt[1];
-                }
-            }else{
-                xExtent = xExt;
             }
         }
+
 
         for (let j = ySelection.length - 1; j >= 0; j--) {
             let yExt = d3.extent(this.data[ySelection[j]]);
