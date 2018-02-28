@@ -183,7 +183,8 @@ class FilterManager extends EventEmitter {
 
         var label = d;
         if(this.dataSettings.hasOwnProperty(d) && 
-            this.dataSettings[d].hasOwnProperty('uom')){
+            this.dataSettings[d].hasOwnProperty('uom') && 
+            this.dataSettings[d].uom !== null){
             label += ' ['+this.dataSettings[d].uom + ']';
         }
         div.append('div')
@@ -258,7 +259,8 @@ class FilterManager extends EventEmitter {
 
         var label = d;
         if(this.dataSettings.hasOwnProperty(d) && 
-            this.dataSettings[d].hasOwnProperty('uom')){
+            this.dataSettings[d].hasOwnProperty('uom') && 
+            this.dataSettings[d].uom !== null){
             label += ' ['+this.dataSettings[d].uom + ']';
         }
 
@@ -451,7 +453,8 @@ class FilterManager extends EventEmitter {
                         }
                     }else{
                         that.boolFilters[id] = (val)=>{
-                            return val === selectValue;
+                            // Add !! to convert 0,1 ints to bool for comparison
+                            return !!val === selectValue;
                         };
                     }
                     that._filtersChanged();
@@ -463,7 +466,8 @@ class FilterManager extends EventEmitter {
                 // call a filterchange event
                 if(selected!==-1 && !this.boolFilters.hasOwnProperty(id)){
                     this.boolFilters[id] = (val)=>{
-                        return val === selected;
+                        // Add !! to convert 0,1 ints to bool for comparison
+                        return !!val === selected;
                     };
                     this._filtersChanged();
                 }
@@ -525,7 +529,8 @@ class FilterManager extends EventEmitter {
                                     .attr('class', 'editButton remove');
                                 var checked = that.boolFilStat[id].checked;
                                 that.boolFilters[id] = (val)=>{
-                                    return val === checked;
+                                    // Add !! to convert 0,1 ints to bool for comparison
+                                    return !!val ===  checked;
                                 };
                                 that._filtersChanged();
                             }else{
@@ -557,7 +562,7 @@ class FilterManager extends EventEmitter {
                     var id = this.id;
                     that.boolFilStat[id].checked = checked;
                     that.boolFilters[id] = (val)=>{
-                        return val === checked;
+                        return !!val === checked;
                     };
                     that._filtersChanged();
                 });
@@ -615,7 +620,7 @@ class FilterManager extends EventEmitter {
                         // If one of the items is in the defined set and the
                         //  other is not (e.g. filter id is in collection but 
                         // current data id is not)
-                        if( (filterRel[i].indexOf(p)!==-1) === 
+                        if( (filterRel[i].indexOf(p)!==-1) && 
                             (filterRel[i].indexOf(f)!==-1)){
 
                             applicableFilter = true;

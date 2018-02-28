@@ -2121,7 +2121,7 @@ class graphly extends EventEmitter {
                     applicableFilter = false;
                     let filterRel = this.filterManager.filterSettings.filterRelation;
                     for (let i = 0; i < filterRel.length; i++) {
-                        if( (filterRel[i].indexOf(p)!==-1) === 
+                        if( (filterRel[i].indexOf(p)!==-1) && 
                             (filterRel[i].indexOf(f)!==-1)){
                             applicableFilter = true;
                             break;
