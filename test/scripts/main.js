@@ -131,12 +131,12 @@ var otherds = {
         //regression: 'polynomial',
         lineConnect: true
     },
-    F: {
+    /*F: {
         symbol: 'circle',
         uom: 'nT'
         //regression: 'polynomial',
         //lineConnect: true
-    },
+    },*/
     Timestamp: {
         scaleFormat: 'time'
     },

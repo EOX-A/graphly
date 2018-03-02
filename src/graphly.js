@@ -609,9 +609,9 @@ class graphly extends EventEmitter {
             if(this.dataSettings.hasOwnProperty(uniqY[i]) && 
                this.dataSettings[uniqY[i]].hasOwnProperty('uom') &&
                this.dataSettings[uniqY[i]].uom !== null){
-                listText.push(uniqY+' ['+this.dataSettings[uniqY[i]].uom+'] ');
+                listText.push(uniqY[i]+' ['+this.dataSettings[uniqY[i]].uom+'] ');
             }else{
-                listText.push(uniqY);
+                listText.push(uniqY[i]);
             }
         }
 
@@ -627,7 +627,7 @@ class graphly extends EventEmitter {
                 'translate('+ -(this.margin.left/2+10) +','+
                 (this.height/2)+')rotate(-90)'
             )
-            .text(listText.join());
+            .text(listText.join(', '));
 
         this.el.select('#ySettings').remove();
 
@@ -1013,10 +1013,23 @@ class graphly extends EventEmitter {
         let keys = Object.keys(data);
         for (var i = 0; i < keys.length; i++) {
             if( !this.dataSettings.hasOwnProperty(keys[i]) ){
-                this.dataSettings[keys[i]] = {
-                    uom: null,
-                    color: [Math.random(), Math.random(), Math.random(), 0.8]
-                };
+                // If the parameter is multi-Id we initialize it differnetly
+                if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+                    let parIds = this.renderSettings.dataIdentifier.identifiers;
+                    this.dataSettings[keys[i]] = {};
+                    for (let j = 0; j < parIds.length; j++) {
+                        this.dataSettings[keys[i]][parIds[j]] = {
+                            uom: null,
+                            color: [Math.random(), Math.random(), Math.random(), 0.8]
+                        };
+                    }
+
+                } else {
+                    this.dataSettings[keys[i]] = {
+                        uom: null,
+                        color: [Math.random(), Math.random(), Math.random(), 0.8]
+                    };
+                }
             }
         }
 
@@ -1563,18 +1576,31 @@ class graphly extends EventEmitter {
         let yAxRen = this.renderSettings.yAxis;
         let resultData;
         inactive = defaultFor(inactive, false);
-        var reg = {
-            type: this.dataSettings[yAxRen[parPos]].regression,
-            order: this.dataSettings[yAxRen[parPos]].regressionOrder
-        };
+        let datIds = this.renderSettings.dataIdentifier.identifiers;
 
 
         //Check if data has identifier creating multiple datasets
         if (this.renderSettings.hasOwnProperty('dataIdentifier')){
 
-            for (let i = 0; i < this.renderSettings.dataIdentifier.identifiers.length; i++) {
+            for (let i = 0; i < datIds.length; i++) {
 
-                let id = this.renderSettings.dataIdentifier.identifiers[i];
+                // Check if regression is activated for this parameter and id
+                let id = datIds[i];
+                let regSett = this.dataSettings[yAxRen[parPos]];
+
+                if( this.dataSettings[yAxRen[parPos]].hasOwnProperty ){
+                    regSett = regSett[id];
+                }
+
+                var reg = {
+                    type: regSett.regression,
+                    order: regSett.regressionOrder
+                };
+
+                if(reg.type === undefined){
+                    continue;
+                }
+                
                 let parId = this.renderSettings.dataIdentifier.parameter;
 
                 let filterFunc = function (d,i){
@@ -1636,12 +1662,20 @@ class graphly extends EventEmitter {
         let rC;
         let colorParam = this.renderSettings.colorAxis[param];
         let cA = this.dataSettings[colorParam];
+        let selPar = this.renderSettings.yAxis[param];
 
         if (cA && cA.hasOwnProperty('colorscaleFunction')){
             rC = cA.colorscaleFunction(id);
             rC = rC.map(function(c){return c/255;});
         }else{
-            rC = [0.258, 0.525, 0.956];
+            // Check if color has been defined for specific parameter
+            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+                rC = this.dataSettings[selPar][id].color;
+            } else if(this.dataSettings[selPar].hasOwnProperty('color')){
+                rC = this.dataSettings[selPar].color;
+            } else { 
+                rC = [0.258, 0.525, 0.956];
+            }
         }
         return rC;
     }
@@ -1649,6 +1683,7 @@ class graphly extends EventEmitter {
     getColor(param, index, data) {
         let rC;
         let colorParam = this.renderSettings.colorAxis[param];
+        let paramId = this.renderSettings.yAxis[param];
         let cA = this.dataSettings[colorParam];
 
         if (cA && cA.hasOwnProperty('colorscaleFunction')){
@@ -1658,13 +1693,17 @@ class graphly extends EventEmitter {
             rC = rC.map(function(c){return c/255;});
         }else{
             // Check if color has been defined for specific parameter
-            if(this.dataSettings[this.renderSettings.yAxis[param]].hasOwnProperty('color')){
-                rC = this.dataSettings[this.renderSettings.yAxis[param]].color;
-            }else{ 
+            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+                let identParam = this.renderSettings.dataIdentifier.parameter;
+                let val = data[identParam][index];
+                rC = this.dataSettings[paramId][val].color;
+            } else if(this.dataSettings[paramId].hasOwnProperty('color')){
+                rC = this.dataSettings[paramId].color;
+            } else { 
                 rC = [0.258, 0.525, 0.956];
             }
         }
-        if(rC.length == 3){
+        if(typeof rC !== 'object' && rC.length == 3){
             rC.push(0.8);
         }
         return rC;
@@ -1967,7 +2006,7 @@ class graphly extends EventEmitter {
         let lp = data[xAxRen].length;
         let p_x, p_y;
 
-        for (let j=0;j<=lp; j++) {
+        for (let j=0;j<lp; j++) {
 
             let x = this.xScale(data[xAxRen][j]);
             let y = this.yScale(data[yAxRen[parPos]][j]);
@@ -1990,6 +2029,13 @@ class graphly extends EventEmitter {
 
             let nCol = c.map(function(c){return c/255;});
             let parSett = this.dataSettings[yAxRen[parPos]];
+
+            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+                let identParam = this.renderSettings.dataIdentifier.parameter;
+                let val = data[identParam][j];
+                parSett = this.dataSettings[yAxRen[parPos]][val];
+            }
+
             let cA = this.dataSettings[
                 this.renderSettings.colorAxis[parPos]
             ];
@@ -2075,7 +2121,7 @@ class graphly extends EventEmitter {
     }
 
 
-    renderRegressionOptions(id, regressionTypes) {
+    renderRegressionOptions(id, regressionTypes, dataSettings) {
         let checked = this.el.select('#regressionCheckbox').property('checked');
         let that = this;
 
@@ -2099,7 +2145,7 @@ class graphly extends EventEmitter {
                     .text(function (d) { return d.name; })
                     .attr('value', function (d) { return d.value; })
                     .property('selected', function(d){
-                        return d.value === that.dataSettings[id].regression;
+                        return d.value === dataSettings.regression;
                     });
 
             addOrder();
@@ -2107,7 +2153,7 @@ class graphly extends EventEmitter {
             function onregressionChange() {
                 let selectValue = 
                     that.el.select('#regressionSelect').property('value');
-                that.dataSettings[id].regression = selectValue;
+                dataSettings.regression = selectValue;
                 addOrder();
                 that.addApply();
             }
@@ -2115,7 +2161,7 @@ class graphly extends EventEmitter {
             function addOrder(){
                 that.el.select('#regressionOrderLabel').remove();
                 that.el.select('#regressionOrder').remove();
-                if(that.dataSettings[id].regression === 'polynomial'){
+                if(dataSettings.regression === 'polynomial'){
                     that.el.select('#parameterSettings')
                         .append('label')
                         .attr('id', 'regressionOrderLabel')
@@ -2126,9 +2172,9 @@ class graphly extends EventEmitter {
                         .append('input')
                         .attr('id', 'regressionOrder')
                         .attr('type', 'text')
-                        .attr('value', defaultFor(that.dataSettings[id].regressionOrder, 3))
+                        .attr('value', defaultFor(dataSettings.regressionOrder, 3))
                         .on('input', function(){
-                            that.dataSettings[id].regressionOrder = Number(this.value);
+                            dataSettings.regressionOrder = Number(this.value);
                             //that.renderRegressionOptions(id, regressionTypes);
                             that.addApply();
                         });
@@ -2141,8 +2187,8 @@ class graphly extends EventEmitter {
             this.el.select('#regressionSelect').remove();
             this.el.select('#regressionOrderLabel').remove();
             this.el.select('#regressionOrder').remove();
-            delete that.dataSettings[id].regression;
-            delete that.dataSettings[id].regressionOrder;
+            delete dataSettings.regression;
+            delete dataSettings.regressionOrder;
             this.addApply();
         }
 
@@ -2211,47 +2257,81 @@ class graphly extends EventEmitter {
 
     addParameterLabel(id){
 
-        let parDiv = this.el.select('#parameterInfo').append('div')
-            .attr('class', 'labelitem');
+        let parIds;
+        // If parameter is separated by identifier we need to create multiple
+        // labels for each identifier
+        if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+            parIds = this.renderSettings.dataIdentifier.identifiers;
 
-        let iconSvg = parDiv.append('div')
-            .attr('class', 'svgIcon')
-            .style('display', 'inline')
-            .append('svg')
-            .attr('width', 20).attr('height', 10);
+        } else {
+            parIds = [null];
+        }
 
-        let symbolColor = '';
+        for (var i = 0; i < parIds.length; i++) {
 
-        if(this.dataSettings[id].hasOwnProperty('color')){
-            symbolColor = '#'+ CP.RGB2HEX(
-                this.dataSettings[id].color.slice(0,-1)
-                .map(function(c){return Math.round(c*255);})
+            let parDiv = this.el.select('#parameterInfo').append('div')
+                .attr('class', 'labelitem');
+
+            let iconSvg = parDiv.append('div')
+                .attr('class', 'svgIcon')
+                .style('display', 'inline')
+                .append('svg')
+                .attr('width', 20).attr('height', 10);
+
+            let symbolColor = '';
+
+            let dataSettings = this.dataSettings[id];
+            // If we have a multi-id parameter the datasettings of it is an object
+            if( parIds[i]!== null ){
+                if(!this.dataSettings[id].hasOwnProperty(parIds[i])){
+                    this.dataSettings[id][parIds[i]] = {};
+                }
+                dataSettings = this.dataSettings[id][parIds[i]];
+            }
+
+
+            if(dataSettings.hasOwnProperty('color')){
+
+                symbolColor = '#'+ CP.RGB2HEX(
+                    dataSettings.color.slice(0,-1)
+                    .map(function(c){return Math.round(c*255);})
+                );
+            }
+
+            if(dataSettings.hasOwnProperty('lineConnect') && 
+               dataSettings.lineConnect){
+                iconSvg.append('line')
+                    .attr('x1', 0).attr('y1', 5)
+                    .attr('x2', 20).attr('y2', 5)
+                    .attr("stroke-width", 1.5)
+                    .attr("stroke", symbolColor);
+            }
+
+            dataSettings.symbol = defaultFor(
+                dataSettings.symbol, 'circle'
             );
-        }
 
-        if(this.dataSettings[id].hasOwnProperty('lineConnect') && 
-           this.dataSettings[id].lineConnect){
-            iconSvg.append('line')
-                .attr('x1', 0).attr('y1', 5)
-                .attr('x2', 20).attr('y2', 5)
-                .attr("stroke-width", 1.5)
-                .attr("stroke", symbolColor);
-        }
+            u.addSymbol(iconSvg, dataSettings.symbol, symbolColor);
 
-        this.dataSettings[id].symbol = defaultFor(
-            this.dataSettings[id].symbol, 'circle'
-        );
+            var that = this;
 
-        u.addSymbol(iconSvg, this.dataSettings[id].symbol, symbolColor);
+            let displayName;
+            if(dataSettings.hasOwnProperty('displayName')){
+                displayName = dataSettings.displayName;
+            }else{
+                displayName = id;
+                if(parIds[i]!==null){
+                    displayName += ' ('+parIds[i]+')';
+                }
+            }
+            dataSettings.displayName = displayName;
 
-        var that = this;
+            parDiv.append('div')
+                .style('display', 'inline')
+                .attr('id', id)
+                .html(displayName);
 
-        parDiv.append('div')
-            .style('display', 'inline')
-            .attr('id', id)
-            .html(defaultFor(this.dataSettings[id].displayName, id))
-
-        parDiv.on('click', ()=>{
+            parDiv.on('click', ()=>{
 
                 this.el.select('#parameterSettings').selectAll('*').remove();
 
@@ -2278,9 +2358,9 @@ class graphly extends EventEmitter {
                     .append('input')
                     .attr('id', 'displayName')
                     .attr('type', 'text')
-                    .attr('value', that.dataSettings[id].displayName)
+                    .attr('value', dataSettings.displayName)
                     .on('input', function(){
-                        that.dataSettings[id].displayName = this.value;
+                        dataSettings.displayName = this.value;
                         that.addApply();
                     });
 
@@ -2315,12 +2395,12 @@ class graphly extends EventEmitter {
                         .text(function (d) { return d.name; })
                         .attr('value', function (d) { return d.value; })
                         .property('selected', function(d){
-                            return d.value === that.dataSettings[id].symbol;
+                            return d.value === dataSettings.symbol;
                         });
 
                 function onchange() {
                     let selectValue = that.el.select('#symbolSelect').property('value');
-                    that.dataSettings[id].symbol = selectValue;
+                    dataSettings.symbol = selectValue;
                     that.addApply();
                 }
 
@@ -2335,7 +2415,7 @@ class graphly extends EventEmitter {
                     .attr('type', 'text')
                     .attr('value', 
                         '#'+CP.RGB2HEX(
-                            that.dataSettings[id].color.slice(0,-1)
+                            dataSettings.color.slice(0,-1)
                             .map(function(c){return Math.round(c*255);})
                         )
                     );
@@ -2350,7 +2430,7 @@ class graphly extends EventEmitter {
                     c = c.map(function(c){return c/255;});
                     c.push(0.8);
                     if(!firstChange){
-                        that.dataSettings[id].color = c;
+                        dataSettings.color = c;
                         that.addApply();
                     }else{
                         firstChange = false;
@@ -2378,11 +2458,11 @@ class graphly extends EventEmitter {
                     .attr('id', 'lineConnect')
                     .attr('type', 'checkbox')
                     .property('checked', 
-                        defaultFor(that.dataSettings[id].lineConnect, false)
+                        defaultFor(dataSettings.lineConnect, false)
                     )
                     .on('change', function(){
-                        that.dataSettings[id].lineConnect = 
-                            !defaultFor(that.dataSettings[id].lineConnect, false);
+                        dataSettings.lineConnect = 
+                            !defaultFor(dataSettings.lineConnect, false);
                         that.addApply();
                     });
 
@@ -2402,25 +2482,26 @@ class graphly extends EventEmitter {
                     .attr('id', 'regressionCheckbox')
                     .attr('type', 'checkbox')
                     .property('checked', 
-                        that.dataSettings[id].hasOwnProperty('regression')
+                        dataSettings.hasOwnProperty('regression')
                     )
                     .on('change', function(){
                         // If activated there is no type defined so we
                         // define a defualt one, for now linear
                         if(that.el.select('#regressionCheckbox').property('checked')){
-                             that.dataSettings[id].regression = defaultFor(
-                                that.dataSettings[id].regression,
+                             dataSettings.regression = defaultFor(
+                                dataSettings.regression,
                                 'linear'
                             );
                         }
 
-                        that.renderRegressionOptions(id, regressionTypes);
+                        that.renderRegressionOptions(id, regressionTypes, dataSettings);
                         that.addApply();
                     });
 
-                that.renderRegressionOptions(id, regressionTypes);
+                that.renderRegressionOptions(id, regressionTypes, dataSettings);
 
             });
+        }
     }
 
 
@@ -2590,9 +2671,10 @@ class graphly extends EventEmitter {
                     }
 
                     // Check if any regression type is selected for parameter
-                    if(this.dataSettings[yAxRen[parPos]].hasOwnProperty('regression')){
-                        this.createRegression(data, parPos);
-                    }
+
+                    //if(this.dataSettings[yAxRen[parPos]].hasOwnProperty('regression')){
+                    this.createRegression(data, parPos);
+                    //}
                     if(inactiveData[yAxRen[parPos]].length>0){
                         this.createRegression(this.data, parPos, true);
                     }
