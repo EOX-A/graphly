@@ -42,11 +42,11 @@ var renderSettings_ray = {
 
 var renderSettingsSwarm = {
     xAxis: 'Timestamp',
-    yAxis: ['T_elec'],
-    colorAxis: [ 'id' ],
+    yAxis: ['F_error'],
+    colorAxis: [null/* 'Spacecraft' */],
     dataIdentifier: {
-        parameter: 'id',
-        identifiers: ['Alpha', 'Bravo']
+        parameter: 'Spacecraft',
+        identifiers: ['A', 'B']
     }
 };
 
@@ -130,6 +130,12 @@ var otherds = {
         uom: 'n',
         //regression: 'polynomial',
         lineConnect: true
+    },
+    F: {
+        symbol: 'circle',
+        uom: 'nT'
+        //regression: 'polynomial',
+        //lineConnect: true
     },
     Timestamp: {
         scaleFormat: 'time'
@@ -435,8 +441,8 @@ var filterManager = new FilterManager({
 
 var graph = new graphly.graphly({
     el: '#graph',
-    dataSettings: dataSettings,
-    renderSettings: renderSettings,
+    dataSettings: otherds,
+    renderSettings: renderSettingsSwarm,
     filterManager: filterManager,
     //autoColorExtent: true
     //fixedSize: true,
@@ -477,7 +483,7 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/level_1B_data.mp', true);
+xhr.open('GET', 'data/swarm.mp', true);
 //xhr.open('GET', 'data/AE_OPER_AUX_ISR_1B_20071002T103629_20071002T110541_0002.MSP', true);
 
 xhr.responseType = 'arraybuffer';
@@ -546,11 +552,9 @@ xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
     var data = msgpack.decode(tmp);
 
+    graph.loadData(data);
 
-
-    var ds = data.AEOLUS[0];
-
-   
+    /*var ds = data.AEOLUS[0];
 
     var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
     var mie_HLOS_wind_speed = flattenObservationArray(ds.mie_HLOS_wind_speed);
@@ -577,7 +581,8 @@ xhr.onload = function(e) {
     graph.loadData(data);
     if(usesecond){
         graph2.loadData(data);
-    }
+    }*/
+
     filterManager.loadData(data);
 };
 

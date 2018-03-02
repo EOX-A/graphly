@@ -171,6 +171,10 @@ class graphly extends EventEmitter {
         this.autoColorExtent = defaultFor(options.autoColorExtent, false);
         this.fixedXDomain = undefined;
 
+        this.logX = defaultFor(options.logX, false);
+        this.logY = defaultFor(options.logY, false);
+        this.logY2 = defaultFor(options.logY2, false);
+
         if(this.filterManager){
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
         }
@@ -603,17 +607,26 @@ class graphly extends EventEmitter {
         // Add uom info to unique elements
         for (var i = 0; i < uniqY.length; i++) {
             if(this.dataSettings.hasOwnProperty(uniqY[i]) && 
-               this.dataSettings[uniqY[i]].hasOwnProperty('uom')){
+               this.dataSettings[uniqY[i]].hasOwnProperty('uom') &&
+               this.dataSettings[uniqY[i]].uom !== null){
                 listText.push(uniqY+' ['+this.dataSettings[uniqY[i]].uom+'] ');
             }else{
                 listText.push(uniqY);
             }
         }
 
+        if(listText.length == 0){
+            // No items selected, add "filler text"
+            listText.push('Add parameter ...');
+        }
+
         this.svg.append('text')
             .attr('class', 'yAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
-            .attr('transform', 'translate('+ -(this.margin.left/2+10) +','+(this.height/2)+')rotate(-90)')
+            .attr('transform', 
+                'translate('+ -(this.margin.left/2+10) +','+
+                (this.height/2)+')rotate(-90)'
+            )
             .text(listText.join());
 
         this.el.select('#ySettings').remove();
@@ -634,6 +647,26 @@ class graphly extends EventEmitter {
                 this.el.select('#ySettings').style('display', 'none');
             });
 
+        let con = this.el.select('#ySettings').append('div')
+            .attr('class', 'axisOption');
+        let that = this;
+        con.append('input')
+            .attr('id', 'logYoption')
+            .attr('type', 'checkbox')
+            .property('checked', 
+                defaultFor(that.logY, false)
+            )
+            .on('change', function(){
+                that.logY = !that.logY;
+                that.initAxis();
+                that.renderData();
+            });
+
+        con.append('label')
+            .attr('for', 'logYoption')
+            .text('Logarithmic scale (base-10) ');
+
+
         document.getElementById('yScaleChoices').multiple = true;
 
         this.el.select('.yAxisLabel.axisLabel').on('click', ()=>{
@@ -650,8 +683,6 @@ class graphly extends EventEmitter {
           placeholderValue: ' select ...',
           itemSelectText: '',
         });
-
-        let that = this;
 
         ySettingParameters.passedElement.addEventListener('addItem', function(event) {
             that.renderSettings.yAxis.push(event.detail.value);
@@ -1157,9 +1188,26 @@ class graphly extends EventEmitter {
             .domain([xExtent[0], xExtent[1]])
             .range([0, this.width]);
 
-        this.yScale = d3.scale.linear()
-            .domain(yExtent)
-            .range([this.height, 0]);
+        if(this.logY){
+            let start = yExtent[0];
+            let end = yExtent[1];
+
+            // if both positive or negative all fine else
+            if(yExtent[0]<=0 && yExtent[1]>0){
+                start = 0.005;
+            }
+            if(yExtent[0]>=0 && yExtent[1]<0){
+                start = -0.005;
+            }
+
+            this.yScale = d3.scale.log()
+                .domain([start,end])
+                .range([this.height, 0]);
+        }else{
+            this.yScale = d3.scale.linear()
+                .domain(yExtent)
+                .range([this.height, 0]);
+        }
 
         this.xAxis = d3.svg.axis()
             .scale(this.xScale)
@@ -1541,7 +1589,7 @@ class graphly extends EventEmitter {
                     resultData = filteredX.map(function(d){return d.getTime();})
                         .zip(filteredY);
                 }else{
-                    data = filteredX.zip(filteredY);
+                    resultData = filteredX.zip(filteredY);
                 }
 
                 var rC = this.getIdColor(parPos, id);
@@ -1865,16 +1913,24 @@ class graphly extends EventEmitter {
                         let colorParam = this.renderSettings.colorAxis[parPos];
                         if(data[colorParam][i-1] === data[colorParam][i])
                         {
+                            // Do not connect lines going in negative x direction
+                            // as some datasets loop and it looks messy
+                            if(x-p_x>-this.width/2){
+                                this.batchDrawer.addLine(
+                                    p_x, p_y, x, y, 1, 
+                                    rC[0], rC[1], rC[2], 0.8
+                                );
+                            }
+                        }
+                    }else{
+                        // Do not connect lines going in negative x direction
+                        // as some datasets loop and it looks messy
+                        if(x-p_x>-this.width/2){
                             this.batchDrawer.addLine(
                                 p_x, p_y, x, y, 1, 
                                 rC[0], rC[1], rC[2], 0.8
                             );
                         }
-                    }else{
-                        this.batchDrawer.addLine(
-                            p_x, p_y, x, y, 1, 
-                            rC[0], rC[1], rC[2], 0.8
-                        );
                     }
                 }
 
@@ -1952,16 +2008,24 @@ class graphly extends EventEmitter {
                         let colorParam = this.renderSettings.colorAxis[parPos];
                         if(data[colorParam][j-1] === data[colorParam][j])
                         {
+                            // Do not connect lines going in negative x direction
+                            // as some datasets loop and it looks messy
+                            if(x-p_x>-this.width/2){
+                                this.batchDrawer.addLine(
+                                    p_x, p_y, x, y, 1, 
+                                    rC[0], rC[1], rC[2], 0.8
+                                );
+                            }
+                        }
+                    }else{
+                        // Do not connect lines going in negative x direction
+                        // as some datasets loop and it looks messy
+                        if(x-p_x>-this.width/2){
                             this.batchDrawer.addLine(
                                 p_x, p_y, x, y, 1, 
                                 rC[0], rC[1], rC[2], 0.8
                             );
                         }
-                    }else{
-                        this.batchDrawer.addLine(
-                            p_x, p_y, x, y, 1, 
-                            rC[0], rC[1], rC[2], 0.8
-                        );
                     }
                 }
 
@@ -2174,6 +2238,10 @@ class graphly extends EventEmitter {
                 .attr("stroke", symbolColor);
         }
 
+        this.dataSettings[id].symbol = defaultFor(
+            this.dataSettings[id].symbol, 'circle'
+        );
+
         u.addSymbol(iconSvg, this.dataSettings[id].symbol, symbolColor);
 
         var that = this;
@@ -2182,7 +2250,8 @@ class graphly extends EventEmitter {
             .style('display', 'inline')
             .attr('id', id)
             .html(defaultFor(this.dataSettings[id].displayName, id))
-            .on('click', ()=>{
+
+        parDiv.on('click', ()=>{
 
                 this.el.select('#parameterSettings').selectAll('*').remove();
 

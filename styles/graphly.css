@@ -364,3 +364,21 @@ svg {
     right: 3px;
     top: 3px;
 }
+
+#ySettings .choices{
+    margin-bottom: 5px!important;
+}
+
+.axisOption{
+    font: 400 13.3333px Arial;
+}
+
+.axisOption label {
+    cursor: pointer;
+}
+
+.axisOption input {
+    vertical-align: top;
+    margin-top: 1px;
+    float: right;
+}
