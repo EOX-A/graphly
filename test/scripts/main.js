@@ -43,6 +43,7 @@ var renderSettings_ray = {
 var renderSettingsSwarm = {
     xAxis: 'Timestamp',
     yAxis: ['F_error'],
+    y2Axis: [],
     colorAxis: [null/* 'Spacecraft' */],
     dataIdentifier: {
         parameter: 'Spacecraft',
@@ -444,6 +445,7 @@ var graph = new graphly.graphly({
     dataSettings: otherds,
     renderSettings: renderSettingsSwarm,
     filterManager: filterManager,
+    debounceActive: false
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000

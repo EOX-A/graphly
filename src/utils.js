@@ -34,7 +34,7 @@ Array.prototype.pushArray = function() {
 };
 
 
-export function addSymbol(el, symbol, color, center, stroke, size ){
+export function addSymbol(el, symbol, color, center, stroke, size , className){
 
     let s = defaultFor(size, 10);
     let c = defaultFor(center, {x: s, y: s/2});
@@ -52,16 +52,16 @@ export function addSymbol(el, symbol, color, center, stroke, size ){
          .y(function(d) { return d.y; })
          .interpolate("linear");
 
-
+    let element;
     switch(symbol){
         case 'rectangle':
-            el.append("rect")
+            element = el.append("rect")
                 .attr("x", c.x-s/2).attr("y", c.y-s/2)
                 .attr("width", s).attr("height", s)
                 .attr('fill', color);
             break;
         case 'rectangle_empty':
-             el.append("rect")
+            element = el.append("rect")
                 .attr("x", c.x-s/2).attr("y", c.y-s/2)
                 .attr("width", s-1).attr("height", s-1)
                 .attr('fill', 'none')
@@ -69,13 +69,13 @@ export function addSymbol(el, symbol, color, center, stroke, size ){
                 .attr("stroke", color);
             break;
         case 'circle':
-            el.append("ellipse")
+            element = el.append("ellipse")
                 .attr("cx", c.x).attr("cy", c.y)
                 .attr("rx", s/2).attr("ry", s/2)
                 .attr('fill', color);
             break;
         case 'circle_empty':
-            el.append("ellipse")
+            element = el.append("ellipse")
                 .attr("cx", c.x).attr("cy", c.y)
                 .attr("rx", s/2-1).attr("ry", s/2-1)
                 .attr('fill', 'none')
@@ -83,46 +83,46 @@ export function addSymbol(el, symbol, color, center, stroke, size ){
                 .attr("stroke", color);
             break;
         case 'plus':
-            el.append('line')
+            element = el.append('line')
                 .attr('x1', c.x).attr('y1', c.y-s/2)
                 .attr('x2', c.x).attr('y2', c.y+s/2)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
-            el.append('line')
+            element = el.append('line')
                 .attr('x1', c.x-s/2).attr('y1', c.y)
                 .attr('x2', c.x+s/2).attr('y2', c.y)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
             break;
         case 'x':
-            el.append('line')
+            element = el.append('line')
                 .attr('x1', c.x-s/2).attr('y1', c.y-s/2)
                 .attr('x2', c.x+s/2).attr('y2', c.y+s/2)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
-            el.append('line')
+            element = el.append('line')
                 .attr('x1', c.x+s/2).attr('y1', c.y-s/2)
                 .attr('x2', c.x-s/2).attr('y2', c.y+s/2)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
             break;
-
         case 'triangle':
-            el.append("path")
+            element = el.append("path")
                 .attr("d", triangleFunction(triangleData))
                 .attr("stroke-width", sW)
                 .attr("stroke", color)
                 .attr("fill", color);
-
             break;
         case 'triangle_empty':
-            el.append("path")
+            element = el.append("path")
                 .attr("d", triangleFunction(triangleData))
                 .attr("stroke-width", sW)
                 .attr("stroke", color)
                 .attr("fill", "none");
-
             break;
+    }
+    if(className){
+        element.attr('class', className);
     }
 }
 

@@ -382,3 +382,16 @@ svg {
     margin-top: 1px;
     float: right;
 }
+
+
+.graphlyTooltip{
+    position: absolute;
+    background-color: white;
+    display: none;
+    width: 265px;
+    max-height: 250px;
+    z-index: 10;
+    font-size: 0.8em;
+    font-family: 'arial';
+    padding: 5px;
+}
