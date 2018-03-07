@@ -352,7 +352,7 @@ class graphly extends EventEmitter {
                             u.addSymbol( 
                                 self.topSvg, nodeId.symbol, '#00ff00',
                                 {x: nodeId.x.coord, y: nodeId.y.coord},
-                                1.0, 13.0, 'temporary'
+                                3.0, 13.0, 'temporary'
                             );
                         }
                     }
@@ -416,7 +416,7 @@ class graphly extends EventEmitter {
                             }
                             u.addSymbol( 
                                 self.topSvg, nodeId.symbol, '#00ff00',
-                                {x: nodeId.x.coord, y: nodeId.y.coord}, 1.0, 13.0
+                                {x: nodeId.x.coord, y: nodeId.y.coord}, 4.0, 13.0
                             );
                         }
                     }
@@ -1132,6 +1132,8 @@ class graphly extends EventEmitter {
         let y2Selection = [];
         let rs = this.renderSettings;
 
+        this.renderSettings.y2Axis = defaultFor(this.renderSettings.y2Axis, []);
+
         if(rs.combinedParameters.hasOwnProperty(rs.xAxis)){
             xSelection = [].concat.apply([], rs.combinedParameters[rs.xAxis]);
         } else {
@@ -1701,23 +1703,22 @@ class graphly extends EventEmitter {
         let yAxRen = this.renderSettings.yAxis;
         let resultData;
         inactive = defaultFor(inactive, false);
-        let datIds = this.renderSettings.dataIdentifier.identifiers;
-
 
         //Check if data has identifier creating multiple datasets
         if (this.renderSettings.hasOwnProperty('dataIdentifier')){
 
+            let datIds = this.renderSettings.dataIdentifier.identifiers;
             for (let i = 0; i < datIds.length; i++) {
 
                 // Check if regression is activated for this parameter and id
                 let id = datIds[i];
                 let regSett = this.dataSettings[yAxRen[parPos]];
 
-                if( this.dataSettings[yAxRen[parPos]].hasOwnProperty ){
+                if( this.dataSettings[yAxRen[parPos]].hasOwnProperty(id) ){
                     regSett = regSett[id];
                 }
 
-                var reg = {
+                let reg = {
                     type: regSett.regression,
                     order: regSett.regressionOrder
                 };
@@ -1753,32 +1754,40 @@ class graphly extends EventEmitter {
             }
             
         }else{
-            // TODO: Check for size mismatch?
-            if(this.xTimeScale){
-                resultData = data[xAxRen]
-                    .map(function(d){return d.getTime();})
-                    .zip(
+            let regSett = this.dataSettings[yAxRen[parPos]];
+            let reg = {
+                type: regSett.regression,
+                order: regSett.regressionOrder
+            };
+
+            if(typeof reg.type !== 'undefined'){
+                // TODO: Check for size mismatch?
+                if(this.xTimeScale){
+                    resultData = data[xAxRen]
+                        .map(function(d){return d.getTime();})
+                        .zip(
+                            data[yAxRen[parPos]]
+                        );
+                }else{
+                    resultData = data[xAxRen].zip(
                         data[yAxRen[parPos]]
                     );
-            }else{
-                resultData = data[xAxRen].zip(
-                    data[yAxRen[parPos]]
-                );
-            }
-            if(!inactive){
-                // Check for predefined color
-                if(this.dataSettings.hasOwnProperty(yAxRen[parPos]) &&
-                   this.dataSettings[yAxRen[parPos]].hasOwnProperty('color')){
-                    this.renderRegression(
-                        resultData, reg, 
-                        this.dataSettings[yAxRen[parPos]].color
-                    );
-            }else{
-                this.renderRegression(resultData, reg);
-            }
-                
-            }else{
-                this.renderRegression(resultData, reg, [0.2,0.2,0.2,0.4]);
+                }
+                if(!inactive){
+                    // Check for predefined color
+                    if(this.dataSettings.hasOwnProperty(yAxRen[parPos]) &&
+                       this.dataSettings[yAxRen[parPos]].hasOwnProperty('color')){
+                        this.renderRegression(
+                            resultData, reg, 
+                            this.dataSettings[yAxRen[parPos]].color
+                        );
+                }else{
+                    this.renderRegression(resultData, reg);
+                }
+                    
+                }else{
+                    this.renderRegression(resultData, reg, [0.2,0.2,0.2,0.4]);
+                }
             }
         }
     }
@@ -2350,12 +2359,21 @@ class graphly extends EventEmitter {
                 if(this.filterManager.filterSettings.hasOwnProperty('filterRelation')){
                     applicableFilter = false;
                     let filterRel = this.filterManager.filterSettings.filterRelation;
+                    let insideGroup = false;
                     for (let i = 0; i < filterRel.length; i++) {
+                        // Check if both parameters are in the same group
                         if( (filterRel[i].indexOf(p)!==-1) && 
                             (filterRel[i].indexOf(f)!==-1)){
                             applicableFilter = true;
                             break;
                         }
+                        // Check if current parameter is in any group
+                        if(filterRel[i].indexOf(p)!==-1){
+                            insideGroup = true;
+                        }
+                    }
+                    if(!insideGroup){
+                        applicableFilter = true;
                     }
                 }
                 

@@ -87,12 +87,18 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
                 .attr('x1', c.x).attr('y1', c.y-s/2)
                 .attr('x2', c.x).attr('y2', c.y+s/2)
                 .attr("stroke-width", sW)
-                .attr("stroke", color);
+                .attr("stroke", color)
+            if(className){
+                element.attr('class', className);
+            }
             element = el.append('line')
                 .attr('x1', c.x-s/2).attr('y1', c.y)
                 .attr('x2', c.x+s/2).attr('y2', c.y)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
+            if(className){
+                element.attr('class', className);
+            }
             break;
         case 'x':
             element = el.append('line')
@@ -100,11 +106,17 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
                 .attr('x2', c.x+s/2).attr('y2', c.y+s/2)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
+            if(className){
+                element.attr('class', className);
+            }
             element = el.append('line')
                 .attr('x1', c.x+s/2).attr('y1', c.y-s/2)
                 .attr('x2', c.x-s/2).attr('y2', c.y+s/2)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
+            if(className){
+                element.attr('class', className);
+            }
             break;
         case 'triangle':
             element = el.append("path")
@@ -121,7 +133,7 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
                 .attr("fill", "none");
             break;
     }
-    if(className){
+    if(element && className){
         element.attr('class', className);
     }
 }

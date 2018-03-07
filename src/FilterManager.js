@@ -453,8 +453,7 @@ class FilterManager extends EventEmitter {
                         }
                     }else{
                         that.boolFilters[id] = (val)=>{
-                            // Add !! to convert 0,1 ints to bool for comparison
-                            return !!val === selectValue;
+                            return val === selectValue;
                         };
                     }
                     that._filtersChanged();
@@ -466,8 +465,7 @@ class FilterManager extends EventEmitter {
                 // call a filterchange event
                 if(selected!==-1 && !this.boolFilters.hasOwnProperty(id)){
                     this.boolFilters[id] = (val)=>{
-                        // Add !! to convert 0,1 ints to bool for comparison
-                        return !!val === selected;
+                        return val === selected;
                     };
                     this._filtersChanged();
                 }
@@ -614,6 +612,7 @@ class FilterManager extends EventEmitter {
                 var applicableFilter = true;
                 if(this.filterSettings.hasOwnProperty('filterRelation')){
                     applicableFilter = false;
+                    let insideGroup = false;
                     var filterRel = this.filterSettings.filterRelation;
 
                     for (var i = 0; i < filterRel.length; i++) {
@@ -622,10 +621,16 @@ class FilterManager extends EventEmitter {
                         // current data id is not)
                         if( (filterRel[i].indexOf(p)!==-1) && 
                             (filterRel[i].indexOf(f)!==-1)){
-
                             applicableFilter = true;
                             break;
                         }
+                        // Check if current parameter is in any group
+                        if(filterRel[i].indexOf(p)!==-1){
+                            insideGroup = true;
+                        }
+                    }
+                    if(!insideGroup){
+                        applicableFilter = true;
                     }
                 }
                 // Check if filter is a grouped filter

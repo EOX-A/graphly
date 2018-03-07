@@ -453,7 +453,7 @@ var graph = new graphly.graphly({
 
 filterManager.setRenderNode('#filters');
 
-/*var graph2 = new graphly.graphly({
+var graph2 = new graphly.graphly({
     el: '#graph2',
     dataSettings: ds_mie,
     renderSettings: renderSettings_mie,
@@ -463,7 +463,7 @@ filterManager.setRenderNode('#filters');
     connectedGraph: graph
 });
 
-graph.connectGraph(graph2);*/
+graph.connectGraph(graph2);
 
 
 
