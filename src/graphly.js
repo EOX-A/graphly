@@ -186,6 +186,8 @@ class graphly extends EventEmitter {
         this.logY = defaultFor(options.logY, false);
         this.logY2 = defaultFor(options.logY2, false);
 
+        this.colorAxisTickFormat = defaultFor(options.colorAxisTickFormat, 'g');
+
         if(this.filterManager){
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
         }
@@ -538,9 +540,18 @@ class graphly extends EventEmitter {
 
     saveImage(){
 
-        this.dim = this.el.select('svg').node().getBoundingClientRect();
-        let renderWidth = this.dim.width;
-        let renderHeight = this.dim.height;
+        // We need to first render the canvas if the debounce active is false
+        if(!this.debounceActive){
+            this.renderCanvas.style('opacity','1');
+            let prevImg = this.el.select('#previewImage');
+            let img = this.renderCanvas.node().toDataURL();
+            if(!prevImg.empty()){
+                prevImg.attr('xlink:href', img)
+                    .attr('transform', 'translate(0,0)scale(1)')
+                    .style('display', 'none');
+            }
+        }
+
 
         this.svg.select('#previewImage').style('display', 'block');
 
@@ -572,6 +583,23 @@ class graphly extends EventEmitter {
             .attr('stroke', 'none')
             .attr('shape-rendering', 'crispEdges');
 
+        // TODO: We introduce a short timeout here because it seems for some
+        // reason the rendered image is not ready when not using the debounce
+        // flag, not sure how to discover if the image is ready or not,
+        // when debugging the svg_html shows the correct image, but the 
+        // redering is empty
+        if(!this.debounceActive){
+            setTimeout(this.createOutputPNG.bind(this), 10);
+        } else {
+            this.createOutputPNG();
+        }
+    }
+
+    createOutputPNG(){
+
+        this.dim = this.el.select('svg').node().getBoundingClientRect();
+        let renderWidth = this.dim.width;
+        let renderHeight = this.dim.height;
 
         var svg_html = this.el.select('svg')
             .attr("version", 1.1)
@@ -591,7 +619,6 @@ class graphly extends EventEmitter {
         c.toBlob(function(blob) {
             FileSaver.saveAs(blob, self.file_save_string);
         }, "image/png" ,1);
-
     }
 
     createAxisLabels(){
@@ -852,7 +879,7 @@ class graphly extends EventEmitter {
 
         let step = (colorAxisScale.domain()[1] - colorAxisScale.domain()[0]) / 10;
 
-        colorAxis.tickFormat(d3.format("g"));
+        colorAxis.tickFormat(d3.format(this.colorAxisTickFormat));
 
         let g = this.el.select('svg').select('g').append("g")
             .attr('id', ('colorscale_'+id))
@@ -2899,6 +2926,17 @@ class graphly extends EventEmitter {
                     .style('display', 'none');
             }
             this.previewActive = false;
+        } else {
+            let prevImg = this.el.select('#previewImage');
+            if(prevImg.empty()){
+                this.renderingContainer.append('svg:image')
+                    .attr('id', 'previewImage')
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('width',  this.width)
+                    .attr('height', this.height)
+                    .style('display', 'none');
+            }
         }
 
         this.emit('rendered');

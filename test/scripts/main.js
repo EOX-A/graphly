@@ -453,17 +453,17 @@ var graph = new graphly.graphly({
 
 filterManager.setRenderNode('#filters');
 
-var graph2 = new graphly.graphly({
+/*var graph2 = new graphly.graphly({
     el: '#graph2',
     dataSettings: ds_mie,
     renderSettings: renderSettings_mie,
     filterManager: filterManager,
     //fixedSize: true,
     //fixedWidth: 12000
-    connectedGraph: graph
-});
+    //connectedGraph: graph
+});*/
 
-graph.connectGraph(graph2);
+//graph.connectGraph(graph2);
 
 
 
@@ -602,7 +602,7 @@ d3.select('#datafiles').on('change', function(e){
     graph.setDataSettings(otherds);
     usesecond = false;
     graph.connectGraph(false);
-    graph2.connectGraph(false);
+   // graph2.connectGraph(false);
     if (sel_value.indexOf('testdata') === -1){
         if (sel_value.indexOf('MRC') !== -1){
             graph.setRenderSettings(renderSettingsMRC);
@@ -612,10 +612,10 @@ d3.select('#datafiles').on('change', function(e){
             graph.setRenderSettings(renderSettingsISR);
         }else {
             usesecond = true;
-            graph.connectGraph(graph2);
+            /*graph.connectGraph(graph2);
             graph2.connectGraph(graph);
             graph2.setDataSettings(ds_mie);
-            graph2.setRenderSettings(renderSettings_mie);
+            graph2.setRenderSettings(renderSettings_mie);*/
 
             graph.setDataSettings(ds_rayleigh);
             graph.setRenderSettings(renderSettings_ray);
