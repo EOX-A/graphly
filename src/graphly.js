@@ -788,6 +788,7 @@ class graphly extends EventEmitter {
             that.initAxis();
             that.renderData();
             that.createAxisLabels();
+            that.emit('axisChange');
         },false);
         ySettingParameters.passedElement.addEventListener('removeItem', function(event) {
             let index = that.renderSettings.yAxis.indexOf(event.detail.value);
@@ -799,6 +800,7 @@ class graphly extends EventEmitter {
                 that.initAxis();
                 that.renderData();
                 that.createAxisLabels();
+                that.emit('axisChange');
             }
         },false);
 
@@ -846,6 +848,7 @@ class graphly extends EventEmitter {
             that.initAxis();
             that.renderData();
             that.createAxisLabels();
+            that.emit('axisChange');
         },false);
 
     }
@@ -1048,6 +1051,9 @@ class graphly extends EventEmitter {
         // Multiply by number of y axis elements as for each one all data points
         // for the selected parameter is drawn
         max = max * this.renderSettings.yAxis.length * 2;
+        if(this.renderSettings.y2Axis.length > 0){
+            max *= this.renderSettings.yAxis.length*2;
+        }
 
         this.updateBuffers(this.batchDrawer, ++max);
 
@@ -1109,25 +1115,31 @@ class graphly extends EventEmitter {
         // Add some default values for datasettings if nothing is defined yet
         let keys = Object.keys(data);
         for (var i = 0; i < keys.length; i++) {
-            if( !this.dataSettings.hasOwnProperty(keys[i]) ){
-                // If the parameter is multi-Id we initialize it differnetly
-                if (this.renderSettings.hasOwnProperty('dataIdentifier')){
-                    let parIds = this.renderSettings.dataIdentifier.identifiers;
+
+            // If the parameter is multi-Id we initialize it differnetly
+            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+                let parIds = this.renderSettings.dataIdentifier.identifiers;
+                if(!this.dataSettings.hasOwnProperty(keys[i]) ){
                     this.dataSettings[keys[i]] = {};
-                    for (let j = 0; j < parIds.length; j++) {
+                }
+                for (let j = 0; j < parIds.length; j++) {
+                    if(!this.dataSettings[keys[i]].hasOwnProperty(parIds[j])) {
                         this.dataSettings[keys[i]][parIds[j]] = {
-                            uom: null,
+                            symbol: 'circle',
                             color: [Math.random(), Math.random(), Math.random(), 0.8]
                         };
                     }
+                }
 
-                } else {
+            } else {
+                if(!this.dataSettings.hasOwnProperty(keys[i])) {
                     this.dataSettings[keys[i]] = {
                         uom: null,
                         color: [Math.random(), Math.random(), Math.random(), 0.8]
                     };
                 }
             }
+
         }
 
         // Add some default values for combined params datasettings if nothing 
@@ -1594,7 +1606,10 @@ class graphly extends EventEmitter {
             }
 
         }else{
-            this.onZoom();
+            this.debounceZoom.bind(this)();
+            // While interaction is happening only render visible plot once
+            // debounce finished render also reference canvas to allow interaction
+            this.renderData(false);
         }
     }
 
@@ -2858,7 +2873,7 @@ class graphly extends EventEmitter {
             
             // Add y axis selection length as both axis use the same colorscale
             if(this.renderSettings.colorAxis[parPos+yAxRen.length] === null){
-                this.addParameterLabel(id);
+                this.addParameterLabel(idY2);
                 this.el.select('#parameterInfo').style('display', 'block');
             }
 
