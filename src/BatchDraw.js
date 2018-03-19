@@ -326,12 +326,22 @@ class BatchDrawer {
         this.numRects++;
     }
 
+    drawImage(img) {
+        this.GL.drawImage(img,this.canvas.width,this.canvas.height);
+    }
+
+    clear(){
+        this.GL.clear(this.GL.COLOR_BUFFER_BIT);
+    }
+
 
     draw(keepOld) {
         keepOld = keepOld == null ? false : keepOld;
 
         // Clear screen:
-        this.GL.clear(this.GL.COLOR_BUFFER_BIT);
+        //if(!keepOld){
+            //this.GL.clear(this.GL.COLOR_BUFFER_BIT);
+        //}
 
         if (this.GLVersion == 2) {
             if (this.numRects > 0) {
