@@ -363,6 +363,7 @@ svg {
     position: absolute;
     right: 3px;
     top: 3px;
+    z-index: 1;
 }
 
 #ySettings .choices{
@@ -390,6 +391,7 @@ svg {
     display: none;
     width: 265px;
     max-height: 250px;
+    overflow-y: scroll;
     z-index: 10;
     font-size: 0.9em;
     font-family: 'arial';

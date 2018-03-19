@@ -180,6 +180,7 @@ class graphly extends EventEmitter {
         this.filterManager = defaultFor(options.filterManager, false);
         this.connectedGraph = defaultFor(options.connectedGraph, false);
         this.autoColorExtent = defaultFor(options.autoColorExtent, false);
+        this.enableFit = defaultFor(options.enableFit, true);
         this.fixedXDomain = undefined;
 
         this.logX = defaultFor(options.logX, false);
@@ -450,12 +451,22 @@ class graphly extends EventEmitter {
                             tooltip.style('display', 'none');
                         });
 
-                    for (let key in nodeId) {
-                        if(key !== 'symbol'){
+                    if (typeof self.filteredData !== 'undefined' && 
+                        nodeId.hasOwnProperty('index')){
+                        for (let k in self.filteredData){
                             tooltip.append('div')
-                                .text(nodeId[key].id+': '+nodeId[key].val)
+                                .text(k+': '+self.filteredData[k][nodeId.index])
+                        }
+                    } else {
+                        for (let key in nodeId) {
+                            if(key !== 'symbol'){
+                                tooltip.append('div')
+                                    .text(nodeId[key].id+': '+nodeId[key].val)
+                            }
                         }
                     }
+                    
+
                 }
             });
         }
@@ -2192,6 +2203,7 @@ class graphly extends EventEmitter {
             let c = u.genColor();
 
             let par_properties = {
+                index: j,
                 x: {
                     val: data[xAxis][j],
                     id: xAxis,
@@ -2646,39 +2658,41 @@ class graphly extends EventEmitter {
                         that.addApply();
                     });
 
-                this.el.select('#parameterSettings')
-                    .append('label')
-                    .attr('for', 'regressionCheckbox')
-                    .text('Regression');
-                    
-                let regressionTypes = [
-                    {name: 'Linear', value: 'linear'},
-                    {name: 'Polynomial', value: 'polynomial'}
-                ];
+                if(this.enableFit){
+                    this.el.select('#parameterSettings')
+                        .append('label')
+                        .attr('for', 'regressionCheckbox')
+                        .text('Regression');
+                        
+                    let regressionTypes = [
+                        {name: 'Linear', value: 'linear'},
+                        {name: 'Polynomial', value: 'polynomial'}
+                    ];
 
 
-                this.el.select('#parameterSettings')
-                    .append('input')
-                    .attr('id', 'regressionCheckbox')
-                    .attr('type', 'checkbox')
-                    .property('checked', 
-                        dataSettings.hasOwnProperty('regression')
-                    )
-                    .on('change', function(){
-                        // If activated there is no type defined so we
-                        // define a defualt one, for now linear
-                        if(that.el.select('#regressionCheckbox').property('checked')){
-                             dataSettings.regression = defaultFor(
-                                dataSettings.regression,
-                                'linear'
-                            );
-                        }
+                    this.el.select('#parameterSettings')
+                        .append('input')
+                        .attr('id', 'regressionCheckbox')
+                        .attr('type', 'checkbox')
+                        .property('checked', 
+                            dataSettings.hasOwnProperty('regression')
+                        )
+                        .on('change', function(){
+                            // If activated there is no type defined so we
+                            // define a defualt one, for now linear
+                            if(that.el.select('#regressionCheckbox').property('checked')){
+                                 dataSettings.regression = defaultFor(
+                                    dataSettings.regression,
+                                    'linear'
+                                );
+                            }
 
-                        that.renderRegressionOptions(id, regressionTypes, dataSettings);
-                        that.addApply();
-                    });
+                            that.renderRegressionOptions(id, regressionTypes, dataSettings);
+                            that.addApply();
+                        });
 
-                that.renderRegressionOptions(id, regressionTypes, dataSettings);
+                    that.renderRegressionOptions(id, regressionTypes, dataSettings);
+                }
 
             });
         }
@@ -2732,7 +2746,12 @@ class graphly extends EventEmitter {
             inactiveData[p] = [];
         }
 
+        // We need a reference to the original unfiltered index to be able to
+        // display correct information when selecting data point
+
         this.applyDataFilters(data, inactiveData);
+
+        this.filteredData = data;
 
         // Check if we need to update extents which have been reset because
         // of filtering on parameter
@@ -2750,6 +2769,7 @@ class graphly extends EventEmitter {
         }
 
         this.createRegressionInfo();
+
 
         let that = this;
         let idX = xAxRen;
@@ -2856,13 +2876,13 @@ class graphly extends EventEmitter {
                     }
 
                     // Check if any regression type is selected for parameter
-
-                    //if(this.dataSettings[yAxRen[parPos]].hasOwnProperty('regression')){
-                    this.createRegression(data, parPos);
-                    //}
-                    if(inactiveData[yAxRen[parPos]].length>0){
-                        this.createRegression(this.data, parPos, true);
+                    if(this.enableFit){
+                        this.createRegression(data, parPos);
+                        if(inactiveData[yAxRen[parPos]].length>0){
+                            this.createRegression(this.data, parPos, true);
+                        }
                     }
+                    
                 }
             }
         }

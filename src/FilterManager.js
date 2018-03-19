@@ -19,8 +19,10 @@ class FilterManager extends EventEmitter {
         this.maskParameter = defaultFor(this.filterSettings.maskParameter, []);
         this.data = defaultFor(params.data, {});
         this.dataSettings = defaultFor(this.filterSettings.dataSettings, {});
+        this.showCloseButtons = defaultFor(params.showCloseButtons, false);
         
         this.initManager();
+        this.extents = {};
 
         this.margin = defaultFor(
             params.margin,
@@ -39,12 +41,12 @@ class FilterManager extends EventEmitter {
         this.boolFilters = {};
         this.maskFilters = {};
         this.boolFilStat = {};
-        this.extents = {};
     }
 
     resetManager(){
         this.initManager();
         this.emit('filterChange', {});
+        this._renderFilters();
     }
 
     _initData() {
@@ -257,6 +259,12 @@ class FilterManager extends EventEmitter {
                 .style('width', width+'px')
                 .style('height', height+'px');
 
+        div.append('div')
+            .attr('class', 'labelClose cross')
+            .on('click', ()=>{
+                this.emit('removeFilter', d);
+            });
+
         var label = d;
         if(this.dataSettings.hasOwnProperty(d) && 
             this.dataSettings[d].hasOwnProperty('uom') && 
@@ -267,6 +275,13 @@ class FilterManager extends EventEmitter {
         if(this.brushes.hasOwnProperty(d)){
             div.append('div')
                 .attr('class', 'eraserIcon editButton')
+                .style('right', ()=>{
+                    if(this.showCloseButtons){
+                        return '9px';
+                    } else {
+                        return '0px';
+                    }
+                })
                 .on('click', ()=>{
                     this.y[d].brush.clear();
                     this._brushEnd();
