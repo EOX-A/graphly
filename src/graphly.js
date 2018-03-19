@@ -996,6 +996,20 @@ class graphly extends EventEmitter {
             .style('visibility', 'hidden')
             .attr('pointer-events', 'all');
 
+        if(this.renderSettings.y2Axis.length>0){
+            this.svg.append('rect')
+                .attr('id', 'zoomY2Box')
+                .attr('width', this.margin.right)
+                .attr('height', this.height )
+                .attr('transform', 'translate(' + (
+                    -this.margin.left + this.margin.right + this.width
+                    ) + ',' + 0 + ')'
+                )
+                .attr('fill', 'red')
+                .style('visibility', 'hidden')
+                .attr('pointer-events', 'all');
+        }
+
         // Add rectangle as 'outline' for plot
         this.svg.append('rect')
             .attr('id', 'rectangleOutline')
@@ -1431,12 +1445,13 @@ class graphly extends EventEmitter {
           .x(this.xScale)
           .on('zoom', this.previewZoom.bind(this));
 
-        /*if(this.connectedGraph){
-            this.connectedGraph.
-        }*/
 
         this.yzoom = d3.behavior.zoom()
           .y(this.yScale)
+          .on('zoom', this.previewZoom.bind(this));
+
+        this.y2zoom = d3.behavior.zoom()
+          .y(this.y2Scale)
           .on('zoom', this.previewZoom.bind(this));
 
 
@@ -1457,6 +1472,7 @@ class graphly extends EventEmitter {
         this.renderCanvas.call(this.xyzoom);
         this.el.select('#zoomXBox').call(this.xzoom);
         this.el.select('#zoomYBox').call(this.yzoom);
+        this.el.select('#zoomY2Box').call(this.y2zoom);
 
         this.createAxisLabels();
     }
@@ -1473,10 +1489,14 @@ class graphly extends EventEmitter {
         this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
             .on('zoom', this.previewZoom.bind(this));
+        this.y2zoom = d3.behavior.zoom()
+            .y(this.y2Scale)
+            .on('zoom', this.previewZoom.bind(this));
 
         this.renderCanvas.call(this.xyzoom);
         this.el.select('#zoomXBox').call(this.xzoom);
         this.el.select('#zoomYBox').call(this.yzoom);
+        this.el.select('#zoomY2Box').call(this.y2zoom);
 
 
     }
@@ -1575,6 +1595,16 @@ class graphly extends EventEmitter {
         let transXY = this.xyzoom.translate();
         let transX = this.xzoom.translate();
         let transY = this.yzoom.translate();
+
+        if(this.renderSettings.y2Axis.length > 0){
+            if(transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1){
+                this.y2zoom
+                    .scale(xyScale)
+                    .translate(transXY);
+            } else {
+                this.y2AxisSvg.call(this.y2Axis);
+            }
+        }
 
 
         this.topSvg.selectAll('.highlightItem').remove();

@@ -43,8 +43,8 @@ var renderSettings_ray = {
 var renderSettingsSwarm = {
     xAxis: 'Timestamp',
     yAxis: ['F_error'],
-    y2Axis: [],
-    colorAxis: [null/* 'Spacecraft' */],
+    y2Axis: ['F'],
+    colorAxis: [null, null],
     dataIdentifier: {
         parameter: 'Spacecraft',
         identifiers: ['A', 'B']

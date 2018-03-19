@@ -9,7 +9,7 @@ svg {
     cursor:ew-resize;
 }
 
-#zoomYBox {
+#zoomYBox, #zoomY2Box {
     cursor: ns-resize;
 }
 
