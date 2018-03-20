@@ -255,7 +255,7 @@ svg {
 }
 
 
-#ySettings{
+#ySettings, #y2Settings{
     position: absolute;
     z-index: 500;
     width: 210px;

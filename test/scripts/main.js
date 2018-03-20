@@ -41,14 +41,14 @@ var renderSettings_ray = {
 };
 
 var renderSettingsSwarm = {
-    xAxis: 'Timestamp',
+    xAxis: 'Latitude',
     yAxis: ['F_error'],
     y2Axis: ['F'],
     colorAxis: [null, null],
-    dataIdentifier: {
+    /*dataIdentifier: {
         parameter: 'Spacecraft',
         identifiers: ['A', 'B']
-    }
+    }*/
 };
 
 var renderSettingsMRC = {

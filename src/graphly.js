@@ -636,6 +636,7 @@ class graphly extends EventEmitter {
     createAxisLabels(){
 
          let yChoices = [];
+         let y2Choices = [];
          let xChoices = [];
 
          let xHidden, yHidden, y2Hidden;
@@ -676,10 +677,16 @@ class graphly extends EventEmitter {
             if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
 
                 yChoices.push({value: key, label: key});
+                y2Choices.push({value: key, label: key});
                 xChoices.push({value: key, label: key});
 
                 if(this.renderSettings.yAxis.indexOf(key)!==-1){
                     yChoices[yChoices.length-1].selected = true;
+                    y2Choices.pop();
+                }
+                if(this.renderSettings.y2Axis.indexOf(key)!==-1){
+                    y2Choices[y2Choices.length-1].selected = true;
+                    yChoices.pop();
                 }
                 if(this.renderSettings.xAxis === key){
                     xChoices[xChoices.length-1].selected = true;
@@ -700,10 +707,17 @@ class graphly extends EventEmitter {
             }
             if(includePar){
                 yChoices.push({value: comKey, label: comKey});
+                y2Choices.push({value: comKey, label: comKey});
                 xChoices.push({value: comKey, label: comKey});
 
                 if(this.renderSettings.yAxis.indexOf(comKey)!==-1){
                     yChoices[yChoices.length-1].selected = true;
+                    y2Choices.pop();
+                }
+                // Add selected attribute also to y2 axis selections
+                if(this.renderSettings.y2Axis.indexOf(comKey)!==-1){
+                    y2Choices[y2Choices.length-1].selected = true;
+                    yChoices.pop();
                 }
                 if(this.renderSettings.xAxis === comKey){
                     xChoices[xChoices.length-1].selected = true;
@@ -714,7 +728,6 @@ class graphly extends EventEmitter {
         this.el.selectAll('.axisLabel').on('click',null);
         this.el.selectAll('.axisLabel').remove();
 
-        //let uniqY = [ ...new Set(this.renderSettings.yAxis) ];
         let uniqY = this.renderSettings.yAxis;
 
         let listText = [];
@@ -729,11 +742,10 @@ class graphly extends EventEmitter {
             }
         }
 
-        if(listText.length == 0){
+        if(listText.length === 0){
             // No items selected, add "filler text"
             listText.push('Add parameter ...');
         }
-
         this.svg.append('text')
             .attr('class', 'yAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
@@ -745,7 +757,7 @@ class graphly extends EventEmitter {
 
         this.el.select('#ySettings').remove();
 
-        let ySetDiv = this.el.append('div')
+        this.el.append('div')
             .attr('id', 'ySettings')
             .style('display', function(){
                 return yHidden ? 'none' : 'block';
@@ -820,6 +832,114 @@ class graphly extends EventEmitter {
                 that.emit('axisChange');
             }
         },false);
+
+
+        // Create labels for y2 axis
+
+        let uniqY2 = this.renderSettings.y2Axis;
+        listText = [];
+        // Add uom info to unique elements
+        for (let i = 0; i < uniqY2.length; i++) {
+            if(this.dataSettings.hasOwnProperty(uniqY2[i]) && 
+               this.dataSettings[uniqY2[i]].hasOwnProperty('uom') &&
+               this.dataSettings[uniqY2[i]].uom !== null){
+                listText.push(uniqY2[i]+' ['+this.dataSettings[uniqY2[i]].uom+'] ');
+            }else{
+                listText.push(uniqY2[i]);
+            }
+        }
+        if(listText.length === 0){
+            // No items selected, add "filler text"
+            listText.push('Add parameter ...');
+        }
+        this.svg.append('text')
+            .attr('class', 'y2AxisLabel axisLabel')
+            .attr('text-anchor', 'middle')
+            .attr('transform', 
+                'translate('+ (this.width+this.margin.right-20) +','+
+                (this.height/2)+')rotate(-90)'
+            )
+            .text(listText.join(', '));
+
+        this.el.select('#y2Settings').remove();
+
+        this.el.append('div')
+            .attr('id', 'y2Settings')
+            .style('display', function(){
+                return y2Hidden ? 'none' : 'block';
+            })
+            .style('top', this.height/2+'px')
+            .style('left', (this.width-165)+'px')
+            .append('select')
+                .attr('id', 'y2ScaleChoices');
+
+        this.el.select('#y2Settings').append('div')
+            .attr('class', 'labelClose cross')
+            .on('click', ()=>{
+                this.el.select('#y2Settings').style('display', 'none');
+            });
+
+        con = this.el.select('#y2Settings').append('div')
+            .attr('class', 'axisOption');
+        con.append('input')
+            .attr('id', 'logY2option')
+            .attr('type', 'checkbox')
+            .property('checked', 
+                defaultFor(that.logY2, false)
+            )
+            .on('change', function(){
+                that.logY2 = !that.logY2;
+                that.initAxis();
+                that.renderData();
+            });
+
+        con.append('label')
+            .attr('for', 'logY2option')
+            .text('Logarithmic scale (base-10) ');
+
+
+        document.getElementById('y2ScaleChoices').multiple = true;
+
+        this.el.select('.y2AxisLabel.axisLabel').on('click', ()=>{
+            if(this.el.select('#y2Settings').style('display') === 'block'){
+                this.el.select('#y2Settings').style('display', 'none');
+            }else{
+                this.el.select('#y2Settings').style('display', 'block');
+            }
+        });
+
+        let y2SettingParameters = new Choices(this.el.select('#y2ScaleChoices').node(), {
+          choices: y2Choices,
+          removeItemButton: true,
+          placeholderValue: ' select ...',
+          itemSelectText: '',
+        });
+
+        y2SettingParameters.passedElement.addEventListener('addItem', function(event) {
+            that.renderSettings.y2Axis.push(event.detail.value);
+            that.renderSettings.colorAxis.push(null);
+            that.recalculateBufferSize();
+            that.initAxis();
+            that.renderData();
+            that.createAxisLabels();
+            that.emit('axisChange');
+        },false);
+        y2SettingParameters.passedElement.addEventListener('removeItem', function(event) {
+            let index = that.renderSettings.y2Axis.indexOf(event.detail.value);
+            // TODO: Should it happen that the removed item is not in the list?
+            // Do we need to handle this case? 
+            if(index!==-1){
+                that.renderSettings.y2Axis.splice(index, 1);
+                that.renderSettings.colorAxis.splice((index+that.renderSettings.yAxis.length), 1);
+                that.initAxis();
+                that.renderData();
+                that.createAxisLabels();
+                that.emit('axisChange');
+            }
+        },false);
+
+
+
 
         this.svg.append('text')
             .attr('class', 'xAxisLabel axisLabel')
@@ -1708,7 +1828,7 @@ class graphly extends EventEmitter {
         }
     }
 
-    renderRegression(data, reg, color, thickness) {
+    renderRegression(data, reg, yScale, color, thickness) {
         let result;
         let c = defaultFor(color, [0.1, 0.4, 0.9]);
         if(c.length === 3){
@@ -1737,7 +1857,7 @@ class graphly extends EventEmitter {
                 ];
 
                 xPoints = xPoints.map(this.xScale);
-                yPoints = yPoints.map(this.yScale);
+                yPoints = yPoints.map(yScale);
 
                 this.batchDrawer.addLine(
                     xPoints[1], yPoints[1],
@@ -1779,8 +1899,8 @@ class graphly extends EventEmitter {
                         px1 = this.xScale(new Date(Math.ceil(x1)));
                         px2 = this.xScale(new Date(Math.ceil(x2)));
                     }
-                    py1 = this.yScale(y1);
-                    py2 = this.yScale(y2);
+                    py1 = yScale(y1);
+                    py2 = yScale(y2);
 
                     this.batchDrawer.addLine(
                         px1, py1,
@@ -1804,10 +1924,9 @@ class graphly extends EventEmitter {
         }
     }
 
-    createRegression(data, parPos, inactive) {
+    createRegression(data, parPos, yAxRen, inactive) {
 
         let xAxRen = this.renderSettings.xAxis;
-        let yAxRen = this.renderSettings.yAxis;
         let resultData;
         inactive = defaultFor(inactive, false);
 
@@ -1852,11 +1971,15 @@ class graphly extends EventEmitter {
                 }
 
                 var rC = this.getIdColor(parPos, id);
+                let yScale = this.yScale;
+                if(this.renderSettings.y2Axis.indexOf(yAxRen[parPos]) !== -1){
+                    yScale = this.y2Scale;
+                }
 
                 if(!inactive){
-                    this.renderRegression(resultData, reg, rC);
+                    this.renderRegression(resultData, reg, yScale, rC);
                 }else{
-                    this.renderRegression(resultData, reg, [0.2,0.2,0.2,0.4]);
+                    this.renderRegression(resultData, reg, yScale, [0.2,0.2,0.2,0.4]);
                 }
             }
             
@@ -1866,6 +1989,11 @@ class graphly extends EventEmitter {
                 type: regSett.regression,
                 order: regSett.regressionOrder
             };
+
+            let yScale = this.yScale;
+            if(this.renderSettings.y2Axis.indexOf(yAxRen[parPos]) !== -1){
+                yScale = this.y2Scale;
+            }
 
             if(typeof reg.type !== 'undefined'){
                 // TODO: Check for size mismatch?
@@ -1885,15 +2013,15 @@ class graphly extends EventEmitter {
                     if(this.dataSettings.hasOwnProperty(yAxRen[parPos]) &&
                        this.dataSettings[yAxRen[parPos]].hasOwnProperty('color')){
                         this.renderRegression(
-                            resultData, reg, 
+                            resultData, reg, yScale,
                             this.dataSettings[yAxRen[parPos]].color
                         );
                 }else{
-                    this.renderRegression(resultData, reg);
+                    this.renderRegression(resultData, reg, yScale);
                 }
                     
                 }else{
-                    this.renderRegression(resultData, reg, [0.2,0.2,0.2,0.4]);
+                    this.renderRegression(resultData, reg, yScale, [0.2,0.2,0.2,0.4]);
                 }
             }
         }
@@ -2219,7 +2347,7 @@ class graphly extends EventEmitter {
                             if(x-p_x>-this.width/2){
                                 this.batchDrawer.addLine(
                                     p_x, p_y, x, y, 1, 
-                                    rC[0], rC[1], rC[2], 0.8
+                                    rC[0], rC[1], rC[2], 1.0
                                 );
                             }
                         }
@@ -2229,7 +2357,7 @@ class graphly extends EventEmitter {
                         if(x-p_x>-this.width/2){
                             this.batchDrawer.addLine(
                                 p_x, p_y, x, y, 1, 
-                                rC[0], rC[1], rC[2], 0.8
+                                rC[0], rC[1], rC[2], 1.0
                             );
                         }
                     }
@@ -2320,8 +2448,8 @@ class graphly extends EventEmitter {
                             // as some datasets loop and it looks messy
                             if(x-p_x>-this.width/2){
                                 this.batchDrawer.addLine(
-                                    p_x, p_y, x, y, 1, 
-                                    rC[0], rC[1], rC[2], 0.8
+                                    p_x, p_y, x, y, 1.0, 
+                                    rC[0], rC[1], rC[2], 1.0
                                 );
                             }
                         }
@@ -2330,8 +2458,8 @@ class graphly extends EventEmitter {
                         // as some datasets loop and it looks messy
                         if(x-p_x>-this.width/2){
                             this.batchDrawer.addLine(
-                                p_x, p_y, x, y, 1, 
-                                rC[0], rC[1], rC[2], 0.8
+                                p_x, p_y, x, y, 1.0, 
+                                rC[0], rC[1], rC[2], 1.0
                             );
                         }
                     }
@@ -2344,7 +2472,7 @@ class graphly extends EventEmitter {
                     par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
+                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.8
                     );
                     if(!this.fixedSize && updateReferenceCanvas){
                         this.batchDrawerReference.addDot(
@@ -2776,11 +2904,9 @@ class graphly extends EventEmitter {
     }
 
 
-    renderParameter(idX, idY, parPos, data, inactiveData, updateReferenceCanvas){
+    renderParameter(idX, idY, yAxisSet, parPos, data, inactiveData, updateReferenceCanvas){
 
         let xAxRen = this.renderSettings.xAxis;
-        let yAxRen = this.renderSettings.yAxis;
-        let y2AxRen = this.renderSettings.y2Axis;
         let combPars = this.renderSettings.combinedParameters;
 
         // If a combined parameter is provided we need to render either
@@ -2788,13 +2914,13 @@ class graphly extends EventEmitter {
         if(combPars.hasOwnProperty(xAxRen)){
             // If also the yAxis item is an array we render a rectangle
             //if(yAxRen[yScaleItem].constructor === Array){
-            if(combPars.hasOwnProperty(yAxRen[parPos])){
+            if(combPars.hasOwnProperty(yAxisSet[parPos])){
 
                 let xGroup = this.renderSettings.combinedParameters[
                     xAxRen
                 ];
                 let yGroup = this.renderSettings.combinedParameters[
-                    yAxRen[parPos]
+                    yAxisSet[parPos]
                 ];
                 this.renderRectangles(
                     data, parPos, xGroup, yGroup, updateReferenceCanvas
@@ -2812,7 +2938,7 @@ class graphly extends EventEmitter {
         } else {
             // xAxis has only one element
             // Check if yAxis has two elements
-            if(yAxRen[parPos].constructor === Array){
+            if(yAxisSet[parPos].constructor === Array){
                 // If yAxis has two elements draw lines in yAxis direction
                 // TODO: drawing of lines
             } else {
@@ -2827,7 +2953,7 @@ class graphly extends EventEmitter {
                 let lp = inactiveData[xAxRen].length;
                 for (let j=0;j<=lp; j++) {
                     let x = (this.xScale(inactiveData[xAxRen][j]));
-                    let y = (this.yScale(inactiveData[yAxRen[parPos]][j]));
+                    let y = (this.yScale(inactiveData[yAxisSet[parPos]][j]));
                     let rC = [0.3,0.3,0.3];
 
                     let c = u.genColor();
@@ -2837,12 +2963,12 @@ class graphly extends EventEmitter {
                             val: x, id: xAxRen, coord: x
                         },
                         y: {
-                            val: y, id: yAxRen[parPos], coord: y
+                            val: y, id: yAxisSet[parPos], coord: y
                         },
                     };
 
                     let nCol = c.map(function(c){return c/255;});
-                    let parSett = this.dataSettings[yAxRen[parPos]];
+                    let parSett = this.dataSettings[yAxisSet[parPos]];
 
                     if (parSett){
 
@@ -2865,9 +2991,9 @@ class graphly extends EventEmitter {
 
                 // Check if any regression type is selected for parameter
                 if(this.enableFit){
-                    this.createRegression(data, parPos);
-                    if(inactiveData[yAxRen[parPos]].length>0){
-                        this.createRegression(this.data, parPos, true);
+                    this.createRegression(data, parPos, yAxisSet);
+                    if(inactiveData[yAxisSet[parPos]].length>0){
+                        this.createRegression(this.data, parPos, yAxisSet, true);
                     }
                 }
                 
@@ -2958,7 +3084,8 @@ class graphly extends EventEmitter {
                 .style('top', (this.margin.top+dim.height-5)+'px');
 
             this.renderParameter(
-                idX, idY, parPos, data, inactiveData, updateReferenceCanvas
+                idX, idY, this.renderSettings.yAxis,
+                parPos, data, inactiveData, updateReferenceCanvas
             );
         }
 
@@ -3004,6 +3131,11 @@ class graphly extends EventEmitter {
             // If y2 Axis needs to be rendered we need to create a separate 
             // image for each y axis, so we clear the rendering for the first y-Axis
             this.batchDrawer.clear();
+            this.el.select('#regressionInfo').remove();
+            this.el.append('div')
+                .attr('id', 'regressionInfo')
+                .style('bottom', this.margin.bottom+'px')
+                .style('left', (this.width/2)+'px');
 
             for (let parPos=0; parPos<y2AxRen.length; parPos++){
 
@@ -3016,7 +3148,8 @@ class graphly extends EventEmitter {
                 }
 
                 this.renderParameter(
-                    idX, idY2, parPos, data, inactiveData, updateReferenceCanvas
+                    idX, idY2, this.renderSettings.y2Axis,
+                    parPos, data, inactiveData, updateReferenceCanvas
                 );
             }
 
@@ -3062,7 +3195,10 @@ class graphly extends EventEmitter {
             // that were cleared before
             for (let parPos=0; parPos<yAxRen.length; parPos++){
                 let idY = yAxRen[parPos];
-                this.renderParameter(idX, idY, parPos, data, inactiveData, updateReferenceCanvas);
+                this.renderParameter(
+                    idX, idY, this.renderSettings.yAxis,
+                    parPos, data, inactiveData, updateReferenceCanvas
+                );
             }
 
             this.batchDrawer.draw();
