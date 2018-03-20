@@ -176,7 +176,7 @@ svg {
     border-color: #444;
     padding: 5px;
     text-align: center;
-    z-index: 5;
+    z-index: 500;
 }
 
 .color-picker-h, .color-picker-sv{
@@ -242,7 +242,7 @@ svg {
     border-color: #444;
     padding: 5px;
     padding-top: 15px;
-    z-index: 5;
+    z-index: 500;
     margin-top: 14px;
 }
 
@@ -372,6 +372,7 @@ svg {
 
 .axisOption{
     font: 400 13.3333px Arial;
+    margin-top: 15px;
 }
 
 .axisOption label {
@@ -396,4 +397,8 @@ svg {
     font-size: 0.9em;
     font-family: 'arial';
     padding: 5px;
+}
+
+ #xAxisCustomLabel, #yAxisCustomLabel, #y2AxisCustomLabel{
+    margin-top: -3px;
 }

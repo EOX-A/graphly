@@ -43,8 +43,8 @@ var renderSettings_ray = {
 var renderSettingsSwarm = {
     xAxis: 'Latitude',
     yAxis: ['F_error'],
-    y2Axis: ['F'],
-    colorAxis: [null, null],
+    //y2Axis: ['F'],
+    colorAxis: [null],
     dataIdentifier: {
         parameter: 'Spacecraft',
         identifiers: ['A', 'B']

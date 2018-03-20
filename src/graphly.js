@@ -100,6 +100,10 @@ class graphly extends EventEmitter {
 
         // Passed options
         this.el = d3.select(options.el);
+        this.yAxisLabel = null;
+        this.y2AxisLabel = null;
+        this.xAxisLabel = null;
+
 
         this.el.append('canvas')
             .attr('id', 'imagerenderer')
@@ -127,7 +131,7 @@ class graphly extends EventEmitter {
 
         this.margin = defaultFor(
             options.margin,
-            {top: 10, left: 90, bottom: 50, right: 20}
+            {top: 10, left: 90, bottom: 50, right: 30}
         );
 
         if(this.renderSettings.hasOwnProperty('y2Axis') && 
@@ -746,6 +750,9 @@ class graphly extends EventEmitter {
             // No items selected, add "filler text"
             listText.push('Add parameter ...');
         }
+        if(this.yAxisLabel){
+            listText = [this.yAxisLabel];
+        }
         this.svg.append('text')
             .attr('class', 'yAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
@@ -776,6 +783,23 @@ class graphly extends EventEmitter {
         let con = this.el.select('#ySettings').append('div')
             .attr('class', 'axisOption');
         let that = this;
+
+        con.append('input')
+            .attr('id', 'yAxisCustomLabel')
+            .attr('type', 'text')
+            .property('value', listText.join(', '))
+            .on('input', function(){
+                d3.select('.yAxisLabel.axisLabel').text(this.value);
+                that.yAxisLabel = this.value;
+            });
+
+        con.append('label')
+            .attr('for', 'yAxisCustomLabel')
+            .text('Label');
+
+        con = this.el.select('#ySettings').append('div')
+            .attr('class', 'axisOption');
+
         con.append('input')
             .attr('id', 'logYoption')
             .attr('type', 'checkbox')
@@ -791,6 +815,8 @@ class graphly extends EventEmitter {
         con.append('label')
             .attr('for', 'logYoption')
             .text('Logarithmic scale (base-10) ');
+
+
 
 
         document.getElementById('yScaleChoices').multiple = true;
@@ -811,6 +837,7 @@ class graphly extends EventEmitter {
         });
 
         ySettingParameters.passedElement.addEventListener('addItem', function(event) {
+            that.yAxisLabel = null;
             that.renderSettings.yAxis.push(event.detail.value);
             that.renderSettings.colorAxis.push(null);
             that.recalculateBufferSize();
@@ -820,6 +847,7 @@ class graphly extends EventEmitter {
             that.emit('axisChange');
         },false);
         ySettingParameters.passedElement.addEventListener('removeItem', function(event) {
+            that.yAxisLabel = null;
             let index = that.renderSettings.yAxis.indexOf(event.detail.value);
             // TODO: Should it happen that the removed item is not in the list?
             // Do we need to handle this case? 
@@ -848,15 +876,20 @@ class graphly extends EventEmitter {
                 listText.push(uniqY2[i]);
             }
         }
+        let addMar = this.margin.right - 10;
         if(listText.length === 0){
             // No items selected, add "filler text"
             listText.push('Add parameter ...');
+            addMar = 20;
+        }
+        if(this.y2AxisLabel){
+            listText = [this.y2AxisLabel];
         }
         this.svg.append('text')
             .attr('class', 'y2AxisLabel axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 
-                'translate('+ (this.width+this.margin.right-20) +','+
+                'translate('+ (this.width+addMar) +','+
                 (this.height/2)+')rotate(-90)'
             )
             .text(listText.join(', '));
@@ -878,6 +911,20 @@ class graphly extends EventEmitter {
             .on('click', ()=>{
                 this.el.select('#y2Settings').style('display', 'none');
             });
+
+        con = this.el.select('#y2Settings').append('div')
+            .attr('class', 'axisOption');
+        con.append('input')
+            .attr('id', 'y2AxisCustomLabel')
+            .attr('type', 'text')
+            .property('value', listText.join(', '))
+            .on('input', function(){
+                d3.select('.y2AxisLabel.axisLabel').text(this.value);
+                that.y2AxisLabel = this.value;
+            });
+        con.append('label')
+            .attr('for', 'y2AxisCustomLabel')
+            .text('Label');
 
         con = this.el.select('#y2Settings').append('div')
             .attr('class', 'axisOption');
@@ -916,6 +963,7 @@ class graphly extends EventEmitter {
         });
 
         y2SettingParameters.passedElement.addEventListener('addItem', function(event) {
+            that.y2AxisLabel = null;
             that.renderSettings.y2Axis.push(event.detail.value);
             that.renderSettings.colorAxis.push(null);
             that.recalculateBufferSize();
@@ -923,8 +971,13 @@ class graphly extends EventEmitter {
             that.renderData();
             that.createAxisLabels();
             that.emit('axisChange');
+            // One item was added and none where before, we resize the right margin
+            if(that.renderSettings.y2Axis.length === 1){
+                that.resize();
+            }
         },false);
         y2SettingParameters.passedElement.addEventListener('removeItem', function(event) {
+            that.y2AxisLabel = null;
             let index = that.renderSettings.y2Axis.indexOf(event.detail.value);
             // TODO: Should it happen that the removed item is not in the list?
             // Do we need to handle this case? 
@@ -935,17 +988,24 @@ class graphly extends EventEmitter {
                 that.renderData();
                 that.createAxisLabels();
                 that.emit('axisChange');
+                // No items in y2 axis we resize the right margin
+                if(that.renderSettings.y2Axis.length === 0){
+                    that.resize();
+                }
             }
         },false);
 
 
-
+        let xLabel = this.renderSettings.xAxis;
+        if(this.xAxisLabel){
+            xLabel = this.xAxisLabel;
+        }
 
         this.svg.append('text')
             .attr('class', 'xAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-10))+')')
-            .text(this.renderSettings.xAxis);
+            .text(xLabel);
 
         this.el.select('#xSettings').remove();
 
@@ -979,7 +1039,22 @@ class graphly extends EventEmitter {
           itemSelectText: '',
         });
 
+        con = this.el.select('#xSettings').append('div')
+            .attr('class', 'axisOption');
+        con.append('input')
+            .attr('id', 'xAxisCustomLabel')
+            .attr('type', 'text')
+            .property('value', xLabel)
+            .on('input', function(){
+                d3.select('.xAxisLabel.axisLabel').text(this.value);
+                that.xAxisLabel = this.value;
+            });
+        con.append('label')
+            .attr('for', 'xAxisCustomLabel')
+            .text('Label');
+
         xSettingParameters.passedElement.addEventListener('change', function(event) {
+            that.xAxisLabel = null;
             that.renderSettings.xAxis = event.detail.value;
             that.recalculateBufferSize();
             that.initAxis();
@@ -2092,7 +2167,12 @@ class graphly extends EventEmitter {
                 csAmount++;
             }
         }
-        this.margin.right = this.originalMarginRight;
+        if(this.renderSettings.hasOwnProperty('y2Axis') && 
+           this.renderSettings.y2Axis.length>0){
+            this.margin.right = 90;
+        } else {
+            this.margin.right = this.originalMarginRight;
+        }
         this.margin.right += csAmount*100;
         this.width = this.dim.width - this.margin.left - this.margin.right;
         this.height = this.dim.height - this.margin.top - this.margin.bottom;
