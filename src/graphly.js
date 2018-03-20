@@ -638,7 +638,7 @@ class graphly extends EventEmitter {
          let yChoices = [];
          let xChoices = [];
 
-         let xHidden, yHidden;
+         let xHidden, yHidden, y2Hidden;
 
          if(!this.el.select('#xSettings').empty()){
             xHidden = (this.el.select('#xSettings').style('display') == 'block' ) ? 
@@ -653,8 +653,13 @@ class graphly extends EventEmitter {
         }else{
             yHidden = true;
         }
-         
-         
+
+        if(!this.el.select('#y2Settings').empty()){
+            y2Hidden = (this.el.select('#y2Settings').style('display') == 'block' ) ? 
+                false : true; 
+        }else{
+            y2Hidden = true;
+        }
 
         // Go through data settings and find currently available ones
         let ds = this.dataSettings;
@@ -1427,12 +1432,12 @@ class graphly extends EventEmitter {
             .call(this.xAxis);
 
         this.yAxisSvg = this.svg.append('g')
-            .attr('class', 'axis')
+            .attr('class', 'y axis')
             .call(this.yAxis);
 
         if(this.renderSettings.y2Axis.length > 0){
             this.y2AxisSvg = this.svg.append('g')
-                .attr('class', 'axis')
+                .attr('class', 'y2 axis')
                 .call(this.y2Axis);
         }
 
@@ -1974,6 +1979,12 @@ class graphly extends EventEmitter {
         this.xAxisSvg.call(this.xAxis);
         this.yAxisSvg.call(this.yAxis);
 
+        if(this.renderSettings.y2Axis.length > 0){
+            this.y2Axis.innerTickSize(this.width);
+            this.y2Scale.range([this.height, 0]);
+            this.y2AxisSvg.call(this.y2Axis);
+        }
+
         this.renderCanvas
             .attr('width', this.width - 1)
             .attr('height', this.height - 1);
@@ -2004,7 +2015,20 @@ class graphly extends EventEmitter {
         this.el.select('#zoomYBox')
             .attr('width', this.margin.left)
             .attr('height', this.height );
-            
+
+        this.el.select('#zoomY2Box')
+            .attr('width', this.margin.right)
+            .attr('height', this.height )
+            .attr('transform', 'translate(' + (
+                -this.margin.left + this.margin.right + this.width
+                ) + ',' + 0 + ')'
+            );
+
+        this.el.select('#zoomXBox')
+            .attr('width', this.width)
+            .attr('height', this.margin.bottom)
+            .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
+
         this.el.select('#rectangleOutline')
             .attr('width', this.width)
             .attr('height', this.height);
@@ -2863,8 +2887,7 @@ class graphly extends EventEmitter {
         let xAxRen = this.renderSettings.xAxis;
         let yAxRen = this.renderSettings.yAxis;
         let y2AxRen = this.renderSettings.y2Axis;
-        let combPars = this.renderSettings.combinedParameters;
-
+        
         this.batchDrawer.clear();
 
         // If data object is undefined or empty return
@@ -2934,7 +2957,9 @@ class graphly extends EventEmitter {
             this.el.select('#parameterSettings')
                 .style('top', (this.margin.top+dim.height-5)+'px');
 
-            this.renderParameter(idX, idY, parPos, data, inactiveData, updateReferenceCanvas);
+            this.renderParameter(
+                idX, idY, parPos, data, inactiveData, updateReferenceCanvas
+            );
         }
 
         this.batchDrawer.draw();
@@ -2943,29 +2968,24 @@ class graphly extends EventEmitter {
         }
 
         if(this.debounceActive){
-            if(y2AxRen.length > 0){
-                this.renderCanvas.style('opacity','1');
-                let prevImg = this.el.select('#previewImage');
-                let img = this.renderCanvas.node().toDataURL();
-                if(!prevImg.empty()){
-                    prevImg.attr('xlink:href', img)
-                        .attr('transform', null)
-                        .style('display', 'none');
-                } else {
-                    this.renderingContainer.append('svg:image')
-                        .attr('id', 'previewImage')
-                        .attr('xlink:href', img)
-                        .attr('x', 0)
-                        .attr('y', 0)
-                        .attr('width',  this.width)
-                        .attr('height', this.height)
-                        .style('display', 'none');
-                }
-                this.previewActive = false;
-                // If y2 Axis needs to be rendered we need to create a separate 
-                // image for each y axis, so we clear the rendering for the first y-Axis
-                this.batchDrawer.clear();
+            this.renderCanvas.style('opacity','1');
+            let prevImg = this.el.select('#previewImage');
+            let img = this.renderCanvas.node().toDataURL();
+            if(!prevImg.empty()){
+                prevImg.attr('xlink:href', img)
+                    .attr('transform', null)
+                    .style('display', 'none');
+            } else {
+                this.renderingContainer.append('svg:image')
+                    .attr('id', 'previewImage')
+                    .attr('xlink:href', img)
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('width',  this.width)
+                    .attr('height', this.height)
+                    .style('display', 'none');
             }
+            this.previewActive = false;
         } else {
             let prevImg = this.el.select('#previewImage');
             if(prevImg.empty()){
@@ -2979,74 +2999,78 @@ class graphly extends EventEmitter {
             }
         }
 
+        if(y2AxRen.length > 0){
 
-        for (let parPos=0; parPos<y2AxRen.length; parPos++){
+            // If y2 Axis needs to be rendered we need to create a separate 
+            // image for each y axis, so we clear the rendering for the first y-Axis
+            this.batchDrawer.clear();
 
-            let idY2 = y2AxRen[parPos];
-            
-            // Add y axis selection length as both axis use the same colorscale
-            if(this.renderSettings.colorAxis[parPos+yAxRen.length] === null){
-                this.addParameterLabel(idY2);
-                this.el.select('#parameterInfo').style('display', 'block');
+            for (let parPos=0; parPos<y2AxRen.length; parPos++){
+
+                let idY2 = y2AxRen[parPos];
+                
+                // Add y axis selection length as both axis use the same colorscale
+                if(this.renderSettings.colorAxis[parPos+yAxRen.length] === null){
+                    this.addParameterLabel(idY2);
+                    this.el.select('#parameterInfo').style('display', 'block');
+                }
+
+                this.renderParameter(
+                    idX, idY2, parPos, data, inactiveData, updateReferenceCanvas
+                );
             }
 
-            this.renderParameter(idX, idY2, parPos, data, inactiveData, updateReferenceCanvas);
-        }
-
-
-        this.batchDrawer.draw();
-        if(!this.fixedSize && updateReferenceCanvas){
-            this.batchDrawerReference.draw();
-        }
-
-        let imageId = 'previewImage';
-        if(y2AxRen.length > 0){
-            imageId = 'previewImage2';
-        }
-
-        if(this.debounceActive){
-            this.renderCanvas.style('opacity','1');
-            let prevImg = this.el.select('#'+imageId);
-            let img = this.renderCanvas.node().toDataURL();
-            if(!prevImg.empty()){
-                prevImg.attr('xlink:href', img)
-                    .attr('transform', null)
-                    .style('display', 'none');
+            // Save preview image of rendering of second y axis 
+            // without data from first y axis
+            this.batchDrawer.draw();
+            if(!this.fixedSize && updateReferenceCanvas){
+                this.batchDrawerReference.draw();
+            }
+            if(this.debounceActive){
+                this.renderCanvas.style('opacity','1');
+                let prevImg = this.el.select('#previewImage2' );
+                let img = this.renderCanvas.node().toDataURL();
+                if(!prevImg.empty()){
+                    prevImg.attr('xlink:href', img)
+                        .attr('transform', null)
+                        .style('display', 'none');
+                } else {
+                    this.renderingContainer.insert('svg:image', ':first-child')
+                        .attr('id', 'previewImage2')
+                        .attr('xlink:href', img)
+                        .attr('x', 0)
+                        .attr('y', 0)
+                        .attr('width',  this.width)
+                        .attr('height', this.height)
+                        .style('display', 'none');
+                }
+                this.previewActive = false;
             } else {
-                this.renderingContainer.insert('svg:image', ':first-child')
-                    .attr('id', imageId)
-                    .attr('xlink:href', img)
-                    .attr('x', 0)
-                    .attr('y', 0)
-                    .attr('width',  this.width)
-                    .attr('height', this.height)
-                    .style('display', 'none');
+                let prevImg = this.el.select('#previewImage2' );
+                if(prevImg.empty()){
+                    this.renderingContainer.append('svg:image')
+                        .attr('id', '#previewImage2')
+                        .attr('x', 0)
+                        .attr('y', 0)
+                        .attr('width',  this.width)
+                        .attr('height', this.height)
+                        .style('display', 'none');
+                }
             }
-            this.previewActive = false;
-        } else {
-            let prevImg = this.el.select('#'+imageId);
-            if(prevImg.empty()){
-                this.renderingContainer.append('svg:image')
-                    .attr('id', imageId)
-                    .attr('x', 0)
-                    .attr('y', 0)
-                    .attr('width',  this.width)
-                    .attr('height', this.height)
-                    .style('display', 'none');
-            }
-        }
 
-        if(y2AxRen.length > 0){
+            // Re-render data points of first yAxis parameters
+            // that were cleared before
             for (let parPos=0; parPos<yAxRen.length; parPos++){
                 let idY = yAxRen[parPos];
                 this.renderParameter(idX, idY, parPos, data, inactiveData, updateReferenceCanvas);
             }
 
-            this.batchDrawer.draw(false);
+            this.batchDrawer.draw();
             if(!this.fixedSize && updateReferenceCanvas){
-                this.batchDrawerReference.draw(false);
+                this.batchDrawerReference.draw();
             }
         }
+
 
 
         if(this.el.select('#parameterInfo').selectAll('*').empty()){
