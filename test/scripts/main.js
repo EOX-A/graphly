@@ -45,10 +45,10 @@ var renderSettingsSwarm = {
     yAxis: ['F_error'],
     y2Axis: ['F'],
     colorAxis: [null, null],
-    /*dataIdentifier: {
+    dataIdentifier: {
         parameter: 'Spacecraft',
         identifiers: ['A', 'B']
-    }*/
+    }
 };
 
 var renderSettingsMRC = {

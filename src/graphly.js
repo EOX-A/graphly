@@ -1970,7 +1970,12 @@ class graphly extends EventEmitter {
                     resultData = filteredX.zip(filteredY);
                 }
 
-                var rC = this.getIdColor(parPos, id);
+                let rC = this.getIdColor(parPos, id);
+                if(regSett.hasOwnProperty('color')){
+                    rC = regSett.color;
+                    rC[3] = 1.0;
+                }
+                
                 let yScale = this.yScale;
                 if(this.renderSettings.y2Axis.indexOf(yAxRen[parPos]) !== -1){
                     yScale = this.y2Scale;
