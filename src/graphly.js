@@ -186,6 +186,8 @@ class graphly extends EventEmitter {
         this.autoColorExtent = defaultFor(options.autoColorExtent, false);
         this.enableFit = defaultFor(options.enableFit, true);
         this.fixedXDomain = undefined;
+        this.mouseDown = false;
+        this.prevMousePos = null;
 
         this.logX = defaultFor(options.logX, false);
         this.logY = defaultFor(options.logY, false);
@@ -298,7 +300,27 @@ class graphly extends EventEmitter {
 
 
         if(!this.fixedSize){
+
+            this.renderCanvas.on('mousedown', ()=> {
+                // Save mouse position to see if when releasing it the user has
+                // panned the canvas
+                this.prevMousePos = [d3.event.clientX, d3.event.clientY];
+                this.mouseDown = true;
+                tooltip.style('display', 'none');
+                tooltip.selectAll('*').remove();
+                self.topSvg.selectAll('*').remove();
+            });
+
+            this.renderCanvas.on('mouseout', ()=> {
+               this.mouseDown = false;
+            });
+
             this.renderCanvas.on('mousemove', function() {
+
+                // If mouse is being pressed don't pick anything
+                if(self.mouseDown){
+                    return;
+                }
 
                 // Clean anything inside top svg
                 self.topSvg.selectAll('.temporary').remove();
@@ -366,7 +388,18 @@ class graphly extends EventEmitter {
                 }
             });
 
-            this.renderCanvas.on('click', ()=> {
+            this.renderCanvas.on('mouseup', ()=> {
+
+                this.mouseDown = false;
+                // If there was movement of mouse bigger then delta do not
+                // trigger picking
+                if(Math.max(
+                    Math.abs(this.prevMousePos[0]-d3.event.clientX),
+                    Math.abs(this.prevMousePos[1]-d3.event.clientY) 
+                    ) > 5
+                ){
+                    return;
+                }
 
                 tooltip.style('display', 'none');
                 tooltip.selectAll('*').remove();
