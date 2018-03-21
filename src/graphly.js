@@ -570,6 +570,7 @@ class graphly extends EventEmitter {
 
         this.svg.select('#previewImage').style('display', 'block');
         this.svg.select('#previewImage2').style('display', 'block');
+        this.svg.select('#svgInfoContainer').style('display', 'block');
 
         // Apply all styles directly so they render as expected
         // css styles are not applied to rendering
@@ -598,6 +599,10 @@ class graphly extends EventEmitter {
         this.el.selectAll('text')
             .attr('stroke', 'none')
             .attr('shape-rendering', 'crispEdges');
+
+        // Set fontsize for text explicitly
+        this.svg.selectAll('text')
+            .attr('font-size', '12px');
 
         // TODO: We introduce a short timeout here because it seems for some
         // reason the rendered image is not ready when not using the debounce
@@ -631,6 +636,8 @@ class graphly extends EventEmitter {
         ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
 
         this.svg.select('#previewImage').style('display', 'none');
+        this.svg.select('#previewImage2').style('display', 'none');
+        this.svg.select('#svgInfoContainer').style('display', 'none');
 
         c.toBlob(function(blob) {
             FileSaver.saveAs(blob, self.file_save_string);
@@ -2754,6 +2761,9 @@ class graphly extends EventEmitter {
             let parDiv = this.el.select('#parameterInfo').append('div')
                 .attr('class', 'labelitem');
 
+            let infoGroup = this.el.select('#svgInfoContainer');
+            infoGroup.attr('display', 'none');
+
             let iconSvg = parDiv.append('div')
                 .attr('class', 'svgIcon')
                 .style('display', 'inline')
@@ -2812,6 +2822,34 @@ class graphly extends EventEmitter {
                 .style('display', 'inline')
                 .attr('id', id)
                 .html(displayName);
+
+            // Update size of rect based on size of original div
+            let boundRect = this.el.select('#parameterInfo').node().getBoundingClientRect();
+            this.el.select('#svgInfoRect').attr('height', boundRect.height);
+
+            // check amount of elements and calculate offset
+            let offset = 21 + d3.select('#svgInfoContainer').selectAll('text').size() *20;
+            let labelText = infoGroup.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('y', offset)
+                .attr('x', 153)
+                .text(displayName);
+
+            var labelBbox = labelText.node().getBBox();
+
+            let symbolGroup = infoGroup.append('g')
+                .attr('transform', 'translate(' + (130-labelBbox.width/2) + ',' +
+                (offset-10) + ')');
+            u.addSymbol(symbolGroup, dataSettings.symbol, symbolColor);
+
+            if(dataSettings.hasOwnProperty('lineConnect') && 
+               dataSettings.lineConnect){
+                symbolGroup.append('line')
+                    .attr('x1', 0).attr('y1', 5)
+                    .attr('x2', 20).attr('y2', 5)
+                    .attr("stroke-width", 1.5)
+                    .attr("stroke", symbolColor);
+            }
 
             parDiv.on('click', ()=>{
 
@@ -3100,6 +3138,19 @@ class graphly extends EventEmitter {
         let y2AxRen = this.renderSettings.y2Axis;
         
         this.batchDrawer.clear();
+
+        d3.select('#svgInfoContainer').remove();
+        // Add rendering representation to svg
+        let infoGroup = this.svg.append('g')
+            .attr('id', 'svgInfoContainer')
+            .attr('transform', 'translate(' + (this.width/2 - 90) + ',' +
+            (this.margin.top+1) + ')');
+        infoGroup.append('rect')
+            .attr('id', 'svgInfoRect')
+            .attr('width', 280)
+            .attr('height', 100)
+            .attr('fill', 'white')
+            .attr('stroke', 'black');
 
         // If data object is undefined or empty return
         // TODO: There should be a cleaner way to do this, maybe clean all

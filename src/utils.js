@@ -58,7 +58,8 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
             element = el.append("rect")
                 .attr("x", c.x-s/2).attr("y", c.y-s/2)
                 .attr("width", s).attr("height", s)
-                .attr('fill', color);
+                .attr('fill', color)
+                .attr("stroke", 'none');
             break;
         case 'rectangle_empty':
             element = el.append("rect")
@@ -72,7 +73,8 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
             element = el.append("ellipse")
                 .attr("cx", c.x).attr("cy", c.y)
                 .attr("rx", s/2).attr("ry", s/2)
-                .attr('fill', color);
+                .attr('fill', color)
+                .attr("stroke", 'none');
             break;
         case 'circle_empty':
             element = el.append("ellipse")
@@ -87,7 +89,7 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
                 .attr('x1', c.x).attr('y1', c.y-s/2)
                 .attr('x2', c.x).attr('y2', c.y+s/2)
                 .attr("stroke-width", sW)
-                .attr("stroke", color)
+                .attr("stroke", color);
             if(className){
                 element.attr('class', className);
             }
