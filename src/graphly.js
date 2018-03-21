@@ -25,7 +25,7 @@ let dotType = {
 //graphly.TYPE[settingvariable]
 
 let DOTTYPE = 4.0;
-let DOTSIZE = 9;
+let DOTSIZE = 8;
 
 require('../styles/graphly.css');
 require('../node_modules/choices.js/assets/styles/css/choices.css');

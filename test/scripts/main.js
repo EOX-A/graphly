@@ -445,7 +445,7 @@ var graph = new graphly.graphly({
     dataSettings: otherds,
     renderSettings: renderSettingsSwarm,
     filterManager: filterManager,
-    debounceActive: true
+    debounceActive: false
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000
