@@ -190,6 +190,12 @@ svg {
 .labelitem{
     margin: 5px;
     cursor: pointer;
+    color: #007bff;
+    font-weight: bold;
+}
+
+.labelitem:hover { 
+    text-decoration: underline;
 }
 
 .parameterClose{

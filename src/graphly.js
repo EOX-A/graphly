@@ -616,6 +616,16 @@ class graphly extends EventEmitter {
         this.svg.select('#previewImage2').style('display', 'block');
         this.svg.select('#svgInfoContainer').style('visibility', 'visible');
 
+        // Set interactive blue to black for labels
+        this.svg.selectAll('.axisLabel').attr('fill', 'black');
+        this.svg.selectAll('.axisLabel').attr('font-weight', 'normal');
+        this.svg.selectAll('.axisLabel').attr('text-decoration', 'none');
+        // Check if one of the labels says Add parameter ...
+        d3.selectAll('.axisLabel').filter(function(){ 
+            return d3.select(this).text() == 'Add parameter ...'
+        })
+        .attr('fill', 'none');
+
 
         // Apply all styles directly so they render as expected
         // css styles are not applied to rendering
@@ -685,10 +695,26 @@ class graphly extends EventEmitter {
         this.svg.select('#previewImage2').style('display', 'none');
         this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
 
+        // Set interactive blue to black for labels
+        this.svg.selectAll('.axisLabel').attr('fill', '#007bff');
+        this.svg.selectAll('.axisLabel').attr('font-weight', 'bold');
 
         c.toBlob(function(blob) {
             FileSaver.saveAs(blob, self.file_save_string);
         }, "image/png" ,1);
+    }
+
+    addTextMouseover(text){
+        // Reset listeners to avoid issues
+        text.on('mouseover', null);
+        text.on('mouseout', null);
+
+        text.on('mouseover', ()=>{
+            text.attr('text-decoration', 'underline');
+        })
+        text.on('mouseout', ()=>{
+            d3.select(d3.event.target).attr('text-decoration', 'none');
+        })
     }
 
     createAxisLabels(){
@@ -807,14 +833,21 @@ class graphly extends EventEmitter {
         if(this.yAxisLabel){
             listText = [this.yAxisLabel];
         }
-        this.svg.append('text')
+        
+        let labelytext = this.svg.append('text')
             .attr('class', 'yAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 
                 'translate('+ -(this.margin.left/2+10) +','+
                 (this.height/2)+')rotate(-90)'
             )
+            .attr('fill', '#007bff')
+            .attr('stroke', 'none')
+            .attr('font-weight', 'bold')
+            .attr('text-decoration', 'none')
             .text(listText.join(', '));
+
+        this.addTextMouseover(labelytext);
 
         this.el.select('#ySettings').remove();
 
@@ -939,14 +972,21 @@ class graphly extends EventEmitter {
         if(this.y2AxisLabel){
             listText = [this.y2AxisLabel];
         }
-        this.svg.append('text')
+        
+        let labely2text = this.svg.append('text')
             .attr('class', 'y2AxisLabel axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 
                 'translate('+ (this.width+addMar) +','+
                 (this.height/2)+')rotate(-90)'
             )
+            .attr('fill', '#007bff')
+            .attr('stroke', 'none')
+            .attr('font-weight', 'bold')
+            .attr('text-decoration', 'none')
             .text(listText.join(', '));
+
+        this.addTextMouseover(labely2text);
 
         this.el.select('#y2Settings').remove();
 
@@ -1055,11 +1095,17 @@ class graphly extends EventEmitter {
             xLabel = this.xAxisLabel;
         }
 
-        this.svg.append('text')
+        let labelxtext = this.svg.append('text')
             .attr('class', 'xAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-10))+')')
+            .attr('fill', '#007bff')
+            .attr('stroke', 'none')
+            .attr('font-weight', 'bold')
+            .attr('text-decoration', 'none')
             .text(xLabel);
+
+        this.addTextMouseover(labelxtext);
 
         this.el.select('#xSettings').remove();
 
@@ -2627,6 +2673,71 @@ class graphly extends EventEmitter {
         }
     }
 
+    renderFilteredOutPoints(data, xAxis, yAxis, cAxis) {
+
+        let lp = data[xAxis].length;
+        let p_x, p_y;
+        let yScale = this.yScale;
+
+        // Check if parameter part of left or right y Scale
+        if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
+            yScale = this.y2Scale;
+        }
+
+        for (let j=0;j<lp; j++) {
+
+            let x = this.xScale(data[xAxis][j]);
+            let y = yScale(data[yAxis][j]);
+            let rC = [0.5, 0.5, 0.5];
+
+            let par_properties = {
+                index: j,
+                x: {
+                    val: data[xAxis][j],
+                    id: xAxis,
+                    coord: x
+                },
+                y: {
+                    val: data[yAxis][j],
+                    id: yAxis,
+                    coord: y
+                },
+            };
+
+            let parSett = this.dataSettings[yAxis];
+
+            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+                let identParam = this.renderSettings.dataIdentifier.parameter;
+                let val = data[identParam][j];
+                parSett = this.dataSettings[yAxis][val];
+            }
+
+            let cA = this.dataSettings[cAxis];
+
+            if (parSett){
+
+                if(!parSett.hasOwnProperty('symbol')){
+                    parSett.symbol = 'circle';
+                }
+                if(parSett.symbol !== null && parSett.symbol !== 'none'){
+                    par_properties.symbol = parSett.symbol;
+                    let symbol = parSett.symbol;
+                    if(symbol === 'circle'){
+                        symbol = 'circle_empty'
+                    } else if(symbol === 'rectangle'){
+                        symbol = 'rectangle_empty'
+                    } else if(symbol === 'triangle'){
+                        symbol = 'triangle_empty'
+                    }
+                    var sym = defaultFor(dotType[symbol], 2.0);
+                    this.batchDrawer.addDot(
+                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.2
+                    );
+                }
+            }
+        }
+    }
+
 
      addApply() {
         if(!this.el.select('#applyButton').empty()){
@@ -3113,51 +3224,17 @@ class graphly extends EventEmitter {
                 // TODO: drawing of lines
             } else {
 
+                this.renderFilteredOutPoints(
+                    inactiveData, idX, idY,
+                    this.renderSettings.colorAxis[parPos],
+                    updateReferenceCanvas
+                );
+
                 this.renderPoints(
                     data, idX, idY,
                     this.renderSettings.colorAxis[parPos],
                     updateReferenceCanvas
                 );
-
-                // Draw filtered out 'points' for x,y 
-                let lp = inactiveData[xAxRen].length;
-                for (let j=0;j<=lp; j++) {
-                    let x = (this.xScale(inactiveData[xAxRen][j]));
-                    let y = (this.yScale(inactiveData[yAxisSet[parPos]][j]));
-                    let rC = [0.3,0.3,0.3];
-
-                    let c = u.genColor();
-
-                    let par_properties = {
-                        x: {
-                            val: x, id: xAxRen, coord: x
-                        },
-                        y: {
-                            val: y, id: yAxisSet[parPos], coord: y
-                        },
-                    };
-
-                    let nCol = c.map(function(c){return c/255;});
-                    let parSett = this.dataSettings[yAxisSet[parPos]];
-
-                    if (parSett){
-
-                        if(parSett.hasOwnProperty('symbol') && parSett.symbol !== 'none'){
-                            var sym = defaultFor(dotType[parSett.symbol], 2.0);
-                            this.batchDrawer.addDot(
-                                x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.1
-                            );
-                            if(!this.fixedSize){
-                                this.batchDrawerReference.addDot(
-                                    x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
-                                );
-                            }
-                            
-                        }
-                    }
-
-                    this.colourToNode[c.join('-')] = par_properties;
-                }
 
                 // Check if any regression type is selected for parameter
                 if(this.enableFit){
