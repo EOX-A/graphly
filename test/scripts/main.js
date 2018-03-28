@@ -402,7 +402,7 @@ var filterSettings = {
     ],
     dataSettings: dataSettings,
     visibleFilters: [
-        'mie_quality_flag_data', 'mie_wind_data'
+        'mie_quality_flag_data', 'mie_wind_data', 'F', 'n', 'F_error'
       
     ],
     //boolParameter: [],
@@ -435,7 +435,7 @@ var filterSettings = {
 
 
 var filterManager = new FilterManager({
-    //el:'#filters',
+    el:'#filters',
     filterSettings: filterSettings,
 });
 
@@ -478,6 +478,11 @@ filterManager.on('filterChange', function(filters){
 
 d3.select('#save').on('click', function(){
     graph.saveImage();
+});
+
+
+graph.on('pointSelect', function(values){
+    console.log(values);
 });
 
 var usesecond = false;

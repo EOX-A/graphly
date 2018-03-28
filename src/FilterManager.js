@@ -319,8 +319,38 @@ class FilterManager extends EventEmitter {
         this.y[d].brush = d3.svg.brush()
             .y(this.y[d])
             .on("brushend", this._brushEnd.bind(this))
-            .on("brush", function(param){});
+            .on("brush", function(param){
+                // Add extent information for selection
+                let brush_top = d3.select(this).selectAll('.resize.n');
+                let brush_bottom = d3.select(this).selectAll('.resize.s');
+                let extent = d3.event.target.extent()
+                let format = d3.format('.02f');
 
+                brush_top.select('text').remove();
+                brush_bottom.select('text').remove();
+                brush_top.select('rect').remove();
+                brush_bottom.select('rect').remove();
+
+                let toprect = brush_top.append('rect')
+                   .attr('fill', 'white')
+                   .attr('height', '16');
+                let toptext = brush_top.append('text')
+                   .text(format(extent[1]))
+                let width = toptext.node().getBBox().width+4;
+                toprect.attr('width', width).style('transform', 'translate('+(-width/2)+'px,-26px)');
+                toptext.style('transform', 'translate('+(-width/2+3)+'px,-14px)');
+
+                let botrect = brush_bottom.append('rect')
+                   .attr('fill', 'white')
+                   .attr('height', '16');
+                let bottext = brush_bottom.append('text')
+                   .text(format(extent[0]));
+                width = bottext.node().getBBox().width+4;
+                botrect.attr('width', width).style('transform', 'translate('+(-width/2)+'px,10px)');
+                bottext.style('transform', 'translate('+(-width/2+3)+'px,22px)');
+            });
+
+ 
         var tempScale = d3.scale.linear()
             .domain([0, bins+1])
             .range(this.y[d].domain());
@@ -338,25 +368,25 @@ class FilterManager extends EventEmitter {
             })])
             .range([0, 40]);
 
-        var bar = svg.selectAll("." + d)
+        var bar = svg.selectAll('.' + d)
             .data(this.hist_data[d])
-            .enter().append("g")
-            .attr("class", "bar "+d)
-            .attr("transform", dat => { 
+            .enter().append('g')
+            .attr('class', 'bar '+d)
+            .attr('transform', dat => { 
                 var height_modifier = this.y[d](dat.x) - heightRange/bins;
                 if(!height_modifier){
                     height_modifier = 0;
                 }
-                return "translate(0," + (height_modifier) + ")";
+                return 'translate(0,' + (height_modifier) + ')';
             });
 
         var x_hist = this.x_hist;
 
-        bar.append("rect")
-            .attr("height", 
+        bar.append('rect')
+            .attr('height', 
                 Math.floor(heightRange/bins)-1
             )
-            .attr("width", function(dat) {
+            .attr('width', function(dat) {
                 // Make sure that non-zero height is shown to know where data
                 // is available (even if it is so small it would not show)
                 var size = x_hist[d](dat.y);
@@ -365,7 +395,7 @@ class FilterManager extends EventEmitter {
                 }
                 return size;
             })
-            .style("fill", "#1F77B4");
+            .style('fill', '#1F77B4');
 
         // Add an axis
         var self = this;

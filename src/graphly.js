@@ -309,6 +309,7 @@ class graphly extends EventEmitter {
                 tooltip.style('display', 'none');
                 tooltip.selectAll('*').remove();
                 self.topSvg.selectAll('*').remove();
+                this.emit('pointSelect', null);
             });
 
             this.renderCanvas.on('mouseout', ()=> {
@@ -486,6 +487,7 @@ class graphly extends EventEmitter {
                         .on('click', ()=>{
                             this.topSvg.selectAll('*').remove();
                             tooltip.style('display', 'none');
+                            this.emit('pointSelect', null);
                         });
 
                     if (typeof self.filteredData !== 'undefined' && 
@@ -493,6 +495,15 @@ class graphly extends EventEmitter {
                         for (let k in self.filteredData){
                             tooltip.append('div')
                                 .text(k+': '+self.filteredData[k][nodeId.index])
+                        }
+                        if(self.filteredData.hasOwnProperty('Latitude') &&
+                           self.filteredData.hasOwnProperty('Longitude') &&
+                           self.filteredData.hasOwnProperty('Radius') ){
+                            this.emit('pointSelect', {
+                                Latitude: self.filteredData.Latitude[nodeId.index],
+                                Longitude: self.filteredData.Longitude[nodeId.index],
+                                Radius: self.filteredData.Radius[nodeId.index]
+                            });
                         }
                     } else {
                         for (let key in nodeId) {
