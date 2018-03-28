@@ -383,6 +383,11 @@ svg {
     vertical-align: top;
     margin-top: 1px;
     float: right;
+
+}
+
+.axisOption input[type=text]{
+    width: 150px;
 }
 
 

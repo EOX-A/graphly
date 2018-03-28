@@ -614,7 +614,8 @@ class graphly extends EventEmitter {
 
         this.svg.select('#previewImage').style('display', 'block');
         this.svg.select('#previewImage2').style('display', 'block');
-        this.svg.select('#svgInfoContainer').style('display', 'block');
+        this.svg.select('#svgInfoContainer').style('visibility', 'visible');
+
 
         // Apply all styles directly so they render as expected
         // css styles are not applied to rendering
@@ -669,7 +670,8 @@ class graphly extends EventEmitter {
         var svg_html = this.el.select('svg')
             .attr("version", 1.1)
             .attr("xmlns", "http://www.w3.org/2000/svg")
-            .node().innerHTML;
+            .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+            .node().outerHTML;
 
         this.el.select('#imagerenderer').attr('width', renderWidth);
         this.el.select('#imagerenderer').attr('height', renderHeight);
@@ -681,7 +683,8 @@ class graphly extends EventEmitter {
 
         this.svg.select('#previewImage').style('display', 'none');
         this.svg.select('#previewImage2').style('display', 'none');
-        this.svg.select('#svgInfoContainer').style('display', 'none');
+        this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
+
 
         c.toBlob(function(blob) {
             FileSaver.saveAs(blob, self.file_save_string);
@@ -2806,7 +2809,7 @@ class graphly extends EventEmitter {
                 .attr('class', 'labelitem');
 
             let infoGroup = this.el.select('#svgInfoContainer');
-            infoGroup.attr('display', 'none');
+            infoGroup.style('visibility', 'hidden');
 
             let iconSvg = parDiv.append('div')
                 .attr('class', 'svgIcon')
@@ -2879,7 +2882,7 @@ class graphly extends EventEmitter {
                 .attr('x', 153)
                 .text(displayName);
 
-            var labelBbox = labelText.node().getBBox();
+            let labelBbox = labelText.node().getBBox();
 
             let symbolGroup = infoGroup.append('g')
                 .attr('transform', 'translate(' + (130-labelBbox.width/2) + ',' +
