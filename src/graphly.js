@@ -1803,8 +1803,8 @@ class graphly extends EventEmitter {
     }
 
     onZoom() {
-        this.renderData();
         this.zoom_update();
+        this.renderData();
     }
 
 
@@ -1904,10 +1904,9 @@ class graphly extends EventEmitter {
                 this.y2zoom
                     .scale(xyScale)
                     .translate(transXY);
-            } else {
-                this.y2AxisSvg.call(this.y2Axis);
             }
         }
+        this.y2AxisSvg.call(this.y2Axis);
 
 
         this.topSvg.selectAll('.highlightItem').remove();
@@ -3472,7 +3471,6 @@ class graphly extends EventEmitter {
         if(this.el.select('#parameterInfo').selectAll('*').empty()){
             this.el.select('#parameterInfo').style('display', 'none');
         }
-
 
         this.emit('rendered');
     }

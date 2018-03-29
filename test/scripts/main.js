@@ -43,12 +43,12 @@ var renderSettings_ray = {
 var renderSettingsSwarm = {
     xAxis: 'Latitude',
     yAxis: ['F_error'],
-    //y2Axis: ['F'],
-    colorAxis: [null],
+    y2Axis: ['F'],
+    colorAxis: [null, null]/*,
     dataIdentifier: {
         parameter: 'Spacecraft',
         identifiers: ['A', 'B']
-    }
+    }*/
 };
 
 var renderSettingsMRC = {
@@ -445,7 +445,7 @@ var graph = new graphly.graphly({
     dataSettings: otherds,
     renderSettings: renderSettingsSwarm,
     filterManager: filterManager,
-    debounceActive: false
+    debounceActive: true
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000
