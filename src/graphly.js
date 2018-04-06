@@ -1091,6 +1091,11 @@ class graphly extends EventEmitter {
 
 
         let xLabel = this.renderSettings.xAxis;
+        if(this.dataSettings.hasOwnProperty(xLabel) && 
+           this.dataSettings[xLabel].hasOwnProperty('uom') &&
+           this.dataSettings[xLabel].uom !== null){
+            xLabel+=' ['+this.dataSettings[xLabel].uom+']';
+        }
         if(this.xAxisLabel){
             xLabel = this.xAxisLabel;
         }
@@ -1376,10 +1381,8 @@ class graphly extends EventEmitter {
 
         // Multiply by number of y axis elements as for each one all data points
         // for the selected parameter is drawn
-        max = max * this.renderSettings.yAxis.length * 2;
-        if(this.renderSettings.y2Axis.length > 0){
-            max *= this.renderSettings.yAxis.length*2;
-        }
+        let parAmount = this.renderSettings.yAxis.length + this.renderSettings.y2Axis.length;
+        max = max * parAmount * 2;
 
         this.updateBuffers(this.batchDrawer, ++max);
 
@@ -1726,9 +1729,11 @@ class graphly extends EventEmitter {
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
 
-        this.yAxisSvg = this.svg.append('g')
-            .attr('class', 'y axis')
-            .call(this.yAxis);
+        if(this.renderSettings.yAxis.length > 0){
+            this.yAxisSvg = this.svg.append('g')
+                .attr('class', 'y axis')
+                .call(this.yAxis);
+        }
 
         if(this.renderSettings.y2Axis.length > 0){
             this.y2AxisSvg = this.svg.append('g')
@@ -1875,7 +1880,10 @@ class graphly extends EventEmitter {
 
 
         this.xAxisSvg.call(this.xAxis);
-        this.yAxisSvg.call(this.yAxis);
+
+        if(this.renderSettings.yAxis.length > 0){
+            this.yAxisSvg.call(this.yAxis);
+        }
 
 
         if (this.xTimeScale){
@@ -1905,8 +1913,9 @@ class graphly extends EventEmitter {
                     .scale(xyScale)
                     .translate(transXY);
             }
+            this.y2AxisSvg.call(this.y2Axis);
         }
-        this.y2AxisSvg.call(this.y2Axis);
+        
 
 
         this.topSvg.selectAll('.highlightItem').remove();

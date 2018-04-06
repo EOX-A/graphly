@@ -42,7 +42,7 @@ var renderSettings_ray = {
 
 var renderSettingsSwarm = {
     xAxis: 'Latitude',
-    yAxis: ['F_error'],
+    yAxis: [],
     y2Axis: ['F'],
     colorAxis: [null, null]/*,
     dataIdentifier: {
