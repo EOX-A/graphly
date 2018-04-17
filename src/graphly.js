@@ -2298,7 +2298,10 @@ class graphly extends EventEmitter {
         this.xAxis.tickSize(-this.height);
         this.yAxis.innerTickSize(-this.width);
         this.xAxisSvg.call(this.xAxis);
-        this.yAxisSvg.call(this.yAxis);
+
+        if(this.renderSettings.yAxis.length > 0){
+            this.yAxisSvg.call(this.yAxis);
+        }
 
         if(this.renderSettings.y2Axis.length > 0){
             this.y2Axis.innerTickSize(this.width);
