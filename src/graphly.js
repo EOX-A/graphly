@@ -2813,6 +2813,7 @@ class graphly extends EventEmitter {
                 .text('Apply')
                 .on('click', ()=>{
                     this.renderData();
+                    this.createColorScales();
                 });
         }
     }
@@ -2960,6 +2961,321 @@ class graphly extends EventEmitter {
         }
     }
 
+    renderColorScaleOptions(colorIndex){
+
+        this.el.select('#parameterSettings')
+            .append('label')
+            .attr('id', 'labelColorParamSelection')
+            .attr('for', 'colorParamSelection')
+            .text('Parameter');
+
+        let labelColorParamSelect = this.el.select('#parameterSettings')
+          .append('select')
+            .attr('id','colorParamSelection')
+            .on('change',oncolorParamSelectionChange);
+
+        // Go through data settings and find currently available ones
+        let ds = this.dataSettings;
+        let selectionChoices = [];
+        for (let key in ds) {
+            // Check if key is part of a combined parameter
+            let ignoreKey = false;
+            let comKey = null;
+            for (comKey in this.renderSettings.combinedParameters){
+                if(this.renderSettings.combinedParameters[comKey].indexOf(key) !== -1){
+                    ignoreKey = true;
+                }
+            }
+            if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
+                selectionChoices.push({value: key, label: key});
+                if(this.renderSettings.colorAxis[colorIndex] === key){
+                    selectionChoices[selectionChoices.length-1].selected = true;
+                }
+            }
+        }
+
+        let options = labelColorParamSelect
+          .selectAll('option')
+            .data(selectionChoices).enter()
+            .append('option')
+                .text(function (d) { return d.label; })
+                .attr('value', function (d) { return d.value; })
+                .property('selected', function(d){
+                    return d.hasOwnProperty('selected');
+                });
+
+        let that = this;
+
+        function oncolorParamSelectionChange() {
+            let selectValue = 
+                that.el.select('#colorParamSelection').property('value');
+            that.renderSettings.colorAxis[colorIndex] = selectValue;
+        }
+
+
+        this.el.select('#parameterSettings')
+            .append('label')
+            .attr('id', 'labelColorScaleSelection')
+            .attr('for', 'colorScaleSelection')
+            .text('Colorscale');
+
+        let labelColorScaleSelect = this.el.select('#parameterSettings')
+          .append('select')
+            .attr('id','colorScaleSelection')
+            .on('change',oncolorScaleSelectionChange);
+
+        let colorscales = [
+          'viridis', 'inferno', 'rainbow', 'jet', 'hsv', 'hot', 'cool', 'spring',
+          'summer', 'autumn', 'winter', 'bone', 'copper', 'greys', 'yignbu',
+          'greens', 'yiorrd', 'bluered', 'rdbu', 'picnic', 'portland',
+          'blackbody', 'earth', 'electric', 'magma', 'plasma'
+        ];
+
+        let colorScaleOptions = labelColorScaleSelect
+          .selectAll('option')
+            .data(colorscales).enter()
+            .append('option')
+                .text(function (d) { return d; })
+                .attr('value', function (d) { return d; })
+                .property('selected', (d)=>{
+                    let obj = this.dataSettings[this.renderSettings.colorAxis[colorIndex]];
+                    if(obj && obj.hasOwnProperty('colorscale')){
+                        return d === this.dataSettings[this.renderSettings.colorAxis[colorIndex]].colorscale;
+                    } else {
+                        return false;
+                    }
+                    
+                });
+        function oncolorScaleSelectionChange() {
+            let selectValue = 
+                that.el.select('#colorScaleSelection').property('value');
+            that.dataSettings[that.renderSettings.colorAxis[colorIndex]].colorscale = selectValue;
+        }
+
+    }
+
+
+    renderParameterOptions(dataSettings, id){
+
+        let that = this;
+        this.el.select('#parameterSettings').selectAll('*').remove();
+
+        this.el.select('#parameterSettings')
+            .style('display', 'block');
+
+        this.el.select('#parameterSettings')
+            .append('div')
+            .attr('class', 'parameterClose cross')
+            .on('click', ()=>{
+                this.el.select('#parameterSettings')
+                    .selectAll('*').remove();
+                this.el.select('#parameterSettings')
+                    .style('display', 'none');
+            });
+
+        this.el.select('#parameterSettings')
+            .append('label')
+            .attr('for', 'displayName')
+            .text('Label');
+            
+
+        this.el.select('#parameterSettings')
+            .append('input')
+            .attr('id', 'displayName')
+            .attr('type', 'text')
+            .attr('value', dataSettings.displayName)
+            .on('input', function(){
+                dataSettings.displayName = this.value;
+                that.addApply();
+            });
+
+        this.el.select('#parameterSettings')
+            .append('label')
+            .attr('for', 'symbolSelect')
+            .text('Symbol');
+            
+
+        let data = [
+            { name:'None', value: 'none' },
+            { name:'Rectangle', value: 'rectangle' },
+            { name:'Rectangle outline', value: 'rectangle_empty'},
+            { name:'Circle', value: 'circle'},
+            { name:'Circle outline', value: 'circle_empty'},
+            { name:'Plus', value: 'plus'},
+            { name:'X', value: 'x'},
+            { name:'Triangle', value: 'triangle'},
+            { name:'Triangle outline', value: 'triangle_empty'}
+        ];
+
+
+        let select = this.el.select('#parameterSettings')
+          .append('select')
+            .attr('id','symbolSelect')
+            .on('change',onchange);
+
+        let options = select
+          .selectAll('option')
+            .data(data).enter()
+            .append('option')
+                .text(function (d) { return d.name; })
+                .attr('value', function (d) { return d.value; })
+                .property('selected', function(d){
+                    return d.value === dataSettings.symbol;
+                });
+
+        function onchange() {
+            let selectValue = that.el.select('#symbolSelect').property('value');
+            dataSettings.symbol = selectValue;
+            that.addApply();
+        }
+
+        this.el.select('#parameterSettings')
+            .append('label')
+            .attr('for', 'colorSelection')
+            .text('Color');
+
+        let colorSelect = this.el.select('#parameterSettings')
+            .append('input')
+            .attr('id', 'colorSelection')
+            .attr('type', 'text')
+            .attr('value', 
+                '#'+CP.RGB2HEX(
+                    dataSettings.color.slice(0,-1)
+                    .map(function(c){return Math.round(c*255);})
+                )
+            );
+
+        let picker = new CP(colorSelect.node());
+
+        let firstChange = true;
+
+        picker.on('change', function(color) {
+            this.target.value = '#' + color;
+            let c = CP.HEX2RGB(color);
+            c = c.map(function(c){return c/255;});
+            c.push(0.8);
+            if(!firstChange){
+                dataSettings.color = c;
+                that.addApply();
+            }else{
+                firstChange = false;
+            }
+            
+        });
+
+        let x = document.createElement('a');
+            x.href = 'javascript:;';
+            x.innerHTML = 'Close';
+            x.addEventListener('click', function() {
+                picker.exit();
+            }, false);
+
+        picker.picker.appendChild(x);
+
+        // Create and manage colorscale selection
+        // Find index of id
+        let renderIndex = this.renderSettings.yAxis.indexOf(id);
+        if(renderIndex === -1){
+            renderIndex = this.renderSettings.y2Axis.indexOf(id);
+            if(renderIndex !== -1){
+                renderIndex += this.renderSettings.yAxis.length;
+            }
+        }
+        // Should normally always have an index
+        if(renderIndex !== -1){
+            let colorAxis = this.renderSettings.colorAxis[renderIndex];
+            let active = false;
+            if(colorAxis !== null){
+                active = true;
+            }
+
+            this.el.select('#parameterSettings')
+                .append('label')
+                .attr('for', 'colorscaleSelection')
+                .text('Apply colorscale');
+
+            this.el.select('#parameterSettings')
+                .append('input')
+                .attr('id', 'colorscaleSelection')
+                .attr('type', 'checkbox')
+                .property('checked', active)
+                .on('change', ()=>{
+                    if(d3.select("#colorscaleSelection").property("checked")){
+                        that.renderSettings.colorAxis[renderIndex] = 'F_error';
+                    } else {
+                        that.renderSettings.colorAxis[renderIndex] = null;
+                    }
+                    that.renderParameterOptions(dataSettings, id);
+                });
+            // Need to add additional necessary options
+            // drop down with possible parameters and colorscale
+            if(active){                           
+                let parameterList = [
+                    {name: 'Linear', value: 'linear'},
+                    {name: 'Polynomial', value: 'polynomial'}
+                ];
+                this.renderColorScaleOptions(renderIndex);
+            }
+
+        }
+
+        this.el.select('#parameterSettings')
+            .append('label')
+            .attr('for', 'lineConnect')
+            .text('Line connect');
+            
+
+        this.el.select('#parameterSettings')
+            .append('input')
+            .attr('id', 'lineConnect')
+            .attr('type', 'checkbox')
+            .property('checked', 
+                defaultFor(dataSettings.lineConnect, false)
+            )
+            .on('change', function(){
+                dataSettings.lineConnect = 
+                    !defaultFor(dataSettings.lineConnect, false);
+                that.addApply();
+            });
+
+        if(this.enableFit){
+            this.el.select('#parameterSettings')
+                .append('label')
+                .attr('for', 'regressionCheckbox')
+                .text('Regression');
+                
+            let regressionTypes = [
+                {name: 'Linear', value: 'linear'},
+                {name: 'Polynomial', value: 'polynomial'}
+            ];
+
+
+            this.el.select('#parameterSettings')
+                .append('input')
+                .attr('id', 'regressionCheckbox')
+                .attr('type', 'checkbox')
+                .property('checked', 
+                    dataSettings.hasOwnProperty('regression')
+                )
+                .on('change', function(){
+                    // If activated there is no type defined so we
+                    // define a defualt one, for now linear
+                    if(that.el.select('#regressionCheckbox').property('checked')){
+                         dataSettings.regression = defaultFor(
+                            dataSettings.regression,
+                            'linear'
+                        );
+                    }
+
+                    that.renderRegressionOptions(id, regressionTypes, dataSettings);
+                    that.addApply();
+                });
+
+            that.renderRegressionOptions(id, regressionTypes, dataSettings);
+        }
+
+    }
+
 
     addParameterLabel(id){
 
@@ -3068,178 +3384,7 @@ class graphly extends EventEmitter {
                     .attr("stroke", symbolColor);
             }
 
-            parDiv.on('click', ()=>{
-
-                this.el.select('#parameterSettings').selectAll('*').remove();
-
-                this.el.select('#parameterSettings')
-                    .style('display', 'block');
-
-                this.el.select('#parameterSettings')
-                    .append('div')
-                    .attr('class', 'parameterClose cross')
-                    .on('click', ()=>{
-                        this.el.select('#parameterSettings')
-                            .selectAll('*').remove();
-                        this.el.select('#parameterSettings')
-                            .style('display', 'none');
-                    });
-
-                this.el.select('#parameterSettings')
-                    .append('label')
-                    .attr('for', 'displayName')
-                    .text('Label');
-                    
-
-                this.el.select('#parameterSettings')
-                    .append('input')
-                    .attr('id', 'displayName')
-                    .attr('type', 'text')
-                    .attr('value', dataSettings.displayName)
-                    .on('input', function(){
-                        dataSettings.displayName = this.value;
-                        that.addApply();
-                    });
-
-                this.el.select('#parameterSettings')
-                    .append('label')
-                    .attr('for', 'symbolSelect')
-                    .text('Symbol');
-                    
-
-                let data = [
-                    { name:'None', value: 'none' },
-                    { name:'Rectangle', value: 'rectangle' },
-                    { name:'Rectangle outline', value: 'rectangle_empty'},
-                    { name:'Circle', value: 'circle'},
-                    { name:'Circle outline', value: 'circle_empty'},
-                    { name:'Plus', value: 'plus'},
-                    { name:'X', value: 'x'},
-                    { name:'Triangle', value: 'triangle'},
-                    { name:'Triangle outline', value: 'triangle_empty'}
-                ];
-
-
-                let select = this.el.select('#parameterSettings')
-                  .append('select')
-                    .attr('id','symbolSelect')
-                    .on('change',onchange);
-
-                let options = select
-                  .selectAll('option')
-                    .data(data).enter()
-                    .append('option')
-                        .text(function (d) { return d.name; })
-                        .attr('value', function (d) { return d.value; })
-                        .property('selected', function(d){
-                            return d.value === dataSettings.symbol;
-                        });
-
-                function onchange() {
-                    let selectValue = that.el.select('#symbolSelect').property('value');
-                    dataSettings.symbol = selectValue;
-                    that.addApply();
-                }
-
-                this.el.select('#parameterSettings')
-                    .append('label')
-                    .attr('for', 'colorSelection')
-                    .text('Color');
-
-                let colorSelect = this.el.select('#parameterSettings')
-                    .append('input')
-                    .attr('id', 'colorSelection')
-                    .attr('type', 'text')
-                    .attr('value', 
-                        '#'+CP.RGB2HEX(
-                            dataSettings.color.slice(0,-1)
-                            .map(function(c){return Math.round(c*255);})
-                        )
-                    );
-
-                let picker = new CP(colorSelect.node());
-
-                let firstChange = true;
-
-                picker.on('change', function(color) {
-                    this.target.value = '#' + color;
-                    let c = CP.HEX2RGB(color);
-                    c = c.map(function(c){return c/255;});
-                    c.push(0.8);
-                    if(!firstChange){
-                        dataSettings.color = c;
-                        that.addApply();
-                    }else{
-                        firstChange = false;
-                    }
-                    
-                });
-
-                let x = document.createElement('a');
-                    x.href = 'javascript:;';
-                    x.innerHTML = 'Close';
-                    x.addEventListener('click', function() {
-                        picker.exit();
-                    }, false);
-
-                picker.picker.appendChild(x);
-
-                this.el.select('#parameterSettings')
-                    .append('label')
-                    .attr('for', 'lineConnect')
-                    .text('Line connect');
-                    
-
-                this.el.select('#parameterSettings')
-                    .append('input')
-                    .attr('id', 'lineConnect')
-                    .attr('type', 'checkbox')
-                    .property('checked', 
-                        defaultFor(dataSettings.lineConnect, false)
-                    )
-                    .on('change', function(){
-                        dataSettings.lineConnect = 
-                            !defaultFor(dataSettings.lineConnect, false);
-                        that.addApply();
-                    });
-
-                if(this.enableFit){
-                    this.el.select('#parameterSettings')
-                        .append('label')
-                        .attr('for', 'regressionCheckbox')
-                        .text('Regression');
-                        
-                    let regressionTypes = [
-                        {name: 'Linear', value: 'linear'},
-                        {name: 'Polynomial', value: 'polynomial'}
-                    ];
-
-
-                    this.el.select('#parameterSettings')
-                        .append('input')
-                        .attr('id', 'regressionCheckbox')
-                        .attr('type', 'checkbox')
-                        .property('checked', 
-                            dataSettings.hasOwnProperty('regression')
-                        )
-                        .on('change', function(){
-                            // If activated there is no type defined so we
-                            // define a defualt one, for now linear
-                            if(that.el.select('#regressionCheckbox').property('checked')){
-                                 dataSettings.regression = defaultFor(
-                                    dataSettings.regression,
-                                    'linear'
-                                );
-                            }
-
-                            that.renderRegressionOptions(id, regressionTypes, dataSettings);
-                            that.addApply();
-                        });
-
-                    that.renderRegressionOptions(id, regressionTypes, dataSettings);
-                }
-
-            });
+            parDiv.on('click', this.renderParameterOptions.bind(this, dataSettings, id));
         }
     }
 
