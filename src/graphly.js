@@ -103,6 +103,7 @@ class graphly extends EventEmitter {
         this.yAxisLabel = null;
         this.y2AxisLabel = null;
         this.xAxisLabel = null;
+        this.colorCache = {};
 
 
         this.el.append('canvas')
@@ -528,6 +529,10 @@ class graphly extends EventEmitter {
     onFilterChange(filters){
         if(!this.batchDrawer){
             return;
+        }
+        // Remove all color caches
+        for(let k in this.colorCache){
+            delete this.colorCache[k];
         }
         // Reset colorscale range if filter changed for parameter with 
         // colorscale
@@ -1253,6 +1258,7 @@ class graphly extends EventEmitter {
             .text(label);
 
         let csZoomEvent = ()=>{
+            delete this.colorCache[id];
             g.call(colorAxis);
             this.dataSettings[id].extent = colorAxisScale.domain();
             this.renderData(false);
@@ -2286,8 +2292,11 @@ class graphly extends EventEmitter {
         return rC;
     }
 
-    resize(){
-        this.debounceResize.bind(this)();
+    resize(debounce){
+        debounce = defaultFor(debounce, true);
+        if(debounce){
+            this.debounceResize.bind(this)();
+        }
         this.dim = this.el.node().getBoundingClientRect();
         // If there are colorscales to be rendered we need to apply additional
         // margin to the right reducing the total width
@@ -2400,12 +2409,39 @@ class graphly extends EventEmitter {
         //this.createHelperObjects();
     }
 
-    renderRectangles(data, parPos, xGroup, yGroup, updateReferenceCanvas) {
+    renderRectangles(data, parPos, xGroup, yGroup, cAxis, updateReferenceCanvas) {
 
         // TODO: How to decide which item to take for counting
         // should we compare changes and look for errors in config?
         var l = data[xGroup[0]].length;
         let c;
+
+        let currColCache = null;
+        let colCacheAvailable = false;
+
+        if(cAxis !== null){
+            // Check if a colorscale is defined for this 
+            // attribute, if not use default (plasma)
+            let cs = 'viridis';
+            let cA = this.dataSettings[cAxis];
+            if (cA && cA.hasOwnProperty('colorscale')){
+                cs = cA.colorscale;
+            }
+            if(cA && cA.hasOwnProperty('extent')){
+                this.plotter.setDomain(cA.extent);
+            }
+            // If current cs not equal to the set in the plotter update cs
+            if(cs !== this.plotter.name){
+                this.plotter.setColorScale(cs);
+            }
+            // Check if colorcache is available to be used
+            if(this.colorCache.hasOwnProperty(cAxis) && this.colorCache[cAxis].length > 0){
+                colCacheAvailable = true;
+                currColCache = this.colorCache[cAxis];
+            } else {
+                this.colorCache[cAxis] = [];
+            }
+        }
 
         for (let i=0; i<l; i++) {
 
@@ -2434,9 +2470,23 @@ class graphly extends EventEmitter {
 
             let nCol = idC.map(function(c){return c/255;});
 
+            let rC;
+            if(cAxis !== null){
+                if(colCacheAvailable){
+                    rC = currColCache[j];
+                } else {
+                    rC = this.plotter.getColor(data[cAxis][i])
+                        .map(function(c){return c/255;}); 
+                    this.colorCache[cAxis].push(rC);
+                }
+                
+            } else {
+                rC = this.getColor(yAxis, i, data);
+            }
+
             // Check if color axis is being used
             // TODO: make sure multiple color scales can be used
-            if(this.renderSettings.colorAxis[parPos]){
+            /*if(this.renderSettings.colorAxis[parPos]){
                 // Check if a colorscale is defined for this 
                 // attribute, if not use default (plasma)
                 let cs = 'viridis';
@@ -2479,11 +2529,12 @@ class graphly extends EventEmitter {
                 }else{
                     c = [0.1, 0.4,0.9, 1.0];
                 }
-            }
+            }*/
             
             this.colourToNode[idC.join('-')] = par_properties;
 
-            this.batchDrawer.addRect(x1,y1,x2,y2, c[0], c[1], c[2], 1.0);
+            this.batchDrawer.addRect(x1,y1,x2,y2, rC[0], rC[1], rC[2], 1.0);
+
             if(!this.fixedSize && updateReferenceCanvas){
                 this.batchDrawerReference.addRect(
                     x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0
@@ -2614,6 +2665,8 @@ class graphly extends EventEmitter {
         let lp = data[xAxis].length;
         let p_x, p_y;
         let yScale = this.yScale;
+        let currColCache = null;
+        let colCacheAvailable = false;
 
         // Check if parameter part of left or right y Scale
         if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
@@ -2635,6 +2688,13 @@ class graphly extends EventEmitter {
             if(cs !== this.plotter.name){
                 this.plotter.setColorScale(cs);
             }
+            // Check if colorcache is available to be used
+            if(this.colorCache.hasOwnProperty(cAxis) && this.colorCache[cAxis].length > 0){
+                colCacheAvailable = true;
+                currColCache = this.colorCache[cAxis];
+            } else {
+                this.colorCache[cAxis] = [];
+            }
         }
 
         for (let j=0;j<lp; j++) {
@@ -2644,8 +2704,14 @@ class graphly extends EventEmitter {
             // If render settings uses colorscale axis get color from there
             let rC;
             if(cAxis !== null){
-                rC = this.plotter.getColor(data[cAxis][j])
-                    .map(function(c){return c/255;});
+                if(colCacheAvailable){
+                    rC = currColCache[j];
+                } else {
+                    rC = this.plotter.getColor(data[cAxis][j])
+                        .map(function(c){return c/255;}); 
+                    this.colorCache[cAxis].push(rC);
+                }
+                
             } else {
                 rC = this.getColor(yAxis, j, data);
             }
@@ -2812,6 +2878,7 @@ class graphly extends EventEmitter {
                 .attr('id', 'applyButton')
                 .text('Apply')
                 .on('click', ()=>{
+                    this.resize(false);
                     this.renderData();
                     this.createColorScales();
                 });
@@ -3009,6 +3076,7 @@ class graphly extends EventEmitter {
         function oncolorParamSelectionChange() {
             let selectValue = 
                 that.el.select('#colorParamSelection').property('value');
+            delete that.colorCache[that.renderSettings.colorAxis[colorIndex]];
             that.renderSettings.colorAxis[colorIndex] = selectValue;
         }
 
@@ -3038,18 +3106,20 @@ class graphly extends EventEmitter {
                 .text(function (d) { return d; })
                 .attr('value', function (d) { return d; })
                 .property('selected', (d)=>{
-                    let obj = this.dataSettings[this.renderSettings.colorAxis[colorIndex]];
+                    let csId = this.renderSettings.colorAxis[colorIndex];
+                    let obj = this.dataSettings[csId];
                     if(obj && obj.hasOwnProperty('colorscale')){
-                        return d === this.dataSettings[this.renderSettings.colorAxis[colorIndex]].colorscale;
+                        return d === this.dataSettings[csId].colorscale;
                     } else {
                         return false;
                     }
                     
                 });
         function oncolorScaleSelectionChange() {
-            let selectValue = 
-                that.el.select('#colorScaleSelection').property('value');
-            that.dataSettings[that.renderSettings.colorAxis[colorIndex]].colorscale = selectValue;
+            let csId = that.renderSettings.colorAxis[colorIndex];
+            delete that.colorCache[csId];
+            let selectValue = that.el.select('#colorScaleSelection').property('value');
+            that.dataSettings[csId].colorscale = selectValue;
         }
 
     }
@@ -3408,7 +3478,7 @@ class graphly extends EventEmitter {
                     yAxisSet[parPos]
                 ];
                 this.renderRectangles(
-                    data, parPos, xGroup, yGroup, updateReferenceCanvas
+                    data, parPos, xGroup, yGroup, idCS, updateReferenceCanvas
                 );
                 
             } else {
