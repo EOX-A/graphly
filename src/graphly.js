@@ -262,7 +262,7 @@ class graphly extends EventEmitter {
                 .attr('width', this.width - 1)
                 .attr('height', this.height - 1)
                 .style('position', 'absolute')
-                .style('display', 'none')
+                //.style('display', 'none')
                 .style('transform', 'translate(' + (this.margin.left + 1) +
                   'px' + ',' + (this.margin.top + 1) + 'px' + ')');
 
@@ -2409,12 +2409,11 @@ class graphly extends EventEmitter {
         //this.createHelperObjects();
     }
 
-    renderRectangles(data, parPos, xGroup, yGroup, cAxis, updateReferenceCanvas) {
+    renderRectangles(data, idY, xGroup, yGroup, cAxis, updateReferenceCanvas) {
 
         // TODO: How to decide which item to take for counting
         // should we compare changes and look for errors in config?
         var l = data[xGroup[0]].length;
-        let c;
 
         let currColCache = null;
         let colCacheAvailable = false;
@@ -2473,7 +2472,7 @@ class graphly extends EventEmitter {
             let rC;
             if(cAxis !== null){
                 if(colCacheAvailable){
-                    rC = currColCache[j];
+                    rC = currColCache[i];
                 } else {
                     rC = this.plotter.getColor(data[cAxis][i])
                         .map(function(c){return c/255;}); 
@@ -2481,55 +2480,8 @@ class graphly extends EventEmitter {
                 }
                 
             } else {
-                rC = this.getColor(yAxis, i, data);
+                rC = this.getColor(idY, i, data);
             }
-
-            // Check if color axis is being used
-            // TODO: make sure multiple color scales can be used
-            /*if(this.renderSettings.colorAxis[parPos]){
-                // Check if a colorscale is defined for this 
-                // attribute, if not use default (plasma)
-                let cs = 'viridis';
-                let cA = this.dataSettings[
-                    this.renderSettings.colorAxis[parPos]
-                ];
-                if (cA && cA.hasOwnProperty('colorscale')){
-                    cs = cA.colorscale;
-                }
-                if(cA && cA.hasOwnProperty('extent')){
-                    this.plotter.setDomain(cA.extent);
-                }
-                // If current cs not equal to the set in the plotter update cs
-                if(cs !== this.plotter.name){
-                    this.plotter.setColorScale(cs);
-                }
-                c = this.plotter.getColor(
-                    data[this.renderSettings.colorAxis[parPos]][i],
-                    data
-                ).map(function(c){return c/255;});
-
-                par_properties.col = {
-                    id: this.renderSettings.colorAxis[parPos],
-                    val: data[this.renderSettings.colorAxis[parPos]][i]
-                };
-
-            } else {
-                // If no color axis defined check for color 
-                // defined in data settings
-                // TODO: check for datasettings for yAxis parameter
-                // TODO: auto generate identifier color if nothing is defined
-                let cA = this.dataSettings[
-                    this.renderSettings.colorAxis[parPos]
-                ];
-                if (cA && cA.hasOwnProperty('colorscaleFunction')){
-                    c = cA.colorscaleFunction(
-                        data[this.renderSettings.colorAxis[parPos]][i]
-                    );
-                    c.map(function(c){return c/255;});
-                }else{
-                    c = [0.1, 0.4,0.9, 1.0];
-                }
-            }*/
             
             this.colourToNode[idC.join('-')] = par_properties;
 
@@ -3271,7 +3223,24 @@ class graphly extends EventEmitter {
                 .property('checked', active)
                 .on('change', ()=>{
                     if(d3.select("#colorscaleSelection").property("checked")){
-                        that.renderSettings.colorAxis[renderIndex] = 'F_error';
+                        // Go through data settings and find currently available ones
+                        let ds = this.dataSettings;
+                        let selectionChoices = [];
+                        for (let key in ds) {
+                            // Check if key is part of a combined parameter
+                            let ignoreKey = false;
+                            let comKey = null;
+                            for (comKey in this.renderSettings.combinedParameters){
+                                if(this.renderSettings.combinedParameters[comKey].indexOf(key) !== -1){
+                                    ignoreKey = true;
+                                }
+                            }
+                            if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
+                                selectionChoices.push(key);
+                            }
+                        }
+                        // Select first option
+                        that.renderSettings.colorAxis[renderIndex] = selectionChoices[0];
                     } else {
                         that.renderSettings.colorAxis[renderIndex] = null;
                     }
@@ -3361,56 +3330,27 @@ class graphly extends EventEmitter {
 
         for (var i = 0; i < parIds.length; i++) {
 
+            // Check if parameter is combined for x and y axis
+            let combined = false;
+            let combPars = this.renderSettings.combinedParameters;
+
+            if(combPars.hasOwnProperty(this.renderSettings.xAxis)){
+                if(combPars.hasOwnProperty(id)){
+                    combined = true;
+                }
+            }
+
+
             let parDiv = this.el.select('#parameterInfo').append('div')
                 .attr('class', 'labelitem');
 
             let infoGroup = this.el.select('#svgInfoContainer');
             infoGroup.style('visibility', 'hidden');
 
-            let iconSvg = parDiv.append('div')
-                .attr('class', 'svgIcon')
-                .style('display', 'inline')
-                .append('svg')
-                .attr('width', 20).attr('height', 10);
-
-            let symbolColor = '';
-
             let dataSettings = this.dataSettings[id];
-            // If we have a multi-id parameter the datasettings of it is an object
-            if( parIds[i]!== null ){
-                if(!this.dataSettings[id].hasOwnProperty(parIds[i])){
-                    this.dataSettings[id][parIds[i]] = {};
-                }
-                dataSettings = this.dataSettings[id][parIds[i]];
-            }
-
-
-            if(dataSettings.hasOwnProperty('color')){
-
-                symbolColor = '#'+ CP.RGB2HEX(
-                    dataSettings.color.slice(0,-1)
-                    .map(function(c){return Math.round(c*255);})
-                );
-            }
-
-            if(dataSettings.hasOwnProperty('lineConnect') && 
-               dataSettings.lineConnect){
-                iconSvg.append('line')
-                    .attr('x1', 0).attr('y1', 5)
-                    .attr('x2', 20).attr('y2', 5)
-                    .attr("stroke-width", 1.5)
-                    .attr("stroke", symbolColor);
-            }
-
-            dataSettings.symbol = defaultFor(
-                dataSettings.symbol, 'circle'
-            );
-
-            u.addSymbol(iconSvg, dataSettings.symbol, symbolColor);
-
-            var that = this;
 
             let displayName;
+
             if(dataSettings.hasOwnProperty('displayName')){
                 displayName = dataSettings.displayName;
             }else{
@@ -3439,19 +3379,60 @@ class graphly extends EventEmitter {
                 .text(displayName);
 
             let labelBbox = labelText.node().getBBox();
+            if(!combined){
+                let iconSvg = parDiv.append('div')
+                    .attr('class', 'svgIcon')
+                    .style('display', 'inline')
+                    .append('svg')
+                    .attr('width', 20).attr('height', 10);
 
-            let symbolGroup = infoGroup.append('g')
-                .attr('transform', 'translate(' + (130-labelBbox.width/2) + ',' +
-                (offset-10) + ')');
-            u.addSymbol(symbolGroup, dataSettings.symbol, symbolColor);
+                let symbolColor = '';
 
-            if(dataSettings.hasOwnProperty('lineConnect') && 
-               dataSettings.lineConnect){
-                symbolGroup.append('line')
-                    .attr('x1', 0).attr('y1', 5)
-                    .attr('x2', 20).attr('y2', 5)
-                    .attr("stroke-width", 1.5)
-                    .attr("stroke", symbolColor);
+                // If we have a multi-id parameter the datasettings of it is an object
+                if( parIds[i]!== null ){
+                    if(!this.dataSettings[id].hasOwnProperty(parIds[i])){
+                        this.dataSettings[id][parIds[i]] = {};
+                    }
+                    dataSettings = this.dataSettings[id][parIds[i]];
+                }
+
+
+                if(dataSettings.hasOwnProperty('color')){
+
+                    symbolColor = '#'+ CP.RGB2HEX(
+                        dataSettings.color.slice(0,-1)
+                        .map(function(c){return Math.round(c*255);})
+                    );
+                }
+
+                if(dataSettings.hasOwnProperty('lineConnect') && 
+                   dataSettings.lineConnect){
+                    iconSvg.append('line')
+                        .attr('x1', 0).attr('y1', 5)
+                        .attr('x2', 20).attr('y2', 5)
+                        .attr("stroke-width", 1.5)
+                        .attr("stroke", symbolColor);
+                }
+
+                dataSettings.symbol = defaultFor(
+                    dataSettings.symbol, 'circle'
+                );
+
+                u.addSymbol(iconSvg, dataSettings.symbol, symbolColor);
+
+                let symbolGroup = infoGroup.append('g')
+                    .attr('transform', 'translate(' + (130-labelBbox.width/2) + ',' +
+                    (offset-10) + ')');
+                u.addSymbol(symbolGroup, dataSettings.symbol, symbolColor);
+
+                if(dataSettings.hasOwnProperty('lineConnect') && 
+                   dataSettings.lineConnect){
+                    symbolGroup.append('line')
+                        .attr('x1', 0).attr('y1', 5)
+                        .attr('x2', 20).attr('y2', 5)
+                        .attr("stroke-width", 1.5)
+                        .attr("stroke", symbolColor);
+                }
             }
 
             parDiv.on('click', this.renderParameterOptions.bind(this, dataSettings, id));
@@ -3478,7 +3459,7 @@ class graphly extends EventEmitter {
                     yAxisSet[parPos]
                 ];
                 this.renderRectangles(
-                    data, parPos, xGroup, yGroup, idCS, updateReferenceCanvas
+                    data, idY, xGroup, yGroup, idCS, updateReferenceCanvas
                 );
                 
             } else {
@@ -3534,6 +3515,7 @@ class graphly extends EventEmitter {
         let y2AxRen = this.renderSettings.y2Axis;
         
         this.batchDrawer.clear();
+        this.batchDrawerReference.clear();
 
         d3.select('#svgInfoContainer').remove();
         // Add rendering representation to svg

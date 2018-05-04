@@ -335,13 +335,7 @@ class BatchDrawer {
     }
 
 
-    draw(keepOld) {
-        keepOld = keepOld == null ? false : keepOld;
-
-        // Clear screen:
-        //if(!keepOld){
-            //this.GL.clear(this.GL.COLOR_BUFFER_BIT);
-        //}
+    draw() {
 
         if (this.GLVersion == 2) {
             if (this.numRects > 0) {
@@ -376,12 +370,11 @@ class BatchDrawer {
                 this._drawDotsGL1();
             }
         }
-        if (!keepOld) {
-            // Don't keep old elements for next draw call
-            this.numLines = 0;
-            this.numDots = 0;
-            this.numRects = 0;
-        }
+        
+        this.numLines = 0;
+        this.numDots = 0;
+        this.numRects = 0;
+
     }
 
 
