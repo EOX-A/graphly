@@ -449,7 +449,8 @@ var graph = new graphly.graphly({
     dataSettings: ds_mie,
     renderSettings: renderSettings_mie,
     filterManager: filterManager,
-    debounceActive: false
+    debounceActive: false,
+    displayParameterLabel: false
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000

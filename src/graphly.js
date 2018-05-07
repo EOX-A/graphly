@@ -155,6 +155,8 @@ class graphly extends EventEmitter {
         this.debounceActive = defaultFor(options.debounceActive, true);
         this.dim = this.el.node().getBoundingClientRect();
 
+        this.displayParameterLabel = defaultFor(options.displayParameterLabel, true);
+
         // If there are colorscales to be rendered we need to apply additional
         // margin to the right reducing the total width
         let csAmount = 0;
@@ -1226,9 +1228,6 @@ class graphly extends EventEmitter {
         if (cA && cA.hasOwnProperty('colorscale')){
             cs = cA.colorscale;
         }
-        /*if(cA && cA.hasOwnProperty('extent')){
-            this.plotter.setDomain(cA.extent);
-        }*/
 
         // If current cs not equal to the set in the plotter update cs
         if(cs !== this.plotter.name){
@@ -2319,6 +2318,11 @@ class graphly extends EventEmitter {
         this.resize_update();
         this.createColorScales();
         this.createAxisLabels();
+
+        this.batchDrawer.updateCanvasSize(this.width, this.height);
+        this.batchDrawerReference.updateCanvasSize(this.width, this.height);
+        this.renderData();
+        this.zoom_update();
     }
 
 
@@ -2912,7 +2916,7 @@ class graphly extends EventEmitter {
     }
 
 
-    createRegressionInfo(){
+    createInfoBoxes(){
         // Setup div for regression info rendering
         this.el.select('#regressionInfo').remove();
         this.el.append('div')
@@ -2920,11 +2924,19 @@ class graphly extends EventEmitter {
             .style('bottom', this.margin.bottom+'px')
             .style('left', (this.width/2)+'px');
 
-        this.el.select('#parameterInfo').remove();
-        this.el.append('div')
-            .attr('id', 'parameterInfo')
-            .style('top', this.margin.top*2+'px')
-            .style('left', (this.width/2)+'px');
+        if(this.el.select('#parameterInfo').empty()){
+            this.el.append('div')
+                .attr('id', 'parameterInfo')
+                .style('top', this.margin.top*2+'px')
+                .style('left', (this.width/2)+'px')
+                .style('display', 'none');
+        } else {
+            this.el.select('#parameterInfo').selectAll('*').remove();
+            this.el.select('#parameterInfo')
+                .style('top', this.margin.top*2+'px')
+                .style('left', (this.width/2)+'px');
+        }
+
 
         this.el.select('#parameterSettings').remove();
         this.el.append('div')
@@ -3577,7 +3589,7 @@ class graphly extends EventEmitter {
             }
         }
 
-        this.createRegressionInfo();
+        this.createInfoBoxes();
 
         let idX = xAxRen;
 
@@ -3588,7 +3600,35 @@ class graphly extends EventEmitter {
 
             // Add item to labels if there is no coloraxis is defined
             this.addParameterLabel(idY);
-            this.el.select('#parameterInfo').style('display', 'block');
+            // Add settings button to display/hide parameter information
+            if(this.el.select('#cogIcon').empty()){
+                this.el.append('div')
+                    .attr('id', 'cogIcon')
+                    .style('left', (this.margin.left)+'px')
+                    .style('top', '10px')
+                    .on('click', ()=>{
+                        let info = this.el.select('#parameterInfo');
+                        if(info.style('display') == 'block'){
+                            info.style('display', 'none');
+                            this.el.select('#parameterSettings')
+                                .style('display', 'none');
+                            this.displayParameterLabel = false;
+                        }else{
+                            info.style('display', 'block');
+                            this.displayParameterLabel = true;
+                        }
+                    })
+                    .on('mouseover', function(){
+                        d3.select(this).style('background-size', '45px 45px');
+                    })
+                    .on('mouseout', function(){
+                        d3.select(this).style('background-size', '41px 41px');
+                    });
+            }
+
+            if(this.displayParameterLabel){
+                this.el.select('#parameterInfo').style('display', 'block');
+            }
 
             // Change height of settings panel to be just under labels
             let dim = this.el.select('#parameterSettings').node().getBoundingClientRect();
@@ -3659,7 +3699,6 @@ class graphly extends EventEmitter {
                 
                 // Add y axis selection length as both axis use the same colorscale
                 this.addParameterLabel(idY2);
-                this.el.select('#parameterInfo').style('display', 'block');
 
                 this.renderParameter(
                     idX, idY2, idCS, this.renderSettings.y2Axis,

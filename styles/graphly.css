@@ -413,3 +413,13 @@ svg {
  #xAxisCustomLabel, #yAxisCustomLabel, #y2AxisCustomLabel{
     margin-top: -3px;
 }
+
+#cogIcon{
+    position: absolute;
+    cursor: pointer;
+    z-index: 20;
+    width: 41px;
+    height: 41px;
+    background-position: center; 
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAB3RJTUUH4gUHDBgdKmiqBAAAAetJREFUWMPt1k+ITlEYx/GPaUKaSMRMMwssRhkrokTiKckGyxH5kyyUslI2KISUWEmNBSELRdmqJylZ+bO0JJT8WaBRDMbmvnV7m1dmvO87qfutW/f8znPP/d1znufcQ0VFRUVFRTuY0oxBImIK3mNOIS3MzBfNMtnRpHEWlQzCimbOZMcEZq0vItbUySv+1I6I/ohY1pbljohpeICVuIez2Ii9mF0K/YZbGCr6tuMDlmfmm/Ga7Bxn/KnCIGworrGYhh3FVWM+rmN9q5f7GoYnuGqjuNzynMzMZ9hVvLDMVSzBVCzAcfysizmdmTcmYrJzAs/cxkfMrbUzc3ep/yWORcQITpT0oXZuQf0lg7U8HYtzRQHVWNXy6o6ITgziMAZKXV2ZOdzgmedYXDTf4gIuZeanVs3k06JwBur0vgYGO9BbkrpxBq8ior9VJht9/f4G+k50jaFPx+tWFc5jrB5DPxARL3AxM78X//EtON9gnCeZ+bVVOTkLs/AFPXiEmaWQz0Vl99QV1ig24yFmYCQz37XlFBQRW3HnL0JPZuaRyToFNesE1ZLNvMbauvaVIgV6cbSkr5tMk92l+/vYl5k/Svl7sOibFxEdmfmr7UuWmYPYhLvYVjNYcAg3sQdL/8VgRUVFRUVFxf/Hb5P/eXsCd5P8AAAAAElFTkSuQmCC');
+}
