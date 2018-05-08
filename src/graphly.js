@@ -129,6 +129,7 @@ class graphly extends EventEmitter {
         // TOOO: How could some defaults be guessed for rendering?
         this.dataSettings = defaultFor(options.dataSettings, {});
         this.setRenderSettings(options.renderSettings);
+        this.timeScales = [];
 
         this.margin = defaultFor(
             options.margin,
@@ -940,7 +941,13 @@ class graphly extends EventEmitter {
         ySettingParameters.passedElement.addEventListener('addItem', function(event) {
             that.yAxisLabel = null;
             that.renderSettings.yAxis.push(event.detail.value);
-            that.renderSettings.colorAxis.push(null);
+            // If y2 axis has parameters we need to add the coloraxis element
+            // taking them into account as color axis is shared
+            if(that.renderSettings.y2Axis.length > 0){
+                that.renderSettings.colorAxis.splice(that.renderSettings.yAxis.length-1, 0, null);
+            } else {
+                that.renderSettings.colorAxis.push(null);
+            }
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
@@ -1430,8 +1437,8 @@ class graphly extends EventEmitter {
 
     loadData(data){
         
-        //this.filters = {};
         this.data = data;
+        this.timeScales = [];
 
         this.renderSettings.combinedParameters = defaultFor(
             this.renderSettings.combinedParameters, {}
@@ -1444,6 +1451,7 @@ class graphly extends EventEmitter {
         for (let key in ds) {
             if (ds[key].hasOwnProperty('scaleFormat')){
                 if (ds[key].scaleFormat === 'time'){
+                    this.timeScales.push(key);
                     let format = defaultFor(ds[key].timeFormat, 'default');
 
                     // Check if key is available in data first
@@ -2424,6 +2432,12 @@ class graphly extends EventEmitter {
         let currColCache = null;
         let colCacheAvailable = false;
 
+        let yScale = this.yScale;
+        // Check if parameter part of left or right y Scale
+        if(this.renderSettings.y2Axis.indexOf(idY) !== -1){
+            yScale = this.y2Scale;
+        }
+
         if(cAxis !== null){
             // Check if a colorscale is defined for this 
             // attribute, if not use default (plasma)
@@ -2452,8 +2466,8 @@ class graphly extends EventEmitter {
 
             let x1 = (this.xScale(data[xGroup[0]][i]));
             let x2 = (this.xScale(data[xGroup[1]][i]));
-            let y1 = (this.yScale(data[yGroup[0]][i]));
-            let y2 = (this.yScale(data[yGroup[1]][i]));
+            let y1 = (yScale(data[yGroup[0]][i]));
+            let y2 = (yScale(data[yGroup[1]][i]));
 
             let idC = u.genColor();
 
@@ -2501,130 +2515,29 @@ class graphly extends EventEmitter {
         }
     }
 
-   renderMiddlePoints(data, parPos, xGroup, updateReferenceCanvas) {
-
-        let xAxRen = this.renderSettings.xAxis;
-        let yAxRen = this.renderSettings.yAxis;
-        let p_x, p_y;
-        // TODO: How to decide which item to take for counting
-        // should we compare changes and look for errors in config?
-        let l = data[xGroup[0]].length;
-
-        for (let i=0; i<l; i++) {
-
-            let x1 = (this.xScale(
-                data[xGroup[0]][i])
-            );
-            let x2 = (this.xScale(
-                data[xGroup[1]][i])
-            );
-            let x = x1 + (x2-x1)/2;
-            let y = (this.yScale(
-                data[yAxRen[parPos]][i])
-            );
-
-            let rC = this.getColor(parPos, i, data);
-
-            let c = u.genColor();
-
-            let xVal;
-            if (data[xGroup[0]][i] instanceof Date){
-                xVal = new Date (
-                    data[xGroup[0]][i].getTime() +
-                        (data[xGroup[1]][i]-
-                        data[xGroup[0]][i])/2
-                );
-            }else{
-                xVal = data[xGroup[0]][i] +
-                        (data[xGroup[1]][i]-
-                        data[xGroup[0]][i])/2;
-            }
-            let par_properties = {
-                x: {
-                    val: xVal,
-                    id: xAxRen,
-                    coord: x
-                },
-                y: {
-                    val: data[yAxRen[parPos]][i],
-                    id: yAxRen[parPos],
-                    coord: y
-                },
-            };
-
-            let nCol = c.map(function(c){return c/255;});
-            let parSett = this.dataSettings[yAxRen[parPos]];
-            let cA = this.dataSettings[
-                this.renderSettings.colorAxis[parPos]
-            ];
-
-            if (parSett){
-
-                 if(parSett.hasOwnProperty('lineConnect') &&
-                    parSett.lineConnect && i>0){
-
-                    // Check if using ordinal scale (multiple
-                    // parameters), do not connect if different
-
-                    if(cA && cA.hasOwnProperty('scaleType') && 
-                        cA.scaleType === 'ordinal'){
-
-                        let colorParam = this.renderSettings.colorAxis[parPos];
-                        if(data[colorParam][i-1] === data[colorParam][i])
-                        {
-                            // Do not connect lines going in negative x direction
-                            // as some datasets loop and it looks messy
-                            if(x-p_x>-this.width/2){
-                                this.batchDrawer.addLine(
-                                    p_x, p_y, x, y, 1, 
-                                    rC[0], rC[1], rC[2], 1.0
-                                );
-                            }
-                        }
-                    }else{
-                        // Do not connect lines going in negative x direction
-                        // as some datasets loop and it looks messy
-                        if(x-p_x>-this.width/2){
-                            this.batchDrawer.addLine(
-                                p_x, p_y, x, y, 1, 
-                                rC[0], rC[1], rC[2], 1.0
-                            );
-                        }
-                    }
-                }
-
-                 if(!parSett.hasOwnProperty('symbol')){
-                    parSett.symbol = 'circle';
-                }
-                if(parSett.symbol !== null){
-                    par_properties.symbol = parSett.symbol;
-                    var sym = defaultFor(dotType[parSett.symbol], 2.0);
-                    this.batchDrawer.addDot(
-                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
-                    );
-                    if(!this.fixedSize && updateReferenceCanvas){
-                        this.batchDrawerReference.addDot(
-                            x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
-                        );
-                    }
-                }
-            }
-
-            this.colourToNode[c.join('-')] = par_properties;
-
-            p_x = x;
-            p_y = y;
-        }
-    }
-
 
     renderPoints(data, xAxis, yAxis, cAxis, updateReferenceCanvas) {
 
-        let lp = data[xAxis].length;
+        let lp;
         let p_x, p_y;
         let yScale = this.yScale;
         let currColCache = null;
         let colCacheAvailable = false;
+
+        let combPars = this.renderSettings.combinedParameters;
+        let xGroup = false;
+        let yGroup = false;
+        // Check if either x or y axis is a combined parameter
+        if(combPars.hasOwnProperty(xAxis)){
+            xGroup = combPars[xAxis];
+        } else {
+            lp = data[xAxis].length;
+        }
+        if(combPars.hasOwnProperty(yAxis)){
+            yGroup = combPars[yAxis];
+        } else {
+            lp = data[yAxis].length;
+        }
 
         // Check if parameter part of left or right y Scale
         if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
@@ -2657,8 +2570,40 @@ class graphly extends EventEmitter {
 
         for (let j=0;j<lp; j++) {
 
-            let x = this.xScale(data[xAxis][j]);
-            let y = yScale(data[yAxis][j]);
+            let x, y, valX, valY;
+
+            if(!xGroup){
+                valX = data[xAxis][j];
+            } else {
+                // Check if we have a time variable
+                if(this.timeScales.indexOf(xGroup[0])!==-1){
+                    valX = new Date(
+                        data[xGroup[0]][j].getTime() +
+                        (data[xGroup[1]][j].getTime() - data[xGroup[0]][j].getTime())/2
+                    );
+                } else {
+                    valX = data[xGroup[0]][j] +
+                         (data[xGroup[1]][j] - data[xGroup[0]][j])/2;
+                }
+            }
+            x = this.xScale(valX);
+
+            if(!yGroup){
+                valY = data[yAxis][j];
+            } else {
+                // Check if we have a time variable
+                if(this.timeScales.indexOf(yGroup[0])!==-1){
+                    valY = new Date(
+                        data[yGroup[0]][j].getTime() +
+                        (data[yGroup[1]][j].getTime() - data[yGroup[0]][j].getTime())/2
+                    );
+                } else {
+                    valY = data[yGroup[0]][j] +
+                         (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
+                }
+            }
+            y =  yScale(valY);
+            
             // If render settings uses colorscale axis get color from there
             let rC;
             if(cAxis !== null){
@@ -2680,12 +2625,12 @@ class graphly extends EventEmitter {
             let par_properties = {
                 index: j,
                 x: {
-                    val: data[xAxis][j],
+                    val: valX,
                     id: xAxis,
                     coord: x
                 },
                 y: {
-                    val: data[yAxis][j],
+                    val: valY,
                     id: yAxis,
                     coord: y
                 },
@@ -3407,7 +3352,7 @@ class graphly extends EventEmitter {
 
             let labelBbox = labelText.node().getBBox();
             if(!combined){
-                let iconSvg = parDiv.append('div')
+                let iconSvg = parDiv.insert('div', ':first-child')
                     .attr('class', 'svgIcon')
                     .style('display', 'inline')
                     .append('svg')
@@ -3469,53 +3414,34 @@ class graphly extends EventEmitter {
 
     renderParameter(idX, idY, idCS, yAxisSet, parPos, data, inactiveData, updateReferenceCanvas){
 
-        let xAxRen = this.renderSettings.xAxis;
         let combPars = this.renderSettings.combinedParameters;
 
         // If a combined parameter is provided we need to render either
         // a line or a rectangle as we have two parameters per item
-        if(combPars.hasOwnProperty(xAxRen)){
+        if(combPars.hasOwnProperty(idX)){
             // If also the yAxis item is an array we render a rectangle
             //if(yAxRen[yScaleItem].constructor === Array){
-            if(combPars.hasOwnProperty(yAxisSet[parPos])){
-
-                let xGroup = this.renderSettings.combinedParameters[
-                    xAxRen
-                ];
-                let yGroup = this.renderSettings.combinedParameters[
-                    yAxisSet[parPos]
-                ];
+            if(combPars.hasOwnProperty(idY)){
+                let xGroup = this.renderSettings.combinedParameters[idX];
+                let yGroup = this.renderSettings.combinedParameters[idY];
                 this.renderRectangles(
                     data, idY, xGroup, yGroup, idCS, updateReferenceCanvas
                 );
-                
             } else {
-                // Use middle value of composite xAxis parameter
-                // to render point
-                let xGroup = this.renderSettings.combinedParameters[xAxRen];
-                this.renderMiddlePoints(
-                    data, parPos, xGroup, updateReferenceCanvas
-                );
-
+                this.renderPoints(data, idX, idY, idCS, updateReferenceCanvas);
             }
         } else {
-            // xAxis has only one element
-            // Check if yAxis has two elements
-            if(yAxisSet[parPos].constructor === Array){
-                // If yAxis has two elements draw lines in yAxis direction
-                // TODO: drawing of lines
+            if(combPars.hasOwnProperty(idY)){
+                this.renderPoints(data, idX, idY, idCS, updateReferenceCanvas);
             } else {
-
                 this.renderFilteredOutPoints(
                     inactiveData, idX, idY,
                     updateReferenceCanvas
                 );
-
                 this.renderPoints(
                     data, idX, idY, idCS,
                     updateReferenceCanvas
                 );
-
                 // Check if any regression type is selected for parameter
                 if(this.enableFit){
                     this.createRegression(data, parPos, yAxisSet);
@@ -3549,7 +3475,8 @@ class graphly extends EventEmitter {
         let infoGroup = this.svg.append('g')
             .attr('id', 'svgInfoContainer')
             .attr('transform', 'translate(' + (this.width/2 - 90) + ',' +
-            (this.margin.top+1) + ')');
+            (this.margin.top+1) + ')')
+            .style('visibility', 'hidden');
         infoGroup.append('rect')
             .attr('id', 'svgInfoRect')
             .attr('width', 280)

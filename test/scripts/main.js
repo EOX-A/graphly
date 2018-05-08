@@ -576,6 +576,7 @@ xhr.onload = function(e) {
     );
     var mie_altitude = flattenObservationArraySE(ds.mie_altitude);
     var mie_bin_quality_flag = flattenObservationArray(ds.mie_bin_quality_flag);
+    var geoid_separation =proxyFlattenObservationArraySE(ds.geoid_separation, ds.mie_altitude);
 
     data = {
       mie_datetime_start: time[0],
@@ -585,7 +586,8 @@ xhr.onload = function(e) {
       mie_wind_velocity: mie_HLOS_wind_speed,
       mie_quality_flag_data: mie_bin_quality_flag,
       mie_altitude_top: mie_altitude[0],
-      mie_altitude_bottom: mie_altitude[1]
+      mie_altitude_bottom: mie_altitude[1],
+      geoid_separation: geoid_separation[0]
     };
 
 

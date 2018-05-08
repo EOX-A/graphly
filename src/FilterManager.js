@@ -161,9 +161,6 @@ class FilterManager extends EventEmitter {
             })
             .style('line-height', '10px')
             .on('click', function(){
-
-                console.log(d);
-
                 if(!that.maskParameter[d].hasOwnProperty('selection')){
                     // TODO: Decide on default value
                     /*var mask = '';
