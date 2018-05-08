@@ -264,7 +264,7 @@ class graphly extends EventEmitter {
                 .attr('width', this.width - 1)
                 .attr('height', this.height - 1)
                 .style('position', 'absolute')
-                //.style('display', 'none')
+                .style('display', 'none')
                 .style('transform', 'translate(' + (this.margin.left + 1) +
                   'px' + ',' + (this.margin.top + 1) + 'px' + ')');
 
@@ -626,7 +626,9 @@ class graphly extends EventEmitter {
 
         this.svg.select('#previewImage').style('display', 'block');
         this.svg.select('#previewImage2').style('display', 'block');
-        this.svg.select('#svgInfoContainer').style('visibility', 'visible');
+        if(this.displayParameterLabel){
+            this.svg.select('#svgInfoContainer').style('visibility', 'visible');
+        }
 
         // Set interactive blue to black for labels
         this.svg.selectAll('.axisLabel').attr('fill', 'black');
@@ -1260,7 +1262,7 @@ class graphly extends EventEmitter {
             delete this.colorCache[id];
             g.call(colorAxis);
             this.dataSettings[id].extent = colorAxisScale.domain();
-            this.renderData(false);
+            this.renderData();
         };
 
         let csZoom = d3.behavior.zoom()
@@ -2929,7 +2931,7 @@ class graphly extends EventEmitter {
                 .attr('id', 'parameterInfo')
                 .style('top', this.margin.top*2+'px')
                 .style('left', (this.width/2)+'px')
-                .style('display', 'none');
+                .style('visibility', 'hidden');
         } else {
             this.el.select('#parameterInfo').selectAll('*').remove();
             this.el.select('#parameterInfo')
@@ -3123,88 +3125,100 @@ class graphly extends EventEmitter {
                 that.addApply();
             });
 
-        this.el.select('#parameterSettings')
-            .append('label')
-            .attr('for', 'symbolSelect')
-            .text('Symbol');
-            
+        // Check if parameter is combined for x and y axis
+        let combined = false;
+        let combPars = this.renderSettings.combinedParameters;
 
-        let data = [
-            { name:'None', value: 'none' },
-            { name:'Rectangle', value: 'rectangle' },
-            { name:'Rectangle outline', value: 'rectangle_empty'},
-            { name:'Circle', value: 'circle'},
-            { name:'Circle outline', value: 'circle_empty'},
-            { name:'Plus', value: 'plus'},
-            { name:'X', value: 'x'},
-            { name:'Triangle', value: 'triangle'},
-            { name:'Triangle outline', value: 'triangle_empty'}
-        ];
-
-
-        let select = this.el.select('#parameterSettings')
-          .append('select')
-            .attr('id','symbolSelect')
-            .on('change',onchange);
-
-        let options = select
-          .selectAll('option')
-            .data(data).enter()
-            .append('option')
-                .text(function (d) { return d.name; })
-                .attr('value', function (d) { return d.value; })
-                .property('selected', function(d){
-                    return d.value === dataSettings.symbol;
-                });
-
-        function onchange() {
-            let selectValue = that.el.select('#symbolSelect').property('value');
-            dataSettings.symbol = selectValue;
-            that.addApply();
+        if(combPars.hasOwnProperty(this.renderSettings.xAxis)){
+            if(combPars.hasOwnProperty(id)){
+                combined = true;
+            }
         }
 
-        this.el.select('#parameterSettings')
-            .append('label')
-            .attr('for', 'colorSelection')
-            .text('Color');
+        if(!combined){
+            this.el.select('#parameterSettings')
+                .append('label')
+                .attr('for', 'symbolSelect')
+                .text('Symbol');
+                
 
-        let colorSelect = this.el.select('#parameterSettings')
-            .append('input')
-            .attr('id', 'colorSelection')
-            .attr('type', 'text')
-            .attr('value', 
-                '#'+CP.RGB2HEX(
-                    dataSettings.color.slice(0,-1)
-                    .map(function(c){return Math.round(c*255);})
-                )
-            );
+            let data = [
+                { name:'None', value: 'none' },
+                { name:'Rectangle', value: 'rectangle' },
+                { name:'Rectangle outline', value: 'rectangle_empty'},
+                { name:'Circle', value: 'circle'},
+                { name:'Circle outline', value: 'circle_empty'},
+                { name:'Plus', value: 'plus'},
+                { name:'X', value: 'x'},
+                { name:'Triangle', value: 'triangle'},
+                { name:'Triangle outline', value: 'triangle_empty'}
+            ];
 
-        let picker = new CP(colorSelect.node());
 
-        let firstChange = true;
+            let select = this.el.select('#parameterSettings')
+              .append('select')
+                .attr('id','symbolSelect')
+                .on('change',onchange);
 
-        picker.on('change', function(color) {
-            this.target.value = '#' + color;
-            let c = CP.HEX2RGB(color);
-            c = c.map(function(c){return c/255;});
-            c.push(0.8);
-            if(!firstChange){
-                dataSettings.color = c;
+            let options = select
+              .selectAll('option')
+                .data(data).enter()
+                .append('option')
+                    .text(function (d) { return d.name; })
+                    .attr('value', function (d) { return d.value; })
+                    .property('selected', function(d){
+                        return d.value === dataSettings.symbol;
+                    });
+
+            function onchange() {
+                let selectValue = that.el.select('#symbolSelect').property('value');
+                dataSettings.symbol = selectValue;
                 that.addApply();
-            }else{
-                firstChange = false;
             }
-            
-        });
 
-        let x = document.createElement('a');
-            x.href = 'javascript:;';
-            x.innerHTML = 'Close';
-            x.addEventListener('click', function() {
-                picker.exit();
-            }, false);
+            this.el.select('#parameterSettings')
+                .append('label')
+                .attr('for', 'colorSelection')
+                .text('Color');
 
-        picker.picker.appendChild(x);
+            let colorSelect = this.el.select('#parameterSettings')
+                .append('input')
+                .attr('id', 'colorSelection')
+                .attr('type', 'text')
+                .attr('value', 
+                    '#'+CP.RGB2HEX(
+                        dataSettings.color.slice(0,-1)
+                        .map(function(c){return Math.round(c*255);})
+                    )
+                );
+
+            let picker = new CP(colorSelect.node());
+
+            let firstChange = true;
+
+            picker.on('change', function(color) {
+                this.target.value = '#' + color;
+                let c = CP.HEX2RGB(color);
+                c = c.map(function(c){return c/255;});
+                c.push(0.8);
+                if(!firstChange){
+                    dataSettings.color = c;
+                    that.addApply();
+                }else{
+                    firstChange = false;
+                }
+                
+            });
+
+            let x = document.createElement('a');
+                x.href = 'javascript:;';
+                x.innerHTML = 'Close';
+                x.addEventListener('click', function() {
+                    picker.exit();
+                }, false);
+
+            picker.picker.appendChild(x);
+        }
 
         // Create and manage colorscale selection
         // Find index of id
@@ -3261,13 +3275,14 @@ class graphly extends EventEmitter {
             // Need to add additional necessary options
             // drop down with possible parameters and colorscale
             if(active){                           
-                let parameterList = [
-                    {name: 'Linear', value: 'linear'},
-                    {name: 'Polynomial', value: 'polynomial'}
-                ];
                 this.renderColorScaleOptions(renderIndex);
             }
 
+        }
+
+        if(combined) {
+            this.addApply();
+            return;
         }
 
         this.el.select('#parameterSettings')
@@ -3608,13 +3623,13 @@ class graphly extends EventEmitter {
                     .style('top', '10px')
                     .on('click', ()=>{
                         let info = this.el.select('#parameterInfo');
-                        if(info.style('display') == 'block'){
-                            info.style('display', 'none');
+                        if(info.style('visibility') == 'visible'){
+                            info.style('visibility', 'hidden');
                             this.el.select('#parameterSettings')
                                 .style('display', 'none');
                             this.displayParameterLabel = false;
                         }else{
-                            info.style('display', 'block');
+                            info.style('visibility', 'visible');
                             this.displayParameterLabel = true;
                         }
                     })
@@ -3627,7 +3642,7 @@ class graphly extends EventEmitter {
             }
 
             if(this.displayParameterLabel){
-                this.el.select('#parameterInfo').style('display', 'block');
+                this.el.select('#parameterInfo').style('visibility', 'visible');
             }
 
             // Change height of settings panel to be just under labels
@@ -3764,7 +3779,7 @@ class graphly extends EventEmitter {
 
 
         if(this.el.select('#parameterInfo').selectAll('*').empty()){
-            this.el.select('#parameterInfo').style('display', 'none');
+            this.el.select('#parameterInfo').style('visibility', 'hidden');
         }
 
         this.emit('rendered');
