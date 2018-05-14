@@ -233,6 +233,7 @@ class BatchDrawer {
 
 
     _initUniforms() {
+        let gl = this.GL;
         let projection = new Float32Array([2 / this.canvas.width, 0, 0,
                                            0, -2 / this.canvas.height, 0,
                                           -1, 1, 1]);
@@ -243,30 +244,30 @@ class BatchDrawer {
             resScaleY = this.canvas.height;
         }
 
-        this.GL.viewport(0, 0, this.canvas.width, this.canvas.height);
+        gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 
-        this.GL.useProgram(this.lineProgram);
-        let lineProjLoc = this.GL.getUniformLocation(this.lineProgram, 'projection');
-        this.GL.uniformMatrix3fv(lineProjLoc, false, projection);
+        gl.useProgram(this.lineProgram);
+        let lineProjLoc = gl.getUniformLocation(this.lineProgram, 'projection');
+        gl.uniformMatrix3fv(lineProjLoc, false, projection);
 
-        let lineResLoc = this.GL.getUniformLocation(this.lineProgram, 'resolutionScale');
-        this.GL.uniform2f(lineResLoc, resScaleX, resScaleY);
-
-
-        this.GL.useProgram(this.dotProgram);
-        let dotProjLoc = this.GL.getUniformLocation(this.dotProgram, 'projection');
-        this.GL.uniformMatrix3fv(dotProjLoc, false, projection);
-
-        let dotResLoc = this.GL.getUniformLocation(this.dotProgram, 'resolutionScale');
-        this.GL.uniform2f(dotResLoc, resScaleX, resScaleY);
+        let lineResLoc = gl.getUniformLocation(this.lineProgram, 'resolutionScale');
+        gl.uniform2f(lineResLoc, resScaleX, resScaleY);
 
 
-        this.GL.useProgram(this.rectProgram);
-        let rectProjLoc = this.GL.getUniformLocation(this.rectProgram, 'projection');
-        this.GL.uniformMatrix3fv(rectProjLoc, false, projection);
+        gl.useProgram(this.dotProgram);
+        let dotProjLoc = gl.getUniformLocation(this.dotProgram, 'projection');
+        gl.uniformMatrix3fv(dotProjLoc, false, projection);
 
-        let rectResLoc = this.GL.getUniformLocation(this.rectProgram, 'resolutionScale');
-        this.GL.uniform2f(rectResLoc, resScaleX, resScaleY);
+        let dotResLoc = gl.getUniformLocation(this.dotProgram, 'resolutionScale');
+        gl.uniform2f(dotResLoc, resScaleX, resScaleY);
+
+
+        gl.useProgram(this.rectProgram);
+        let rectProjLoc = gl.getUniformLocation(this.rectProgram, 'projection');
+        gl.uniformMatrix3fv(rectProjLoc, false, projection);
+
+        let rectResLoc = gl.getUniformLocation(this.rectProgram, 'resolutionScale');
+        gl.uniform2f(rectResLoc, resScaleX, resScaleY);
 
     }
 
@@ -420,213 +421,222 @@ class BatchDrawer {
 
 
     _drawLinesGL2() {
+        let gl = this.GL;
         // Use line drawing shaders:
-        this.GL.useProgram(this.lineProgram);
+        gl.useProgram(this.lineProgram);
 
-        this.GL.enableVertexAttribArray(this.LINE_VX_BUF);
-        this.GL.enableVertexAttribArray(this.LINE_START_BUF);
-        this.GL.enableVertexAttribArray(this.LINE_END_BUF);
-        this.GL.enableVertexAttribArray(this.LINE_WIDTH_BUF);
-        this.GL.enableVertexAttribArray(this.LINE_COLOR_BUF);
+        gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+        gl.enableVertexAttribArray(this.LINE_VX_BUF);
+        gl.enableVertexAttribArray(this.LINE_START_BUF);
+        gl.enableVertexAttribArray(this.LINE_END_BUF);
+        gl.enableVertexAttribArray(this.LINE_WIDTH_BUF);
+        gl.enableVertexAttribArray(this.LINE_COLOR_BUF);
 
         // Bind all line vertex buffers:
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineVertexBuffer);
-        this.GL.vertexAttribPointer(this.LINE_VX_BUF, 3, this.GL.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineVertexBuffer);
+        gl.vertexAttribPointer(this.LINE_VX_BUF, 3, gl.FLOAT, false, 0, 0);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineStartBuffer);
-        this.GL.vertexAttribPointer(this.LINE_START_BUF, 2, this.GL.FLOAT, false, 8, 0);
-        this.GL.vertexAttribDivisor(this.LINE_START_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineStartBuffer);
+        gl.vertexAttribPointer(this.LINE_START_BUF, 2, gl.FLOAT, false, 8, 0);
+        gl.vertexAttribDivisor(this.LINE_START_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineEndBuffer);
-        this.GL.vertexAttribPointer(this.LINE_END_BUF, 2, this.GL.FLOAT, false, 8, 0);
-        this.GL.vertexAttribDivisor(this.LINE_END_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineEndBuffer);
+        gl.vertexAttribPointer(this.LINE_END_BUF, 2, gl.FLOAT, false, 8, 0);
+        gl.vertexAttribDivisor(this.LINE_END_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineWidthBuffer);
-        this.GL.vertexAttribPointer(this.LINE_WIDTH_BUF, 1, this.GL.FLOAT, false, 4, 0);
-        this.GL.vertexAttribDivisor(this.LINE_WIDTH_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineWidthBuffer);
+        gl.vertexAttribPointer(this.LINE_WIDTH_BUF, 1, gl.FLOAT, false, 4, 0);
+        gl.vertexAttribDivisor(this.LINE_WIDTH_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineColorBuffer);
-        this.GL.vertexAttribPointer(this.LINE_COLOR_BUF, 4, this.GL.FLOAT, false, 16, 0);
-        this.GL.vertexAttribDivisor(this.LINE_COLOR_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineColorBuffer);
+        gl.vertexAttribPointer(this.LINE_COLOR_BUF, 4, gl.FLOAT, false, 16, 0);
+        gl.vertexAttribDivisor(this.LINE_COLOR_BUF, 1);
 
         // Draw all line instances:
-        this.GL.drawArraysInstanced(this.GL.TRIANGLE_STRIP, 0, 4, this.numLines);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.numLines);
     }
 
 
     _drawDotsGL2() {
+        let gl = this.GL;
         // Use dot drawing shaders:
-        this.GL.useProgram(this.dotProgram);
+        gl.useProgram(this.dotProgram);
 
-        //this.GL.blendFuncSeparate(this.GL.SRC_ALPHA, this.GL.ONE_MINUS_SRC_ALPHA, this.GL.ONE, this.GL.ONE_MINUS_SRC_ALPHA);
-        this.GL.blendFunc(this.GL.ONE, this.GL.ONE_MINUS_SRC_ALPHA);
-        this.GL.enable(this.GL.BLEND);
+        gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        this.GL.enableVertexAttribArray(this.DOT_VX_BUF);
-        this.GL.enableVertexAttribArray(this.DOT_POS_BUF);
-        this.GL.enableVertexAttribArray(this.DOT_SIZE_BUF);
-        this.GL.enableVertexAttribArray(this.DOT_COLOR_BUF);
-        this.GL.enableVertexAttribArray(this.DOT_TYPE_BUF);
+        gl.enableVertexAttribArray(this.DOT_VX_BUF);
+        gl.enableVertexAttribArray(this.DOT_POS_BUF);
+        gl.enableVertexAttribArray(this.DOT_SIZE_BUF);
+        gl.enableVertexAttribArray(this.DOT_COLOR_BUF);
+        gl.enableVertexAttribArray(this.DOT_TYPE_BUF);
 
         // Bind all line vertex buffers:
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotVertexBuffer);
-        this.GL.vertexAttribPointer(this.DOT_VX_BUF, 3, this.GL.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotVertexBuffer);
+        gl.vertexAttribPointer(this.DOT_VX_BUF, 3, gl.FLOAT, false, 0, 0);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotPosBuffer);
-        this.GL.vertexAttribPointer(this.DOT_POS_BUF, 2, this.GL.FLOAT, false, 8, 0);
-        this.GL.vertexAttribDivisor(this.DOT_POS_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotPosBuffer);
+        gl.vertexAttribPointer(this.DOT_POS_BUF, 2, gl.FLOAT, false, 8, 0);
+        gl.vertexAttribDivisor(this.DOT_POS_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotSizeBuffer);
-        this.GL.vertexAttribPointer(this.DOT_SIZE_BUF, 1, this.GL.FLOAT, false, 4, 0);
-        this.GL.vertexAttribDivisor(this.DOT_SIZE_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotSizeBuffer);
+        gl.vertexAttribPointer(this.DOT_SIZE_BUF, 1, gl.FLOAT, false, 4, 0);
+        gl.vertexAttribDivisor(this.DOT_SIZE_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotColorBuffer);
-        this.GL.vertexAttribPointer(this.DOT_COLOR_BUF, 4, this.GL.FLOAT, false, 16, 0);
-        this.GL.vertexAttribDivisor(this.DOT_COLOR_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotColorBuffer);
+        gl.vertexAttribPointer(this.DOT_COLOR_BUF, 4, gl.FLOAT, false, 16, 0);
+        gl.vertexAttribDivisor(this.DOT_COLOR_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotTypeBuffer);
-        this.GL.vertexAttribPointer(this.DOT_TYPE_BUF, 1, this.GL.FLOAT, false, 4, 0);
-        this.GL.vertexAttribDivisor(this.DOT_TYPE_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotTypeBuffer);
+        gl.vertexAttribPointer(this.DOT_TYPE_BUF, 1, gl.FLOAT, false, 4, 0);
+        gl.vertexAttribDivisor(this.DOT_TYPE_BUF, 1);
 
         // Draw all dot instances:
-        this.GL.drawArraysInstanced(this.GL.POINT, 0, 4, this.numDots);
+        gl.drawArraysInstanced(gl.POINT, 0, 4, this.numDots);
     }
 
     _drawRectsGL2() {
+        let gl = this.GL;
         // Use rect drawing shaders:
-        this.GL.useProgram(this.rectProgram);
+        gl.useProgram(this.rectProgram);
 
-        //this.GL.blendFuncSeparate(this.GL.SRC_ALPHA, this.GL.ONE_MINUS_SRC_ALPHA, this.GL.ONE, this.GL.ONE_MINUS_SRC_ALPHA);
-        this.GL.blendFunc(this.GL.ONE, this.GL.ONE_MINUS_SRC_ALPHA);
-        this.GL.enable(this.GL.BLEND);
+        gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        this.GL.enableVertexAttribArray(this.RECT_VX_BUF);
-        this.GL.enableVertexAttribArray(this.RECT_START_BUF);
-        this.GL.enableVertexAttribArray(this.RECT_END_BUF);
-        this.GL.enableVertexAttribArray(this.RECT_COLOR_BUF);
+        gl.enableVertexAttribArray(this.RECT_VX_BUF);
+        gl.enableVertexAttribArray(this.RECT_START_BUF);
+        gl.enableVertexAttribArray(this.RECT_END_BUF);
+        gl.enableVertexAttribArray(this.RECT_COLOR_BUF);
 
         // Bind all line vertex buffers:
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectVertexBuffer);
-        this.GL.vertexAttribPointer(this.RECT_VX_BUF, 3, this.GL.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rectVertexBuffer);
+        gl.vertexAttribPointer(this.RECT_VX_BUF, 3, gl.FLOAT, false, 0, 0);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectStartBuffer);
-        this.GL.vertexAttribPointer(this.RECT_START_BUF, 2, this.GL.FLOAT, false, 8, 0);
-        this.GL.vertexAttribDivisor(this.RECT_START_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rectStartBuffer);
+        gl.vertexAttribPointer(this.RECT_START_BUF, 2, gl.FLOAT, false, 8, 0);
+        gl.vertexAttribDivisor(this.RECT_START_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectEndBuffer);
-        this.GL.vertexAttribPointer(this.RECT_END_BUF, 2, this.GL.FLOAT, false, 8, 0);
-        this.GL.vertexAttribDivisor(this.RECT_END_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rectEndBuffer);
+        gl.vertexAttribPointer(this.RECT_END_BUF, 2, gl.FLOAT, false, 8, 0);
+        gl.vertexAttribDivisor(this.RECT_END_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectColorBuffer);
-        this.GL.vertexAttribPointer(this.RECT_COLOR_BUF, 4, this.GL.FLOAT, false, 16, 0);
-        this.GL.vertexAttribDivisor(this.RECT_COLOR_BUF, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rectColorBuffer);
+        gl.vertexAttribPointer(this.RECT_COLOR_BUF, 4, gl.FLOAT, false, 16, 0);
+        gl.vertexAttribDivisor(this.RECT_COLOR_BUF, 1);
 
         // Draw all rect instances:
-        this.GL.drawArraysInstanced(this.GL.TRIANGLE_STRIP, 0, 4, this.numRects);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.numRects);
 
     }
 
 
     _drawLinesGL1() {
+        let gl = this.GL;
         // Use line drawing shaders:
-        this.GL.useProgram(this.lineProgram);
+        gl.useProgram(this.lineProgram);
 
-        this.GL.enableVertexAttribArray(this.LINE_VX_BUF);
-        this.GL.enableVertexAttribArray(this.LINE_START_BUF);
-        this.GL.enableVertexAttribArray(this.LINE_END_BUF);
-        this.GL.enableVertexAttribArray(this.LINE_WIDTH_BUF);
-        this.GL.enableVertexAttribArray(this.LINE_COLOR_BUF);
+        gl.enableVertexAttribArray(this.LINE_VX_BUF);
+        gl.enableVertexAttribArray(this.LINE_START_BUF);
+        gl.enableVertexAttribArray(this.LINE_END_BUF);
+        gl.enableVertexAttribArray(this.LINE_WIDTH_BUF);
+        gl.enableVertexAttribArray(this.LINE_COLOR_BUF);
 
         // Bind all line vertex buffers:
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineVertexBuffer);
-        this.GL.vertexAttribPointer(this.LINE_VX_BUF, 3, this.GL.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineVertexBuffer);
+        gl.vertexAttribPointer(this.LINE_VX_BUF, 3, gl.FLOAT, false, 0, 0);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineStartBuffer);
-        this.GL.vertexAttribPointer(this.LINE_START_BUF, 2, this.GL.FLOAT, false, 8, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineStartBuffer);
+        gl.vertexAttribPointer(this.LINE_START_BUF, 2, gl.FLOAT, false, 8, 0);
         this.ext.vertexAttribDivisorANGLE(this.LINE_START_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineEndBuffer);
-        this.GL.vertexAttribPointer(this.LINE_END_BUF, 2, this.GL.FLOAT, false, 8, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineEndBuffer);
+        gl.vertexAttribPointer(this.LINE_END_BUF, 2, gl.FLOAT, false, 8, 0);
         this.ext.vertexAttribDivisorANGLE(this.LINE_END_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineWidthBuffer);
-        this.GL.vertexAttribPointer(this.LINE_WIDTH_BUF, 1, this.GL.FLOAT, false, 4, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineWidthBuffer);
+        gl.vertexAttribPointer(this.LINE_WIDTH_BUF, 1, gl.FLOAT, false, 4, 0);
         this.ext.vertexAttribDivisorANGLE(this.LINE_WIDTH_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineColorBuffer);
-        this.GL.vertexAttribPointer(this.LINE_COLOR_BUF, 4, this.GL.FLOAT, false, 16, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineColorBuffer);
+        gl.vertexAttribPointer(this.LINE_COLOR_BUF, 4, gl.FLOAT, false, 16, 0);
         this.ext.vertexAttribDivisorANGLE(this.LINE_COLOR_BUF, 1);
 
         // Draw all line instances:
-        this.ext.drawArraysInstancedANGLE(this.GL.TRIANGLE_STRIP, 0, 4, this.numLines);
+        this.ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.numLines);
     }
 
 
     _drawDotsGL1() {
+        let gl = this.GL;
         // Use dot drawing shaders:
-        this.GL.useProgram(this.dotProgram);
+        gl.useProgram(this.dotProgram);
 
-        this.GL.blendFunc(this.GL.ONE, this.GL.ONE_MINUS_SRC_ALPHA);
-        this.GL.enable(this.GL.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.enable(gl.BLEND);
 
-        this.GL.enableVertexAttribArray(this.DOT_VX_BUF);
-        this.GL.enableVertexAttribArray(this.DOT_POS_BUF);
-        this.GL.enableVertexAttribArray(this.DOT_SIZE_BUF);
-        this.GL.enableVertexAttribArray(this.DOT_COLOR_BUF);
-        this.GL.enableVertexAttribArray(this.DOT_TYPE_BUF);
+        gl.enableVertexAttribArray(this.DOT_VX_BUF);
+        gl.enableVertexAttribArray(this.DOT_POS_BUF);
+        gl.enableVertexAttribArray(this.DOT_SIZE_BUF);
+        gl.enableVertexAttribArray(this.DOT_COLOR_BUF);
+        gl.enableVertexAttribArray(this.DOT_TYPE_BUF);
 
         // Bind all line vertex buffers:
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotVertexBuffer);
-        this.GL.vertexAttribPointer(this.DOT_VX_BUF, 3, this.GL.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotVertexBuffer);
+        gl.vertexAttribPointer(this.DOT_VX_BUF, 3, gl.FLOAT, false, 0, 0);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotPosBuffer);
-        this.GL.vertexAttribPointer(this.DOT_POS_BUF, 2, this.GL.FLOAT, false, 8, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotPosBuffer);
+        gl.vertexAttribPointer(this.DOT_POS_BUF, 2, gl.FLOAT, false, 8, 0);
         this.ext.vertexAttribDivisorANGLE(this.DOT_POS_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotSizeBuffer);
-        this.GL.vertexAttribPointer(this.DOT_SIZE_BUF, 1, this.GL.FLOAT, false, 4, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotSizeBuffer);
+        gl.vertexAttribPointer(this.DOT_SIZE_BUF, 1, gl.FLOAT, false, 4, 0);
         this.ext.vertexAttribDivisorANGLE(this.DOT_SIZE_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotColorBuffer);
-        this.GL.vertexAttribPointer(this.DOT_COLOR_BUF, 4, this.GL.FLOAT, false, 16, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotColorBuffer);
+        gl.vertexAttribPointer(this.DOT_COLOR_BUF, 4, gl.FLOAT, false, 16, 0);
         this.ext.vertexAttribDivisorANGLE(this.DOT_COLOR_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.dotTypeBuffer);
-        this.GL.vertexAttribPointer(this.DOT_TYPE_BUF, 1, this.GL.FLOAT, false, 4, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dotTypeBuffer);
+        gl.vertexAttribPointer(this.DOT_TYPE_BUF, 1, gl.FLOAT, false, 4, 0);
         this.ext.vertexAttribDivisorANGLE(this.DOT_TYPE_BUF, 1);
 
         // Draw all dot instances:
-        this.ext.drawArraysInstancedANGLE(this.GL.POINT, 0, 4, this.numDots);
+        this.ext.drawArraysInstancedANGLE(gl.POINT, 0, 4, this.numDots);
     }
 
     _drawRectsGL1() {
-
+        let gl = this.GL;
         // Use rect drawing shaders:
-        this.GL.useProgram(this.rectProgram);
+        gl.useProgram(this.rectProgram);
 
-        this.GL.enableVertexAttribArray(this.RECT_VX_BUF);
-        this.GL.enableVertexAttribArray(this.RECT_START_BUF);
-        this.GL.enableVertexAttribArray(this.RECT_END_BUF);
-        this.GL.enableVertexAttribArray(this.RECT_COLOR_BUF);
+        gl.enableVertexAttribArray(this.RECT_VX_BUF);
+        gl.enableVertexAttribArray(this.RECT_START_BUF);
+        gl.enableVertexAttribArray(this.RECT_END_BUF);
+        gl.enableVertexAttribArray(this.RECT_COLOR_BUF);
 
         // Bind all line vertex buffers:
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectVertexBuffer);
-        this.GL.vertexAttribPointer(this.RECT_VX_BUF, 3, this.GL.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rectVertexBuffer);
+        gl.vertexAttribPointer(this.RECT_VX_BUF, 3, gl.FLOAT, false, 0, 0);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectStartBuffer);
-        this.GL.vertexAttribPointer(this.RECT_START_BUF, 2, this.GL.FLOAT, false, 8, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rectStartBuffer);
+        gl.vertexAttribPointer(this.RECT_START_BUF, 2, gl.FLOAT, false, 8, 0);
         this.ext.vertexAttribDivisorANGLE(this.RECT_START_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectEndBuffer);
-        this.GL.vertexAttribPointer(this.RECT_END_BUF, 2, this.GL.FLOAT, false, 8, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rectEndBuffer);
+        gl.vertexAttribPointer(this.RECT_END_BUF, 2, gl.FLOAT, false, 8, 0);
         this.ext.vertexAttribDivisorANGLE(this.RECT_END_BUF, 1);
 
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.rectColorBuffer);
-        this.GL.vertexAttribPointer(this.RECT_COLOR_BUF, 4, this.GL.FLOAT, false, 16, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rectColorBuffer);
+        gl.vertexAttribPointer(this.RECT_COLOR_BUF, 4, gl.FLOAT, false, 16, 0);
         this.ext.vertexAttribDivisorANGLE(this.RECT_COLOR_BUF, 1);
 
         // Draw all rect instances:
-        this.ext.drawArraysInstancedANGLE(this.GL.TRIANGLE_STRIP, 0, 4, this.numRects);
+        this.ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.numRects);
     }
 
 
@@ -651,10 +661,10 @@ class BatchDrawer {
                 in float dotType;
                 in float dotSize;
                 out vec4 fragmentColor;
-                
+
                 void main(void) {
 
-                    vec4 color_out = vec4(color.rgb * color.a, color.a);
+                    vec4 color_out = vec4(color.rgb  * color.a, color.a);
                     if(color.a < 0.0){
                         color_out = vec4(color.rgb, 1.0);
                     }
@@ -821,7 +831,7 @@ class BatchDrawer {
                     in vec4 color;
                     out vec4 fragmentColor;
                     void main(void) {
-                        fragmentColor = color;
+                        fragmentColor = vec4(color.rgb  * color.a, color.a);;
                 }`;
             
                 lineVertexSource = 

@@ -19,10 +19,8 @@ let dotType = {
     x: 5.0,
     triangle: 6.0,
     triangle_empty: 7.0,
-    //circle: 7.0,
 };
 
-//graphly.TYPE[settingvariable]
 
 let DOTTYPE = 4.0;
 let DOTSIZE = 8;
@@ -33,7 +31,6 @@ require('../node_modules/c-p/color-picker.css');
 
 const EventEmitter = require('events');
 
-//import from './colorscales';
 import * as u from './utils';
 
 let regression = require('regression');
@@ -82,7 +79,7 @@ class graphly extends EventEmitter {
     */
 
     /**
-    * The graph class.
+    * The graphly class.
     * @memberof module:graphly
     * @constructor
     * @param {Object} options the options to pass to the plot.
@@ -104,6 +101,10 @@ class graphly extends EventEmitter {
         this.y2AxisLabel = null;
         this.xAxisLabel = null;
         this.colorCache = {};
+        this.defaultAlpha = defaultFor(options.defaultAlpha, 1.0);
+
+        // Set default font-size main element
+        this.el.style('font-size', '0.8em');
 
 
         this.el.append('canvas')
@@ -596,7 +597,6 @@ class graphly extends EventEmitter {
                 let col = cGen(i);
                 col = CP.HEX2RGB(col);
                 col = col.map(function(c){return c/255;});
-                col.push(0.8);
                 this.dataSettings[k].color = col;
             }
         }
@@ -1492,7 +1492,8 @@ class graphly extends EventEmitter {
                     if(!this.dataSettings[keys[i]].hasOwnProperty(parIds[j])) {
                         this.dataSettings[keys[i]][parIds[j]] = {
                             symbol: 'circle',
-                            color: [Math.random(), Math.random(), Math.random(), 0.8]
+                            color: [Math.random(), Math.random(), Math.random()],
+                            alpha: this.defaultAlpha
                         };
                     }
                 }
@@ -1501,7 +1502,8 @@ class graphly extends EventEmitter {
                 if(!this.dataSettings.hasOwnProperty(keys[i])) {
                     this.dataSettings[keys[i]] = {
                         uom: null,
-                        color: [Math.random(), Math.random(), Math.random(), 0.8]
+                        color: [Math.random(), Math.random(), Math.random()],
+                        alpha: this.defaultAlpha
                     };
                 }
             }
@@ -1515,7 +1517,8 @@ class graphly extends EventEmitter {
                 if( !this.dataSettings.hasOwnProperty(cP) ){
                     this.dataSettings[cP] = {
                         uom: null,
-                        color: [Math.random(), Math.random(), Math.random(), 0.8]
+                        color: [Math.random(), Math.random(), Math.random()],
+                        alpha: this.defaultAlpha
                     };
                 }
             }
@@ -2289,14 +2292,21 @@ class graphly extends EventEmitter {
                 let identParam = this.renderSettings.dataIdentifier.parameter;
                 let val = data[identParam][index];
                 rC = this.dataSettings[param][val].color;
+                if(this.dataSettings[param][val].hasOwnProperty('alpha')){
+                    rC.push(this.dataSettings[param][val].alpha);
+                }
             } else if(this.dataSettings[param].hasOwnProperty('color')){
-                rC = this.dataSettings[param].color;
+                rC = this.dataSettings[param].color.slice();
             } else { 
                 rC = [0.258, 0.525, 0.956];
             }
         }
-        if(typeof rC !== 'object' && rC.length == 3){
-            rC.push(0.8);
+        if(rC.length == 3){
+            if(this.dataSettings[param].hasOwnProperty('alpha')){
+                rC.push(this.dataSettings[param].alpha);
+            } else { 
+                rC.push(this.defaultAlpha);
+            }
         }
         return rC;
     }
@@ -2495,17 +2505,19 @@ class graphly extends EventEmitter {
                     rC = currColCache[i];
                 } else {
                     rC = this.plotter.getColor(data[cAxis][i])
-                        .map(function(c){return c/255;}); 
+                        .map(function(c){return c/255;});
+                    if(this.dataSettings[idY].hasOwnProperty('alpha')){
+                        rC[3] = this.dataSettings[idY].alpha;
+                    }
                     this.colorCache[cAxis].push(rC);
                 }
-                
             } else {
                 rC = this.getColor(idY, i, data);
             }
             
             this.colourToNode[idC.join('-')] = par_properties;
 
-            this.batchDrawer.addRect(x1,y1,x2,y2, rC[0], rC[1], rC[2], 1.0);
+            this.batchDrawer.addRect(x1,y1,x2,y2, rC[0], rC[1], rC[2], rC[3]);
 
             if(!this.fixedSize && updateReferenceCanvas){
                 this.batchDrawerReference.addRect(
@@ -2663,8 +2675,8 @@ class graphly extends EventEmitter {
                             // as some datasets loop and it looks messy
                             if(x-p_x>-this.width/2){
                                 this.batchDrawer.addLine(
-                                    p_x, p_y, x, y, 1.0, 
-                                    rC[0], rC[1], rC[2], 1.0
+                                    p_x, p_y, x, y, 1.5, 
+                                    rC[0], rC[1], rC[2], rC[3]
                                 );
                             }
                         }
@@ -2673,8 +2685,8 @@ class graphly extends EventEmitter {
                         // as some datasets loop and it looks messy
                         if(x-p_x>-this.width/2){
                             this.batchDrawer.addLine(
-                                p_x, p_y, x, y, 1.0, 
-                                rC[0], rC[1], rC[2], 1.0
+                                p_x, p_y, x, y, 1.5, 
+                                rC[0], rC[1], rC[2], rC[3]
                             );
                         }
                     }
@@ -2687,7 +2699,7 @@ class graphly extends EventEmitter {
                     par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.8
+                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
                     );
                     if(!this.fixedSize && updateReferenceCanvas){
                         this.batchDrawerReference.addDot(
@@ -3145,7 +3157,6 @@ class graphly extends EventEmitter {
                 this.target.value = '#' + color;
                 let c = CP.HEX2RGB(color);
                 c = c.map(function(c){return c/255;});
-                c.push(0.8);
                 if(!firstChange){
                     dataSettings.color = c;
                     that.addApply();
@@ -3164,6 +3175,33 @@ class graphly extends EventEmitter {
 
             picker.picker.appendChild(x);
         }
+
+        this.el.select('#parameterSettings')
+            .append('label')
+            .attr('for', 'opacitySelection')
+            .text('Opacity');
+
+        this.el.select('#parameterSettings').append('input')
+            .attr('id', 'opacityInput')
+            .attr('type', 'range')
+            .attr('min', 0)
+            .attr('max', 1)
+            .attr('step', 0.05)
+            .attr('value', defaultFor(
+                this.dataSettings[id].alpha,
+                this.defaultAlpha
+            ))
+            .on('input', ()=>{
+                let val = d3.event.currentTarget.valueAsNumber;
+                this.dataSettings[id].alpha = val;
+                // TODO: Possibly only update alpha in colorcache
+                for(let k in this.colorCache){
+                    delete this.colorCache[k];
+                    /*for(let i=0; i<this.colorCache[k].length; i++){
+                        this.colorCache[k][i][3] = val;
+                    }*/
+                }
+            });
 
         // Create and manage colorscale selection
         // Find index of id
