@@ -3,18 +3,17 @@
 
 
 var renderSettings_mie = {
-    xAxis: 'mie_datetime',
+    xAxis: 'mie_altitude_top',
     yAxis: [
-         'mie_altitude',
-         'mie_dem_altitude'
+         'geoid_separation',
+         //'mie_dem_altitude'
     ],
     //y2Axis: [],
     combinedParameters: {
-        mie_datetime: ['mie_datetime_start', 'mie_datetime_stop'],
+        mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
     },
     colorAxis: [
-        'mie_wind_velocity',
         null
     ],
 
@@ -30,7 +29,7 @@ var renderSettings_ray = {
     combinedParameters: {
         rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
         rayleigh_altitude: ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
-        mie_datetime: ['mie_datetime_start', 'mie_datetime_stop'],
+        mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
     },
     colorAxis: [
@@ -42,9 +41,9 @@ var renderSettings_ray = {
 
 var renderSettingsSwarm = {
     xAxis: 'Latitude',
-    yAxis: [],
-    y2Axis: ['F'],
-    colorAxis: [null, null]/*,
+    yAxis: ['F'],
+    y2Axis: ['F_res_IGRF12'],
+    colorAxis: ['F_error', null]/*,
     dataIdentifier: {
         parameter: 'Spacecraft',
         identifiers: ['A', 'B']
@@ -99,6 +98,12 @@ var ds_rayleigh = {
 };
 
 var ds_mie = {
+    geoid_separation: {
+        lineConnect: true,
+        symbol: 'rectangle',
+        color: [1.0,0.0,0.0],
+        alpha: 0.5
+    },
     mie_dem_altitude: {
         symbol: null,
         uom: 'm',
@@ -114,7 +119,7 @@ var ds_mie = {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
-    mie_datetime_stop: {
+    mie_datetime_end: {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
@@ -129,8 +134,12 @@ var otherds = {
     T_elec: {
         symbol: 'circle',
         uom: 'n',
+        colorscale: 'plasma'
         //regression: 'polynomial',
-        lineConnect: true
+        //lineConnect: true
+    },
+    F_error: {
+        colorscale: 'inferno'
     },
     /*F: {
         symbol: 'circle',
@@ -255,7 +264,7 @@ var filterSettings = {
     filterRelation: [
         [
             'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
-            'mie_datetime_start', 'mie_datetime_stop', 'mie_startlat',
+            'mie_datetime_start', 'mie_datetime_end', 'mie_startlat',
             'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
             'mie_geo_height', 'mie_wind_velocity', 'mie_observation_type'
         ],
@@ -336,24 +345,25 @@ var renderSettings = {
     //y2Axis: [],
     combinedParameters: {
         mie_latitude: ['mie_latitude_start', 'mie_latitude_end'],
-        mie_altitude: ['mie_altitude_start', 'mie_altitude_end'],
+        mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top'],
         latitude_of_DEM_intersection: [
             'latitude_of_DEM_intersection_start',
             'latitude_of_DEM_intersection_end'
         ],
-        time: ['time_start', 'time_end'],
+        time: ['mie_datetime_start', 'mie_datetime_end'],
     },
-    colorAxis: ['mie_wind_data']
+    colorAxis: ['mie_wind_velocity']
 
 };
 
 var dataSettings = {
+
    
-    time_start: {
+    mie_datetime_start: {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
-    time_end: {
+    mie_datetime_end: {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
@@ -363,7 +373,7 @@ var dataSettings = {
         timeFormat: 'MJD2000_S'
     },
 
-    mie_wind_data: {
+    mie_wind_velocity: {
         uom: 'm/s',
         colorscale: 'viridis',
         extent: [-140,39]
@@ -383,7 +393,7 @@ var dataSettings = {
 var filterSettings = {
     parameterMatrix: {
         'height': [
-            'mie_altitude_start', 'mie_altitude_end'
+            'mie_altitude_bottom', 'mie_altitude_top'
         ],
         'latitude': [
             'mie_latitude'
@@ -394,15 +404,15 @@ var filterSettings = {
     },
     filterRelation: [
         [
-            'mie_quality_flag_data', 'mie_wind_data', 'mie_latitude', 'mie_altitude',
-            'mie_latitude_start', 'mie_latitude_end', 'mie_altitude_start', 'mie_altitude_end',
-            'time', 'time_start', 'time_end', 'latitude_of_DEM_intersection_start',
+            'mie_quality_flag_data', 'mie_wind_velocity', 'mie_latitude', 'mie_altitude',
+            'mie_latitude_start', 'mie_latitude_end', 'mie_altitude_top', 'mie_altitude_bottom',
+            'time', 'mie_datetime_start', 'mie_datetime_end', 'latitude_of_DEM_intersection_start',
             'latitude_of_DEM_intersection_end', 'latitude_of_DEM_intersection'
         ]
     ],
     dataSettings: dataSettings,
     visibleFilters: [
-        'mie_quality_flag_data', 'mie_wind_data', 'F', 'n', 'F_error'
+        'mie_quality_flag_data', 'mie_wind_velocity', 'F', 'n', 'F_error'
       
     ],
     //boolParameter: [],
@@ -442,10 +452,11 @@ var filterManager = new FilterManager({
 
 var graph = new graphly.graphly({
     el: '#graph',
-    dataSettings: otherds,
-    renderSettings: renderSettingsSwarm,
+    dataSettings: ds_mie,
+    renderSettings: renderSettings_mie,
     filterManager: filterManager,
-    debounceActive: true
+    debounceActive: false,
+    displayParameterLabel: true
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000
@@ -490,8 +501,8 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/swarm.mp', true);
-//xhr.open('GET', 'data/AE_OPER_AUX_ISR_1B_20071002T103629_20071002T110541_0002.MSP', true);
+//xhr.open('GET', 'data/swarm.mp', true);
+xhr.open('GET', 'data/aeolus_L1.mp', true);
 
 xhr.responseType = 'arraybuffer';
 
@@ -559,9 +570,9 @@ xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
     var data = msgpack.decode(tmp);
 
-    graph.loadData(data);
+    //graph.loadData(data);
 
-    /*var ds = data.AEOLUS[0];
+    var ds = data.ALD_U_N_1B[0];
 
     var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
     var mie_HLOS_wind_speed = flattenObservationArray(ds.mie_HLOS_wind_speed);
@@ -571,16 +582,18 @@ xhr.onload = function(e) {
     );
     var mie_altitude = flattenObservationArraySE(ds.mie_altitude);
     var mie_bin_quality_flag = flattenObservationArray(ds.mie_bin_quality_flag);
+    var geoid_separation =proxyFlattenObservationArraySE(ds.geoid_separation, ds.mie_altitude);
 
     data = {
-      time_start: time[0],
-      time_end: time[1],
+      mie_datetime_start: time[0],
+      mie_datetime_end: time[1],
       latitude_of_DEM_intersection_start: latitude_of_DEM_intersection[1],
       latitude_of_DEM_intersection_end: latitude_of_DEM_intersection[0],
-      mie_wind_data: mie_HLOS_wind_speed,
+      mie_wind_velocity: mie_HLOS_wind_speed,
       mie_quality_flag_data: mie_bin_quality_flag,
-      mie_altitude_start: mie_altitude[1],
-      mie_altitude_end: mie_altitude[0]
+      mie_altitude_top: mie_altitude[0],
+      mie_altitude_bottom: mie_altitude[1],
+      geoid_separation: geoid_separation[0]
     };
 
 
@@ -588,7 +601,7 @@ xhr.onload = function(e) {
     graph.loadData(data);
     if(usesecond){
         graph2.loadData(data);
-    }*/
+    }
 
     filterManager.loadData(data);
 };

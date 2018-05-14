@@ -5,6 +5,7 @@ svg {
   /*shape-rendering: crispEdges;*/
 }
 
+
 #zoomXBox {
     cursor:ew-resize;
 }
@@ -17,19 +18,19 @@ svg {
 .axis path,
 .axis line {
     fill: none;
-    stroke: #ccc;
-    stroke-width: 1;
     shape-rendering: crispEdges;
-    stroke-dasharray: 2 
+    stroke: #ccc;
+    stroke-dasharray: 2;
+    stroke-width: 1;
 }
 
 .color.axis path,
 .color.axis line {
     fill: none;
-    stroke: #ccc;
-    stroke-width: 1;
     shape-rendering: crispEdges;
-    stroke-dasharray: 0 
+    stroke: #ccc;
+    stroke-dasharray: 0;
+    stroke-width: 1;
 }
 
 
@@ -48,39 +49,35 @@ svg {
 }
 
 #rectangleOutline{
+    fill: none;
+    shape-rendering: crispEdges;
     stroke: #ccc;
     stroke-width: 1;
-    shape-rendering: crispEdges;
-    fill: none;
 }
 
 .cogIcon{
-    width: 15px;
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAMAAADXqc3KAAAA1VBMVEUAAAAAff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff9i1YelAAAARnRSTlMAAQIDBAYHCAkNDxYXGBkeISIjJCYnMzY9QVJcXV5fZGZnaGlrbG11jJGXmp2go6Wqq6+0t7nIys/R19na3unt7/H19/v98ZT2GAAAANNJREFUGBltwYlWglAYRtEDRBANNs9zaTZnRRNmovC9/yP1c7NcK9ibP9GjikufumuZI2q8QuaDmgU5EVNzp7vz0JXTwWvtH4aYYCBpPNREXkh6wRyowTbwqQZ3wIMatIGoL6e/5gdbQzmpj4kymTLBbKjy7OMsy6Q4I5mYHy2ZFGckE+OEbzJlgllXpedjwnc52arnb37J6XnAjRocAwM1uAfaarADzAwkjXNN5IWkVyrJxd4SdOV08FZOzmeZWpQT8Z9XymTU3cqcURc/qbwK+PUN9JxSzFViTw0AAAAASUVORK5CYII=");
     height: 15px;
-    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAMAAADXqc3KAAAA1VBMVEUAAAAAff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff8Aff9i1YelAAAARnRSTlMAAQIDBAYHCAkNDxYXGBkeISIjJCYnMzY9QVJcXV5fZGZnaGlrbG11jJGXmp2go6Wqq6+0t7nIys/R19na3unt7/H19/v98ZT2GAAAANNJREFUGBltwYlWglAYRtEDRBANNs9zaTZnRRNmovC9/yP1c7NcK9ibP9GjikufumuZI2q8QuaDmgU5EVNzp7vz0JXTwWvtH4aYYCBpPNREXkh6wRyowTbwqQZ3wIMatIGoL6e/5gdbQzmpj4kymTLBbKjy7OMsy6Q4I5mYHy2ZFGckE+OEbzJlgllXpedjwnc52arnb37J6XnAjRocAwM1uAfaarADzAwkjXNN5IWkVyrJxd4SdOV08FZOzmeZWpQT8Z9XymTU3cqcURc/qbwK+PUN9JxSzFViTw0AAAAASUVORK5CYII=")
+    width: 15px;
 }
 
 .eraserIcon{
-    width: 15px;
-    height: 15px;
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAALCAMAAACecocUAAAARVBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADc6ur3AAAAFnRSTlMAAgMKCxUbHjM0XWFim6CmtbnDxd7xXSXl0gAAAEZJREFUCFs9x0kCgCAMBMEOirvigvz/qSYRnct0ga0XP9tSjvBn+WBZMXsqhHG9KzouiS8myODQJLUOS+LeEDZPRcrn4PUAJlkEj+JsHDEAAAAASUVORK5CYII=");
     background-position: 1px -1px;
+    height: 15px;
+    width: 15px;
 }
 
 
 .filterContainer{
-    /*outline: black;
-    outline-width: 1px;
-    outline-style: solid;*/
-    position: relative;
     box-shadow: 3px 3px 2px #ccc;
     margin-left: 4px;
     padding-top: 10px;
+    position: relative;
 
 }
 
 .boolParameterContainer{
-    font-size: 0.7em;
     margin-top: 6px;
 }
 
@@ -90,16 +87,15 @@ svg {
 }
 
 .choiceParameterContainer {
-    font-size: 0.8em;
-    margin-top: 6px;
     margin-left: 5px;
     margin-right: 5px;
+    margin-top: 6px;
 }
 
 .choiceParameterContainer label{
+    float: left;
     margin-left: 5px;
     margin-right: 5px;
-    float: left;
     margin-top: 2px;
 }
 
@@ -113,7 +109,6 @@ svg {
 }
 
 .parameterLabel {
-    position: absolute;
     font-size: 0.8em;
     position: absolute;
     transform-origin: left;
@@ -121,19 +116,18 @@ svg {
 
 
 .editButton{
-    text-align: center;
-    width: 11px;
-    height: 11px;
-    right: 1px;
-    margin-right: 5px;
-    font-size: 14px;
-    cursor: pointer;
+    border-color: #555;
     border-radius: 2px;
     border-style: solid;
     border-width: 1px;
-    border-color: #555;
-    z-index: 5;
+    cursor: pointer;
+    height: 11px;
+    margin-right: 5px;
     position: absolute;
+    right: 1px;
+    text-align: center;
+    width: 11px;
+    z-index: 5;
 }
 
 .editButton.add:before {
@@ -148,39 +142,37 @@ svg {
 
 
 .axisLabel{
-    pointer-events: all;
     cursor: pointer;
+    pointer-events: all;
 
 }
 
 #regressionInfo{
-    font-weight: bold;
-    font-family: arial;
-    font-size: 0.9em;
     background-color: white;
+    font-family: arial;
+    font-weight: bold;
+    padding-left: 10px;
+    padding-right: 10px;
     position: absolute;
     text-align: center;
-    padding-right: 10px;
-    padding-left: 10px;
     z-index: 5;
 }
 
 #parameterInfo{
-    font-family: arial;
-    font-size: 0.8em;
     background-color: white;
-    position: relative;
-    width: 270px;
-    border-width: 1px;
-    border-style: solid;
     border-color: #444;
+    border-style: solid;
+    border-width: 1px;
+    font-family: arial;
     padding: 5px;
+    position: relative;
     text-align: center;
+    width: 270px;
     z-index: 500;
 }
 
 .color-picker-h, .color-picker-sv{
-    top: 0 !important;
+    top: 0px;
 }
 
 .svgIcon{
@@ -188,10 +180,10 @@ svg {
 }
 
 .labelitem{
-    margin: 5px;
-    cursor: pointer;
     color: #007bff;
+    cursor: pointer;
     font-weight: bold;
+    margin: 5px;
 }
 
 .labelitem:hover { 
@@ -199,9 +191,14 @@ svg {
 }
 
 .parameterClose{
+    cursor: pointer;
     float: right;
     margin-top: -9px;
-    cursor: pointer;
+}
+
+#parameterSettings {
+    max-height: 80%;
+    overflow-y: auto;
 }
 
 #parameterSettings label, 
@@ -211,18 +208,22 @@ svg {
 }
 
 #parameterSettings label {
-    width: 30%;
     text-align: right;
+    width: 30%;
+}
+
+#parameterSettings label {
+    margin-bottom: 10px;
 }
 
 #parameterSettings label + input{
+    margin: 0 5% 0 4%;
     width: 55%;
-    margin: 0 5% 10px 4%;
 }
 
 #parameterSettings label + select{
+    margin: 0 3% 0 4%;
     width: 57%;
-    margin: 0 3% 10px 4%;
 }
 
 #parameterSettings input + input {
@@ -233,23 +234,23 @@ svg {
     float: right;
 }
 
-/*#parameterSettings input, select{
-    margin-bottom: 10px;
-}*/
+#opacityInput{
+    vertical-align: middle;
+}
+
 
 #parameterSettings{
-    font-family: arial;
-    font-size: 0.8em;
     background-color: white;
+    border-color: #444;
+    border-style: solid;
+    border-width: 1px;
+    font-family: arial;
+    margin-top: 14px;
+    padding-top: 15px;
+    padding: 5px;
     position: relative;
     width: 270px;
-    border-width: 1px;
-    border-style: solid;
-    border-color: #444;
-    padding: 5px;
-    padding-top: 15px;
     z-index: 500;
-    margin-top: 14px;
 }
 
 .buttonContainer{
@@ -262,30 +263,30 @@ svg {
 
 
 #ySettings, #y2Settings{
-    position: absolute;
-    z-index: 500;
-    width: 210px;
-    padding: 5px;
-    padding-right: 24px;
-    max-height: 200px;
+    background-color: white;
     border-color: #999;
     border-style: solid;
     border-width: 1px;
-    background-color: white;
+    max-height: 200px;
+    padding-right: 24px;
+    padding: 5px;
+    position: absolute;
+    width: 210px;
+    z-index: 500;
 }
 
 
 #xSettings{
-    position: absolute;
-    z-index: 500;
-    width: 210px;
-    padding: 5px;
-    padding-right: 24px;
-    max-height: 200px;
+    background-color: white;
     border-color: #999;
     border-style: solid;
     border-width: 1px;
-    background-color: white;
+    max-height: 200px;
+    padding-right: 24px;
+    padding: 5px;
+    position: absolute;
+    width: 210px;
+    z-index: 500;
 }
 
 .choices__inner{
@@ -299,8 +300,8 @@ svg {
 
 .choices__item{
     font-size: 12px !important;
-    padding-top: 5px!important;
     padding-bottom: 5px!important;
+    padding-top: 5px!important;
 }
 
 .choices__list--single {
@@ -315,32 +316,30 @@ svg {
 
 
 .filterContainer.maskfilter {
-    overflow-y: scroll;
     overflow-x: hidden;
+    overflow-y: scroll;
 }
 
 .maskinput{
-    position:relative;
     float: left!important;
+    position:relative;
 }
 
 .filterContainer label{
-    width: 120px;
-    font-size: 0.8em;
-
-    position:relative;
-    left: 30px;
-
     display:inline-block;
+    font-size: 0.8em;
+    left: 30px;
+    position:relative;
     vertical-align:middle;
+    width: 120px;
 }
 
 
 
 /* Label selection styles */
 .choices__inner{
+    margin-top: 9px;
     padding: 0!important;
-    padding-left: 5px!important;
 }
 
 .choices__list{
@@ -356,12 +355,12 @@ svg {
 }
 
 .cross {
-    width: 8px;
-    height: 8px;
-    background-size: 100%;
+    background-image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjEiIGhlaWdodD0iMjEiIHZpZXdCb3g9IjAgMCAyMSAyMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSIjMDAwIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0yLjU5Mi4wNDRsMTguMzY0IDE4LjM2NC0yLjU0OCAyLjU0OEwuMDQ0IDIuNTkyeiIvPjxwYXRoIGQ9Ik0wIDE4LjM2NEwxOC4zNjQgMGwyLjU0OCAyLjU0OEwyLjU0OCAyMC45MTJ6Ii8+PC9nPjwvc3ZnPg==);
     background-repeat-x: no-repeat;
     background-repeat-y: no-repeat;
-    background-image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjEiIGhlaWdodD0iMjEiIHZpZXdCb3g9IjAgMCAyMSAyMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSIjMDAwIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0yLjU5Mi4wNDRsMTguMzY0IDE4LjM2NC0yLjU0OCAyLjU0OEwuMDQ0IDIuNTkyeiIvPjxwYXRoIGQ9Ik0wIDE4LjM2NEwxOC4zNjQgMGwyLjU0OCAyLjU0OEwyLjU0OCAyMC45MTJ6Ii8+PC9nPjwvc3ZnPg==);
+    background-size: 100%;
+    height: 8px;
+    width: 8px;
 }
 
 .labelClose{
@@ -386,9 +385,9 @@ svg {
 }
 
 .axisOption input {
-    vertical-align: top;
-    margin-top: 1px;
     float: right;
+    margin-top: 1px;
+    vertical-align: top;
 
 }
 
@@ -398,18 +397,28 @@ svg {
 
 
 .graphlyTooltip{
-    position: absolute;
     background-color: white;
     display: none;
-    width: 265px;
+    font-family: 'arial';
+    font-size: 0.9em;
     max-height: 250px;
     overflow-y: scroll;
-    z-index: 10;
-    font-size: 0.9em;
-    font-family: 'arial';
     padding: 5px;
+    position: absolute;
+    width: 265px;
+    z-index: 10;
 }
 
  #xAxisCustomLabel, #yAxisCustomLabel, #y2AxisCustomLabel{
     margin-top: -3px;
+}
+
+#cogIcon{
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAB3RJTUUH4gUHDBgdKmiqBAAAAetJREFUWMPt1k+ITlEYx/GPaUKaSMRMMwssRhkrokTiKckGyxH5kyyUslI2KISUWEmNBSELRdmqJylZ+bO0JJT8WaBRDMbmvnV7m1dmvO87qfutW/f8znPP/d1znufcQ0VFRUVFRTuY0oxBImIK3mNOIS3MzBfNMtnRpHEWlQzCimbOZMcEZq0vItbUySv+1I6I/ohY1pbljohpeICVuIez2Ii9mF0K/YZbGCr6tuMDlmfmm/Ga7Bxn/KnCIGworrGYhh3FVWM+rmN9q5f7GoYnuGqjuNzynMzMZ9hVvLDMVSzBVCzAcfysizmdmTcmYrJzAs/cxkfMrbUzc3ep/yWORcQITpT0oXZuQf0lg7U8HYtzRQHVWNXy6o6ITgziMAZKXV2ZOdzgmedYXDTf4gIuZeanVs3k06JwBur0vgYGO9BbkrpxBq8ior9VJht9/f4G+k50jaFPx+tWFc5jrB5DPxARL3AxM78X//EtON9gnCeZ+bVVOTkLs/AFPXiEmaWQz0Vl99QV1ig24yFmYCQz37XlFBQRW3HnL0JPZuaRyToFNesE1ZLNvMbauvaVIgV6cbSkr5tMk92l+/vYl5k/Svl7sOibFxEdmfmr7UuWmYPYhLvYVjNYcAg3sQdL/8VgRUVFRUVFxf/Hb5P/eXsCd5P8AAAAAElFTkSuQmCC');
+    background-position: center; 
+    cursor: pointer;
+    height: 41px;
+    position: absolute;
+    width: 41px;
+    z-index: 20;
 }
