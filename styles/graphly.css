@@ -246,8 +246,8 @@ svg {
     border-width: 1px;
     font-family: arial;
     margin-top: 14px;
-    padding-top: 15px;
     padding: 5px;
+    padding-top: 15px;
     position: relative;
     width: 270px;
     z-index: 500;
@@ -402,7 +402,7 @@ svg {
     font-family: 'arial';
     font-size: 0.9em;
     max-height: 250px;
-    overflow-y: scroll;
+    overflow-y: auto;
     padding: 5px;
     position: absolute;
     width: 265px;
