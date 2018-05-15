@@ -3,18 +3,15 @@
 
 
 var renderSettings_mie = {
-    xAxis: 'mie_altitude_top',
-    yAxis: [
-         'geoid_separation',
-         //'mie_dem_altitude'
-    ],
-    //y2Axis: [],
+    xAxis: 'mie_altitude',
+    yAxis: ['mie_datetime'],
+    y2Axis: [],
     combinedParameters: {
         mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
     },
     colorAxis: [
-        null
+        'mie_wind_velocity'
     ],
 
 };
@@ -101,8 +98,7 @@ var ds_mie = {
     geoid_separation: {
         lineConnect: true,
         symbol: 'rectangle',
-        color: [1.0,0.0,0.0],
-        alpha: 0.5
+        //color: [1.0,0.0,0.0]
     },
     mie_dem_altitude: {
         symbol: null,
@@ -456,7 +452,9 @@ var graph = new graphly.graphly({
     renderSettings: renderSettings_mie,
     filterManager: filterManager,
     debounceActive: false,
-    displayParameterLabel: true
+    //displayParameterLabel: false,
+    displayColorscaleOptions: false,
+    displayAlphaOptions: false,
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000
