@@ -57,9 +57,9 @@ class FilterManager extends EventEmitter {
             for (var i = 0; i < items.length; i++) {
                 if(this.data.hasOwnProperty(items[i])){
                     if(this.data.hasOwnProperty(g)){
-                        this.data[g].push(this.data[items[i]]);
+                        this.data[g].push(this.data[items[i]].slice());
                     }else{
-                        this.data[g] = this.data[items[i]];
+                        this.data[g] = this.data[items[i]].slice();
                     }
                 }
             }
