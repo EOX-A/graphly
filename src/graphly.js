@@ -22,7 +22,6 @@ let dotType = {
 };
 
 
-let DOTTYPE = 4.0;
 let DOTSIZE = 8;
 
 require('../styles/graphly.css');
@@ -101,7 +100,7 @@ class graphly extends EventEmitter {
         this.y2AxisLabel = null;
         this.xAxisLabel = null;
         this.colorCache = {};
-        this.defaultAlpha = defaultFor(options.defaultAlpha, 1.0);
+        this.defaultAlpha = defaultFor(options.defaultAlpha, 0.9);
 
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
@@ -157,7 +156,15 @@ class graphly extends EventEmitter {
         this.debounceActive = defaultFor(options.debounceActive, true);
         this.dim = this.el.node().getBoundingClientRect();
 
-        this.displayParameterLabel = defaultFor(options.displayParameterLabel, true);
+        this.displayParameterLabel = defaultFor(
+            options.displayParameterLabel, true
+        );
+        this.displayColorscaleOptions = defaultFor(
+            options.displayColorscaleOptions, true
+        );
+        this.displayAlphaOptions = defaultFor(
+            options.displayAlphaOptions, true
+        );
 
         // If there are colorscales to be rendered we need to apply additional
         // margin to the right reducing the total width
@@ -902,21 +909,23 @@ class graphly extends EventEmitter {
         con = this.el.select('#ySettings').append('div')
             .attr('class', 'axisOption');
 
-        con.append('input')
-            .attr('id', 'logYoption')
-            .attr('type', 'checkbox')
-            .property('checked', 
-                defaultFor(that.logY, false)
-            )
-            .on('change', function(){
-                that.logY = !that.logY;
-                that.initAxis();
-                that.renderData();
-            });
+        if(!this.yTimeScale){
+            con.append('input')
+                .attr('id', 'logYoption')
+                .attr('type', 'checkbox')
+                .property('checked', 
+                    defaultFor(that.logY, false)
+                )
+                .on('change', function(){
+                    that.logY = !that.logY;
+                    that.initAxis();
+                    that.renderData();
+                });
 
-        con.append('label')
-            .attr('for', 'logYoption')
-            .text('Logarithmic scale (base-10) ');
+            con.append('label')
+                .attr('for', 'logYoption')
+                .text('Logarithmic scale (base-10) ');
+        }
 
 
 
@@ -940,14 +949,39 @@ class graphly extends EventEmitter {
 
         ySettingParameters.passedElement.addEventListener('addItem', function(event) {
             that.yAxisLabel = null;
-            that.renderSettings.yAxis.push(event.detail.value);
-            // If y2 axis has parameters we need to add the coloraxis element
-            // taking them into account as color axis is shared
-            if(that.renderSettings.y2Axis.length > 0){
-                that.renderSettings.colorAxis.splice(that.renderSettings.yAxis.length-1, 0, null);
+            let renSett = that.renderSettings;
+            // Check if the yAxis is currently showing a time parameter and the
+            // new parameter is not, then we remove the previous time parameter
+            if(that.yTimeScale){
+               renSett.yAxis.pop();
+               renSett.yAxis.push(event.detail.value);
+               renSett.colorAxis[that.renderSettings.yAxis.length-1] = null;
             } else {
-                that.renderSettings.colorAxis.push(null);
+                // If newly added parameter is a time scale we remove also the
+                // previous parameters from the y scale
+                if(that.checkTimeScale(event.detail.value)){
+                    let y2ColScale = renSett.colorAxis.slice(
+                        renSett.yAxis.length-1, renSett.colorAxis.length);
+                    if(y2ColScale.length > 0){
+                        renSett.colorAxis = [null].concat(y2ColScale);
+                    }else {
+                        renSett.colorAxis = [null];
+                    }
+                    renSett.yAxis = [event.detail.value];
+                } else {
+                    renSett.yAxis.push(event.detail.value);
+                    // If y2 axis has parameters we need to add the coloraxis element
+                    // taking them into account as color axis is shared
+                    if(renSett.y2Axis.length > 0){
+                        renSett.colorAxis.splice(
+                            renSett.yAxis.length-1, 0, null
+                        );
+                    } else {
+                        renSett.colorAxis.push(null);
+                    }
+                }
             }
+            
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
@@ -1043,21 +1077,24 @@ class graphly extends EventEmitter {
 
         con = this.el.select('#y2Settings').append('div')
             .attr('class', 'axisOption');
-        con.append('input')
-            .attr('id', 'logY2option')
-            .attr('type', 'checkbox')
-            .property('checked', 
-                defaultFor(that.logY2, false)
-            )
-            .on('change', function(){
-                that.logY2 = !that.logY2;
-                that.initAxis();
-                that.renderData();
-            });
 
-        con.append('label')
-            .attr('for', 'logY2option')
-            .text('Logarithmic scale (base-10) ');
+        if(!this.y2TimeScale){
+            con.append('input')
+                .attr('id', 'logY2option')
+                .attr('type', 'checkbox')
+                .property('checked', 
+                    defaultFor(that.logY2, false)
+                )
+                .on('change', function(){
+                    that.logY2 = !that.logY2;
+                    that.initAxis();
+                    that.renderData();
+                });
+
+            con.append('label')
+                .attr('for', 'logY2option')
+                .text('Logarithmic scale (base-10) ');
+        }
 
 
         document.getElementById('y2ScaleChoices').multiple = true;
@@ -1078,9 +1115,30 @@ class graphly extends EventEmitter {
         });
 
         y2SettingParameters.passedElement.addEventListener('addItem', function(event) {
+            let renSett = that.renderSettings;
             that.y2AxisLabel = null;
-            that.renderSettings.y2Axis.push(event.detail.value);
-            that.renderSettings.colorAxis.push(null);
+            // Check if the y2Axis is currently showing a time parameter and the
+            // new parameter is not, then we remove the previous time parameter
+            if(that.y2TimeScale){
+               renSett.y2Axis.pop();
+               renSett.y2Axis.push(event.detail.value);
+               renSett.colorAxis[renSett.y2Axis.length-1] = null;
+            } else {
+                // If newly added parameter is a time scale we remove also the
+                // previous parameters from the y scale
+                if(that.checkTimeScale(event.detail.value)){
+                    for (var i = renSett.y2Axis.length - 1; i >= 0; i--) {
+                        renSett.y2Axis.pop();
+                        renSett.colorAxis.pop();
+                    }
+                    renSett.y2Axis.push(event.detail.value);
+                    renSett.colorAxis.push(null);
+                } else {
+                    renSett.y2Axis.push(event.detail.value);
+                    renSett.colorAxis.push(null);
+                }
+            }
+
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
@@ -1528,11 +1586,44 @@ class graphly extends EventEmitter {
         this.renderData();
     }
 
+    checkTimeScale(id) {
+        // See if id is from combined dataset
+        if(this.renderSettings.combinedParameters.hasOwnProperty(id)){
+            id = this.renderSettings.combinedParameters[id][0];
+        }
+        if (this.dataSettings.hasOwnProperty(id)){
+            if (this.dataSettings[id].hasOwnProperty('scaleFormat')){
+                if (this.dataSettings[id].scaleFormat === 'time'){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    calculateExtent(selection) {
+        let currExt, resExt; 
+        for (var i = selection.length - 1; i >= 0; i--) {
+            currExt = d3.extent(this.data[selection[i]]);
+            if(resExt){
+                if(currExt[0]<resExt[0]){
+                    resExt[0] = currExt[0];
+                }
+                if(currExt[1]>resExt[1]){
+                    resExt[1] = currExt[1];
+                }
+            }else{
+                resExt = currExt;
+            }
+        }
+        return resExt;
+    }
+
     initAxis(){
 
         this.svg.selectAll('*').remove();
 
-        let xExtent, yExtent, y2Extent, xExt;
+        let xExtent, yExtent, y2Extent;
 
         // "Flatten selections"
         let xSelection = [];
@@ -1556,61 +1647,24 @@ class graphly extends EventEmitter {
             }
         }
 
-        for (var h = 0; h < this.renderSettings.y2Axis.length; h++) {
-            if(rs.combinedParameters.hasOwnProperty(rs.y2Axis[h])){
-                y2Selection = [].concat.apply([], rs.combinedParameters[rs.y2Axis[h]]);
+        for (var i = 0; i < this.renderSettings.y2Axis.length; i++) {
+            if(rs.combinedParameters.hasOwnProperty(rs.y2Axis[i])){
+                y2Selection = [].concat.apply([], rs.combinedParameters[rs.y2Axis[i]]);
             } else {
-                y2Selection.push(this.renderSettings.y2Axis[h]);
+                y2Selection.push(this.renderSettings.y2Axis[i]);
             }
         }
+
 
 
         if(this.fixedXDomain !== undefined){
             xExtent = this.fixedXDomain;
         } else {
-            for (var i = xSelection.length - 1; i >= 0; i--) {
-                xExt = d3.extent(this.data[xSelection[i]]);
-                if(xExtent){
-                    if(xExt[0]<xExtent[0]){
-                        xExtent[0] = xExt[0];
-                    }
-                    if(xExt[1]>xExtent[1]){
-                        xExtent[1] = xExt[1];
-                    }
-                }else{
-                    xExtent = xExt;
-                }
-            }
+            xExtent = this.calculateExtent(xSelection);
         }
+        yExtent = this.calculateExtent(ySelection);
+        y2Extent = this.calculateExtent(y2Selection);
 
-
-        for (let j = ySelection.length - 1; j >= 0; j--) {
-            let yExt = d3.extent(this.data[ySelection[j]]);
-            if(yExtent){
-                if(yExt[0]<yExtent[0]){
-                    yExtent[0] = yExt[0];
-                }
-                if(yExt[1]>yExtent[1]){
-                    yExtent[1] = yExt[1];
-                }
-            }else{
-                yExtent = yExt;
-            } 
-        }
-
-        for (let j = y2Selection.length - 1; j >= 0; j--) {
-            let y2Ext = d3.extent(this.data[y2Selection[j]]);
-            if(y2Extent){
-                if(y2Ext[0]<y2Extent[0]){
-                    y2Extent[0] = y2Ext[0];
-                }
-                if(y2Ext[1]>y2Extent[1]){
-                    y2Extent[1] = y2Ext[1];
-                }
-            }else{
-                y2Extent = y2Ext;
-            } 
-        }
 
         if(ySelection.length === 0){
             yExtent = [0,1];
@@ -1667,37 +1721,41 @@ class graphly extends EventEmitter {
         let xScaleType, yScaleType, y2ScaleType;
         // TODO: how to handle multiple different scale types
         // For now just check first object of scale
-        this.xTimeScale = false;
-        if (this.dataSettings.hasOwnProperty(xSelection[0])){
-            if (this.dataSettings[xSelection[0]].hasOwnProperty('scaleFormat')){
-                if (this.dataSettings[xSelection[0]].scaleFormat === 'time'){
-                    this.xTimeScale = true;
-                }
+        this.xTimeScale = this.checkTimeScale(xSelection[0]);
+        this.yTimeScale = this.checkTimeScale(ySelection[0]);
+        this.y2TimeScale = this.checkTimeScale(y2Selection[0]);
+
+        function getScale(isTime){
+            if(isTime){
+                return d3.time.scale.utc();
+            } else {
+                return d3.scale.linear();
             }
         }
 
-        if(this.xTimeScale){
-            xScaleType = d3.time.scale.utc();
-        } else {
-            xScaleType = d3.scale.linear();
+        xScaleType = getScale(this.xTimeScale);
+        yScaleType = getScale(this.yTimeScale);
+        y2ScaleType = getScale(this.y2TimeScale);
+
+        function calcExtent(extent, range, timescale, margin){
+            margin = defaultFor(margin, [0.01, 0.01]);
+            let returnExt = [];
+            if(timescale){
+                range = extent[1].getTime() - extent[0].getTime();
+                returnExt[0] = new Date(extent[0].getTime() - range*margin[0]);
+                returnExt[1] = new Date(extent[1].getTime() + range*margin[1]);
+            }else{
+                returnExt[0] = extent[0] - range*margin[0];
+                returnExt[1] = extent[1] + range*margin[1];
+            }
+            return returnExt;
         }
 
         // Adapt domain so that data is not directly at border
         if(!this.fixedSize){
-            yExtent[0] = yExtent[0] - yRange*0.08;
-            yExtent[1] = yExtent[1] + yRange*0.1;
-
-            y2Extent[0] = y2Extent[0] - y2Range*0.08;
-            y2Extent[1] = y2Extent[1] + y2Range*0.1;
-
-            if(this.xTimeScale){
-                xRange = xExtent[1].getTime() - xExtent[0].getTime();
-                xExtent[0] = new Date(xExtent[0].getTime() - xRange*0.03);
-                xExtent[1] = new Date(xExtent[1].getTime() + xRange*0.03);
-            }else{
-                xExtent[0] = xExtent[0] - xRange*0.03;
-                xExtent[1] = xExtent[1] + xRange*0.03;
-            }
+            yExtent = calcExtent(yExtent, yRange, this.yTimeScale, [0.02, 0.02]);
+            y2Extent = calcExtent(y2Extent, y2Range, this.y2TimeScale, [0.02, 0.02]);
+            xExtent = calcExtent(xExtent, xRange, this.xTimeScale);
         }
 
         this.xScale = xScaleType
@@ -1720,7 +1778,7 @@ class graphly extends EventEmitter {
                 .domain([start,end])
                 .range([this.height, 0]);
         }else{
-            this.yScale = d3.scale.linear()
+            this.yScale = yScaleType
                 .domain(yExtent)
                 .range([this.height, 0]);
         }
@@ -1741,7 +1799,7 @@ class graphly extends EventEmitter {
                 .domain([start,end])
                 .range([this.height, 0]);
         }else{
-            this.y2Scale = d3.scale.linear()
+            this.y2Scale = y2ScaleType
                 .domain(y2Extent)
                 .range([this.height, 0]);
         }
@@ -1809,11 +1867,8 @@ class graphly extends EventEmitter {
         ]);*/
 
         this.createHelperObjects();
-        
+        this.addTimeInformation();
 
-        if (this.xTimeScale){
-            this.addTimeInformation();
-        }
 
         this.renderCanvas.call(this.xyzoom);
         this.el.select('#zoomXBox').call(this.xzoom);
@@ -1856,22 +1911,55 @@ class graphly extends EventEmitter {
     addTimeInformation() {
 
         let dateFormat = d3.time.format.utc('%Y-%m-%dT%H:%M:%S');
-
         this.el.selectAll('.start-date').remove();
-        this.el.selectAll('.x.axis>.tick:nth-of-type(2)')
-            .append('text')
-            .attr('dy', '28px')
-            .attr('dx', '-64px')
-            .attr('class', 'start-date')
-            .text(function(d){return dateFormat(d);});
-
         this.el.selectAll('.end-date').remove();
-        this.el.selectAll('.x.axis>.tick:nth-last-of-type(2)')
-            .append('text')
-            .attr('dy', '28px')
-            .attr('dx', '-64px')
-            .attr('class', 'end-date')
-            .text(function(d){return dateFormat(d);});
+
+        if(this.xTimeScale) {
+            this.el.selectAll('.x.axis>.tick:nth-of-type(2)')
+                .append('text')
+                .attr('dy', '28px')
+                .attr('dx', '-64px')
+                .attr('class', 'start-date')
+                .text(function(d){return dateFormat(d);});
+            this.el.selectAll('.x.axis>.tick:nth-last-of-type(2)')
+                .append('text')
+                .attr('dy', '28px')
+                .attr('dx', '-64px')
+                .attr('class', 'end-date')
+                .text(function(d){return dateFormat(d);});
+        }
+        if(this.yTimeScale) {
+            this.el.selectAll('.y.axis>.tick:nth-of-type(2)')
+                .append('text')
+                .attr('dy', '-42px')
+                .attr('dx', '-60px')
+                .attr("transform", "rotate(-90)")
+                .attr('class', 'start-date')
+                .text(function(d){return dateFormat(d);});
+            this.el.selectAll('.y.axis>.tick:nth-last-of-type(2)')
+                .append('text')
+                .attr('dy', '-42px')
+                .attr('dx', '-60px')
+                .attr("transform", "rotate(-90)")
+                .attr('class', 'end-date')
+                .text(function(d){return dateFormat(d);});
+        }
+        if(this.y2TimeScale) {
+            this.el.selectAll('.y2.axis>.tick:nth-of-type(2)')
+                .append('text')
+                .attr('dy', this.width+52)
+                .attr('dx', '-60px')
+                .attr("transform", "rotate(-90)")
+                .attr('class', 'start-date')
+                .text(function(d){return dateFormat(d);});
+            this.el.selectAll('.y2.axis>.tick:nth-last-of-type(2)')
+                .append('text')
+                .attr('dy',  this.width+52)
+                .attr('dx', '-60px')
+                .attr("transform", "rotate(-90)")
+                .attr('class', 'end-date')
+                .text(function(d){return dateFormat(d);});
+        }
     }
 
 
@@ -1925,10 +2013,7 @@ class graphly extends EventEmitter {
             this.yAxisSvg.call(this.yAxis);
         }
 
-
-        if (this.xTimeScale){
-            this.addTimeInformation();
-        }
+        this.addTimeInformation();
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
@@ -2069,7 +2154,7 @@ class graphly extends EventEmitter {
         }
 
         switch(reg.type){
-            case 'linear':
+            case 'linear': {
                 result = regression('linear', data);
                 let slope = result.equation[0];
                 let yIntercept = result.equation[1];
@@ -2087,8 +2172,9 @@ class graphly extends EventEmitter {
                     xPoints[0], yPoints[0], 1,
                     c[0], c[1], c[2], c[3]
                 );
-            break;
-            case 'polynomial':
+                break;
+            }
+            case 'polynomial': {
                 let degree = defaultFor(reg.order, 3);
                 result = regression('polynomial', data, degree);
                 let lineAmount = 200;
@@ -2131,7 +2217,8 @@ class graphly extends EventEmitter {
                         c[0], c[1], c[2], c[3]
                     );
                 }
-            break;
+                break;
+            }
         }
 
         if(typeof reg.type !== 'undefined'){
@@ -2422,6 +2509,8 @@ class graphly extends EventEmitter {
         this.el.select('#previewImage2')
             .attr('width',  this.width)
             .attr('height', this.height);
+
+        this.addTimeInformation();
 
     }
 
@@ -2718,7 +2807,6 @@ class graphly extends EventEmitter {
     renderFilteredOutPoints(data, xAxis, yAxis) {
 
         let lp = data[xAxis].length;
-        let p_x, p_y;
         let yScale = this.yScale;
 
         // Check if parameter part of left or right y Scale
@@ -2818,8 +2906,7 @@ class graphly extends EventEmitter {
                 .attr('id','regressionSelect')
                 .on('change',onregressionChange);
 
-            let options = regressionSelect
-              .selectAll('option')
+            regressionSelect.selectAll('option')
                 .data(regressionTypes).enter()
                 .append('option')
                     .text(function (d) { return d.name; })
@@ -2984,8 +3071,7 @@ class graphly extends EventEmitter {
             }
         }
 
-        let options = labelColorParamSelect
-          .selectAll('option')
+        labelColorParamSelect.selectAll('option')
             .data(selectionChoices).enter()
             .append('option')
                 .text(function (d) { return d.label; })
@@ -3022,8 +3108,7 @@ class graphly extends EventEmitter {
           'blackbody', 'earth', 'electric', 'magma', 'plasma'
         ];
 
-        let colorScaleOptions = labelColorScaleSelect
-          .selectAll('option')
+        labelColorScaleSelect.selectAll('option')
             .data(colorscales).enter()
             .append('option')
                 .text(function (d) { return d; })
@@ -3176,32 +3261,32 @@ class graphly extends EventEmitter {
             picker.picker.appendChild(x);
         }
 
-        this.el.select('#parameterSettings')
-            .append('label')
-            .attr('for', 'opacitySelection')
-            .text('Opacity');
+        if(this.displayAlphaOptions){
+            
+            this.el.select('#parameterSettings')
+                .append('label')
+                .attr('for', 'opacitySelection')
+                .text('Opacity');
 
-        this.el.select('#parameterSettings').append('input')
-            .attr('id', 'opacityInput')
-            .attr('type', 'range')
-            .attr('min', 0)
-            .attr('max', 1)
-            .attr('step', 0.05)
-            .attr('value', defaultFor(
-                this.dataSettings[id].alpha,
-                this.defaultAlpha
-            ))
-            .on('input', ()=>{
-                let val = d3.event.currentTarget.valueAsNumber;
-                this.dataSettings[id].alpha = val;
-                // TODO: Possibly only update alpha in colorcache
-                for(let k in this.colorCache){
-                    delete this.colorCache[k];
-                    /*for(let i=0; i<this.colorCache[k].length; i++){
-                        this.colorCache[k][i][3] = val;
-                    }*/
-                }
-            });
+            this.el.select('#parameterSettings').append('input')
+                .attr('id', 'opacityInput')
+                .attr('type', 'range')
+                .attr('min', 0)
+                .attr('max', 1)
+                .attr('step', 0.05)
+                .attr('value', defaultFor(
+                    this.dataSettings[id].alpha,
+                    this.defaultAlpha
+                ))
+                .on('input', ()=>{
+                    let val = d3.event.currentTarget.valueAsNumber;
+                    this.dataSettings[id].alpha = val;
+                    // TODO: Possibly only update alpha in colorcache
+                    for(let k in this.colorCache){
+                        delete this.colorCache[k];
+                    }
+                });
+        }
 
         // Create and manage colorscale selection
         // Find index of id
@@ -3213,7 +3298,7 @@ class graphly extends EventEmitter {
             }
         }
         // Should normally always have an index
-        if(renderIndex !== -1){
+        if(renderIndex !== -1 && this.displayColorscaleOptions){
             let colorAxis = this.renderSettings.colorAxis[renderIndex];
             let active = false;
             if(colorAxis !== null){
@@ -3580,7 +3665,21 @@ class graphly extends EventEmitter {
 
             // Add item to labels if there is no coloraxis is defined
             this.addParameterLabel(idY);
-            // Add settings button to display/hide parameter information
+
+            // Change height of settings panel to be just under labels
+            let dim = this.el.select('#parameterSettings').node().getBoundingClientRect();
+
+            this.el.select('#parameterSettings')
+                .style('top', (this.margin.top+dim.height-5)+'px');
+
+            this.renderParameter(
+                idX, idY, idCS, this.renderSettings.yAxis,
+                parPos, data, inactiveData, updateReferenceCanvas
+            );
+        }
+
+        // Add settings button to display/hide parameter information
+        if(!this.displayParameterLabel) {
             if(this.el.select('#cogIcon').empty()){
                 this.el.append('div')
                     .attr('id', 'cogIcon')
@@ -3605,21 +3704,10 @@ class graphly extends EventEmitter {
                         d3.select(this).style('background-size', '41px 41px');
                     });
             }
+        }
 
-            if(this.displayParameterLabel){
-                this.el.select('#parameterInfo').style('visibility', 'visible');
-            }
-
-            // Change height of settings panel to be just under labels
-            let dim = this.el.select('#parameterSettings').node().getBoundingClientRect();
-
-            this.el.select('#parameterSettings')
-                .style('top', (this.margin.top+dim.height-5)+'px');
-
-            this.renderParameter(
-                idX, idY, idCS, this.renderSettings.yAxis,
-                parPos, data, inactiveData, updateReferenceCanvas
-            );
+        if(this.displayParameterLabel){
+            this.el.select('#parameterInfo').style('visibility', 'visible');
         }
 
         this.batchDrawer.draw();
