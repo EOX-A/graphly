@@ -2364,40 +2364,6 @@ class graphly extends EventEmitter {
         return rC;
     }
 
-    getColor(param, index, data) {
-        let rC;
-        let cA = this.dataSettings[param];
-
-        if (cA && cA.hasOwnProperty('colorscaleFunction')){
-            rC = cA.colorscaleFunction(
-                data[param][index]
-            );
-            rC = rC.map(function(c){return c/255;});
-        }else{
-            // Check if color has been defined for specific parameter
-            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
-                let identParam = this.renderSettings.dataIdentifier.parameter;
-                let val = data[identParam][index];
-                rC = this.dataSettings[param][val].color;
-                if(this.dataSettings[param][val].hasOwnProperty('alpha')){
-                    rC.push(this.dataSettings[param][val].alpha);
-                }
-            } else if(this.dataSettings[param].hasOwnProperty('color')){
-                rC = this.dataSettings[param].color.slice();
-            } else { 
-                rC = [0.258, 0.525, 0.956];
-            }
-        }
-        if(rC.length == 3){
-            if(this.dataSettings[param].hasOwnProperty('alpha')){
-                rC.push(this.dataSettings[param].alpha);
-            } else { 
-                rC.push(this.defaultAlpha);
-            }
-        }
-        return rC;
-    }
-
     resize(debounce){
         debounce = defaultFor(debounce, true);
         if(debounce){
@@ -2537,6 +2503,33 @@ class graphly extends EventEmitter {
             yScale = this.y2Scale;
         }
 
+        // Identify how colors are applied to the points
+        let singleColor = true;
+        let colorObj;
+        let identParam;
+
+        if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+            singleColor = false;
+            identParam = this.renderSettings.dataIdentifier.parameter;
+        }
+
+        let constAlpha = this.defaultAlpha;
+
+        if(this.dataSettings[idY].hasOwnProperty('alpha')){
+            constAlpha = this.dataSettings[idY].alpha;
+        } else {
+            this.dataSettings[idY].alpha = constAlpha;
+        }
+
+        if(singleColor) {
+            if(this.dataSettings[idY].hasOwnProperty('color')){
+                colorObj = this.dataSettings[idY].color.slice();
+            } else {
+                colorObj = [0.258, 0.525, 0.956];
+            }
+            colorObj.push(constAlpha);
+        }
+
         if(cAxis !== null){
             // Check if a colorscale is defined for this 
             // attribute, if not use default (plasma)
@@ -2595,13 +2588,19 @@ class graphly extends EventEmitter {
                 } else {
                     rC = this.plotter.getColor(data[cAxis][i])
                         .map(function(c){return c/255;});
-                    if(this.dataSettings[idY].hasOwnProperty('alpha')){
-                        rC[3] = this.dataSettings[idY].alpha;
-                    }
+                    rC[3] = constAlpha;
                     this.colorCache[cAxis].push(rC);
                 }
             } else {
-                rC = this.getColor(idY, i, data);
+                if(singleColor){
+                    rC = colorObj;
+                } else {
+                    let val = data[identParam][i];
+                    rC = this.dataSettings[idY][val].color;
+                    if(this.dataSettings[idY][val].hasOwnProperty('alpha')){
+                        rC.push(this.dataSettings[idY][val].alpha);
+                    }
+                }
             }
             
             this.colourToNode[idC.join('-')] = par_properties;
@@ -2643,6 +2642,33 @@ class graphly extends EventEmitter {
         // Check if parameter part of left or right y Scale
         if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
             yScale = this.y2Scale;
+        }
+
+        // Identify how colors are applied to the points
+        let singleColor = true;
+        let colorObj;
+        let identParam;
+
+        if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+            singleColor = false;
+            identParam = this.renderSettings.dataIdentifier.parameter;
+        }
+
+        let constAlpha = this.defaultAlpha;
+
+        if(this.dataSettings[yAxis].hasOwnProperty('alpha')){
+            constAlpha = this.dataSettings[yAxis].alpha;
+        } else {
+            this.dataSettings[yAxis].alpha = constAlpha;
+        }
+
+        if(singleColor) {
+            if(this.dataSettings[yAxis].hasOwnProperty('color')){
+                colorObj = this.dataSettings[yAxis].color.slice();
+            } else {
+                colorObj = [0.258, 0.525, 0.956];
+            }
+            colorObj.push(constAlpha);
         }
 
         if(cAxis !== null){
@@ -2712,12 +2738,21 @@ class graphly extends EventEmitter {
                     rC = currColCache[j];
                 } else {
                     rC = this.plotter.getColor(data[cAxis][j])
-                        .map(function(c){return c/255;}); 
+                        .map(function(c){return c/255;});
+                    rC[3] = constAlpha;
                     this.colorCache[cAxis].push(rC);
                 }
                 
             } else {
-                rC = this.getColor(yAxis, j, data);
+                if(singleColor){
+                    rC = colorObj;
+                } else {
+                    let val = data[identParam][j];
+                    rC = this.dataSettings[yAxis][val].color;
+                    if(this.dataSettings[yAxis][val].hasOwnProperty('alpha')){
+                        rC.push(this.dataSettings[yAxis][val].alpha);
+                    }
+                }
             }
             
 

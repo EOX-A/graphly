@@ -39,8 +39,8 @@ var renderSettings_ray = {
 var renderSettingsSwarm = {
     xAxis: 'Latitude',
     yAxis: ['F'],
-    y2Axis: ['F_res_IGRF12'],
-    colorAxis: ['F_error', null]/*,
+    //y2Axis: ['F_res_IGRF12'],
+    colorAxis: [null]/*,
     dataIdentifier: {
         parameter: 'Spacecraft',
         identifiers: ['A', 'B']
@@ -453,8 +453,8 @@ var graph = new graphly.graphly({
     filterManager: filterManager,
     debounceActive: false,
     //displayParameterLabel: false,
-    displayColorscaleOptions: false,
-    displayAlphaOptions: false,
+    //displayColorscaleOptions: false,
+    //displayAlphaOptions: false,
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000
@@ -598,7 +598,7 @@ xhr.onload = function(e) {
     filterManager.initManager();
     graph.loadData(data);
     if(usesecond){
-        graph2.loadData(data);
+        //graph2.loadData(data);
     }
 
     filterManager.loadData(data);
