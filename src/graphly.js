@@ -507,19 +507,19 @@ class graphly extends EventEmitter {
                             this.emit('pointSelect', null);
                         });
 
-                    if (typeof self.filteredData !== 'undefined' && 
+                    if (typeof self.currentData !== 'undefined' && 
                         nodeId.hasOwnProperty('index')){
-                        for (let k in self.filteredData){
+                        for (let k in self.currentData){
                             tooltip.append('div')
-                                .text(k+': '+self.filteredData[k][nodeId.index])
+                                .text(k+': '+self.currentData[k][nodeId.index])
                         }
-                        if(self.filteredData.hasOwnProperty('Latitude') &&
-                           self.filteredData.hasOwnProperty('Longitude') &&
-                           self.filteredData.hasOwnProperty('Radius') ){
+                        if(self.currentData.hasOwnProperty('Latitude') &&
+                           self.currentData.hasOwnProperty('Longitude') &&
+                           self.currentData.hasOwnProperty('Radius') ){
                             this.emit('pointSelect', {
-                                Latitude: self.filteredData.Latitude[nodeId.index],
-                                Longitude: self.filteredData.Longitude[nodeId.index],
-                                Radius: self.filteredData.Radius[nodeId.index]
+                                Latitude: self.currentData.Latitude[nodeId.index],
+                                Longitude: self.currentData.Longitude[nodeId.index],
+                                Radius: self.currentData.Radius[nodeId.index]
                             });
                         }
                     } else {
@@ -538,6 +538,7 @@ class graphly extends EventEmitter {
     }
 
     onFilterChange(filters){
+
         if(!this.batchDrawer){
             return;
         }
@@ -568,6 +569,7 @@ class graphly extends EventEmitter {
             }
         }
         this.filters = filters;
+        this.applyDataFilters();
         this.renderData();
     }
 
@@ -1496,6 +1498,8 @@ class graphly extends EventEmitter {
     loadData(data){
         
         this.data = data;
+        this.applyDataFilters();
+
         this.timeScales = [];
 
         this.renderSettings.combinedParameters = defaultFor(
@@ -3036,8 +3040,15 @@ class graphly extends EventEmitter {
             .style('display', 'none');
     }
 
-    applyDataFilters(data, inactiveData){
+    applyDataFilters(){
 
+        let data = {};
+        let inactiveData = {};
+
+        for(let p in this.data){
+            data[p] = this.data[p];
+            inactiveData[p] = [];
+        }
 
         for (let f in this.filters){
             let filter = this.filters[f];
@@ -3081,6 +3092,9 @@ class graphly extends EventEmitter {
                 }
             }
         }
+
+        this.currentData = data;
+        this.currentInactiveData = inactiveData;
     }
 
     renderColorScaleOptions(colorIndex){
@@ -3673,21 +3687,6 @@ class graphly extends EventEmitter {
         // reset color count
         u.resetColor();
 
-        let data = {};
-        let inactiveData = {};
-
-        for(let p in this.data){
-            data[p] = this.data[p];
-            inactiveData[p] = [];
-        }
-
-        // We need a reference to the original unfiltered index to be able to
-        // display correct information when selecting data point
-
-        this.applyDataFilters(data, inactiveData);
-
-        this.filteredData = data;
-
         // Check if we need to update extents which have been reset because
         // of filtering on parameter
         for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
@@ -3696,7 +3695,7 @@ class graphly extends EventEmitter {
                 if(this.dataSettings.hasOwnProperty(ca)){
                     if(!this.dataSettings[ca].hasOwnProperty('extent')){
                         // Set current calculated extent to settings
-                        this.dataSettings[ca].extent = d3.extent(data[ca]);
+                        this.dataSettings[ca].extent = d3.extent(this.currentData[ca]);
                         this.createColorScales();
                     }
                 }
@@ -3723,7 +3722,7 @@ class graphly extends EventEmitter {
 
             this.renderParameter(
                 idX, idY, idCS, this.renderSettings.yAxis,
-                parPos, data, inactiveData, updateReferenceCanvas
+                parPos, this.currentData, this.currentInactiveData, updateReferenceCanvas
             );
         }
 
@@ -3819,7 +3818,7 @@ class graphly extends EventEmitter {
 
                 this.renderParameter(
                     idX, idY2, idCS, this.renderSettings.y2Axis,
-                    parPos, data, inactiveData, updateReferenceCanvas
+                    parPos, this.currentData, this.currentInactiveData, updateReferenceCanvas
                 );
             }
 
@@ -3868,7 +3867,7 @@ class graphly extends EventEmitter {
                 let idCS = this.renderSettings.colorAxis[parPos];
                 this.renderParameter(
                     idX, idY, idCS, this.renderSettings.yAxis,
-                    parPos, data, inactiveData, updateReferenceCanvas
+                    parPos, this.currentData, this.currentInactiveData, updateReferenceCanvas
                 );
             }
 
