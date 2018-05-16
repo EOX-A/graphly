@@ -1616,6 +1616,13 @@ class graphly extends EventEmitter {
                 resExt = currExt;
             }
         }
+        if(selection.length === 0){
+            return [0,1];
+        }
+        if(resExt[0] == resExt[1]){
+            resExt[0]-=1;
+            resExt[1]+=1;
+        }
         return resExt;
     }
 
@@ -1664,15 +1671,6 @@ class graphly extends EventEmitter {
         }
         yExtent = this.calculateExtent(ySelection);
         y2Extent = this.calculateExtent(y2Selection);
-
-
-        if(ySelection.length === 0){
-            yExtent = [0,1];
-        }
-        if(y2Selection.length === 0){
-            y2Extent = [0,1];
-        }
-
 
         let xRange = xExtent[1] - xExtent[0];
         let yRange = yExtent[1] - yExtent[0];
