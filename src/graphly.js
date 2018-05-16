@@ -602,7 +602,7 @@ class graphly extends EventEmitter {
             if(!this.dataSettings[k].hasOwnProperty('color') || 
                 typeof this.dataSettings[k].color === 'undefined'){
                 let col = cGen(i);
-                col = CP.HEX2RGB(col);
+                col = CP.HEX2RGB(col.slice(1));
                 col = col.map(function(c){return c/255;});
                 this.dataSettings[k].color = col;
             }
@@ -2511,6 +2511,13 @@ class graphly extends EventEmitter {
         if (this.renderSettings.hasOwnProperty('dataIdentifier')){
             singleColor = false;
             identParam = this.renderSettings.dataIdentifier.parameter;
+            // Check if alpha value is set for all parameters
+            let identifiers = this.renderSettings.dataIdentifier.identifiers;
+            for (var i = 0; i < identifiers.length; i++) {
+                if(!this.dataSettings[identParam][identifiers[i]].hasOwnProperty('alpha')){
+                    this.dataSettings[identParam][identifiers[i]].alpha = this.defaultAlpha;
+                }
+            }
         }
 
         let constAlpha = this.defaultAlpha;
@@ -2652,6 +2659,13 @@ class graphly extends EventEmitter {
         if (this.renderSettings.hasOwnProperty('dataIdentifier')){
             singleColor = false;
             identParam = this.renderSettings.dataIdentifier.parameter;
+            // Check if alpha value is set for all parameters
+            let identifiers = this.renderSettings.dataIdentifier.identifiers;
+            for (var i = 0; i < identifiers.length; i++) {
+                if(!this.dataSettings[identParam][identifiers[i]].hasOwnProperty('alpha')){
+                    this.dataSettings[identParam][identifiers[i]].alpha = this.defaultAlpha;
+                }
+            }
         }
 
         let constAlpha = this.defaultAlpha;
@@ -2749,9 +2763,7 @@ class graphly extends EventEmitter {
                 } else {
                     let val = data[identParam][j];
                     rC = this.dataSettings[yAxis][val].color;
-                    if(this.dataSettings[yAxis][val].hasOwnProperty('alpha')){
-                        rC.push(this.dataSettings[yAxis][val].alpha);
-                    }
+                    rC.push(this.dataSettings[yAxis][val].alpha);
                 }
             }
             
@@ -3264,7 +3276,7 @@ class graphly extends EventEmitter {
                 .attr('type', 'text')
                 .attr('value', 
                     '#'+CP.RGB2HEX(
-                        dataSettings.color.slice(0,-1)
+                        dataSettings.color
                         .map(function(c){return Math.round(c*255);})
                     )
                 );
@@ -3281,6 +3293,7 @@ class graphly extends EventEmitter {
                     dataSettings.color = c;
                     that.addApply();
                 }else{
+                    dataSettings.color = c;
                     firstChange = false;
                 }
                 
@@ -3478,6 +3491,9 @@ class graphly extends EventEmitter {
             infoGroup.style('visibility', 'hidden');
 
             let dataSettings = this.dataSettings[id];
+            if(parIds[i]!==null){
+                dataSettings = this.dataSettings[id][parIds[i]];
+            }
 
             let displayName;
 
@@ -3530,7 +3546,7 @@ class graphly extends EventEmitter {
                 if(dataSettings.hasOwnProperty('color')){
 
                     symbolColor = '#'+ CP.RGB2HEX(
-                        dataSettings.color.slice(0,-1)
+                        dataSettings.color
                         .map(function(c){return Math.round(c*255);})
                     );
                 }
