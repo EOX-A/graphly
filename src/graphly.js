@@ -2796,8 +2796,11 @@ class graphly extends EventEmitter {
                     rC = colorObj;
                 } else {
                     let val = data[identParam][j];
-                    rC = this.dataSettings[yAxis][val].color.slice();
-                    rC.push(this.dataSettings[yAxis][val].alpha);
+                    let col = this.dataSettings[yAxis][val].color;
+                    rC = [
+                        col[0], col[1], col[2],
+                        this.dataSettings[yAxis][val].alpha
+                    ];
                 }
             }
             
