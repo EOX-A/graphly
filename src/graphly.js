@@ -411,7 +411,7 @@ class graphly extends EventEmitter {
                 this.mouseDown = false;
                 // If there was movement of mouse bigger then delta do not
                 // trigger picking
-                if(Math.max(
+                if(this.prevMousePos && Math.max(
                     Math.abs(this.prevMousePos[0]-d3.event.clientX),
                     Math.abs(this.prevMousePos[1]-d3.event.clientY) 
                     ) > 5
@@ -636,7 +636,8 @@ class graphly extends EventEmitter {
 
         this.svg.select('#previewImage').style('display', 'block');
         this.svg.select('#previewImage2').style('display', 'block');
-        if(this.displayParameterLabel){
+        if(this.displayParameterLabel && 
+            !this.el.select('#parameterInfo').selectAll('*').empty()){
             this.svg.select('#svgInfoContainer').style('visibility', 'visible');
         }
 
@@ -1423,6 +1424,37 @@ class graphly extends EventEmitter {
             .attr('height', this.height);
 
         this.createColorScales();
+        this.createInfoBoxes();
+        this.createParameterInfo();
+
+        // Add settings button to display/hide parameter information
+        if(!this.displayParameterLabel) {
+            if(this.el.select('#cogIcon').empty()){
+                this.el.append('div')
+                    .attr('id', 'cogIcon')
+                    .style('left', (this.margin.left)+'px')
+                    .style('top', '10px')
+                    .on('click', ()=>{
+                        let info = this.el.select('#parameterInfo');
+                        if(info.style('visibility') == 'visible'){
+                            info.style('visibility', 'hidden');
+                            this.el.select('#parameterSettings')
+                                .style('display', 'none');
+                            this.displayParameterLabel = false;
+                        }else{
+                            info.style('visibility', 'visible');
+                            this.displayParameterLabel = true;
+                        }
+                    })
+                    .on('mouseover', function(){
+                        d3.select(this).style('background-size', '45px 45px');
+                    })
+                    .on('mouseout', function(){
+                        d3.select(this).style('background-size', '41px 41px');
+                    });
+            }
+        }
+
     }
 
     
@@ -2764,7 +2796,7 @@ class graphly extends EventEmitter {
                     rC = colorObj;
                 } else {
                     let val = data[identParam][j];
-                    rC = this.dataSettings[yAxis][val].color;
+                    rC = this.dataSettings[yAxis][val].color.slice();
                     rC.push(this.dataSettings[yAxis][val].alpha);
                 }
             }
@@ -2789,8 +2821,7 @@ class graphly extends EventEmitter {
             let nCol = c.map(function(c){return c/255;});
             let parSett = this.dataSettings[yAxis];
 
-            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
-                let identParam = this.renderSettings.dataIdentifier.parameter;
+            if (identParam){
                 let val = data[identParam][j];
                 parSett = this.dataSettings[yAxis][val];
             }
@@ -2930,6 +2961,7 @@ class graphly extends EventEmitter {
                 .attr('id', 'applyButton')
                 .text('Apply')
                 .on('click', ()=>{
+                    this.createParameterInfo();
                     this.resize(false);
                     this.renderData();
                     this.createColorScales();
@@ -3038,6 +3070,29 @@ class graphly extends EventEmitter {
             .attr('id', 'parameterSettings')
             .style('left', (this.width/2)+'px')
             .style('display', 'none');
+
+        if(this.el.select('#parameterInfo').selectAll('*').empty()){
+            this.el.select('#parameterInfo').style('visibility', 'hidden');
+            this.el.select('#svgInfoContainer').style('visibility', 'hidden');
+        }
+    }
+
+    updateInfoBoxes(){
+        this.el.select('#regressionInfo')
+            .style('bottom', this.margin.bottom+'px')
+            .style('left', (this.width/2)+'px');
+
+        this.el.select('#parameterInfo')
+                .style('top', this.margin.top*2+'px')
+                .style('left', (this.width/2)+'px');
+
+        d3.select('#svgInfoContainer')
+            .attr('transform', 'translate(' + (this.width/2 - 90) + ',' +
+            (this.margin.top+1) + ')');
+
+        this.el.select('#parameterSettings')
+            .style('left', (this.width/2)+'px')
+            .style('display', 'none');
     }
 
     applyDataFilters(){
@@ -3096,6 +3151,53 @@ class graphly extends EventEmitter {
         this.currentData = data;
         this.currentInactiveData = inactiveData;
     }
+
+    createParameterInfo(){
+        d3.select('#svgInfoContainer').remove();
+        // Add rendering representation to svg
+        let infoGroup = this.svg.append('g')
+            .attr('id', 'svgInfoContainer')
+            .attr('transform', 'translate(' + (this.width/2 - 90) + ',' +
+            (this.margin.top+1) + ')')
+            .style('visibility', 'hidden');
+        infoGroup.append('rect')
+            .attr('id', 'svgInfoRect')
+            .attr('width', 280)
+            .attr('height', 100)
+            .attr('fill', 'white')
+            .attr('stroke', 'black');
+
+        if(!this.el.select('#parameterInfo').empty()){
+            this.el.select('#parameterInfo').selectAll('*').remove();
+        }
+
+        let yAxRen = this.renderSettings.yAxis;
+        for (let parPos=0; parPos<yAxRen.length; parPos++){
+
+            let idY = yAxRen[parPos];
+            // Add item to labels if there is no coloraxis is defined
+            this.addParameterLabel(idY);
+        }
+
+        let y2AxRen = this.renderSettings.y2Axis;
+        for (let parPos=0; parPos<y2AxRen.length; parPos++){
+
+            let idY2 = y2AxRen[parPos];
+            // Add item to labels if there is no coloraxis is defined
+            this.addParameterLabel(idY2);
+        }
+
+        // Change height of settings panel to be just under labels
+        let dim = this.el.select('#parameterInfo').node().getBoundingClientRect();
+        this.el.select('#parameterSettings')
+                .style('top', (dim.height+this.margin.top+9)+'px');
+
+         if(this.displayParameterLabel && 
+            !this.el.select('#parameterInfo').selectAll('*').empty()){
+            this.el.select('#parameterInfo').style('visibility', 'visible');
+        }
+    }
+
 
     renderColorScaleOptions(colorIndex){
 
@@ -3335,12 +3437,12 @@ class graphly extends EventEmitter {
                 .attr('max', 1)
                 .attr('step', 0.05)
                 .attr('value', defaultFor(
-                    this.dataSettings[id].alpha,
+                    dataSettings.alpha,
                     this.defaultAlpha
                 ))
                 .on('input', ()=>{
                     let val = d3.event.currentTarget.valueAsNumber;
-                    this.dataSettings[id].alpha = val;
+                    dataSettings.alpha = val;
                     // TODO: Possibly only update alpha in colorcache
                     for(let k in this.colorCache){
                         delete this.colorCache[k];
@@ -3472,6 +3574,8 @@ class graphly extends EventEmitter {
 
 
     addParameterLabel(id){
+
+        // TODO: check for available objects instead of deleting and recreating them
 
         let parIds;
         // If parameter is separated by identifier we need to create multiple
@@ -3656,20 +3760,6 @@ class graphly extends EventEmitter {
         this.batchDrawer.clear();
         this.batchDrawerReference.clear();
 
-        d3.select('#svgInfoContainer').remove();
-        // Add rendering representation to svg
-        let infoGroup = this.svg.append('g')
-            .attr('id', 'svgInfoContainer')
-            .attr('transform', 'translate(' + (this.width/2 - 90) + ',' +
-            (this.margin.top+1) + ')')
-            .style('visibility', 'hidden');
-        infoGroup.append('rect')
-            .attr('id', 'svgInfoRect')
-            .attr('width', 280)
-            .attr('height', 100)
-            .attr('fill', 'white')
-            .attr('stroke', 'black');
-
         // If data object is undefined or empty return
         // TODO: There should be a cleaner way to do this, maybe clean all
         // canvases among other things?
@@ -3702,7 +3792,7 @@ class graphly extends EventEmitter {
             }
         }
 
-        this.createInfoBoxes();
+        this.updateInfoBoxes();
 
         let idX = xAxRen;
 
@@ -3711,51 +3801,10 @@ class graphly extends EventEmitter {
             let idY = yAxRen[parPos];
             let idCS = this.renderSettings.colorAxis[parPos];
 
-            // Add item to labels if there is no coloraxis is defined
-            this.addParameterLabel(idY);
-
-            // Change height of settings panel to be just under labels
-            let dim = this.el.select('#parameterSettings').node().getBoundingClientRect();
-
-            this.el.select('#parameterSettings')
-                .style('top', (this.margin.top+dim.height-5)+'px');
-
             this.renderParameter(
                 idX, idY, idCS, this.renderSettings.yAxis,
                 parPos, this.currentData, this.currentInactiveData, updateReferenceCanvas
             );
-        }
-
-        // Add settings button to display/hide parameter information
-        if(!this.displayParameterLabel) {
-            if(this.el.select('#cogIcon').empty()){
-                this.el.append('div')
-                    .attr('id', 'cogIcon')
-                    .style('left', (this.margin.left)+'px')
-                    .style('top', '10px')
-                    .on('click', ()=>{
-                        let info = this.el.select('#parameterInfo');
-                        if(info.style('visibility') == 'visible'){
-                            info.style('visibility', 'hidden');
-                            this.el.select('#parameterSettings')
-                                .style('display', 'none');
-                            this.displayParameterLabel = false;
-                        }else{
-                            info.style('visibility', 'visible');
-                            this.displayParameterLabel = true;
-                        }
-                    })
-                    .on('mouseover', function(){
-                        d3.select(this).style('background-size', '45px 45px');
-                    })
-                    .on('mouseout', function(){
-                        d3.select(this).style('background-size', '41px 41px');
-                    });
-            }
-        }
-
-        if(this.displayParameterLabel){
-            this.el.select('#parameterInfo').style('visibility', 'visible');
         }
 
         this.batchDrawer.draw();
@@ -3813,9 +3862,6 @@ class graphly extends EventEmitter {
                     this.renderSettings.yAxis.length + parPos
                 ];
                 
-                // Add y axis selection length as both axis use the same colorscale
-                this.addParameterLabel(idY2);
-
                 this.renderParameter(
                     idX, idY2, idCS, this.renderSettings.y2Axis,
                     parPos, this.currentData, this.currentInactiveData, updateReferenceCanvas
@@ -3875,12 +3921,6 @@ class graphly extends EventEmitter {
             if(!this.fixedSize && updateReferenceCanvas){
                 this.batchDrawerReference.draw();
             }
-        }
-
-
-
-        if(this.el.select('#parameterInfo').selectAll('*').empty()){
-            this.el.select('#parameterInfo').style('visibility', 'hidden');
         }
 
         this.emit('rendered');
