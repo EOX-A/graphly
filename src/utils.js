@@ -212,70 +212,15 @@ export function hexToRgb(hex) {
 }
 
 
-var timeFormat = d3.time.format.utc.multi([
-    [".%L", function(d) { return d.getUTCMilliseconds(); }],
-    ["%Ss", function(d) {
-        var text = this[0](d);
-        d3.selectAll("text")
-            .filter(function(){ 
-                return d3.select(this).text() == text;
-            })
-            .attr("class", "second");
-
-        return d.getUTCSeconds(); 
-    }],
-    ["%Mm", function(d) { 
-        var text = this[0](d);
-        d3.selectAll("text")
-            .filter(function(){ 
-                return d3.select(this).text() == text;
-            })
-            .attr("class", "minute");
-
-        return d.getUTCMinutes(); 
-     }],
-     ["%H:00", function(d) { 
-        var text = this[0](d);
-        d3.selectAll("text")
-            .filter(function(){ 
-                return d3.select(this).text() == text;
-            })
-            .attr("class", "hour");
-
-        return d.getUTCHours(); 
-    }],
-    ["%dD", function(d) {  
-        var text = this[0](d);
-        d3.selectAll("text")
-            .filter(function(){ 
-                return d3.select(this).text() == text;
-            })
-            .attr("class", "day");
-         return d.getUTCDay() && d.getDate() != 1;  
-    }],
-    ["%dD", function(d) {
-        var text = this[0](d);
-        d3.selectAll("text")
-            .filter(function(){ 
-                return d3.select(this).text() == text;
-            })
-            .attr("class", "day");
-         return d.getDate() != 1;  
-    }],
-    ["%b", function(d) { 
-        var text = this[0](d);
-        d3.selectAll("text")
-            .filter(function(){ 
-                return d3.select(this).text() == text;
-            })
-            .attr("class", "month");
-        return d.getUTCMonth(); }],
-    ["%Y", function(d) { 
-        var text = this[0](d);
-        d3.selectAll("text")
-            .filter(function(){ 
-                return d3.select(this).text() == text;
-            })
-            .attr("class", "year");
-        return true; }]
-]);
+export function getCutomUTCTimeTickFormat() {
+    return d3.time.format.utc.multi([
+        [".%L", function(d) { return d.getUTCMilliseconds(); }],
+        [":%S", function(d) { return d.getUTCSeconds(); }],
+        ["%H:%M", function(d) { return d.getUTCMinutes(); }],
+        ["%H:%M", function(d) { return d.getUTCHours(); }],
+        ["%a %d", function(d) { return d.getUTCDay() && d.getDate() != 1; }],
+        ["%b %d", function(d) { return d.getUTCDate() != 1; }],
+        ["%B", function(d) { return d.getUTCMonth(); }],
+        ["%Y", function() { return true; }]
+    ]);
+}

@@ -52,7 +52,6 @@ let canvg = require('./vendor/canvg.js');
 global.FilterManager = FilterManager;
 
 
-
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
 function debounce(func, wait, immediate) {
@@ -1796,6 +1795,7 @@ class graphly extends EventEmitter {
             .domain([xExtent[0], xExtent[1]])
             .range([0, this.width]);
 
+
         if(this.logY){
             let start = yExtent[0];
             let end = yExtent[1];
@@ -1843,18 +1843,27 @@ class graphly extends EventEmitter {
             .orient('bottom')
             .ticks(Math.max(this.width/120,2))
             .tickSize(-this.height);
+        if(this.xTimeScale){
+            this.xAxis.tickFormat(u.getCutomUTCTimeTickFormat());
+        }
 
         this.yAxis = d3.svg.axis()
             .scale(this.yScale)
             .innerTickSize(-this.width)
             .outerTickSize(0)
             .orient('left');
+        if(this.yTimeScale){
+            this.yAxis.tickFormat(u.getCutomUTCTimeTickFormat());
+        }
 
         this.y2Axis = d3.svg.axis()
             .scale(this.y2Scale)
             .innerTickSize(this.width)
             .outerTickSize(0)
             .orient('right');
+        if(this.y2TimeScale){
+            this.y2Axis.tickFormat(u.getCutomUTCTimeTickFormat());
+        }
 
         this.xAxisSvg = this.svg.append('g')
             .attr('class', 'x axis')
@@ -2384,7 +2393,7 @@ class graphly extends EventEmitter {
 
         if (cA && cA.hasOwnProperty('colorscaleFunction')){
             rC = cA.colorscaleFunction(id);
-            rC = rC.map(function(c){return c/255;});
+            rC = [rC[0]/255, rC[1]/255, rC[2]/255];
         }else{
             // Check if color has been defined for specific parameter
             if (this.renderSettings.hasOwnProperty('dataIdentifier')){
@@ -2620,7 +2629,7 @@ class graphly extends EventEmitter {
                 },
             };
 
-            let nCol = idC.map(function(c){return c/255;});
+            let nCol = [idC[0]/255, idC[1]/255, idC[2]/255];
 
             let rC;
             if(cAxis !== null){
@@ -2785,9 +2794,8 @@ class graphly extends EventEmitter {
                 if(colCacheAvailable){
                     rC = currColCache[j];
                 } else {
-                    rC = this.plotter.getColor(data[cAxis][j])
-                        .map(function(c){return c/255;});
-                    rC[3] = constAlpha;
+                    rC = this.plotter.getColor(data[cAxis][j]);
+                    rC = [rC[0]/255, rC[1]/255, rC[2]/255, constAlpha];
                     this.colorCache[cAxis].push(rC);
                 }
                 
@@ -2821,7 +2829,7 @@ class graphly extends EventEmitter {
                 },
             };
 
-            let nCol = c.map(function(c){return c/255;});
+            let nCol = [c[0]/255, c[1]/255, c[2]/255];
             let parSett = this.dataSettings[yAxis];
 
             if (identParam){
