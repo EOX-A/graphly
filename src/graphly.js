@@ -508,9 +508,15 @@ class graphly extends EventEmitter {
 
                     if (typeof self.currentData !== 'undefined' && 
                         nodeId.hasOwnProperty('index')){
-                        for (let k in self.currentData){
+                        let keysSorted = Object.keys(self.currentData).sort();
+                        for (var i = 0; i < keysSorted.length; i++) {
+                            let key = keysSorted[i];
+                            let val = self.currentData[key][nodeId.index];
+                            if (val instanceof Date){
+                                val = val.toISOString();
+                            }
                             tooltip.append('div')
-                                .text(k+': '+self.currentData[k][nodeId.index])
+                                .text(key+': '+val)
                         }
                         if(self.currentData.hasOwnProperty('Latitude') &&
                            self.currentData.hasOwnProperty('Longitude') &&
@@ -523,9 +529,13 @@ class graphly extends EventEmitter {
                         }
                     } else {
                         for (let key in nodeId) {
+                            let val = nodeId[key].val;
                             if(key !== 'symbol'){
+                                if (val instanceof Date){
+                                    val = val.toISOString();
+                                }
                                 tooltip.append('div')
-                                    .text(nodeId[key].id+': '+nodeId[key].val)
+                                    .text(nodeId[key].id+': '+val)
                             }
                         }
                     }
@@ -1526,6 +1536,40 @@ class graphly extends EventEmitter {
         this.fixedXDomain = undefined;
     }
 
+    setDefaultValues(){
+        // Add some default values for datasettings if nothing is defined yet
+        let keys = Object.keys(this.data);
+        for (var i = 0; i < keys.length; i++) {
+
+            // If the parameter is multi-Id we initialize it differnetly
+            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+                let parIds = this.renderSettings.dataIdentifier.identifiers;
+                if(!this.dataSettings.hasOwnProperty(keys[i]) ){
+                    this.dataSettings[keys[i]] = {};
+                }
+                for (let j = 0; j < parIds.length; j++) {
+                    if(!this.dataSettings[keys[i]].hasOwnProperty(parIds[j])) {
+                        this.dataSettings[keys[i]][parIds[j]] = {
+                            symbol: 'circle',
+                            color: [Math.random(), Math.random(), Math.random()],
+                            alpha: this.defaultAlpha
+                        };
+                    }
+                }
+
+            } else {
+                if(!this.dataSettings.hasOwnProperty(keys[i])) {
+                    this.dataSettings[keys[i]] = {
+                        uom: null,
+                        color: [Math.random(), Math.random(), Math.random()],
+                        alpha: this.defaultAlpha
+                    };
+                }
+            }
+
+        }
+    }
+
     loadData(data){
         
         this.data = data;
@@ -1571,37 +1615,7 @@ class graphly extends EventEmitter {
             }
         }
 
-        // Add some default values for datasettings if nothing is defined yet
-        let keys = Object.keys(data);
-        for (var i = 0; i < keys.length; i++) {
-
-            // If the parameter is multi-Id we initialize it differnetly
-            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
-                let parIds = this.renderSettings.dataIdentifier.identifiers;
-                if(!this.dataSettings.hasOwnProperty(keys[i]) ){
-                    this.dataSettings[keys[i]] = {};
-                }
-                for (let j = 0; j < parIds.length; j++) {
-                    if(!this.dataSettings[keys[i]].hasOwnProperty(parIds[j])) {
-                        this.dataSettings[keys[i]][parIds[j]] = {
-                            symbol: 'circle',
-                            color: [Math.random(), Math.random(), Math.random()],
-                            alpha: this.defaultAlpha
-                        };
-                    }
-                }
-
-            } else {
-                if(!this.dataSettings.hasOwnProperty(keys[i])) {
-                    this.dataSettings[keys[i]] = {
-                        uom: null,
-                        color: [Math.random(), Math.random(), Math.random()],
-                        alpha: this.defaultAlpha
-                    };
-                }
-            }
-
-        }
+        this.setDefaultValues();
 
         // Add some default values for combined params datasettings if nothing 
         // is defined yet
