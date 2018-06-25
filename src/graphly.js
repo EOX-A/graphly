@@ -95,6 +95,7 @@ class graphly extends EventEmitter {
 
         // Passed options
         this.el = d3.select(options.el);
+        this.nsId = options.el;
         this.yAxisLabel = null;
         this.y2AxisLabel = null;
         this.xAxisLabel = null;
@@ -940,9 +941,7 @@ class graphly extends EventEmitter {
         }
 
 
-
-
-        document.getElementById('yScaleChoices').multiple = true;
+        this.el.select('#yScaleChoices').attr('multiple', true);
 
         this.el.select('.yAxisLabel.axisLabel').on('click', ()=>{
             if(this.el.select('#ySettings').style('display') === 'block'){
@@ -1108,8 +1107,7 @@ class graphly extends EventEmitter {
                 .text('Logarithmic scale (base-10) ');
         }
 
-
-        document.getElementById('y2ScaleChoices').multiple = true;
+        this.el.select('#y2ScaleChoices').attr('multiple', true);
 
         this.el.select('.y2AxisLabel.axisLabel').on('click', ()=>{
             if(this.el.select('#y2Settings').style('display') === 'block'){
@@ -1379,11 +1377,11 @@ class graphly extends EventEmitter {
         this.renderingContainer = this.svg.append('g')
             .attr('id','renderingContainer')
             .attr('fill', 'none')
-            .style('clip-path','url(#clip)');
+            .style('clip-path','url('+this.nsId+'clipbox)');
 
         // Add clip path so only points in the area are shown
         let clippath = this.svg.append('defs').append('clipPath')
-            .attr('id', 'clip')
+            .attr('id', (this.nsId.substring(1)+'clipbox'))
             .append('rect')
                 .attr('fill', 'none')
                 .attr('width', this.width)
@@ -1518,7 +1516,13 @@ class graphly extends EventEmitter {
 
         // Multiply by number of y axis elements as for each one all data points
         // for the selected parameter is drawn
-        let parAmount = this.renderSettings.yAxis.length + this.renderSettings.y2Axis.length;
+        let parAmount = 0;
+        if(this.renderSettings.hasOwnProperty('yAxis')){
+            parAmount += this.renderSettings.yAxis.length;
+        }
+        if(this.renderSettings.hasOwnProperty('y2Axis')){
+            parAmount += this.renderSettings.y2Axis.length;
+        }
         max = max * parAmount * 2;
 
         this.updateBuffers(this.batchDrawer, ++max);
@@ -1572,6 +1576,11 @@ class graphly extends EventEmitter {
 
     loadData(data){
         
+        // Clean colorcache
+        for(let k in this.colorCache){
+            delete this.colorCache[k];
+        }
+
         this.data = data;
         this.applyDataFilters();
 
@@ -2495,7 +2504,7 @@ class graphly extends EventEmitter {
                            this.marginY2Offset + this.marginCSOffset)
             .attr('height', this.height + this.margin.top + this.margin.bottom);
 
-        this.el.select('#clip').select('rect')
+        this.el.select((this.nsId+'clipbox')).select('rect')
             .attr('width', this.width)
             .attr('height', this.height);
 
@@ -2666,9 +2675,7 @@ class graphly extends EventEmitter {
                     }
                 }
             }
-            
             this.colourToNode[idC.join('-')] = par_properties;
-
             this.batchDrawer.addRect(x1,y1,x2,y2, rC[0], rC[1], rC[2], rC[3]);
 
             if(!this.fixedSize && updateReferenceCanvas){
@@ -3783,7 +3790,9 @@ class graphly extends EventEmitter {
         let y2AxRen = this.renderSettings.y2Axis;
         
         this.batchDrawer.clear();
-        this.batchDrawerReference.clear();
+        if(this.batchDrawerReference){
+            this.batchDrawerReference.clear();
+        }
 
         // If data object is undefined or empty return
         // TODO: There should be a cleaner way to do this, maybe clean all
