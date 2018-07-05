@@ -649,6 +649,10 @@ class FilterManager extends EventEmitter {
         );
         for (var f in currentFilters){
             var filter = currentFilters[f];
+            // Check if data actually has filter paramter
+            if(!data.hasOwnProperty(f)){
+                continue;
+            }
             var currentDataset = data[f];
             for (var p in data){
                 var applicableFilter = true;

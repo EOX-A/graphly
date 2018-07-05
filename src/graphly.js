@@ -3141,6 +3141,11 @@ class graphly extends EventEmitter {
             let filter = this.filters[f];
             let currentDataset = data[f];
 
+            // Check if parameter is actually in current data
+            if(!data.hasOwnProperty(f)){
+                continue;
+            }
+
             for (let p in data){
 
                 let applicableFilter = true;
@@ -3810,6 +3815,9 @@ class graphly extends EventEmitter {
 
         // reset color count
         u.resetColor();
+
+        // Clear possible regression information
+        this.el.select('#regressionInfo').selectAll('*').remove();
 
         // Check if we need to update extents which have been reset because
         // of filtering on parameter
