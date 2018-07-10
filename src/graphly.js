@@ -1582,7 +1582,6 @@ class graphly extends EventEmitter {
         }
 
         this.data = data;
-        this.applyDataFilters();
 
         this.timeScales = [];
 
@@ -1624,6 +1623,7 @@ class graphly extends EventEmitter {
             }
         }
 
+        this.applyDataFilters();
         this.setDefaultValues();
 
         // Add some default values for combined params datasettings if nothing 
