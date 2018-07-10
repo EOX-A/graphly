@@ -20,6 +20,7 @@ class FilterManager extends EventEmitter {
         this.data = defaultFor(params.data, {});
         this.dataSettings = defaultFor(this.filterSettings.dataSettings, {});
         this.showCloseButtons = defaultFor(params.showCloseButtons, false);
+        this.replaceUnderlines = defaultFor(params.replaceUnderlines, false);
         
         this.initManager();
         this.extents = {};
@@ -186,6 +187,9 @@ class FilterManager extends EventEmitter {
             this.dataSettings[d].uom !== null){
             label += ' ['+this.dataSettings[d].uom + ']';
         }
+        if(this.replaceUnderlines){
+            label = label.replace(/_/g, " ");
+        }
         div.append('div')
             .attr('class', 'parameterLabel')
             .style('transform', d=>{
@@ -267,6 +271,9 @@ class FilterManager extends EventEmitter {
             this.dataSettings[d].hasOwnProperty('uom') && 
             this.dataSettings[d].uom !== null){
             label += ' ['+this.dataSettings[d].uom + ']';
+        }
+        if(this.replaceUnderlines){
+            label = label.replace(/_/g, " ");
         }
 
         if(this.brushes.hasOwnProperty(d)){
