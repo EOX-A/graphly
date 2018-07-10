@@ -1,6 +1,6 @@
 {
   "name": "graphly",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "dependencies": {
     "d3": "~3.5.3",
     "papaparse": "^4.3.2",
