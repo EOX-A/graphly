@@ -2742,7 +2742,11 @@ class graphly extends EventEmitter {
 
         if(singleColor) {
             if(this.dataSettings[yAxis].hasOwnProperty('color')){
-                colorObj = this.dataSettings[yAxis].color.slice();
+                colorObj = [
+                    this.dataSettings[yAxis].color[0],
+                    this.dataSettings[yAxis].color[1],
+                    this.dataSettings[yAxis].color[2]
+                ];
             } else {
                 colorObj = [0.258, 0.525, 0.956];
             }
@@ -3285,6 +3289,7 @@ class graphly extends EventEmitter {
                 that.el.select('#colorParamSelection').property('value');
             delete that.colorCache[that.renderSettings.colorAxis[colorIndex]];
             that.renderSettings.colorAxis[colorIndex] = selectValue;
+            that.addApply();
         }
 
 
@@ -3326,6 +3331,7 @@ class graphly extends EventEmitter {
             delete that.colorCache[csId];
             let selectValue = that.el.select('#colorScaleSelection').property('value');
             that.dataSettings[csId].colorscale = selectValue;
+            that.addApply();
         }
 
     }
@@ -3484,6 +3490,7 @@ class graphly extends EventEmitter {
                     for(let k in this.colorCache){
                         delete this.colorCache[k];
                     }
+                    that.addApply();
                 });
         }
 
@@ -3538,6 +3545,7 @@ class graphly extends EventEmitter {
                         that.renderSettings.colorAxis[renderIndex] = null;
                     }
                     that.renderParameterOptions(dataSettings, id);
+                    that.addApply();
                 });
             // Need to add additional necessary options
             // drop down with possible parameters and colorscale
