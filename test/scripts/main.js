@@ -37,13 +37,13 @@ var renderSettings_ray = {
 };
 
 var renderSettingsSwarm = {
-    xAxis: 'Latitude',
-    yAxis: ['F'],
+    xAxis: 'MLT',
+    yAxis: ['B_NEC_resAC_N'],
     //y2Axis: ['F_res_IGRF12'],
-    colorAxis: [null]/*,
-    dataIdentifier: {
-        parameter: 'Spacecraft',
-        identifiers: ['A', 'B']
+    colorAxis: [null],
+    /*dataIdentifier: {
+        parameter: 'id',
+        identifiers: ['Alpha', 'Bravo']
     }*/
 };
 
@@ -372,7 +372,7 @@ var dataSettings = {
     mie_wind_velocity: {
         uom: 'm/s',
         colorscale: 'viridis',
-        extent: [-140,39]
+        //extent: [-140,39]
         //outline: false
     },
 
@@ -451,7 +451,11 @@ var graph = new graphly.graphly({
     dataSettings: ds_mie,
     renderSettings: renderSettings_mie,
     filterManager: filterManager,
-    debounceActive: false,
+    ignoreParameters: [/mie_quality_fl.*/]
+    //debounceActive: true,
+    //enableFit: false,
+    //displayColorscaleOptions: false,
+    //displayAlphaOptions: false
     //displayParameterLabel: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false,
@@ -470,9 +474,9 @@ filterManager.setRenderNode('#filters');
     //fixedSize: true,
     //fixedWidth: 12000
     //connectedGraph: graph
-});*/
+});
 
-//graph.connectGraph(graph2);
+graph.connectGraph(graph2);*/
 
 
 
@@ -499,7 +503,7 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-//xhr.open('GET', 'data/swarm.mp', true);
+//xhr.open('GET', 'data/test1D.mp', true);
 xhr.open('GET', 'data/aeolus_L1.mp', true);
 
 xhr.responseType = 'arraybuffer';
@@ -568,7 +572,30 @@ xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
     var data = msgpack.decode(tmp);
 
-    //graph.loadData(data);
+    /*var ids = {
+      'A': 'Alpha',
+      'B': 'Bravo',
+      'C': 'Charlie',
+      'NSC': 'NSC'
+    };
+
+    if(data.hasOwnProperty('Spacecraft')) {
+      data['id'] = [];
+      for (var i = 0; i < data.Timestamp.length; i++) {
+        data.id.push(ids[data.Spacecraft[i]]);
+      }
+    }
+    data['B_NEC_resAC_N'] = [];
+    data['B_NEC_resAC_E'] = [];
+    data['B_NEC_resAC_C'] = [];
+
+    for (var i = 0; i < data.B_NEC_resAC.length; i++) {
+        data['B_NEC_resAC_N'].push(data.B_NEC_resAC[i][0]);
+        data['B_NEC_resAC_E'].push(data.B_NEC_resAC[i][1]);
+        data['B_NEC_resAC_C'].push(data.B_NEC_resAC[i][2]); 
+    }
+
+    graph.loadData(data);*/
 
     var ds = data.ALD_U_N_1B[0];
 
@@ -597,9 +624,9 @@ xhr.onload = function(e) {
 
     filterManager.initManager();
     graph.loadData(data);
-    if(usesecond){
-        //graph2.loadData(data);
-    }
+    /*if(usesecond){
+        graph2.loadData(data);
+    }*/
 
     filterManager.loadData(data);
 };
@@ -627,14 +654,14 @@ d3.select('#datafiles').on('change', function(e){
         }else if (sel_value.indexOf('ISR') !== -1){
             graph.setRenderSettings(renderSettingsISR);
         }else {
-            usesecond = true;
-            /*graph.connectGraph(graph2);
+            /*usesecond = true;
+            graph.connectGraph(graph2);
             graph2.connectGraph(graph);
             graph2.setDataSettings(ds_mie);
-            graph2.setRenderSettings(renderSettings_mie);*/
+            graph2.setRenderSettings(renderSettings_mie);
 
             graph.setDataSettings(ds_rayleigh);
-            graph.setRenderSettings(renderSettings_ray);
+            graph.setRenderSettings(renderSettings_ray);*/
         }
         xhr.open('GET', sel_value, true);
         xhr.send();

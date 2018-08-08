@@ -101,6 +101,7 @@ class graphly extends EventEmitter {
         this.xAxisLabel = null;
         this.colorCache = {};
         this.defaultAlpha = defaultFor(options.defaultAlpha, 0.9);
+        this.ignoreParameters = defaultFor(options.ignoreParameters, []);
 
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
@@ -237,7 +238,7 @@ class graphly extends EventEmitter {
 
 
         // tooltip
-        let tooltip = this.el.append('div')
+        this.tooltip = this.el.append('div')
             .attr('class', 'graphlyTooltip')
 
         this.renderCanvas = this.el.append('canvas')
@@ -307,7 +308,8 @@ class graphly extends EventEmitter {
             .style('pointer-events', 'none')
             .append('g')
             .attr('transform', 'translate(' + (this.margin.left+1) + ',' +
-                (this.margin.top+1) + ')');
+                (this.margin.top+1) + ')')
+            .style('clip-path','url('+this.nsId+'clipbox)');
 
         // Make sure we hide the tooltip as soon as we get out of the canvas
         // else it can kind of "stick" when moving the mouse fast
@@ -323,8 +325,8 @@ class graphly extends EventEmitter {
                 // panned the canvas
                 this.prevMousePos = [d3.event.clientX, d3.event.clientY];
                 this.mouseDown = true;
-                tooltip.style('display', 'none');
-                tooltip.selectAll('*').remove();
+                this.tooltip.style('display', 'none');
+                this.tooltip.selectAll('*').remove();
                 self.topSvg.selectAll('*').remove();
                 this.emit('pointSelect', null);
             });
@@ -419,8 +421,8 @@ class graphly extends EventEmitter {
                     return;
                 }
 
-                tooltip.style('display', 'none');
-                tooltip.selectAll('*').remove();
+                this.tooltip.style('display', 'none');
+                this.tooltip.selectAll('*').remove();
                 self.topSvg.selectAll('*').remove();
 
                 let mouseX = d3.event.offsetX; 
@@ -480,7 +482,7 @@ class graphly extends EventEmitter {
                     }
 
                     let dim = this.el.node().getBoundingClientRect();
-                    let ttdim = tooltip.node().getBoundingClientRect();
+                    let ttdim = this.tooltip.node().getBoundingClientRect();
                 
                     // TODO: make sure tooltip is inside window
                     var topPos = d3.event.pageY - dim.top + 10;
@@ -493,17 +495,17 @@ class graphly extends EventEmitter {
                         leftPos = leftPos - 275;
                     }
 
-                    tooltip.style('top', topPos + 'px');
-                    tooltip.style('left', leftPos + 'px');
+                    this.tooltip.style('top', topPos + 'px');
+                    this.tooltip.style('left', leftPos + 'px');
 
-                    tooltip.style('display', 'inline-block');
+                    this.tooltip.style('display', 'inline-block');
 
                     // Add close button
-                    tooltip.append('div')
+                    this.tooltip.append('div')
                         .attr('class', 'labelClose cross')
                         .on('click', ()=>{
                             this.topSvg.selectAll('*').remove();
-                            tooltip.style('display', 'none');
+                            this.tooltip.style('display', 'none');
                             this.emit('pointSelect', null);
                         });
 
@@ -516,7 +518,7 @@ class graphly extends EventEmitter {
                             if (val instanceof Date){
                                 val = val.toISOString();
                             }
-                            tooltip.append('div')
+                            this.tooltip.append('div')
                                 .text(key+': '+val)
                         }
                         if(self.currentData.hasOwnProperty('Latitude') &&
@@ -535,7 +537,7 @@ class graphly extends EventEmitter {
                                 if (val instanceof Date){
                                     val = val.toISOString();
                                 }
-                                tooltip.append('div')
+                                this.tooltip.append('div')
                                     .text(nodeId[key].id+': '+val)
                             }
                         }
@@ -1581,7 +1583,25 @@ class graphly extends EventEmitter {
             delete this.colorCache[k];
         }
 
-        this.data = data;
+        this.data = {};
+        for (var dk in data){
+            // Ignore keys added to ignore list
+            var ignoreKey = false;
+            for (var i = 0; i < this.ignoreParameters.length; i++) {
+                if(this.ignoreParameters[i] instanceof RegExp){
+                    if(this.ignoreParameters[i].test(dk)){
+                        ignoreKey = true;
+                    }
+                } else if ( typeof(this.ignoreParameters[i]) === 'string' ){
+                    if(dk === this.ignoreParameters[i]){
+                        ignoreKey = true;
+                    }
+                }
+            }
+            if(!ignoreKey){
+                this.data[dk] = data[dk];
+            }
+        };
 
         this.timeScales = [];
 
@@ -1594,6 +1614,7 @@ class graphly extends EventEmitter {
         // Check for special formatting of data
         let ds = this.dataSettings;
         for (let key in ds) {
+            
             if (ds[key].hasOwnProperty('scaleFormat')){
                 if (ds[key].scaleFormat === 'time'){
                     this.timeScales.push(key);
@@ -2062,6 +2083,9 @@ class graphly extends EventEmitter {
     }
 
     previewZoom() {
+
+        this.topSvg.selectAll('.temporary').remove();
+        this.tooltip.style('display', 'none');
 
         if(this.connectedGraph && !this.slaveGraph){
             this.connectedGraph.triggerZoomPreview(
@@ -2637,6 +2661,7 @@ class graphly extends EventEmitter {
             let idC = u.genColor();
 
             let par_properties = {
+                index: i,
                 x1: {
                     val: data[xGroup[0]][i],
                     coord: x1, id: xGroup[0]
