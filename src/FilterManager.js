@@ -465,7 +465,7 @@ class FilterManager extends EventEmitter {
                 let choiceSelect = container
                     .append('select')
                         .attr('id',id)
-                        .on('change',onChoiceChange);
+                        .on('change', onChoiceChange.bind(null, id, data));
 
                 let options = choiceSelect
                     .selectAll('option')
@@ -485,9 +485,8 @@ class FilterManager extends EventEmitter {
                     disabled.property('selected', true);
                 }
 
-                function onChoiceChange() {
+                function onChoiceChange(id, data) {
 
-                    var id = this.id;
                     let selectValue = d3.select('#'+id).property('value');
                     // Check if it is a number, if yes, convert it
                     if(!isNaN(selectValue)){
