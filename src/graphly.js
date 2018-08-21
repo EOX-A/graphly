@@ -736,8 +736,8 @@ class graphly extends EventEmitter {
         this.svg.selectAll('.axisLabel').attr('fill', '#007bff');
         this.svg.selectAll('.axisLabel').attr('font-weight', 'bold');
 
-        c.toBlob(function(blob) {
-            FileSaver.saveAs(blob, self.file_save_string);
+        c.toBlob((blob)=> {
+            FileSaver.saveAs(blob, this.fileSaveString);
         }, "image/png" ,1);
     }
 
