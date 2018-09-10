@@ -521,14 +521,75 @@ class graphly extends EventEmitter {
                             this.tooltip.append('div')
                                 .text(key+': '+val)
                         }
-                        if(self.currentData.hasOwnProperty('Latitude') &&
-                           self.currentData.hasOwnProperty('Longitude') &&
-                           self.currentData.hasOwnProperty('Radius') ){
+                        // Check to see if data has set some aliases
+                        if(self.renderSettings.hasOwnProperty('positionAlias')){
+                            let posAlias = self.renderSettings.positionAlias;
+                            var lat, lon, alt;
+                            var cmobPar = self.renderSettings.combinedParameters;
+
+                            if(cmobPar.hasOwnProperty(posAlias.latitude)){
+                                var key = cmobPar[posAlias.latitude];
+                                if(self.currentData.hasOwnProperty(key[0]) && 
+                                   self.currentData.hasOwnProperty(key[1]) ){
+                                    lat = [
+                                        self.currentData[key[0]][nodeId.index],
+                                        self.currentData[key[1]][nodeId.index]
+                                    ];
+                                }
+                                
+                            } else {
+                                if(self.currentData.hasOwnProperty(posAlias.latitude)){
+                                    lat = self.currentData[[posAlias.latitude]][nodeId.index];
+                                }
+                            }
+
+                            if(cmobPar.hasOwnProperty(posAlias.longitude)){
+                                var key = cmobPar[posAlias.longitude];
+                                if(self.currentData.hasOwnProperty(key[0]) && 
+                                   self.currentData.hasOwnProperty(key[1]) ){
+                                    lon = [
+                                        self.currentData[key[0]][nodeId.index],
+                                        self.currentData[key[1]][nodeId.index]
+                                    ];
+                                }
+                                
+                            } else {
+                                if(self.currentData.hasOwnProperty(posAlias.longitude)){
+                                    lon = self.currentData[[posAlias.longitude]][nodeId.index];
+                                }
+                            }
+
+                            if(cmobPar.hasOwnProperty(posAlias.altitude)){
+                                var key = cmobPar[posAlias.altitude];
+                                if(self.currentData.hasOwnProperty(key[0]) && 
+                                   self.currentData.hasOwnProperty(key[1]) ){
+                                    alt = [
+                                        self.currentData[key[0]][nodeId.index],
+                                        self.currentData[key[1]][nodeId.index]
+                                    ];
+                                }
+                                
+                            } else {
+                                if(self.currentData.hasOwnProperty(posAlias.altitude)){
+                                    alt = self.currentData[[posAlias.altitude]][nodeId.index];
+                                }
+                            }
+
                             this.emit('pointSelect', {
-                                Latitude: self.currentData.Latitude[nodeId.index],
-                                Longitude: self.currentData.Longitude[nodeId.index],
-                                Radius: self.currentData.Radius[nodeId.index]
+                                Latitude: lat,
+                                Longitude: lon,
+                                Radius: alt
                             });
+                        } else {
+                            if(self.currentData.hasOwnProperty('Latitude') &&
+                               self.currentData.hasOwnProperty('Longitude') &&
+                               self.currentData.hasOwnProperty('Radius') ){
+                                this.emit('pointSelect', {
+                                    Latitude: self.currentData.Latitude[nodeId.index],
+                                    Longitude: self.currentData.Longitude[nodeId.index],
+                                    Radius: self.currentData.Radius[nodeId.index]
+                                });
+                            }
                         }
                     } else {
                         for (let key in nodeId) {
