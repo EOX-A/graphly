@@ -1029,7 +1029,7 @@ class graphly extends EventEmitter {
             .attr('type', 'text')
             .property('value', listText.join(', '))
             .on('input', function(){
-                d3.select('.yAxisLabel.axisLabel').text(this.value);
+                that.el.select('.yAxisLabel.axisLabel').text(this.value);
                 that.yAxisLabel = this.value;
             });
 
@@ -1197,7 +1197,7 @@ class graphly extends EventEmitter {
             .attr('type', 'text')
             .property('value', listText.join(', '))
             .on('input', function(){
-                d3.select('.y2AxisLabel.axisLabel').text(this.value);
+                that.el.select('.y2AxisLabel.axisLabel').text(this.value);
                 that.y2AxisLabel = this.value;
             });
         con.append('label')
@@ -1358,7 +1358,7 @@ class graphly extends EventEmitter {
             .attr('type', 'text')
             .property('value', xLabel)
             .on('input', function(){
-                d3.select('.xAxisLabel.axisLabel').text(this.value);
+                that.el.select('.xAxisLabel.axisLabel').text(this.value);
                 that.xAxisLabel = this.value;
             });
         con.append('label')
