@@ -239,7 +239,7 @@ class graphly extends EventEmitter {
 
         // tooltip
         this.tooltip = this.el.append('div')
-            .attr('class', 'graphlyTooltip')
+            .attr('class', 'graphlyTooltip paramTable')
 
         this.renderCanvas = this.el.append('canvas')
             .attr('id', 'renderCanvas')
@@ -511,8 +511,10 @@ class graphly extends EventEmitter {
 
                     if (typeof self.currentData !== 'undefined' && 
                         nodeId.hasOwnProperty('index')){
+
                         let keysSorted = Object.keys(self.currentData).sort();
-                        for (var i = 0; i < keysSorted.length; i++) {
+
+                        /*for (var i = 0; i < keysSorted.length; i++) {
                             let key = keysSorted[i];
                             let val = self.currentData[key][nodeId.index];
                             if (val instanceof Date){
@@ -520,8 +522,61 @@ class graphly extends EventEmitter {
                             }
                             this.tooltip.append('div')
                                 .text(key+': '+val)
+                        }*/
+                        let tabledata = [];
+                        let uomAvailable = false;
+                        for (var i = 0; i < keysSorted.length; i++) {
+                            let key = keysSorted[i];
+                            let val = self.currentData[key][nodeId.index];
+                            if (val instanceof Date){
+                                val = val.toISOString();
+                            }
+                            let tObj = {
+                                'Parameter': key,
+                                'Value': val
+                            }
+                            if(self.dataSettings[key].hasOwnProperty('uom') &&
+                               self.dataSettings[key].uom !== null){
+                                uomAvailable = true;
+                                tObj.Unit = self.dataSettings[key].uom;
+                            }
+                            tabledata.push(tObj);
                         }
-                        // Check to see if data has set some aliases
+
+                        let columns = ['Parameter', 'Value'];
+                        if(uomAvailable){
+                            columns.push('Unit')
+                        }
+                        let table = this.tooltip.append('table')
+                        let thead = table.append('thead')
+                        let tbody = table.append('tbody');
+
+                        // append the header row
+                        thead.append('tr')
+                          .selectAll('th')
+                          .data(columns).enter()
+                          .append('th')
+                            .text(function (column) { return column; });
+
+                        // create a row for each object in the data
+                        let rows = tbody.selectAll('tr')
+                          .data(tabledata)
+                          .enter()
+                          .append('tr');
+
+                        // create a cell in each row for each column
+                        let cells = rows.selectAll('td')
+                          .data(function (row) {
+                            return columns.map(function (column) {
+                              return {column: column, value: row[column]};
+                            });
+                          })
+                          .enter()
+                          .append('td')
+                            .text(function (d) { return d.value; });
+
+
+                        // Check to see if data has set some position aliases
                         if(self.renderSettings.hasOwnProperty('positionAlias')){
                             let posAlias = self.renderSettings.positionAlias;
                             var lat, lon, alt;
@@ -2374,8 +2429,19 @@ class graphly extends EventEmitter {
 
         if(typeof reg.type !== 'undefined'){
             // render regression label
-            let regrString = 
-                result.string + '  (r^2: '+ (result.r2).toPrecision(3)+')';
+            let regrString = '';
+            for (var rPos = result.equation.length - 1; rPos >= 0; rPos--) {
+                regrString += result.equation[rPos].toPrecision(4);
+                if(rPos>1){
+                    regrString += 'x<sup>'+rPos+'</sup>';
+                } else if (rPos === 1){
+                    regrString += 'x';
+                }
+                if(rPos>0){
+                    regrString += ' + ';
+                }
+            }
+            regrString += '  (r<sup>2</sup>: '+ (result.r2).toPrecision(4)+')';
 
             this.el.select('#regressionInfo')
                 .append('div')
