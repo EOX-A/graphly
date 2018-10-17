@@ -2006,6 +2006,31 @@ class graphly extends EventEmitter {
         if(this.xTimeScale){
             this.xAxis.tickFormat(u.getCutomUTCTimeTickFormat());
         }
+        // Check if axis is using periodic parameter
+        let tickformat = d3.format('g');
+        if(this.dataSettings.hasOwnProperty(xSelection) && 
+           this.dataSettings[xSelection].hasOwnProperty('periodic')){
+
+            this.xAxis.tickFormat((d,i)=>{
+                let offset = defaultFor(
+                    this.dataSettings[xSelection].periodic.offset, 0
+                );
+                let period = this.dataSettings[xSelection].periodic.period;
+
+                let dm = d-offset;
+                if(d<0){
+                    dm = d-offset;
+                }
+                let offsetAmount = Math.floor(dm/period);
+                if(dm%period !== 0){
+                    d -= offsetAmount*period;
+                    d = tickformat(d.toFixed(10));
+                } else {
+                    d = tickformat(period+offset)+' / '+tickformat(offset);
+                }
+                return d;
+            });
+        }
 
         this.yAxis = d3.svg.axis()
             .scale(this.yScale)
@@ -2014,7 +2039,13 @@ class graphly extends EventEmitter {
             .orient('left');
         if(this.yTimeScale){
             this.yAxis.tickFormat(u.getCutomUTCTimeTickFormat());
-        }
+        }/* else {
+            this.yAxis.tickFormat(function(d,i){
+                let offsetAmount = Math.floor((d+90)/180);
+                d -= offsetAmount*180;
+                return d;
+            });
+        }*/
 
         this.y2Axis = d3.svg.axis()
             .scale(this.y2Scale)
@@ -2929,6 +2960,25 @@ class graphly extends EventEmitter {
             }
         }
 
+        // Check if cyclic axis and if currently displayed axis range needs to
+        // offset to be shown in "next cycle" above or below
+        let xMax, xMin, period, xoffset;
+        let yMax = yScale.domain()[1];
+        let yMin = yScale.domain()[0];
+
+        let xperiodic = false;
+        if(this.dataSettings.hasOwnProperty(xAxis) && 
+           this.dataSettings[xAxis].hasOwnProperty('periodic')){
+            xoffset = defaultFor(
+                this.dataSettings[xAxis].periodic.offset, 0
+            );
+            xperiodic = true;
+            period = this.dataSettings[xAxis].periodic.period;
+            xMax = this.xScale.domain()[1]-xoffset;
+            xMin = this.xScale.domain()[0]+xoffset;
+
+        }
+        
         for (let j=0;j<lp; j++) {
 
             let x, y, valX, valY;
@@ -2940,11 +2990,37 @@ class graphly extends EventEmitter {
                 if(this.timeScales.indexOf(xGroup[0])!==-1){
                     valX = new Date(
                         data[xGroup[0]][j].getTime() +
-                        (data[xGroup[1]][j].getTime() - data[xGroup[0]][j].getTime())/2
+                        (
+                            data[xGroup[1]][j].getTime()-
+                            data[xGroup[0]][j].getTime()
+                        )/2
                     );
                 } else {
                     valX = data[xGroup[0]][j] +
                          (data[xGroup[1]][j] - data[xGroup[0]][j])/2;
+                }
+            }
+            // Manipulate value if we have a periodic parameter
+            if(xperiodic){
+                let shiftpos = Math.abs(parseInt(xMax/period));
+                let shiftneg = Math.abs(parseInt(xMin/period));
+                if(xoffset===0){
+                    shiftneg = Math.abs(Math.floor(xMin/period));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valX = valX + shift*period;
+                    if(valX-xoffset > xMax){
+                        valX -= period;
+                    }
+                    if(valX+xoffset < xMin){
+                        valX += period;
+                    }
+                    
                 }
             }
             x = this.xScale(valX);
@@ -2963,6 +3039,14 @@ class graphly extends EventEmitter {
                          (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
                 }
             }
+
+            if(valY-180 > yMin){
+                valY -= 180;
+            }
+            if(valY+180 < yMax){
+                valY+=180;
+            }
+
             y =  yScale(valY);
             
             // If render settings uses colorscale axis get color from there
