@@ -401,7 +401,7 @@ class graphly extends EventEmitter {
                             u.addSymbol( 
                                 self.topSvg, nodeId.symbol, '#00ff00',
                                 {x: nodeId.x.coord, y: nodeId.y.coord},
-                                3.0, 13.0, 'temporary'
+                                3.0, nodeId.dotsize, 'temporary'
                             );
                         }
                     }
@@ -476,7 +476,8 @@ class graphly extends EventEmitter {
                             }
                             u.addSymbol( 
                                 self.topSvg, nodeId.symbol, '#00ff00',
-                                {x: nodeId.x.coord, y: nodeId.y.coord}, 4.0, 13.0
+                                {x: nodeId.x.coord, y: nodeId.y.coord}, 4.0,
+                                nodeId.dotsize
                             );
                         }
                     }
@@ -3148,6 +3149,7 @@ class graphly extends EventEmitter {
                 if(!parSett.hasOwnProperty('symbol')){
                     parSett.symbol = 'circle';
                 }
+                par_properties.dotsize = dotsize;
 
                 if(parSett.symbol !== null && parSett.symbol !== 'none'){
                     par_properties.symbol = parSett.symbol;
