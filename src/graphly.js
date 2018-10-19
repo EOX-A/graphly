@@ -2039,13 +2039,7 @@ class graphly extends EventEmitter {
             .orient('left');
         if(this.yTimeScale){
             this.yAxis.tickFormat(u.getCutomUTCTimeTickFormat());
-        }/* else {
-            this.yAxis.tickFormat(function(d,i){
-                let offsetAmount = Math.floor((d+90)/180);
-                d -= offsetAmount*180;
-                return d;
-            });
-        }*/
+        }
 
         this.y2Axis = d3.svg.axis()
             .scale(this.y2Scale)
@@ -2231,6 +2225,23 @@ class graphly extends EventEmitter {
 
     previewZoom() {
 
+        // Zooming out
+        let nonUnScale = false;
+        if(d3.event.scale < 1){
+            let xSel = this.renderSettings.xAxis;
+            // Check if we have a periodic scale where we have to limit zoom out
+            if(this.dataSettings.hasOwnProperty(xSel) &&
+               this.dataSettings[xSel].hasOwnProperty('periodic') ){
+                let period = this.dataSettings[xSel].periodic.period;
+                let xdom = this.xScale.domain();
+                if(xdom[1]-xdom[0] >= period){
+                    this.xzoom.scale(1);
+                    this.xzoom.translate([0,0]);
+                    nonUnScale = true;
+                }
+            }
+        }
+
         this.topSvg.selectAll('.temporary').remove();
         this.tooltip.style('display', 'none');
 
@@ -2279,7 +2290,6 @@ class graphly extends EventEmitter {
         }
         
 
-
         this.topSvg.selectAll('.highlightItem').remove();
 
         if(this.debounceActive){
@@ -2301,11 +2311,18 @@ class graphly extends EventEmitter {
 
 
             if(xyScale!==1.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                transXY + ')scale(' + xyScale + ')');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                transXY + ')scale(' + xyScale + ')');
-                
+                if(!nonUnScale){
+                    this.svg.select('#previewImage').attr('transform', 'translate(' + 
+                    transXY + ')scale(' + xyScale + ')');
+                    this.svg.select('#previewImage2').attr('transform', 'translate(' + 
+                    transXY + ')scale(' + xyScale + ')');
+                } else {
+                    transXY[0] = 0;
+                    this.svg.select('#previewImage').attr('transform', 'translate(' + 
+                    transXY + ')scale(' + [1,xyScale] + ')');
+                    this.svg.select('#previewImage2').attr('transform', 'translate(' + 
+                    transXY + ')scale(' + [1,xyScale] + ')');
+                }
             }else if(xScale !== 1.0){
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
                 [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
@@ -2978,6 +2995,8 @@ class graphly extends EventEmitter {
             xMin = this.xScale.domain()[0]+xoffset;
 
         }
+
+        let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
         
         for (let j=0;j<lp; j++) {
 
@@ -3038,13 +3057,6 @@ class graphly extends EventEmitter {
                     valY = data[yGroup[0]][j] +
                          (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
                 }
-            }
-
-            if(valY-180 > yMin){
-                valY -= 180;
-            }
-            if(valY+180 < yMax){
-                valY+=180;
             }
 
             y =  yScale(valY);
@@ -3136,15 +3148,16 @@ class graphly extends EventEmitter {
                 if(!parSett.hasOwnProperty('symbol')){
                     parSett.symbol = 'circle';
                 }
+
                 if(parSett.symbol !== null && parSett.symbol !== 'none'){
                     par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
+                        x, y, dotsize, sym, rC[0], rC[1], rC[2], rC[3]
                     );
                     if(!this.fixedSize && updateReferenceCanvas){
                         this.batchDrawerReference.addDot(
-                            x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                            x, y, dotsize, sym, nCol[0], nCol[1], nCol[2], -1.0
                         );
                     }
                 }
@@ -3700,6 +3713,25 @@ class graphly extends EventEmitter {
                 }, false);
 
             picker.picker.appendChild(x);
+
+            // Add point size option
+            this.el.select('#parameterSettings')
+                .append('label')
+                .attr('for', 'sizeSelection')
+                .text('Point size');
+
+            let sizeSelect = this.el.select('#parameterSettings')
+                .append('input')
+                .attr('id', 'sizeSelection')
+                .attr('type', 'text')
+                .attr('value', 
+                    defaultFor(dataSettings.size, DOTSIZE)
+                )
+                .on('input', ()=>{
+                    let val = Number(d3.event.currentTarget.value);
+                    dataSettings.size = val;
+                    that.addApply();
+                });;
         }
 
         if(this.displayAlphaOptions){

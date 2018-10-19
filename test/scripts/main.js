@@ -490,7 +490,7 @@ var graph = new graphly.graphly({
     renderSettings: renderSettingsSwarm,
     filterManager: filterManager,
     //ignoreParameters: [/mie_quality_fl.*/]
-    debounceActive: false,
+    debounceActive: true,
     //enableFit: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false
