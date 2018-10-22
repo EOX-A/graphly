@@ -1,6 +1,53 @@
 /*jshint esversion: 6 */
 
 /**
+* @typedef {Object} RenderSettings
+* @property {String} xAxis Parameter id to be rendered on x axis.
+* @property {Array.String} yAxis Array of parameter id strings of parameters
+*         to be rendered on y axis (left). 
+* @property {Array.String} y2Axis Array of parameter id strings of parameters
+*        to be rendered on second y axis (right). 
+* @property {Object} combinedParameters
+* @property {Array.String} colorAxis Array of parameter
+*        id strings of parameters to be rendered used for third dimension
+*        as colorscale. If used number of array items must be equal to 
+*        number of items in y and y2 axis combined. It is possible to use
+*        null if any of the selected parameters for y or y2 axis should not
+*        use a colorscale representation. 
+*/
+
+/**
+* @typedef {Object} ParameterSettings
+* @property {String} [symbol] to use for rendering, can be dotType, rectangle,
+*           rectangle_empty, circle, circle_empty, plus, x, triangle, 
+*           triangle_empty.
+* @property {String} [uom] Unit of measurement to be added to label.
+* @property {boolean} [lineConnect] Connect points with lines.
+* @property {String} [colorscale] Colorscale used if parameter is selected to be
+*           rendered as colorscale
+* @property {Array} [extent] Extent to use if parameter selected for
+*           visualization on any axis.
+* @property {String} [regression] Enable calculation/visualization of regression
+*           specifying type. Possible values 'linear', polynomial'.
+* @property {String} [scaleType] If parameter is used for grouping data scaleType
+*           can be set to 'ordinal'
+* @property {Array} [categories] If ordinal scale used array of strings can be 
+*           specified containing unique id strings of each group
+* @property {String} [scaleFormat] If parameter is a time value set scaleFormat 
+*           to 'time'.
+* @property {String} [timeFormat=default] Possible to change format to MJD2000 
+*           using value MJD2000_S.
+* @property {String} [displayName] String to use for labels instead of parameter
+*           id.
+*/
+
+/**
+* @typedef  {Object.<String, ParameterSettings>} DataSettings Has string as 
+*           parameter identifier and corresponding parameter setting object.
+*/
+
+
+/**
  * The main graphly module.
  * @module graphly
  * @name graphly
@@ -78,9 +125,6 @@ function debounce(func, wait, immediate) {
 * @fires module:graphly.graphly#axisChange
 * @fires module:graphly.graphly#rendered
 */
-
-
-
 class graphly extends EventEmitter {
 
     /**
@@ -88,9 +132,10 @@ class graphly extends EventEmitter {
     * @constructor
     * @param {Object} options Parameters to configure the plot.
     * @param {String} options.el Required d3 selector identifier for container
-    * @param {Object} options.dataSettings
-    * @param {Object} options.renderSettings
-    *        to create graph renderings
+    * @param {RenderSettings} options.renderSettings Configuration options for what
+    *        should be rendered.
+    * @param {DataSettings} options.dataSettings Additional information to 
+    *        set parameter specific rules.
     * @param {boolean} [options.debounceActive=true] Setting to determine if 
     *        rendering is  done once user interaction is finished using a 
     *        prerendered image to show interaction. For less then ~6k points 

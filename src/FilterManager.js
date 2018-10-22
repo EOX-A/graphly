@@ -1,5 +1,36 @@
 
 
+/**
+* @typedef {Object} ChoiceObject
+* @property {Array.Object} options Array containing options objects with name
+*           and value keys. 
+* @property {Array.String} [selected] Index of selected option.
+*/
+
+/**
+* @typedef {Object} FilterSettings
+* @property [filterRelation] {Array.Array} Grouping of parameter ids as arrays
+         for parameters that are related and affected by the same filters.
+* @property [parameterMatrix] {Object} Possibility to combine parameters into
+*        merged parameter. Key of object contains new identifier for combined
+*        parameter, value is array of two parameter id string of the original 
+*        parameters
+* @property visibleFilters {Array.String} List of 
+*        parameter identifiers which shall be added as filter.
+* @property boolParameter {Array.String} List of 
+*        parameter identifiers of which the data is comprised of booleans.
+* @property maskParameter {Object.<string, Object>} 
+*        Object with parameter identifier as key and Object as value. Each
+*        object contains values as key and Array of 2 value arrays.
+*        First element is name, second value is description.
+* @property choiceParameter {Object.<String, ChoiceObject>} Choice object
+*        description for choice parameters
+* @property dataSettings {DataSettings}
+*        Object contains 'uom' (unit of measurement) with a string as value
+*        which is added to the parameter identifier label when rendered.
+*/
+
+
 require('./utils.js');
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
@@ -25,19 +56,8 @@ class FilterManager extends EventEmitter {
     * @param options.replaceUnderlines {boolean} Optional, default false.
     *        Replace underlines  with spaces when showing parameter identifier
     *        as labels.
-    * @param options.filterSettings {Object} Optional additional Filter Settings.
-    *        More description to come TODO.
-    * @param options.filterSettings.visibleFilters {Array.String} List of 
-    *        parameter identifiers which shall be added as filter.
-    * @param options.filterSettings.boolParameter {Array.String} List of 
-    *        parameter identifiers of which the data is comprised of booleans.
-    * @param options.filterSettings.maskParameter {Object.<string, Object>} 
-    *        Object with parameter identifier as key and Object as value. Each
-    *        object contains values as key and Array of 2 value arrays.
-    *        First element is name, second value is description.
-    * @param options.filterSettings.dataSettings {Object.<string, Object>} 
-    *        Object contains 'uom' (unit of measurement) with a string as value
-    *        which is added to the parameter identifier label when rendered.
+    * @param options.filterSettings {FilterSettings} Optional additional Filter 
+    *        Settings.
     */
 
     constructor(params) {
