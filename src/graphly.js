@@ -1,6 +1,53 @@
 /*jshint esversion: 6 */
 
 /**
+* @typedef {Object} RenderSettings
+* @property {String} xAxis Parameter id to be rendered on x axis.
+* @property {Array.String} yAxis Array of parameter id strings of parameters
+*         to be rendered on y axis (left). 
+* @property {Array.String} y2Axis Array of parameter id strings of parameters
+*        to be rendered on second y axis (right). 
+* @property {Object} combinedParameters
+* @property {Array.String} colorAxis Array of parameter
+*        id strings of parameters to be rendered used for third dimension
+*        as colorscale. If used number of array items must be equal to 
+*        number of items in y and y2 axis combined. It is possible to use
+*        null if any of the selected parameters for y or y2 axis should not
+*        use a colorscale representation. 
+*/
+
+/**
+* @typedef {Object} ParameterSettings
+* @property {String} [symbol] to use for rendering, can be dotType, rectangle,
+*           rectangle_empty, circle, circle_empty, plus, x, triangle, 
+*           triangle_empty.
+* @property {String} [uom] Unit of measurement to be added to label.
+* @property {boolean} [lineConnect] Connect points with lines.
+* @property {String} [colorscale] Colorscale used if parameter is selected to be
+*           rendered as colorscale
+* @property {Array} [extent] Extent to use if parameter selected for
+*           visualization on any axis.
+* @property {String} [regression] Enable calculation/visualization of regression
+*           specifying type. Possible values 'linear', polynomial'.
+* @property {String} [scaleType] If parameter is used for grouping data scaleType
+*           can be set to 'ordinal'
+* @property {Array} [categories] If ordinal scale used array of strings can be 
+*           specified containing unique id strings of each group
+* @property {String} [scaleFormat] If parameter is a time value set scaleFormat 
+*           to 'time'.
+* @property {String} [timeFormat=default] Possible to change format to MJD2000 
+*           using value MJD2000_S.
+* @property {String} [displayName] String to use for labels instead of parameter
+*           id.
+*/
+
+/**
+* @typedef  {Object.<String, ParameterSettings>} DataSettings Has string as 
+*           parameter identifier and corresponding parameter setting object.
+*/
+
+
+/**
  * The main graphly module.
  * @module graphly
  * @name graphly
@@ -70,24 +117,58 @@ function debounce(func, wait, immediate) {
 }
 
 
+
+/**
+* The graphly class.
+* @memberof module:graphly
+* @fires module:graphly.graphly#pointSelect
+* @fires module:graphly.graphly#axisChange
+* @fires module:graphly.graphly#rendered
+*/
 class graphly extends EventEmitter {
 
     /**
-    * @lends graphly
-    */
-
-    /**
-    * The graphly class.
     * @memberof module:graphly
     * @constructor
-    * @param {Object} options the options to pass to the plot.
-    * @param {HTMLDivElement} [options.el] the div to create graph renderings
-    * @param {String} [options.csv] URL pointing to CSV data
-    * @param {Object} [options.dataSettings] object containing CSV header 
-    *                                        identifier as key and object with 
-    *                                        settings as value
-    * @param {Object} [options.renderSettings] additional render settings
-    * @param {Object[]} [options.dataset] passing of dataset instead of CSV url
+    * @param {Object} options Parameters to configure the plot.
+    * @param {String} options.el Required d3 selector identifier for container
+    * @param {RenderSettings} options.renderSettings Configuration options for what
+    *        should be rendered.
+    * @param {DataSettings} options.dataSettings Additional information to 
+    *        set parameter specific rules.
+    * @param {boolean} [options.debounceActive=true] Setting to determine if 
+    *        rendering is  done once user interaction is finished using a 
+    *        prerendered image to show interaction. For less then ~6k points 
+    *        debounce can be set  to false.
+    * @param {boolean} [options.displayParameterLabel=true] Setting to configure 
+    *        if parameter label box is always shown or is hidden and can be
+    *        opened with the cog symbol.
+    * @param {boolean} [options.displayColorscaleOptions=true] Setting to allow
+    *        adding colorscale as third dimensio nto rendered points
+    * @param {boolean} [options.displayAlphaOptions=true] Enable/disable
+    *        possibility to change alpha value for rendered parameters
+    * @param {boolean} [options.fixedSize=false] Enable/disable use of fixed 
+             size. Rendering is done for specific size not allowing resizing and 
+             not using margins in the extent of the axis. 
+    * @param {Number} [options.fixedWidth=1000] Width used when using fixed size 
+    *        rendering.
+    * @param {Number} [options.fixedHeight=500] Height used when using fixed
+             size rendering.
+    * @param {boolean} [options.autoColorExtent=false] Dynamically adapt color
+             extent for color range parameters
+    * @param {Object} [options.filterManager] Instanced filtermanager object to
+             connect to.
+    * @param {Object} [options.connectedGraph] Instanced graphly object to sync
+             x axis to.
+    * @param {boolean} [options.enableFit=true] Enable/disable fitting
+             functionality.
+    * @param {boolean} [options.logX=false] Use logarithmic scale for x axis.
+    * @param {boolean} [options.logY=false] Use logarithmic scale for left y axis.
+    * @param {boolean} [options.logY2=false] Use logarithmic scale for right y axis.
+    * @param {String} [options.colorAxisTickFormat='g'] d3 format string to use 
+             as default tick format.
+    * @param {Number} [options.defaultAlpha=0.9] Alpha value used as default
+    *        when rendering.
     *
     */
     constructor(options) {
@@ -630,6 +711,15 @@ class graphly extends EventEmitter {
                                 }
                             }
 
+                            /**
+                            * Fires when a point is selected in plot position
+                            * information if it was configured which parameter
+                            * is mapped to lat, lon and altitude.
+                            *
+                            * @event module:graphly.graphly#pointSelect
+                            * @property {Object} position - Object is passed 
+                            * containing Latitude, Longitude and Radius parameter.
+                            */
                             this.emit('pointSelect', {
                                 Latitude: lat,
                                 Longitude: lon,
@@ -717,6 +807,10 @@ class graphly extends EventEmitter {
         delete this.batchDrawerReference;
     }
 
+    /**
+    * Update used render settings without re-rendering
+    * @param {Object} settings See renderSettings description of graphly constructor.
+    */
     setRenderSettings(settings){
         this.renderSettings = defaultFor(settings, {});
 
@@ -739,16 +833,26 @@ class graphly extends EventEmitter {
         }
     }
 
+    /**
+    * Update used data settings without re-rendering
+    * @param {Object} settings See dataSettings description of graphly constructor.
+    */
     setDataSettings(settings){
         this.dataSettings = defaultFor(settings, {});
     }
 
+    /**
+    * Connect x axis of a scond graph to update when x axis of first graph is updated.
+    * @param {Object} graph graphly instance.
+    */
     connectGraph(graph){
         this.connectedGraph = graph;
     }
 
+    /**
+    * Save current plot as image opening save dialog for download.
+    */
     saveImage(){
-
         // We need to first render the canvas if the debounce active is false
         if(!this.debounceActive){
             this.renderCanvas.style('opacity','1');
@@ -1115,6 +1219,11 @@ class graphly extends EventEmitter {
             that.initAxis();
             that.renderData();
             that.createAxisLabels();
+            /**
+            * Event is fired When modifying a parameter for any of the 
+            * axis settings.
+            * @event module:graphly.graphly#axisChange
+            */
             that.emit('axisChange');
         },false);
         ySettingParameters.passedElement.addEventListener('removeItem', function(event) {
@@ -1481,17 +1590,24 @@ class graphly extends EventEmitter {
 
     }
 
+    /**
+    * Get currant canvas as data URI (using toDataURL).
+    * @return {DOMString} A DOMString containing the requested image data URI.
+    */
     getCanvasImage(){
         return this.renderCanvas.node().toDataURL();
     }
 
+    /**
+    * Get currant canvas node.
+    * @return {HTMLElement} Canvas DOM node element.
+    */
     getCanvas(){
         return this.renderCanvas.node();
     }
 
 
     createHelperObjects(){
-
         this.renderingContainer = this.svg.append('g')
             .attr('id','renderingContainer')
             .attr('fill', 'none')
@@ -1583,8 +1699,10 @@ class graphly extends EventEmitter {
     }
 
     
-
-
+    /**
+    * Load data from csv file.
+    * @param {String} url Path/url to csv file
+    */
     loadCSV(csv){
         let self = this;
         // Parse local CSV file
@@ -1692,6 +1810,12 @@ class graphly extends EventEmitter {
         }
     }
 
+    /**
+    * Load data from data object
+    * @param {Object} data Data object containing parameter identifier as keys and 
+             arrays of values as corresponding parameter. {'parId1': [1, 2, 3], 
+             'parId2': [0.6, 0.1, 3.2]}
+    */
     loadData(data){
         
         // Clean colorcache
@@ -2581,6 +2705,12 @@ class graphly extends EventEmitter {
         return rC;
     }
 
+
+    /**
+    * Resize graph
+    * @param {boolean} [debounce=true] Do not resize if consecutive resize calls
+    *        are being made. 
+    */
     resize(debounce){
         debounce = defaultFor(debounce, true);
         if(debounce){
@@ -3135,7 +3265,7 @@ class graphly extends EventEmitter {
     }
 
 
-     addApply() {
+    addApply() {
         if(!this.el.select('#applyButton').empty()){
             this.el.select('#applyButton').remove();
         }
@@ -3943,10 +4073,9 @@ class graphly extends EventEmitter {
 
 
     /**
-    * Render the colorscale to the specified canvas.
-    * @memberof module:plotty
-    * @param {String} name the name of the color scale to render
-    * @param {HTMLCanvasElement} canvas the canvas to render to
+    * Render the data as graph
+    * @param {boolean} [updateReferenceCanvas=true] Update the corresponding 
+    *        color reference canvas
     */
     renderData(updateReferenceCanvas) {
 
@@ -4124,7 +4253,10 @@ class graphly extends EventEmitter {
                 this.batchDrawerReference.draw();
             }
         }
-
+        /**
+        * Event is fired when graph has finished rendering plot.
+        * @event module:graphly.graphly#rendered
+        */
         this.emit('rendered');
     }
 

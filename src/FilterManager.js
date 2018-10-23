@@ -1,12 +1,64 @@
 
 
+/**
+* @typedef {Object} ChoiceObject
+* @property {Array.Object} options Array containing options objects with name
+*           and value keys. 
+* @property {Array.String} [selected] Index of selected option.
+*/
+
+/**
+* @typedef {Object} FilterSettings
+* @property [filterRelation] {Array.Array} Grouping of parameter ids as arrays
+         for parameters that are related and affected by the same filters.
+* @property [parameterMatrix] {Object} Possibility to combine parameters into
+*        merged parameter. Key of object contains new identifier for combined
+*        parameter, value is array of two parameter id string of the original 
+*        parameters
+* @property visibleFilters {Array.String} List of 
+*        parameter identifiers which shall be added as filter.
+* @property boolParameter {Array.String} List of 
+*        parameter identifiers of which the data is comprised of booleans.
+* @property maskParameter {Object.<string, Object>} 
+*        Object with parameter identifier as key and Object as value. Each
+*        object contains values as key and Array of 2 value arrays.
+*        First element is name, second value is description.
+* @property choiceParameter {Object.<String, ChoiceObject>} Choice object
+*        description for choice parameters
+* @property dataSettings {DataSettings}
+*        Object contains 'uom' (unit of measurement) with a string as value
+*        which is added to the parameter identifier label when rendered.
+*/
+
+
 require('./utils.js');
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
 const EventEmitter = require('events');
 
+
+/** The FilterManager class 
+* @memberof module:graphly
+* @fires module:graphly.FilterManager#filterChange
+* @fires module:graphly.FilterManager#removeFilter
+*/
 class FilterManager extends EventEmitter {
+
+ 
+    /**
+    * Create instance of FilterManager
+    * @constructor
+    * @param options {Object} Configuration of the Filter Manager.
+    * @param options.el {String} d3 selector identifer string.
+    * @param options.showCloseButtons {boolean} Optional, default false.
+    *        Add close icon for each filter.
+    * @param options.replaceUnderlines {boolean} Optional, default false.
+    *        Replace underlines  with spaces when showing parameter identifier
+    *        as labels.
+    * @param options.filterSettings {FilterSettings} Optional additional Filter 
+    *        Settings.
+    */
 
     constructor(params) {
         super();
@@ -36,6 +88,9 @@ class FilterManager extends EventEmitter {
         }
     }
 
+    /**
+    * Initialize various objects of class
+    */
     initManager(){
         this.filters = {};
         this.brushes = {};
@@ -44,6 +99,9 @@ class FilterManager extends EventEmitter {
         this.boolFilStat = {};
     }
 
+    /**
+    * Reset all filters
+    */
     resetManager(){
         this.initManager();
         this.emit('filterChange', {});
@@ -263,6 +321,13 @@ class FilterManager extends EventEmitter {
         div.append('div')
             .attr('class', 'labelClose cross')
             .on('click', ()=>{
+                /**
+                * When close buttons are shown event is fired with 
+                * parameter identifier when close button is clicked.
+                *
+                * @event module:graphly.FilterManager#removeFilter
+                * @property {String} id - Provides identifier of parameter
+                */
                 this.emit('removeFilter', d);
             });
 
@@ -427,6 +492,13 @@ class FilterManager extends EventEmitter {
         var filters = Object.assign(
             {}, this.filters, this.boolFilters, this.maskFilters
         );
+        /**
+        * Event fired When any filter is changed.
+
+        * @event module:graphly.FilterManager#filterChange
+        * @property {Object} filters - object containing parameter identifier as key
+        * and filter function as value. 
+        */
         this.emit('filterChange', filters);
         this._renderFilters();
         /*var cEv = new CustomEvent('change', {detail: filters});
@@ -732,26 +804,49 @@ class FilterManager extends EventEmitter {
 
     }
 
+    /**
+    * Set the node where the manager shall be rendered to after instanziation.
+    * @param {String} el d3 selector identifer string.
+    */
     setRenderNode(el){
         this.el = d3.select(el);
         this._renderFilters();
     }
 
+    /**
+    * Set the node where the manager shall be rendered to after instanziation.
+    * @return {Object} html node where FilterManager is being rendered to.
+    */
     getNode(){
         return this.el.node();
     }
 
+    /**
+    * Load data to be used for creation of filter panels
+    * @param {Object} data Object containing parameter id as key and array of values 
+    *        as value. 
+    */
     loadData(data){
         this.data = data;
         this._initData();
         this._renderFilters();
     }
 
+    /**
+    * Update used filter settings and re-render
+    * @param {Object} settings See filterSettings description of Filter Manager 
+    *        constructor.
+    */
     updateFilterSettings(settings){
         this.filterSettings = settings;
         this._renderFilters();
     }
 
+    /**
+    * Update used data settings and re-render
+    * @param {Object} settings See dataSettings description of Filter Manager 
+    *        constructor.
+    */
     updateDataSettings(settings){
         this.dataSettings = settings;
         this._renderFilters();
