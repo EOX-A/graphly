@@ -38,8 +38,20 @@ Just include script to site and add a canvas element where you want to render th
 
 and render using predefined settings:
 ```javascript
-var graph = new plotty.graph({
+var graph = new graphly.graphly({
+	el: '#graph',
+    renderSettings: {
+    	xAxis: 'parameter1',
+    	yAxis: ['parameter2', 'parameter3'],
+    	y2Axis: ['parameter4']
+    }
+});
 
+graph.loadData({
+	parameter1: [1, 2, 3, 4],
+	parameter2: [0.1, 0.2, 0.3, 0.4],
+	parameter3: [0.4, 0.3, 0.2, 0.1],
+	parameter4: [150, 100, 120, 130]
 });
 
 ```
