@@ -2192,14 +2192,25 @@ class graphly extends EventEmitter {
                 .call(this.y2Axis);
         }
 
+        let maxzoomout = 0;
+        let xSel = this.renderSettings.xAxis;
+        if(this.dataSettings.hasOwnProperty(xSel) &&
+           this.dataSettings[xSel].hasOwnProperty('periodic') ){
+            let period = this.dataSettings[xSel].periodic.period;
+            let xd = this.xScale.domain();
+            maxzoomout = Math.abs(xd[1]-xd[0])/period;
+        }
+
         // Define zoom behaviour based on parameter dependend x and y scales
         this.xyzoom = d3.behavior.zoom()
           .x(this.xScale)
           .y(this.yScale)
+          .scaleExtent([maxzoomout,Infinity])
           .on('zoom', this.previewZoom.bind(this));
 
         this.xzoom = d3.behavior.zoom()
           .x(this.xScale)
+          .scaleExtent([maxzoomout,Infinity])
           .on('zoom', this.previewZoom.bind(this));
 
 
@@ -2233,12 +2244,24 @@ class graphly extends EventEmitter {
 
 
     zoom_update() {
+
+        let maxzoomout = 0;
+        let xSel = this.renderSettings.xAxis;
+        if(this.dataSettings.hasOwnProperty(xSel) &&
+           this.dataSettings[xSel].hasOwnProperty('periodic') ){
+            let period = this.dataSettings[xSel].periodic.period;
+            let xd = this.xScale.domain();
+            maxzoomout = Math.abs(xd[1]-xd[0])/period;
+        }
+
         this.xyzoom = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScale)
+            .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this));
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
+            .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this));
         this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
@@ -2350,23 +2373,6 @@ class graphly extends EventEmitter {
 
     previewZoom() {
 
-        // Zooming out
-        let nonUnScale = false;
-        if(d3.event.scale < 1){
-            let xSel = this.renderSettings.xAxis;
-            // Check if we have a periodic scale where we have to limit zoom out
-            if(this.dataSettings.hasOwnProperty(xSel) &&
-               this.dataSettings[xSel].hasOwnProperty('periodic') ){
-                let period = this.dataSettings[xSel].periodic.period;
-                let xdom = this.xScale.domain();
-                if(xdom[1]-xdom[0] >= period){
-                    this.xzoom.scale(1);
-                    this.xzoom.translate([0,0]);
-                    nonUnScale = true;
-                }
-            }
-        }
-
         this.topSvg.selectAll('.temporary').remove();
         this.tooltip.style('display', 'none');
 
@@ -2413,7 +2419,6 @@ class graphly extends EventEmitter {
             }
             this.y2AxisSvg.call(this.y2Axis);
         }
-        
 
         this.topSvg.selectAll('.highlightItem').remove();
 
@@ -2436,18 +2441,10 @@ class graphly extends EventEmitter {
 
 
             if(xyScale!==1.0){
-                if(!nonUnScale){
-                    this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                    transXY + ')scale(' + xyScale + ')');
-                    this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                    transXY + ')scale(' + xyScale + ')');
-                } else {
-                    transXY[0] = 0;
-                    this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                    transXY + ')scale(' + [1,xyScale] + ')');
-                    this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                    transXY + ')scale(' + [1,xyScale] + ')');
-                }
+                this.svg.select('#previewImage').attr('transform', 'translate(' + 
+                transXY + ')scale(' + xyScale + ')');
+                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
+                transXY + ')scale(' + xyScale + ')');
             }else if(xScale !== 1.0){
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
                 [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
@@ -2455,10 +2452,10 @@ class graphly extends EventEmitter {
                 [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
             }else if(yScale !== 1.0){
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [0.0, transY[1.0]] + ')scale(' + [1.0, yScale] + ')');
+                [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
             }else if(y2Scale !== 1.0){
                 this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [0.0, transY2[1.0]] + ')scale(' + [1.0, y2Scale] + ')');
+                [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
             }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
                 transXY + ')scale(1)');
@@ -2476,6 +2473,7 @@ class graphly extends EventEmitter {
                 this.svg.select('#previewImage2').attr('transform', 'translate(' + 
                 [0.0, transY2[1.0]] + ')scale(1)');
             }
+
 
         }else{
             this.debounceZoom.bind(this)();
@@ -3311,9 +3309,57 @@ class graphly extends EventEmitter {
             yScale = this.y2Scale;
         }
 
+        let x, y, valX, valY;
+
+        // Check if cyclic axis and if currently displayed axis range needs to
+        // offset to be shown in "next cycle" above or below
+        let xMax, xMin, period, xoffset;
+        let yMax = yScale.domain()[1];
+        let yMin = yScale.domain()[0];
+
+        let xperiodic = false;
+        if(this.dataSettings.hasOwnProperty(xAxis) && 
+           this.dataSettings[xAxis].hasOwnProperty('periodic')){
+            xoffset = defaultFor(
+                this.dataSettings[xAxis].periodic.offset, 0
+            );
+            xperiodic = true;
+            period = this.dataSettings[xAxis].periodic.period;
+            xMax = this.xScale.domain()[1]-xoffset;
+            xMin = this.xScale.domain()[0]+xoffset;
+
+        }
+
+        let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
+
         for (let j=0;j<lp; j++) {
 
-            let x = this.xScale(data[xAxis][j]);
+            valX = data[xAxis][j];
+            // Manipulate value if we have a periodic parameter
+            if(xperiodic){
+                let shiftpos = Math.abs(parseInt(xMax/period));
+                let shiftneg = Math.abs(parseInt(xMin/period));
+                if(xoffset===0){
+                    shiftneg = Math.abs(Math.floor(xMin/period));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valX = valX + shift*period;
+                    if(valX-xoffset > xMax){
+                        valX -= period;
+                    }
+                    if(valX+xoffset < xMin){
+                        valX += period;
+                    }
+                    
+                }
+            }
+            x = this.xScale(valX);
+
             let y = yScale(data[yAxis][j]);
             let rC = [0.5, 0.5, 0.5];
 
@@ -3356,7 +3402,7 @@ class graphly extends EventEmitter {
                     }
                     var sym = defaultFor(dotType[symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.2
+                        x, y, dotsize, sym, rC[0], rC[1], rC[2], 0.2
                     );
                 }
             }
