@@ -39,6 +39,11 @@
 *           using value MJD2000_S.
 * @property {String} [displayName] String to use for labels instead of parameter
 *           id.
+* @property {Object} [periodic] Can be set when parameter has periodic pattern.
+            The object must have the 'period' value and can have a possible
+            offset. For example longitude values from -180 to 180 would have 360
+            as period and -180 as offset. Default offset value is 0.
+        }
 */
 
 /**
