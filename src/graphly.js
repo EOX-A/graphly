@@ -2210,12 +2210,12 @@ class graphly extends EventEmitter {
         this.xyzoom = d3.behavior.zoom()
           .x(this.xScale)
           .y(this.yScale)
-          .scaleExtent([maxzoomout,Infinity])
+          //.scaleExtent([maxzoomout,Infinity])
           .on('zoom', this.previewZoom.bind(this));
 
         this.xzoom = d3.behavior.zoom()
           .x(this.xScale)
-          .scaleExtent([maxzoomout,Infinity])
+          //.scaleExtent([maxzoomout,Infinity])
           .on('zoom', this.previewZoom.bind(this));
 
 
@@ -2259,7 +2259,7 @@ class graphly extends EventEmitter {
             maxzoomout = Math.abs(xd[1]-xd[0])/period;
         }
 
-        this.xyzoom = d3.behavior.zoom()
+        /*this.xyzoom = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScale)
             .scaleExtent([maxzoomout,Infinity])
@@ -2273,18 +2273,18 @@ class graphly extends EventEmitter {
             .on('zoom', this.previewZoom.bind(this));
         this.y2zoom = d3.behavior.zoom()
             .y(this.y2Scale)
-            .on('zoom', this.previewZoom.bind(this));
+            .on('zoom', this.previewZoom.bind(this));*/
 
-        this.renderCanvas.call(this.xyzoom);
+        /*this.renderCanvas.call(this.xyzoom);
         this.el.select('#zoomXBox').call(this.xzoom);
         this.el.select('#zoomYBox').call(this.yzoom);
-        this.el.select('#zoomY2Box').call(this.y2zoom);
+        this.el.select('#zoomY2Box').call(this.y2zoom);*/
 
 
     }
 
     onZoom() {
-        this.zoom_update();
+        //this.zoom_update();
         this.renderData();
     }
 
@@ -2396,6 +2396,9 @@ class graphly extends EventEmitter {
         if(this.renderSettings.yAxis.length > 0){
             this.yAxisSvg.call(this.yAxis);
         }
+        if(this.renderSettings.y2Axis.length > 0){
+            this.y2AxisSvg.call(this.y2Axis);
+        }
 
         this.addTimeInformation();
 
@@ -2417,7 +2420,9 @@ class graphly extends EventEmitter {
         let transY2 = this.y2zoom.translate();
 
         if(this.renderSettings.y2Axis.length > 0){
-            if(transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1){
+            if(transXY[0] !== this.transXYRendered[0] || 
+               transXY[1] !== this.transXYRendered[1] || 
+               xyScale !== this.xyScaleRendered){
                 this.y2zoom
                     .scale(xyScale)
                     .translate(transXY);
@@ -2428,55 +2433,105 @@ class graphly extends EventEmitter {
         this.topSvg.selectAll('.highlightItem').remove();
 
         if(this.debounceActive){
-
+            let newscale, newtrans;
             this.debounceZoom.bind(this)();
 
             if(!this.previewActive){
                 this.renderCanvas.style('opacity','0');
-                this.oSc = this.currentScale;
-                this.oTr = this.currentTranlate;
-                this.oT = [
-                    d3.event.translate[0]/d3.event.scale,
-                    d3.event.translate[1]/d3.event.scale,
-                ];
                 this.previewActive = true;
                 this.svg.select('#previewImage').style('display', 'block');
                 this.svg.select('#previewImage2').style('display', 'block');
             }
 
-
-            if(xyScale!==1.0){
+            if(xyScale!==this.xyScaleRendered){
+                /*this.yzoom.scale(xyScale).translate(transXY);
+                this.y2zoom.scale(xyScale).translate(transXY);*/
+                newscale = (xyScale/this.xyScaleRendered);
+                newtrans = [
+                    ( transXY[0]/xyScale - this.transXYRendered[0]/
+                        this.xyScaleRendered )*xyScale,
+                    ( transXY[1]/xyScale - this.transXYRendered[1]/
+                        this.xyScaleRendered )*xyScale,
+                ];
+                this.svg.select('#previewImage')
+                    .attr('transform', 
+                        'translate(' + newtrans + ')'+
+                        'scale(' +     newscale + ')'
+                    );
+                this.svg.select('#previewImage2')
+                    .attr('transform', 
+                        'translate(' + newtrans + ')'+
+                        'scale(' +     newscale + ')'
+                    );
+            }else if(xScale !== this.xScaleRendered){
+                newscale = (xScale/this.xScaleRendered);
+                newtrans = (
+                    transX[0]/xScale -
+                    this.transXRendered[0]/this.xScaleRendered
+                )*xScale;
+                this.svg.select('#previewImage')
+                    .attr('transform', 
+                        'translate(' + [newtrans, 0.0] + ')'+
+                        'scale(' +     [newscale, 1.0] + ')'
+                    );
+                this.svg.select('#previewImage2')
+                    .attr('transform', 
+                        'translate(' + [newtrans, 0.0] + ')'+
+                        'scale(' +     [newscale, 1.0] + ')'
+                    );
+            }else if(yScale !== this.yScaleRendered){
+                newscale = (yScale/this.yScaleRendered);
+                newtrans = (
+                    transY[1]/yScale -
+                    this.transYRendered[1]/this.yScaleRendered
+                )*yScale;
+                this.svg.select('#previewImage')
+                    .attr('transform', 
+                        'translate(' + [0.0, newtrans] + ')'+
+                        'scale(' +     [1.0, newscale] + ')'
+                    );
+            }else if(y2Scale !== this.y2ScaleRendered){
+                newscale = (y2Scale/this.y2ScaleRendered);
+                newtrans = (
+                    transY2[1]/y2Scale -
+                    this.transY2Rendered[1]/this.y2ScaleRendered
+                )*y2Scale;
+                this.svg.select('#previewImage2')
+                    .attr('transform', 
+                        'translate(' + [0.0, newtrans] + ')'+
+                        'scale(' +     [1.0, newscale] + ')'
+                    );
+            }else if(transXY[0]!==this.transXYRendered[0] ||
+                     transXY[1]!==this.transXYRendered[1]){
+                //this.yzoom.translate(transXY);
+                /*this.xzoom.translate([transXY[0], this.transXRendered[1]]);
+                this.yzoom.translate([this.transYRendered[0], transXY[1]]);
+                this.y2zoom.translate([this.transY2Rendered[0], transXY[1]]);*/
+                newtrans = [
+                    (transXY[0] - this.transXYRendered[0]),
+                    (transXY[1] - this.transXYRendered[1]),
+                ];
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                transXY + ')scale(' + xyScale + ')');
+                newtrans + ')');
                 this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                transXY + ')scale(' + xyScale + ')');
-            }else if(xScale !== 1.0){
+                newtrans + ')');
+            }else if(transX[0]!==this.transXRendered[0]){
+                //this.xyzoom.translate([transX[0], this.transXYRendered[1]]);
+                newtrans = (transX[0] - this.transXRendered[0]);
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
+                [newtrans, 0.0] + ')');
                 this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
-            }else if(yScale !== 1.0){
+                [newtrans, 0.0] + ')');
+            }else if(transY[1]!==this.transYRendered[1]){
+                //this.xyzoom.translate(transY);
+                newtrans = (transY[1] - this.transYRendered[1]);
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
-            }else if(y2Scale !== 1.0){
+                [0.0, newtrans] + ')');
+            }else if(transY2[1]!==this.transY2Rendered[1]){
+                //this.xyzoom.translate([this.transXYRendered[0], transY2[1]]);
+                newtrans = (transY2[1] - this.transY2Rendered[1]);
                 this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
-            }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                transXY + ')scale(1)');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                transXY + ')scale(1)');
-            }else if(transX[0]!==0.0 || transX[1] !==0.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(1)');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(1)');
-            }else if(transY[0]!==0.0 || transY[1] !==0.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [0.0, transY[1.0]] + ')scale(1)');
-            }else if(transY2[0]!==0.0 || transY2[1] !==0.0){
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [0.0, transY2[1.0]] + ')scale(1)');
+                [0.0, newtrans] + ')');
             }
 
 
@@ -2794,7 +2849,7 @@ class graphly extends EventEmitter {
         this.batchDrawer.updateCanvasSize(this.width, this.height);
         this.batchDrawerReference.updateCanvasSize(this.width, this.height);
         this.renderData();
-        this.zoom_update();
+        //this.zoom_update();
     }
 
 
@@ -2883,7 +2938,7 @@ class graphly extends EventEmitter {
         this.batchDrawer.updateCanvasSize(this.width, this.height);
         this.batchDrawerReference.updateCanvasSize(this.width, this.height);
         this.renderData();
-        this.zoom_update();
+        //this.zoom_update();
         //this.createHelperObjects();
     }
 
@@ -4422,6 +4477,17 @@ class graphly extends EventEmitter {
                 this.batchDrawerReference.draw();
             }
         }
+
+        this.xScaleRendered = this.xzoom.scale();
+        this.yScaleRendered = this.yzoom.scale();
+        this.y2ScaleRendered = this.y2zoom.scale();
+        this.xyScaleRendered = this.xyzoom.scale();
+
+        this.transXRendered = this.xzoom.translate();
+        this.transXYRendered = this.xyzoom.translate();
+        this.transYRendered= this.yzoom.translate();
+        this.transY2Rendered = this.y2zoom.translate();
+
         /**
         * Event is fired when graph has finished rendering plot.
         * @event module:graphly.graphly#rendered
