@@ -188,6 +188,7 @@ class graphly extends EventEmitter {
         this.colorCache = {};
         this.defaultAlpha = defaultFor(options.defaultAlpha, 0.9);
         this.ignoreParameters = defaultFor(options.ignoreParameters, []);
+        this.resFactor = 1;
 
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
@@ -858,11 +859,61 @@ class graphly extends EventEmitter {
     /**
     * Save current plot as image opening save dialog for download.
     */
-    saveImage(){
+    saveImage(resFactor){
+
+        this.resFactor = defaultFor(resFactor, 1);
+
+        if (this.resFactor !== 1){
+
+            this.batchDrawer.updateCanvasSize(
+                this.width*this.resFactor, this.height*this.resFactor
+            );
+            this.renderCanvas.style('width', this.width+'px');
+            this.renderCanvas.style('height', this.height+'px');
+
+            this.xScale.range([0, this.width*this.resFactor]);
+            this.yScale.range([this.height*this.resFactor, 0]);
+
+            let xAxRen = this.renderSettings.xAxis;
+            let yAxRen = this.renderSettings.yAxis;
+            let y2AxRen = this.renderSettings.y2Axis;
+
+            let idX = xAxRen;
+
+            for (let parPos=0; parPos<yAxRen.length; parPos++){
+
+                let idY = yAxRen[parPos];
+                let idCS = this.renderSettings.colorAxis[parPos];
+
+                this.renderParameter(
+                    idX, idY, idCS, this.renderSettings.yAxis,
+                    parPos, this.currentData, this.currentInactiveData, false
+                );
+            }
+
+            for (let parPos=0; parPos<y2AxRen.length; parPos++){
+
+                let idY2 = y2AxRen[parPos];
+                let idCS = this.renderSettings.colorAxis[
+                    this.renderSettings.yAxis.length + parPos
+                ];
+                
+                this.renderParameter(
+                    idX, idY2, idCS, this.renderSettings.y2Axis,
+                    parPos, this.currentData, this.currentInactiveData, false
+                );
+            }
+
+            this.batchDrawer.draw();
+        }
+
         // We need to first render the canvas if the debounce active is false
-        if(!this.debounceActive){
+        if(!this.debounceActive || this.resFactor !== 1){
+
+            //TODO: output image not generated correctly when debounce is active
             this.renderCanvas.style('opacity','1');
             let prevImg = this.el.select('#previewImage');
+
             let img = this.renderCanvas.node().toDataURL();
             if(!prevImg.empty()){
                 prevImg.attr('xlink:href', img)
@@ -937,8 +988,8 @@ class graphly extends EventEmitter {
     createOutputPNG(){
 
         this.dim = this.el.select('svg').node().getBoundingClientRect();
-        let renderWidth = this.dim.width;
-        let renderHeight = this.dim.height;
+        let renderWidth = this.dim.width * this.resFactor;
+        let renderHeight = this.dim.height * this.resFactor;
 
         var svg_html = this.el.select('svg')
             .attr("version", 1.1)
@@ -965,6 +1016,9 @@ class graphly extends EventEmitter {
         c.toBlob((blob)=> {
             FileSaver.saveAs(blob, this.fileSaveString);
         }, "image/png" ,1);
+
+        this.resFactor = 1;
+        this.resize();
     }
 
     addTextMouseover(text){
@@ -2764,6 +2818,11 @@ class graphly extends EventEmitter {
     *        are being made. 
     */
     resize(debounce){
+
+        // Clear possible canvas styles
+        this.renderCanvas.style('width', null);
+        this.renderCanvas.style('height', null);
+
         debounce = defaultFor(debounce, true);
         if(debounce){
             this.debounceResize.bind(this)();
@@ -3131,6 +3190,7 @@ class graphly extends EventEmitter {
         }
 
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
+        dotsize *= this.resFactor;
         
         for (let j=0;j<lp; j++) {
 
@@ -3262,7 +3322,7 @@ class graphly extends EventEmitter {
                             // as some datasets loop and it looks messy
                             if(x-p_x>-this.width/2){
                                 this.batchDrawer.addLine(
-                                    p_x, p_y, x, y, 1.5, 
+                                    p_x, p_y, x, y, (1.5*this.resFactor),
                                     rC[0], rC[1], rC[2], rC[3]
                                 );
                             }
@@ -3272,7 +3332,7 @@ class graphly extends EventEmitter {
                         // as some datasets loop and it looks messy
                         if(x-p_x>-this.width/2){
                             this.batchDrawer.addLine(
-                                p_x, p_y, x, y, 1.5, 
+                                p_x, p_y, x, y, (1.5*this.resFactor),
                                 rC[0], rC[1], rC[2], rC[3]
                             );
                         }
@@ -3336,6 +3396,7 @@ class graphly extends EventEmitter {
         }
 
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
+        dotsize *= this.resFactor;
 
         for (let j=0;j<lp; j++) {
 
