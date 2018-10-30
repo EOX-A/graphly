@@ -37,8 +37,8 @@ var renderSettings_ray = {
 };
 
 var renderSettingsSwarm = {
-    xAxis: 'MLT',
-    yAxis: ['B_NEC_resAC_N'],
+    xAxis: 'Longitude',
+    yAxis: ['Latitude'],
     //y2Axis: ['F_res_IGRF12'],
     colorAxis: [null],
     /*dataIdentifier: {
@@ -150,8 +150,17 @@ var otherds = {
         scaleType: 'ordinal',
         categories: ['Alpha', 'Bravo']
     },
-    Latitude: {
-
+    MLT: {
+        periodic: {
+            period: 24,
+            offset: 0
+        }
+    },
+    Longitude: {
+        periodic: {
+            period: 360,
+            offset: -180
+        }
     },
 
 
@@ -340,7 +349,8 @@ var renderSettings = {
     ],
     //y2Axis: [],
     combinedParameters: {
-        mie_latitude: ['mie_latitude_start', 'mie_latitude_end'],
+        mie_latitude: ['latitude_of_DEM_intersection_start', 'latitude_of_DEM_intersection_end'],
+        mie_longitude: ['mie_longitude_start', 'mie_longitude_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top'],
         latitude_of_DEM_intersection: [
             'latitude_of_DEM_intersection_start',
@@ -348,7 +358,12 @@ var renderSettings = {
         ],
         time: ['mie_datetime_start', 'mie_datetime_end'],
     },
-    colorAxis: ['mie_wind_velocity']
+    colorAxis: ['mie_wind_velocity'],
+    positionAlias: {
+        'latitude': 'mie_latitude',
+        'longitude': 'mie_longitude',
+        'altitude': 'mie_altitude'
+    }
 
 };
 
@@ -384,6 +399,29 @@ var dataSettings = {
         uom: 'm'
     }
 
+};
+
+var testbed14RS = {
+    xAxis: 'time',
+    yAxis: [
+        'altitude'
+    ],
+    combinedParameters: {
+        altitude: ['altitude_end', 'altitude_start'],
+        time: ['time_start', 'time_end'],
+    },
+    colorAxis: ['CPR_Cloud_mask']
+
+};
+
+var testbed14DS = {
+
+    CPR_Cloud_mask: {
+        uom: null,
+        colorscale: 'viridis',
+        //extent: [-140,39]
+        //outline: false
+    }
 };
 
 var filterSettings = {
@@ -448,11 +486,11 @@ var filterManager = new FilterManager({
 
 var graph = new graphly.graphly({
     el: '#graph',
-    dataSettings: ds_mie,
-    renderSettings: renderSettings_mie,
+    dataSettings: otherds,
+    renderSettings: renderSettingsSwarm,
     filterManager: filterManager,
-    ignoreParameters: [/mie_quality_fl.*/]
-    //debounceActive: true,
+    //ignoreParameters: [/mie_quality_fl.*/]
+    debounceActive: true,
     //enableFit: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false
@@ -503,8 +541,9 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-//xhr.open('GET', 'data/test1D.mp', true);
-xhr.open('GET', 'data/aeolus_L1.mp', true);
+//xhr.open('GET', 'data/aeolus_L1.mp', true);
+//xhr.open('GET', 'data/testbed14.mp', true);
+xhr.open('GET', 'data/swarm.mp', true);
 
 xhr.responseType = 'arraybuffer';
 
@@ -572,7 +611,7 @@ xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
     var data = msgpack.decode(tmp);
 
-    /*var ids = {
+    var ids = {
       'A': 'Alpha',
       'B': 'Bravo',
       'C': 'Charlie',
@@ -595,9 +634,9 @@ xhr.onload = function(e) {
         data['B_NEC_resAC_C'].push(data.B_NEC_resAC[i][2]); 
     }
 
-    graph.loadData(data);*/
+    graph.loadData(data);
 
-    var ds = data.ALD_U_N_1B[0];
+    /*var ds = data.ALD_U_N_1B[0];
 
     var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
     var mie_HLOS_wind_speed = flattenObservationArray(ds.mie_HLOS_wind_speed);
@@ -619,7 +658,8 @@ xhr.onload = function(e) {
       mie_altitude_top: mie_altitude[0],
       mie_altitude_bottom: mie_altitude[1],
       geoid_separation: geoid_separation[0]
-    };
+    };*/
+
 
 
     filterManager.initManager();
@@ -642,7 +682,7 @@ d3.select('#datafiles').on('change', function(e){
     var sel_value = sel.options[sel.selectedIndex].value;
 
     
-    graph.setDataSettings(otherds);
+    graph.setDataSettings(testbed14);
     usesecond = false;
     graph.connectGraph(false);
    // graph2.connectGraph(false);

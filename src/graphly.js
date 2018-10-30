@@ -39,6 +39,11 @@
 *           using value MJD2000_S.
 * @property {String} [displayName] String to use for labels instead of parameter
 *           id.
+* @property {Object} [periodic] Can be set when parameter has periodic pattern.
+            The object must have the 'period' value and can have a possible
+            offset. For example longitude values from -180 to 180 would have 360
+            as period and -180 as offset. Default offset value is 0.
+        }
 */
 
 /**
@@ -482,7 +487,7 @@ class graphly extends EventEmitter {
                             u.addSymbol( 
                                 self.topSvg, nodeId.symbol, '#00ff00',
                                 {x: nodeId.x.coord, y: nodeId.y.coord},
-                                3.0, 13.0, 'temporary'
+                                3.0, nodeId.dotsize, 'temporary'
                             );
                         }
                     }
@@ -557,7 +562,8 @@ class graphly extends EventEmitter {
                             }
                             u.addSymbol( 
                                 self.topSvg, nodeId.symbol, '#00ff00',
-                                {x: nodeId.x.coord, y: nodeId.y.coord}, 4.0, 13.0
+                                {x: nodeId.x.coord, y: nodeId.y.coord}, 4.0,
+                                nodeId.dotsize
                             );
                         }
                     }
@@ -2130,6 +2136,31 @@ class graphly extends EventEmitter {
         if(this.xTimeScale){
             this.xAxis.tickFormat(u.getCutomUTCTimeTickFormat());
         }
+        // Check if axis is using periodic parameter
+        let tickformat = d3.format('g');
+        if(this.dataSettings.hasOwnProperty(xSelection) && 
+           this.dataSettings[xSelection].hasOwnProperty('periodic')){
+
+            this.xAxis.tickFormat((d,i)=>{
+                let offset = defaultFor(
+                    this.dataSettings[xSelection].periodic.offset, 0
+                );
+                let period = this.dataSettings[xSelection].periodic.period;
+
+                let dm = d-offset;
+                if(d<0){
+                    dm = d-offset;
+                }
+                let offsetAmount = Math.floor(dm/period);
+                if(dm%period !== 0){
+                    d -= offsetAmount*period;
+                    d = tickformat(d.toFixed(10));
+                } else {
+                    d = tickformat(period+offset)+' / '+tickformat(offset);
+                }
+                return d;
+            });
+        }
 
         this.yAxis = d3.svg.axis()
             .scale(this.yScale)
@@ -2166,14 +2197,25 @@ class graphly extends EventEmitter {
                 .call(this.y2Axis);
         }
 
+        let maxzoomout = 0;
+        let xSel = this.renderSettings.xAxis;
+        if(this.dataSettings.hasOwnProperty(xSel) &&
+           this.dataSettings[xSel].hasOwnProperty('periodic') ){
+            let period = this.dataSettings[xSel].periodic.period;
+            let xd = this.xScale.domain();
+            maxzoomout = Math.abs(xd[1]-xd[0])/period;
+        }
+
         // Define zoom behaviour based on parameter dependend x and y scales
         this.xyzoom = d3.behavior.zoom()
           .x(this.xScale)
           .y(this.yScale)
+          .scaleExtent([maxzoomout,Infinity])
           .on('zoom', this.previewZoom.bind(this));
 
         this.xzoom = d3.behavior.zoom()
           .x(this.xScale)
+          .scaleExtent([maxzoomout,Infinity])
           .on('zoom', this.previewZoom.bind(this));
 
 
@@ -2207,12 +2249,24 @@ class graphly extends EventEmitter {
 
 
     zoom_update() {
+
+        let maxzoomout = 0;
+        let xSel = this.renderSettings.xAxis;
+        if(this.dataSettings.hasOwnProperty(xSel) &&
+           this.dataSettings[xSel].hasOwnProperty('periodic') ){
+            let period = this.dataSettings[xSel].periodic.period;
+            let xd = this.xScale.domain();
+            maxzoomout = Math.abs(xd[1]-xd[0])/period;
+        }
+
         this.xyzoom = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScale)
+            .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this));
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
+            .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this));
         this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
@@ -2370,8 +2424,6 @@ class graphly extends EventEmitter {
             }
             this.y2AxisSvg.call(this.y2Axis);
         }
-        
-
 
         this.topSvg.selectAll('.highlightItem').remove();
 
@@ -2398,7 +2450,6 @@ class graphly extends EventEmitter {
                 transXY + ')scale(' + xyScale + ')');
                 this.svg.select('#previewImage2').attr('transform', 'translate(' + 
                 transXY + ')scale(' + xyScale + ')');
-                
             }else if(xScale !== 1.0){
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
                 [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
@@ -2406,10 +2457,10 @@ class graphly extends EventEmitter {
                 [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
             }else if(yScale !== 1.0){
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [0.0, transY[1.0]] + ')scale(' + [1.0, yScale] + ')');
+                [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
             }else if(y2Scale !== 1.0){
                 this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [0.0, transY2[1.0]] + ')scale(' + [1.0, y2Scale] + ')');
+                [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
             }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
                 this.svg.select('#previewImage').attr('transform', 'translate(' + 
                 transXY + ')scale(1)');
@@ -2427,6 +2478,7 @@ class graphly extends EventEmitter {
                 this.svg.select('#previewImage2').attr('transform', 'translate(' + 
                 [0.0, transY2[1.0]] + ')scale(1)');
             }
+
 
         }else{
             this.debounceZoom.bind(this)();
@@ -3059,6 +3111,27 @@ class graphly extends EventEmitter {
             }
         }
 
+        // Check if cyclic axis and if currently displayed axis range needs to
+        // offset to be shown in "next cycle" above or below
+        let xMax, xMin, period, xoffset;
+        let yMax = yScale.domain()[1];
+        let yMin = yScale.domain()[0];
+
+        let xperiodic = false;
+        if(this.dataSettings.hasOwnProperty(xAxis) && 
+           this.dataSettings[xAxis].hasOwnProperty('periodic')){
+            xoffset = defaultFor(
+                this.dataSettings[xAxis].periodic.offset, 0
+            );
+            xperiodic = true;
+            period = this.dataSettings[xAxis].periodic.period;
+            xMax = this.xScale.domain()[1]-xoffset;
+            xMin = this.xScale.domain()[0]+xoffset;
+
+        }
+
+        let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
+        
         for (let j=0;j<lp; j++) {
 
             let x, y, valX, valY;
@@ -3070,11 +3143,37 @@ class graphly extends EventEmitter {
                 if(this.timeScales.indexOf(xGroup[0])!==-1){
                     valX = new Date(
                         data[xGroup[0]][j].getTime() +
-                        (data[xGroup[1]][j].getTime() - data[xGroup[0]][j].getTime())/2
+                        (
+                            data[xGroup[1]][j].getTime()-
+                            data[xGroup[0]][j].getTime()
+                        )/2
                     );
                 } else {
                     valX = data[xGroup[0]][j] +
                          (data[xGroup[1]][j] - data[xGroup[0]][j])/2;
+                }
+            }
+            // Manipulate value if we have a periodic parameter
+            if(xperiodic){
+                let shiftpos = Math.abs(parseInt(xMax/period));
+                let shiftneg = Math.abs(parseInt(xMin/period));
+                if(xoffset===0){
+                    shiftneg = Math.abs(Math.floor(xMin/period));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valX = valX + shift*period;
+                    if(valX-xoffset > xMax){
+                        valX -= period;
+                    }
+                    if(valX+xoffset < xMin){
+                        valX += period;
+                    }
+                    
                 }
             }
             x = this.xScale(valX);
@@ -3093,6 +3192,7 @@ class graphly extends EventEmitter {
                          (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
                 }
             }
+
             y =  yScale(valY);
             
             // If render settings uses colorscale axis get color from there
@@ -3182,15 +3282,17 @@ class graphly extends EventEmitter {
                 if(!parSett.hasOwnProperty('symbol')){
                     parSett.symbol = 'circle';
                 }
+                par_properties.dotsize = dotsize;
+
                 if(parSett.symbol !== null && parSett.symbol !== 'none'){
                     par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], rC[3]
+                        x, y, dotsize, sym, rC[0], rC[1], rC[2], rC[3]
                     );
                     if(!this.fixedSize && updateReferenceCanvas){
                         this.batchDrawerReference.addDot(
-                            x, y, DOTSIZE, sym, nCol[0], nCol[1], nCol[2], -1.0
+                            x, y, dotsize, sym, nCol[0], nCol[1], nCol[2], -1.0
                         );
                     }
                 }
@@ -3212,9 +3314,57 @@ class graphly extends EventEmitter {
             yScale = this.y2Scale;
         }
 
+        let x, y, valX, valY;
+
+        // Check if cyclic axis and if currently displayed axis range needs to
+        // offset to be shown in "next cycle" above or below
+        let xMax, xMin, period, xoffset;
+        let yMax = yScale.domain()[1];
+        let yMin = yScale.domain()[0];
+
+        let xperiodic = false;
+        if(this.dataSettings.hasOwnProperty(xAxis) && 
+           this.dataSettings[xAxis].hasOwnProperty('periodic')){
+            xoffset = defaultFor(
+                this.dataSettings[xAxis].periodic.offset, 0
+            );
+            xperiodic = true;
+            period = this.dataSettings[xAxis].periodic.period;
+            xMax = this.xScale.domain()[1]-xoffset;
+            xMin = this.xScale.domain()[0]+xoffset;
+
+        }
+
+        let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
+
         for (let j=0;j<lp; j++) {
 
-            let x = this.xScale(data[xAxis][j]);
+            valX = data[xAxis][j];
+            // Manipulate value if we have a periodic parameter
+            if(xperiodic){
+                let shiftpos = Math.abs(parseInt(xMax/period));
+                let shiftneg = Math.abs(parseInt(xMin/period));
+                if(xoffset===0){
+                    shiftneg = Math.abs(Math.floor(xMin/period));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valX = valX + shift*period;
+                    if(valX-xoffset > xMax){
+                        valX -= period;
+                    }
+                    if(valX+xoffset < xMin){
+                        valX += period;
+                    }
+                    
+                }
+            }
+            x = this.xScale(valX);
+
             let y = yScale(data[yAxis][j]);
             let rC = [0.5, 0.5, 0.5];
 
@@ -3257,7 +3407,7 @@ class graphly extends EventEmitter {
                     }
                     var sym = defaultFor(dotType[symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, DOTSIZE, sym, rC[0], rC[1], rC[2], 0.2
+                        x, y, dotsize, sym, rC[0], rC[1], rC[2], 0.2
                     );
                 }
             }
@@ -3746,6 +3896,25 @@ class graphly extends EventEmitter {
                 }, false);
 
             picker.picker.appendChild(x);
+
+            // Add point size option
+            this.el.select('#parameterSettings')
+                .append('label')
+                .attr('for', 'sizeSelection')
+                .text('Point size');
+
+            let sizeSelect = this.el.select('#parameterSettings')
+                .append('input')
+                .attr('id', 'sizeSelection')
+                .attr('type', 'text')
+                .attr('value', 
+                    defaultFor(dataSettings.size, DOTSIZE)
+                )
+                .on('input', ()=>{
+                    let val = Number(d3.event.currentTarget.value);
+                    dataSettings.size = val;
+                    that.addApply();
+                });;
         }
 
         if(this.displayAlphaOptions){
