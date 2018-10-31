@@ -859,7 +859,7 @@ class graphly extends EventEmitter {
     /**
     * Save current plot as rendering opening save dialog for download.
     * @param {String} [format=png] Format to save rendering, possible formats 
-    *        are png, jpg, svg, pdf.
+    *        are png, jpeg, svg.
     * @param {Number} [resFactor=1] Factor to scale rendering up/down for
     *        creating higher res renderings
     */
@@ -871,13 +871,14 @@ class graphly extends EventEmitter {
         if (this.resFactor !== 1){
 
             this.batchDrawer.updateCanvasSize(
-                this.width*this.resFactor, this.height*this.resFactor
+                Math.floor(this.width*this.resFactor),
+                Math.floor(this.height*this.resFactor)
             );
             this.renderCanvas.style('width', this.width+'px');
             this.renderCanvas.style('height', this.height+'px');
 
-            this.xScale.range([0, this.width*this.resFactor]);
-            this.yScale.range([this.height*this.resFactor, 0]);
+            this.xScale.range([0, Math.floor(this.width*this.resFactor)]);
+            this.yScale.range([Math.floor(this.height*this.resFactor), 0]);
 
             let xAxRen = this.renderSettings.xAxis;
             let yAxRen = this.renderSettings.yAxis;
@@ -913,7 +914,7 @@ class graphly extends EventEmitter {
         }
 
         // We need to first render the canvas if the debounce active is false
-        if(!this.debounceActive || this.resFactor !== 1){
+        if(!this.debounceActive){
 
             //TODO: output image not generated correctly when debounce is active
             this.renderCanvas.style('opacity','1');
@@ -926,7 +927,6 @@ class graphly extends EventEmitter {
                     .style('display', 'none');
             }
         }
-
 
         this.svg.select('#previewImage').style('display', 'block');
         this.svg.select('#previewImage2').style('display', 'block');
@@ -993,8 +993,8 @@ class graphly extends EventEmitter {
     createOutputFile(){
 
         this.dim = this.el.select('svg').node().getBoundingClientRect();
-        let renderWidth = this.dim.width * this.resFactor;
-        let renderHeight = this.dim.height * this.resFactor;
+        let renderWidth = Math.floor(this.dim.width * this.resFactor);
+        let renderHeight = Math.floor(this.dim.height * this.resFactor);
 
         var svg_html = this.el.select('svg')
             .attr("version", 1.1)
@@ -1004,9 +1004,6 @@ class graphly extends EventEmitter {
 
         if(this.outFormat === 'svg'){
             let blob = new Blob([ svg_html ], {type: 'image/svg+xml'});
-            FileSaver.saveAs(blob, this.fileSaveString);
-        } else if (this.outFormat === 'pdf') {
-            let blob = new Blob([ svg_html ], {type: 'application/pdf'});
             FileSaver.saveAs(blob, this.fileSaveString);
         } else {
             this.el.select('#imagerenderer').attr('width', renderWidth);
@@ -1036,9 +1033,6 @@ class graphly extends EventEmitter {
 
             ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
 
-            this.svg.select('#previewImage').style('display', 'none');
-            this.svg.select('#previewImage2').style('display', 'none');
-            this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
 
             // Set interactive blue to black for labels
             this.svg.selectAll('.axisLabel').attr('fill', '#007bff');
@@ -1049,6 +1043,10 @@ class graphly extends EventEmitter {
                 FileSaver.saveAs(blob, this.fileSaveString);
             }, outformat ,1);
         }
+
+        this.svg.select('#previewImage').style('display', 'none');
+        this.svg.select('#previewImage2').style('display', 'none');
+        this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
 
         this.resFactor = 1;
         this.resize();
