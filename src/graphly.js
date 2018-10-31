@@ -857,10 +857,15 @@ class graphly extends EventEmitter {
     }
 
     /**
-    * Save current plot as image opening save dialog for download.
+    * Save current plot as rendering opening save dialog for download.
+    * @param {String} [format=png] Format to save rendering, possible formats 
+    *        are png, jpg, svg, pdf.
+    * @param {Number} [resFactor=1] Factor to scale rendering up/down for
+    *        creating higher res renderings
     */
-    saveImage(resFactor){
+    saveImage(format, resFactor){
 
+        this.outFormat = defaultFor(format, 'png');
         this.resFactor = defaultFor(resFactor, 1);
 
         if (this.resFactor !== 1){
@@ -979,13 +984,13 @@ class graphly extends EventEmitter {
         // when debugging the svg_html shows the correct image, but the 
         // redering is empty
         if(!this.debounceActive){
-            setTimeout(this.createOutputPNG.bind(this), 10);
+            setTimeout(this.createOutputFile.bind(this), 10);
         } else {
-            this.createOutputPNG();
+            this.createOutputFile();
         }
     }
 
-    createOutputPNG(){
+    createOutputFile(){
 
         this.dim = this.el.select('svg').node().getBoundingClientRect();
         let renderWidth = this.dim.width * this.resFactor;
@@ -997,25 +1002,53 @@ class graphly extends EventEmitter {
             .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
             .node().outerHTML;
 
-        this.el.select('#imagerenderer').attr('width', renderWidth);
-        this.el.select('#imagerenderer').attr('height', renderHeight);
-
-        var c = this.el.select('#imagerenderer').node();
-        var ctx = c.getContext('2d');
-        ctx.clearRect(0, 0, c.width, c.height);
-        ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
-
-        this.svg.select('#previewImage').style('display', 'none');
-        this.svg.select('#previewImage2').style('display', 'none');
-        this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
-
-        // Set interactive blue to black for labels
-        this.svg.selectAll('.axisLabel').attr('fill', '#007bff');
-        this.svg.selectAll('.axisLabel').attr('font-weight', 'bold');
-
-        c.toBlob((blob)=> {
+        if(this.outFormat === 'svg'){
+            let blob = new Blob([ svg_html ], {type: 'image/svg+xml'});
             FileSaver.saveAs(blob, this.fileSaveString);
-        }, "image/png" ,1);
+        } else if (this.outFormat === 'pdf') {
+            let blob = new Blob([ svg_html ], {type: 'application/pdf'});
+            FileSaver.saveAs(blob, this.fileSaveString);
+        } else {
+            this.el.select('#imagerenderer').attr('width', renderWidth);
+            this.el.select('#imagerenderer').attr('height', renderHeight);
+
+            var c = this.el.select('#imagerenderer').node();
+            var ctx = c.getContext('2d');
+
+            // Clear possible previous renderings
+            ctx.clearRect(0, 0, c.width, c.height);
+            
+            // If format is jpeg we need to "remove" transparent pixels as they 
+            // are turned black
+            if(this.outFormat === 'jpeg'){
+                var imgData=ctx.getImageData(0,0,c.width,c.height);
+                var data=imgData.data;
+                for(var i=0;i<data.length;i+=4){
+                    if(data[i+3]<255){
+                        data[i] = 255 - data[i];
+                        data[i+1] = 255 - data[i+1];
+                        data[i+2] = 255 - data[i+2];
+                        data[i+3] = 255 - data[i+3];
+                    }
+                }
+                ctx.putImageData(imgData,0,0);
+            }
+
+            ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
+
+            this.svg.select('#previewImage').style('display', 'none');
+            this.svg.select('#previewImage2').style('display', 'none');
+            this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
+
+            // Set interactive blue to black for labels
+            this.svg.selectAll('.axisLabel').attr('fill', '#007bff');
+            this.svg.selectAll('.axisLabel').attr('font-weight', 'bold');
+
+            let outformat = 'image/'+ this.outFormat;
+            c.toBlob((blob)=> {
+                FileSaver.saveAs(blob, this.fileSaveString);
+            }, outformat ,1);
+        }
 
         this.resFactor = 1;
         this.resize();
@@ -1686,7 +1719,7 @@ class graphly extends EventEmitter {
             .attr('id', 'zoomXBox')
             .attr('width', this.width)
             .attr('height', this.margin.bottom)
-            .attr('fill', 'blue')
+            .attr('fill', 'none')
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
             .style('visibility', 'hidden')
             .attr('pointer-events', 'all');
@@ -1696,7 +1729,7 @@ class graphly extends EventEmitter {
             .attr('width', this.margin.left)
             .attr('height', this.height )
             .attr('transform', 'translate(' + -this.margin.left + ',' + 0 + ')')
-            .attr('fill', 'red')
+            .attr('fill', 'none')
             .style('visibility', 'hidden')
             .attr('pointer-events', 'all');
 
