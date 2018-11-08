@@ -877,8 +877,11 @@ class graphly extends EventEmitter {
             this.renderCanvas.style('width', this.width+'px');
             this.renderCanvas.style('height', this.height+'px');
 
+            this.batchDrawer.clear();
+
             this.xScale.range([0, Math.floor(this.width*this.resFactor)]);
             this.yScale.range([Math.floor(this.height*this.resFactor), 0]);
+            this.y2Scale.range([Math.floor(this.height*this.resFactor), 0]);
 
             let xAxRen = this.renderSettings.xAxis;
             let yAxRen = this.renderSettings.yAxis;
@@ -886,16 +889,6 @@ class graphly extends EventEmitter {
 
             let idX = xAxRen;
 
-            for (let parPos=0; parPos<yAxRen.length; parPos++){
-
-                let idY = yAxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[parPos];
-
-                this.renderParameter(
-                    idX, idY, idCS, this.renderSettings.yAxis,
-                    parPos, this.currentData, this.currentInactiveData, false
-                );
-            }
 
             for (let parPos=0; parPos<y2AxRen.length; parPos++){
 
@@ -910,11 +903,22 @@ class graphly extends EventEmitter {
                 );
             }
 
+            for (let parPos=0; parPos<yAxRen.length; parPos++){
+
+                let idY = yAxRen[parPos];
+                let idCS = this.renderSettings.colorAxis[parPos];
+
+                this.renderParameter(
+                    idX, idY, idCS, this.renderSettings.yAxis,
+                    parPos, this.currentData, this.currentInactiveData, false
+                );
+            }
+
             this.batchDrawer.draw();
         }
 
         // We need to first render the canvas if the debounce active is false
-        if(!this.debounceActive){
+        if(!this.debounceActive || this.resFactor !== 1){
 
             //TODO: output image not generated correctly when debounce is active
             this.renderCanvas.style('opacity','1');
@@ -929,7 +933,12 @@ class graphly extends EventEmitter {
         }
 
         this.svg.select('#previewImage').style('display', 'block');
-        this.svg.select('#previewImage2').style('display', 'block');
+        // Only show second preview image if not scaling up as we need to
+        // rerender everything when doing so
+        if(this.resFactor === 1){
+            this.svg.select('#previewImage2').style('display', 'block');
+        }
+
         if(this.displayParameterLabel && 
             !this.el.select('#parameterInfo').selectAll('*').empty()){
             this.svg.select('#svgInfoContainer').style('visibility', 'visible');
@@ -983,7 +992,7 @@ class graphly extends EventEmitter {
         // flag, not sure how to discover if the image is ready or not,
         // when debugging the svg_html shows the correct image, but the 
         // redering is empty
-        if(!this.debounceActive){
+        if(!this.debounceActive || this.resFactor !== 1){
             setTimeout(this.createOutputFile.bind(this), 10);
         } else {
             this.createOutputFile();
