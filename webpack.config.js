@@ -6,7 +6,7 @@ const webpack = require('webpack');
 
 
 module.exports = {
-
+    mode: 'development',
     entry: ['babel-polyfill', './src/graphly.js'],
     output: {
         filename: 'dist/graphly.js',
@@ -22,9 +22,6 @@ module.exports = {
       inline: true,
     },
     module: {
-       loaders: [
-            { test: /\.css$/, loader: "style-loader!css-loader" },
-        ],
         rules: [
             {
                 test: /\.css$/,
@@ -43,7 +40,7 @@ module.exports = {
                 use: {
                     loader: 'babel-loader',
                     options: {
-                         presets: ['es2015'],
+                         presets: ['@babel/preset-env'],
                     }
                 }
             }

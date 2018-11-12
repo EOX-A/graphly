@@ -3976,7 +3976,7 @@ class graphly extends EventEmitter {
             let firstChange = true;
 
             picker.on('change', function(color) {
-                this.target.value = '#' + color;
+                this.source.value = '#' + color;
                 let c = CP.HEX2RGB(color);
                 c = c.map(function(c){return c/255;});
                 if(!firstChange){
@@ -3996,7 +3996,7 @@ class graphly extends EventEmitter {
                     picker.exit();
                 }, false);
 
-            picker.picker.appendChild(x);
+            picker.self.appendChild(x);
 
             // Add point size option
             this.el.select('#parameterSettings')

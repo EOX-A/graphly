@@ -6,10 +6,10 @@ const webpack = require('webpack');
 
 
 module.exports = {
-
+    mode: 'production',
     entry: ['babel-polyfill', './src/graphly.js'],
     output: {
-        filename: 'dist/graphly.min.js',
+        filename: 'graphly.min.js',
         library: 'graphly',
         libraryTarget: 'window',
     },
@@ -21,12 +21,9 @@ module.exports = {
         "msgpack": "msgpack-lite"
     },
     plugins: [
-        new webpack.optimize.UglifyJsPlugin()
+        //new webpack.optimize.UglifyJsPlugin()
     ],
     module: {
-       loaders: [
-            { test: /\.css$/, loader: "style-loader!css-loader" },
-        ],
         rules: [
             {
                 test: /\.css$/,
@@ -45,7 +42,7 @@ module.exports = {
                 use: {
                     loader: 'babel-loader',
                     options: {
-                         presets: ['es2015'],
+                         presets: ['@babel/preset-env'],
                     }
                 }
             }
