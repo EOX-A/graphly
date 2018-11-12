@@ -188,6 +188,7 @@ class graphly extends EventEmitter {
         this.colorCache = {};
         this.defaultAlpha = defaultFor(options.defaultAlpha, 0.9);
         this.ignoreParameters = defaultFor(options.ignoreParameters, []);
+        this.resFactor = 1;
 
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
@@ -856,13 +857,73 @@ class graphly extends EventEmitter {
     }
 
     /**
-    * Save current plot as image opening save dialog for download.
+    * Save current plot as rendering opening save dialog for download.
+    * @param {String} [format=png] Format to save rendering, possible formats 
+    *        are png, jpeg, svg.
+    * @param {Number} [resFactor=1] Factor to scale rendering up/down for
+    *        creating higher res renderings
     */
-    saveImage(){
+    saveImage(format, resFactor){
+
+        this.outFormat = defaultFor(format, 'png');
+        this.resFactor = defaultFor(resFactor, 1);
+
+        if (this.resFactor !== 1){
+
+            this.batchDrawer.updateCanvasSize(
+                Math.floor(this.width*this.resFactor),
+                Math.floor(this.height*this.resFactor)
+            );
+            this.renderCanvas.style('width', this.width+'px');
+            this.renderCanvas.style('height', this.height+'px');
+
+            this.batchDrawer.clear();
+
+            this.xScale.range([0, Math.floor(this.width*this.resFactor)]);
+            this.yScale.range([Math.floor(this.height*this.resFactor), 0]);
+            this.y2Scale.range([Math.floor(this.height*this.resFactor), 0]);
+
+            let xAxRen = this.renderSettings.xAxis;
+            let yAxRen = this.renderSettings.yAxis;
+            let y2AxRen = this.renderSettings.y2Axis;
+
+            let idX = xAxRen;
+
+
+            for (let parPos=0; parPos<y2AxRen.length; parPos++){
+
+                let idY2 = y2AxRen[parPos];
+                let idCS = this.renderSettings.colorAxis[
+                    this.renderSettings.yAxis.length + parPos
+                ];
+                
+                this.renderParameter(
+                    idX, idY2, idCS, this.renderSettings.y2Axis,
+                    parPos, this.currentData, this.currentInactiveData, false
+                );
+            }
+
+            for (let parPos=0; parPos<yAxRen.length; parPos++){
+
+                let idY = yAxRen[parPos];
+                let idCS = this.renderSettings.colorAxis[parPos];
+
+                this.renderParameter(
+                    idX, idY, idCS, this.renderSettings.yAxis,
+                    parPos, this.currentData, this.currentInactiveData, false
+                );
+            }
+
+            this.batchDrawer.draw();
+        }
+
         // We need to first render the canvas if the debounce active is false
-        if(!this.debounceActive){
+        if(!this.debounceActive || this.resFactor !== 1){
+
+            //TODO: output image not generated correctly when debounce is active
             this.renderCanvas.style('opacity','1');
             let prevImg = this.el.select('#previewImage');
+
             let img = this.renderCanvas.node().toDataURL();
             if(!prevImg.empty()){
                 prevImg.attr('xlink:href', img)
@@ -871,9 +932,13 @@ class graphly extends EventEmitter {
             }
         }
 
-
         this.svg.select('#previewImage').style('display', 'block');
-        this.svg.select('#previewImage2').style('display', 'block');
+        // Only show second preview image if not scaling up as we need to
+        // rerender everything when doing so
+        if(this.resFactor === 1){
+            this.svg.select('#previewImage2').style('display', 'block');
+        }
+
         if(this.displayParameterLabel && 
             !this.el.select('#parameterInfo').selectAll('*').empty()){
             this.svg.select('#svgInfoContainer').style('visibility', 'visible');
@@ -927,18 +992,18 @@ class graphly extends EventEmitter {
         // flag, not sure how to discover if the image is ready or not,
         // when debugging the svg_html shows the correct image, but the 
         // redering is empty
-        if(!this.debounceActive){
-            setTimeout(this.createOutputPNG.bind(this), 10);
+        if(!this.debounceActive || this.resFactor !== 1){
+            setTimeout(this.createOutputFile.bind(this), 10);
         } else {
-            this.createOutputPNG();
+            this.createOutputFile();
         }
     }
 
-    createOutputPNG(){
+    createOutputFile(){
 
         this.dim = this.el.select('svg').node().getBoundingClientRect();
-        let renderWidth = this.dim.width;
-        let renderHeight = this.dim.height;
+        let renderWidth = Math.floor(this.dim.width * this.resFactor);
+        let renderHeight = Math.floor(this.dim.height * this.resFactor);
 
         var svg_html = this.el.select('svg')
             .attr("version", 1.1)
@@ -946,25 +1011,54 @@ class graphly extends EventEmitter {
             .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
             .node().outerHTML;
 
-        this.el.select('#imagerenderer').attr('width', renderWidth);
-        this.el.select('#imagerenderer').attr('height', renderHeight);
+        if(this.outFormat === 'svg'){
+            let blob = new Blob([ svg_html ], {type: 'image/svg+xml'});
+            FileSaver.saveAs(blob, this.fileSaveString);
+        } else {
+            this.el.select('#imagerenderer').attr('width', renderWidth);
+            this.el.select('#imagerenderer').attr('height', renderHeight);
 
-        var c = this.el.select('#imagerenderer').node();
-        var ctx = c.getContext('2d');
-        ctx.clearRect(0, 0, c.width, c.height);
-        ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
+            var c = this.el.select('#imagerenderer').node();
+            var ctx = c.getContext('2d');
+
+            // Clear possible previous renderings
+            ctx.clearRect(0, 0, c.width, c.height);
+            
+            // If format is jpeg we need to "remove" transparent pixels as they 
+            // are turned black
+            if(this.outFormat === 'jpeg'){
+                var imgData=ctx.getImageData(0,0,c.width,c.height);
+                var data=imgData.data;
+                for(var i=0;i<data.length;i+=4){
+                    if(data[i+3]<255){
+                        data[i] = 255 - data[i];
+                        data[i+1] = 255 - data[i+1];
+                        data[i+2] = 255 - data[i+2];
+                        data[i+3] = 255 - data[i+3];
+                    }
+                }
+                ctx.putImageData(imgData,0,0);
+            }
+
+            ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
+
+
+            // Set interactive blue to black for labels
+            this.svg.selectAll('.axisLabel').attr('fill', '#007bff');
+            this.svg.selectAll('.axisLabel').attr('font-weight', 'bold');
+
+            let outformat = 'image/'+ this.outFormat;
+            c.toBlob((blob)=> {
+                FileSaver.saveAs(blob, this.fileSaveString);
+            }, outformat ,1);
+        }
 
         this.svg.select('#previewImage').style('display', 'none');
         this.svg.select('#previewImage2').style('display', 'none');
         this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
 
-        // Set interactive blue to black for labels
-        this.svg.selectAll('.axisLabel').attr('fill', '#007bff');
-        this.svg.selectAll('.axisLabel').attr('font-weight', 'bold');
-
-        c.toBlob((blob)=> {
-            FileSaver.saveAs(blob, this.fileSaveString);
-        }, "image/png" ,1);
+        this.resFactor = 1;
+        this.resize();
     }
 
     addTextMouseover(text){
@@ -1632,7 +1726,7 @@ class graphly extends EventEmitter {
             .attr('id', 'zoomXBox')
             .attr('width', this.width)
             .attr('height', this.margin.bottom)
-            .attr('fill', 'blue')
+            .attr('fill', 'none')
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
             .style('visibility', 'hidden')
             .attr('pointer-events', 'all');
@@ -1642,7 +1736,7 @@ class graphly extends EventEmitter {
             .attr('width', this.margin.left)
             .attr('height', this.height )
             .attr('transform', 'translate(' + -this.margin.left + ',' + 0 + ')')
-            .attr('fill', 'red')
+            .attr('fill', 'none')
             .style('visibility', 'hidden')
             .attr('pointer-events', 'all');
 
@@ -2764,6 +2858,11 @@ class graphly extends EventEmitter {
     *        are being made. 
     */
     resize(debounce){
+
+        // Clear possible canvas styles
+        this.renderCanvas.style('width', null);
+        this.renderCanvas.style('height', null);
+
         debounce = defaultFor(debounce, true);
         if(debounce){
             this.debounceResize.bind(this)();
@@ -3131,6 +3230,7 @@ class graphly extends EventEmitter {
         }
 
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
+        dotsize *= this.resFactor;
         
         for (let j=0;j<lp; j++) {
 
@@ -3262,7 +3362,7 @@ class graphly extends EventEmitter {
                             // as some datasets loop and it looks messy
                             if(x-p_x>-this.width/2){
                                 this.batchDrawer.addLine(
-                                    p_x, p_y, x, y, 1.5, 
+                                    p_x, p_y, x, y, (1.5*this.resFactor),
                                     rC[0], rC[1], rC[2], rC[3]
                                 );
                             }
@@ -3272,7 +3372,7 @@ class graphly extends EventEmitter {
                         // as some datasets loop and it looks messy
                         if(x-p_x>-this.width/2){
                             this.batchDrawer.addLine(
-                                p_x, p_y, x, y, 1.5, 
+                                p_x, p_y, x, y, (1.5*this.resFactor),
                                 rC[0], rC[1], rC[2], rC[3]
                             );
                         }
@@ -3336,6 +3436,7 @@ class graphly extends EventEmitter {
         }
 
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
+        dotsize *= this.resFactor;
 
         for (let j=0;j<lp; j++) {
 
