@@ -43,10 +43,9 @@
 * @property {String} [displayName] String to use for labels instead of parameter
 *           id.
 * @property {Object} [periodic] Can be set when parameter has periodic pattern.
-            The object must have the 'period' value and can have a possible
-            offset. For example longitude values from -180 to 180 would have 360
-            as period and -180 as offset. Default offset value is 0.
-        }
+*           The object must have the 'period' value and can have a possible
+*           offset. For example longitude values from -180 to 180 would have 360
+*           as period and -180 as offset. Default offset value is 0.
 */
 
 /**
@@ -177,6 +176,7 @@ class graphly extends EventEmitter {
              as default tick format.
     * @param {Number} [options.defaultAlpha=0.9] Alpha value used as default
     *        when rendering.
+    * @property {boolean} [debug=false] Show debug messages
     *
     */
     constructor(options) {
@@ -192,6 +192,7 @@ class graphly extends EventEmitter {
         this.defaultAlpha = defaultFor(options.defaultAlpha, 0.9);
         this.ignoreParameters = defaultFor(options.ignoreParameters, []);
         this.resFactor = 1;
+        this.debug = defaultFor(options.debug, false);
 
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
@@ -762,6 +763,18 @@ class graphly extends EventEmitter {
 
                 }
             });
+        }
+    }
+
+    startTiming(processId){
+        if(this.debug){
+            console.time(processId);
+        }
+    }
+
+    endTiming(processId){
+        if(this.debug){
+            console.timeEnd(processId);
         }
     }
 
@@ -1921,6 +1934,7 @@ class graphly extends EventEmitter {
     */
     loadData(data){
         
+        this.startTiming('loadData');
         // Clean colorcache
         for(let k in this.colorCache){
             delete this.colorCache[k];
@@ -2005,6 +2019,44 @@ class graphly extends EventEmitter {
         }
         
         this.initAxis();
+
+        // Make sure all elements have correct size after possible changes 
+        // because of difference in data and changes in size since initialization
+        // Do this only for non fixed configured plots
+
+        if(!this.fixedSize){
+            // Clear possible canvas styles
+            this.renderCanvas.style('width', null);
+            this.renderCanvas.style('height', null);
+
+            this.dim = this.el.node().getBoundingClientRect();
+            // If there are colorscales to be rendered we need to apply additional
+            // margin to the right reducing the total width
+            let csAmount = 0;
+            for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
+                if(this.renderSettings.colorAxis[i] !== null){
+                    csAmount++;
+                }
+            }
+            if(this.renderSettings.hasOwnProperty('y2Axis') && 
+               this.renderSettings.y2Axis.length>0){
+                this.marginY2Offset = 40;
+            } else {
+                this.marginY2Offset = 0;
+            }
+            this.marginCSOffset = csAmount*100;
+            this.width = this.dim.width - this.margin.left - 
+                         this.margin.right - this.marginY2Offset - this.marginCSOffset;
+            this.height = this.dim.height - this.margin.top - this.margin.bottom;
+            this.resize_update();
+            this.createColorScales();
+            this.createAxisLabels();
+
+            this.batchDrawer.updateCanvasSize(this.width, this.height);
+            this.batchDrawerReference.updateCanvasSize(this.width, this.height);
+        }
+
+        this.endTiming('loadData');
         this.renderData();
     }
 
@@ -3119,7 +3171,7 @@ class graphly extends EventEmitter {
                     x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0
                 );
             }
-        }
+        } // end data for loop
     }
 
 
@@ -4304,6 +4356,8 @@ class graphly extends EventEmitter {
 
     renderParameter(idX, idY, idCS, yAxisSet, parPos, data, inactiveData, updateReferenceCanvas){
 
+        this.startTiming('renderParameter:'+idY);
+
         let combPars = this.renderSettings.combinedParameters;
 
         // If a combined parameter is provided we need to render either
@@ -4342,6 +4396,7 @@ class graphly extends EventEmitter {
                 
             }
         }
+        this.endTiming('renderParameter:'+idY);
     }
 
 
@@ -4351,6 +4406,8 @@ class graphly extends EventEmitter {
     *        color reference canvas
     */
     renderData(updateReferenceCanvas) {
+
+        this.startTiming('renderData');
 
         let xAxRen = this.renderSettings.xAxis;
         let yAxRen = this.renderSettings.yAxis;
@@ -4411,15 +4468,23 @@ class graphly extends EventEmitter {
             );
         }
 
+        this.startTiming('batchDrawer:draw');
         this.batchDrawer.draw();
+        this.endTiming('batchDrawer:draw');
+
+
         if(!this.fixedSize && updateReferenceCanvas){
+            this.startTiming('batchDrawerReference:draw');
             this.batchDrawerReference.draw();
+            this.endTiming('batchDrawerReference:draw');
         }
 
         if(this.debounceActive){
             this.renderCanvas.style('opacity','1');
             let prevImg = this.el.select('#previewImage');
+            this.startTiming('createPreviewImage');
             let img = this.renderCanvas.node().toDataURL();
+            this.endTiming('createPreviewImage');
             if(!prevImg.empty()){
                 prevImg.attr('xlink:href', img)
                     .attr('transform', null)
@@ -4517,7 +4582,8 @@ class graphly extends EventEmitter {
                 let idCS = this.renderSettings.colorAxis[parPos];
                 this.renderParameter(
                     idX, idY, idCS, this.renderSettings.yAxis,
-                    parPos, this.currentData, this.currentInactiveData, updateReferenceCanvas
+                    parPos, this.currentData, this.currentInactiveData,
+                    updateReferenceCanvas
                 );
             }
 
@@ -4531,6 +4597,7 @@ class graphly extends EventEmitter {
         * @event module:graphly.graphly#rendered
         */
         this.emit('rendered');
+        this.endTiming('renderData');
     }
 
 
