@@ -14,6 +14,9 @@
 *        number of items in y and y2 axis combined. It is possible to use
 *        null if any of the selected parameters for y or y2 axis should not
 *        use a colorscale representation. 
+* @property {Object} [dataIdentifier] Contains key "parameter" with identifier 
+*       string of paramter used to separate data into groups and key 
+*       "identifiers" with array of strings with possible values in data array.
 */
 
 /**
