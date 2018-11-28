@@ -212,7 +212,7 @@ export function hexToRgb(hex) {
 }
 
 
-export function getCutomUTCTimeTickFormat() {
+export function getCustomUTCTimeTickFormat() {
     return d3.time.format.utc.multi([
         [".%L", function(d) { return d.getUTCMilliseconds(); }],
         [":%S", function(d) { return d.getUTCSeconds(); }],

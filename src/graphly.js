@@ -17,6 +17,12 @@
 * @property {Object} [dataIdentifier] Contains key "parameter" with identifier 
 *       string of paramter used to separate data into groups and key 
 *       "identifiers" with array of strings with possible values in data array.
+* @property {Array String} [additionalXTicks] Array with parameter ids for 
+*        additional labels that should be used for the x axis
+* @property {Array String} [additionalYTicks] Array with parameter ids for 
+*        additional labels that should be used for the y axis
+* @property {Array String} [additionalY2Ticks] Array with parameter ids for 
+*        additional labels that should be used for the second y axis
 */
 
 /**
@@ -1535,7 +1541,7 @@ class graphly extends EventEmitter {
         let labelxtext = this.svg.append('text')
             .attr('class', 'xAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
-            .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-10))+')')
+            .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-20))+')')
             .attr('fill', '#007bff')
             .attr('stroke', 'none')
             .attr('font-weight', 'bold')
@@ -2283,7 +2289,7 @@ class graphly extends EventEmitter {
             .ticks(Math.max(this.width/120,2))
             .tickSize(-this.height);
         if(this.xTimeScale){
-            this.xAxis.tickFormat(u.getCutomUTCTimeTickFormat());
+            this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
         }
         // Check if axis is using periodic parameter
         let tickformat = d3.format('g');
@@ -2311,13 +2317,66 @@ class graphly extends EventEmitter {
             });
         }
 
+        /*this.additionalXAxis = [];
+        if(this.renderSettings.hasOwnProperty('additionalXTicks')){
+
+            for (var i = 0; i < this.renderSettings.additionalXTicks.length; i++) {
+                let parId = this.renderSettings.additionalXTicks[i];
+                let extent = [
+                    this.data[parId][0],
+                    this.data[parId][this.data[parId].length-1],
+                ];
+                let scale = d3.scale.linear()
+                    .domain(extent)
+                    .range([0, this.width]);
+
+                this.additionalXAxis.push(
+                    d3.svg.axis()
+                        .scale(scale)
+                        .orient('bottom')
+                        .ticks(Math.max(this.width/120,2))
+                        .tickSize(-this.height)
+                        .tickFormat(d3.format('g'))
+                );
+            }
+        }*/
+
+        if(this.renderSettings.hasOwnProperty('additionalXTicks')){
+
+            this.xAxis.tickFormat((d,i)=>{
+                // TODO: Check if selection is group
+                let currParDat = this.data[xSelection[0]];
+                let secParDat = this.data[this.renderSettings.additionalXTicks[0]];
+                let output = '';
+                if(this.xTimeScale){
+                    // Find corresponding value for additional axis
+                    let idx = 0;
+                    for (var i = 0; i < currParDat.length; i++) {
+                        if(currParDat[i].getTime()>=d.getTime()){
+                            idx = i-1;
+                            break;
+                        }
+                    }
+                    if(idx > 0 && idx<secParDat.length){
+                        output = u.getCustomUTCTimeTickFormat()(d)+'|' +
+                            secParDat[idx].toFixed(2);
+                    } else {
+                        output = u.getCustomUTCTimeTickFormat()(d);
+                    }
+                    return output;
+                } else {
+                    return d;
+                }
+            });
+        }
+        
         this.yAxis = d3.svg.axis()
             .scale(this.yScale)
             .innerTickSize(-this.width)
             .outerTickSize(0)
             .orient('left');
         if(this.yTimeScale){
-            this.yAxis.tickFormat(u.getCutomUTCTimeTickFormat());
+            this.yAxis.tickFormat(u.getCustomUTCTimeTickFormat());
         }
 
         this.y2Axis = d3.svg.axis()
@@ -2326,13 +2385,20 @@ class graphly extends EventEmitter {
             .outerTickSize(0)
             .orient('right');
         if(this.y2TimeScale){
-            this.y2Axis.tickFormat(u.getCutomUTCTimeTickFormat());
+            this.y2Axis.tickFormat(u.getCustomUTCTimeTickFormat());
         }
 
         this.xAxisSvg = this.svg.append('g')
             .attr('class', 'x axis')
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
+
+        /*for (var i = 0; i < this.additionalXAxis.length; i++) {
+            this.svg.append('g')
+            .attr('class', 'x_add axis')
+            .attr('transform', 'translate(0,' + this.height+20 + ')')
+            .call(this.additionalXAxis[i]);
+        }*/
 
         if(this.renderSettings.yAxis.length > 0){
             this.yAxisSvg = this.svg.append('g')
@@ -2386,6 +2452,7 @@ class graphly extends EventEmitter {
 
         this.createHelperObjects();
         this.addTimeInformation();
+        this.breakTicks();
 
 
         this.renderCanvas.call(this.xyzoom);
@@ -2492,6 +2559,39 @@ class graphly extends EventEmitter {
         }
     }
 
+    breakTick(text) {
+      text.each(function() {
+            var text = d3.select(this),
+                words = text.text().split('|').reverse(),
+                word,
+                line = [],
+                lineNumber = 0,
+                lineHeight = 40, // px
+                y = text.attr("y"),
+                dy = 10,
+                tspan = text.text(null);
+            while (word = words.pop()) {
+                line.push(word);
+                tspan.text(line.join(" "));
+                line.pop();
+                tspan.text(line.join(" "));
+                line = [word];
+                tspan = text.append("tspan")
+                    .attr("x", 0)
+                    .attr("y", y)
+                    .attr("dy", lineNumber++ * lineHeight + dy  + "px")
+                    .text(word);
+            }
+        });
+    }
+
+    breakTicks() {
+
+        this.el.selectAll('.x.axis>.tick text:first-of-type')
+            .call(this.breakTick);
+
+    }
+
 
     triggerZoomPreview(xZoom, xyZoom, xAxis, xScale){
 
@@ -2547,6 +2647,7 @@ class graphly extends EventEmitter {
         }
 
         this.addTimeInformation();
+        this.breakTicks();
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
@@ -3030,6 +3131,7 @@ class graphly extends EventEmitter {
             .attr('height', this.height);
 
         this.addTimeInformation();
+        this.breakTicks();
 
     }
 
