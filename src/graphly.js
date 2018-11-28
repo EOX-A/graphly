@@ -234,12 +234,18 @@ class graphly extends EventEmitter {
             {top: 10, left: 90, bottom: 50, right: 30}
         );
 
+        this.marginXOffset = 0;
+        this.marginYOffset = 0;
         this.marginY2Offset = 0;
         this.marginCSOffset = 0;
 
         if(this.renderSettings.hasOwnProperty('y2Axis') && 
            this.renderSettings.y2Axis.length>0){
             this.marginY2Offset = 40;
+        }
+
+        if(this.renderSettings.hasOwnProperty('additionalXTicks')) {
+            this.marginXOffset = 30*this.renderSettings.additionalXTicks.length;
         }
 
 
@@ -276,7 +282,8 @@ class graphly extends EventEmitter {
 
         this.width = this.dim.width - this.margin.left - 
                      this.margin.right - this.marginY2Offset - this.marginCSOffset;
-        this.height = this.dim.height - this.margin.top - this.margin.bottom;
+        this.height = this.dim.height - this.margin.top -
+                      this.margin.bottom - this.marginXOffset;
         // Sometimes if the element is not jet completely created the height 
         // might not be defined resulting in a negative value resulting
         // in multiple error, we make sure here the value is not negative
@@ -388,7 +395,11 @@ class graphly extends EventEmitter {
             .attr('width', this.width + this.margin.left + 
                   this.margin.right + this.marginY2Offset + this.marginCSOffset
             )
-            .attr('height', this.height + this.margin.top + this.margin.bottom)
+            .attr(
+                'height', 
+                this.height + this.margin.top +
+                this.margin.bottom + this.marginXOffset
+            )
             .style('position', 'absolute')
             .style('z-index', 0)
             .style('pointer-events', 'none')
@@ -399,7 +410,10 @@ class graphly extends EventEmitter {
         this.topSvg = this.el.append('svg')
             .attr('width', this.width + this.margin.left + 
                    this.margin.right + this.marginY2Offset + this.marginCSOffset)
-            .attr('height', this.height + this.margin.top + this.margin.bottom)
+            .attr(
+                'height', this.height + this.margin.top +
+                this.margin.bottom + this.marginXOffset
+            )
             .style('position', 'absolute')
             .style('z-index', 10)
             .style('pointer-events', 'none')
@@ -1190,6 +1204,7 @@ class graphly extends EventEmitter {
 
         this.el.selectAll('.axisLabel').on('click',null);
         this.el.selectAll('.axisLabel').remove();
+        this.el.selectAll('.subAxisLabel').remove();
 
         let uniqY = this.renderSettings.yAxis;
 
@@ -1541,7 +1556,11 @@ class graphly extends EventEmitter {
         let labelxtext = this.svg.append('text')
             .attr('class', 'xAxisLabel axisLabel')
             .attr('text-anchor', 'middle')
-            .attr('transform', 'translate('+ (this.width/2) +','+(this.height+(this.margin.bottom-20))+')')
+            .attr('transform', 'translate('+ (
+                this.width/2) +','+(this.height+(
+                    this.margin.bottom-20
+                )
+            )+')')
             .attr('fill', '#007bff')
             .attr('stroke', 'none')
             .attr('font-weight', 'bold')
@@ -1557,7 +1576,7 @@ class graphly extends EventEmitter {
             .style('display', function(){
                 return xHidden ? 'none' : 'block'; 
             })
-            .style('bottom', this.margin.bottom+'px')
+            .style('bottom', (this.margin.bottom+this.marginXOffset)+'px')
             .style('left', this.width/2-this.margin.left+50+'px')
             .append('select')
                 .attr('id', 'xScaleChoices');
@@ -1605,6 +1624,26 @@ class graphly extends EventEmitter {
             that.createAxisLabels();
             that.emit('axisChange');
         },false);
+
+
+        // Create subticks lables
+        if(this.renderSettings.hasOwnProperty('additionalXTicks')){
+
+            for (let i = 0; i < this.renderSettings.additionalXTicks.length; i++) {
+                this.svg.append('text')
+                    .attr('class', 'subXAxisLabel subAxisLabel')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate('+ (
+                        this.width/2) +','+(this.height+(
+                            this.margin.bottom+this.marginXOffset - 10
+                        )
+                    )+')')
+                    .attr('stroke', 'none')
+                    .attr('text-decoration', 'none')
+                    .text(this.renderSettings.additionalXTicks[i]);
+            }
+            
+        }
 
     }
 
@@ -1747,7 +1786,7 @@ class graphly extends EventEmitter {
         this.svg.append('rect')
             .attr('id', 'zoomXBox')
             .attr('width', this.width)
-            .attr('height', this.margin.bottom)
+            .attr('height', (this.margin.bottom+this.marginXOffset))
             .attr('fill', 'none')
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
             .style('visibility', 'hidden')
@@ -2053,7 +2092,8 @@ class graphly extends EventEmitter {
             this.marginCSOffset = csAmount*100;
             this.width = this.dim.width - this.margin.left - 
                          this.margin.right - this.marginY2Offset - this.marginCSOffset;
-            this.height = this.dim.height - this.margin.top - this.margin.bottom;
+            this.height = this.dim.height - this.margin.top - 
+                          this.margin.bottom - this.marginXOffset;
             this.resize_update();
             this.createColorScales();
             this.createAxisLabels();
@@ -2351,9 +2391,9 @@ class graphly extends EventEmitter {
                 if(this.xTimeScale){
                     // Find corresponding value for additional axis
                     let idx = 0;
-                    for (var i = 0; i < currParDat.length; i++) {
-                        if(currParDat[i].getTime()>=d.getTime()){
-                            idx = i-1;
+                    for (let j = 0; j < currParDat.length; j++) {
+                        if(currParDat[j].getTime()>=d.getTime()){
+                            idx = j-1;
                             break;
                         }
                     }
@@ -2561,7 +2601,7 @@ class graphly extends EventEmitter {
 
     breakTick(text) {
       text.each(function() {
-            var text = d3.select(this),
+            let text = d3.select(this),
                 words = text.text().split('|').reverse(),
                 word,
                 line = [],
@@ -3041,7 +3081,8 @@ class graphly extends EventEmitter {
         this.marginCSOffset = csAmount*100;
         this.width = this.dim.width - this.margin.left - 
                      this.margin.right - this.marginY2Offset - this.marginCSOffset;
-        this.height = this.dim.height - this.margin.top - this.margin.bottom;
+        this.height = this.dim.height - this.margin.top - 
+                      this.margin.bottom - this.marginXOffset;
         this.resize_update();
         this.createColorScales();
         this.createAxisLabels();
@@ -3085,12 +3126,20 @@ class graphly extends EventEmitter {
         d3.select(this.svg.node().parentNode)
             .attr('width', this.width + this.margin.left + this.margin.right +
                            this.marginY2Offset + this.marginCSOffset)
-            .attr('height', this.height + this.margin.top + this.margin.bottom);
+            .attr(
+                'height',
+                this.height + this.margin.top + 
+                this.margin.bottom + this.marginXOffset
+            );
            
         d3.select(this.topSvg.node().parentNode)
             .attr('width', this.width + this.margin.left + this.margin.right + 
                            this.marginY2Offset + this.marginCSOffset)
-            .attr('height', this.height + this.margin.top + this.margin.bottom);
+            .attr(
+                'height',
+                this.height + this.margin.top +
+                this.margin.bottom + this.marginXOffset
+            );
 
         this.el.select((this.nsId+'clipbox')).select('rect')
             .attr('width', this.width)
@@ -3098,7 +3147,7 @@ class graphly extends EventEmitter {
 
         this.el.select('#zoomXBox')
             .attr('width', this.width)
-            .attr('height', this.margin.bottom)
+            .attr('height', (this.margin.bottom+this.marginXOffset))
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
         this.el.select('#zoomYBox')
@@ -3115,7 +3164,7 @@ class graphly extends EventEmitter {
 
         this.el.select('#zoomXBox')
             .attr('width', this.width)
-            .attr('height', this.margin.bottom)
+            .attr('height', (this.margin.bottom+this.marginXOffset))
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
         this.el.select('#rectangleOutline')
@@ -3774,7 +3823,7 @@ class graphly extends EventEmitter {
         this.el.select('#regressionInfo').remove();
         this.el.append('div')
             .attr('id', 'regressionInfo')
-            .style('bottom', this.margin.bottom+'px')
+            .style('bottom', (this.margin.bottom+this.marginXOffset)+'px')
             .style('left', (this.width/2)+'px');
 
         if(this.el.select('#parameterInfo').empty()){
@@ -3805,7 +3854,7 @@ class graphly extends EventEmitter {
 
     updateInfoBoxes(){
         this.el.select('#regressionInfo')
-            .style('bottom', this.margin.bottom+'px')
+            .style('bottom', (this.margin.bottom+this.marginXOffset)+'px')
             .style('left', (this.width/2)+'px');
 
         this.el.select('#parameterInfo')
@@ -4623,7 +4672,7 @@ class graphly extends EventEmitter {
             this.el.select('#regressionInfo').remove();
             this.el.append('div')
                 .attr('id', 'regressionInfo')
-                .style('bottom', this.margin.bottom+'px')
+                .style('bottom', (this.margin.bottom+this.marginXOffset)+'px')
                 .style('left', (this.width/2)+'px');
 
             for (let parPos=0; parPos<y2AxRen.length; parPos++){
