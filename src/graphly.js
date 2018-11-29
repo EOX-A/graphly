@@ -195,7 +195,7 @@ class graphly extends EventEmitter {
         this.y2AxisLabel = null;
         this.xAxisLabel = null;
         this.colorCache = {};
-        this.defaultAlpha = defaultFor(options.defaultAlpha, 0.9);
+        this.defaultAlpha = defaultFor(options.defaultAlpha, 1.0);
         this.ignoreParameters = defaultFor(options.ignoreParameters, []);
         this.resFactor = 1;
         this.debug = defaultFor(options.debug, false);
@@ -245,7 +245,7 @@ class graphly extends EventEmitter {
         }
 
         if(this.renderSettings.hasOwnProperty('additionalXTicks')) {
-            this.marginXOffset = 30*this.renderSettings.additionalXTicks.length;
+            this.marginXOffset = 40*this.renderSettings.additionalXTicks.length;
         }
 
 
@@ -1015,6 +1015,12 @@ class graphly extends EventEmitter {
             .attr('shape-rendering', 'crispEdges')
             .attr('stroke-dasharray', 'none');
 
+        this.el.selectAll('.subaxis path, .subaxis line')
+            .attr('fill', 'none')
+            .attr('stroke', '#777')
+            .attr('stroke-width', 1)
+            .attr('shape-rendering', 'crispEdges');
+
         this.el.selectAll('text')
             .attr('stroke', 'none')
             .attr('shape-rendering', 'crispEdges');
@@ -1635,7 +1641,7 @@ class graphly extends EventEmitter {
                     .attr('text-anchor', 'middle')
                     .attr('transform', 'translate('+ (
                         this.width/2) +','+(this.height+(
-                            this.margin.bottom+this.marginXOffset - 10
+                            this.margin.bottom+((i)*40) + 20 
                         )
                     )+')')
                     .attr('stroke', 'none')
@@ -2357,39 +2363,39 @@ class graphly extends EventEmitter {
             });
         }
 
-        /*this.additionalXAxis = [];
+        this.additionalXAxis = [];
         if(this.renderSettings.hasOwnProperty('additionalXTicks')){
-
-            for (var i = 0; i < this.renderSettings.additionalXTicks.length; i++) {
-                let parId = this.renderSettings.additionalXTicks[i];
-                let extent = [
-                    this.data[parId][0],
-                    this.data[parId][this.data[parId].length-1],
-                ];
-                let scale = d3.scale.linear()
-                    .domain(extent)
-                    .range([0, this.width]);
+            let addXTicks = this.renderSettings.additionalXTicks;
+            for (let i = 0; i < addXTicks.length; i++) {
 
                 this.additionalXAxis.push(
                     d3.svg.axis()
-                        .scale(scale)
+                        .scale(this.xScale)
                         .orient('bottom')
                         .ticks(Math.max(this.width/120,2))
-                        .tickSize(-this.height)
-                        .tickFormat(d3.format('g'))
+                        .tickSize(5)
+                        .tickFormat(()=>{return '';})
                 );
             }
-        }*/
+        }
 
         if(this.renderSettings.hasOwnProperty('additionalXTicks')){
 
-            this.xAxis.tickFormat((d,i)=>{
+            let addXT = this.renderSettings.additionalXTicks;
+
+            this.xAxis.tickFormat((d)=>{
                 // TODO: Check if selection is group
                 let currParDat = this.data[xSelection[0]];
-                let secParDat = this.data[this.renderSettings.additionalXTicks[0]];
-                let output = '';
+                let secParDat;
+                let addValues = [];
                 if(this.xTimeScale){
-                    // Find corresponding value for additional axis
+                    addValues.push(u.getCustomUTCTimeTickFormat()(d));
+                } else {
+                    addValues.push(d);
+                }
+                // Find corresponding value(s) for additional axis
+                for (let x = 0; x < addXT.length; x++) {
+                    secParDat = this.data[addXT[x]];
                     let idx = 0;
                     for (let j = 0; j < currParDat.length; j++) {
                         if(currParDat[j].getTime()>=d.getTime()){
@@ -2398,15 +2404,12 @@ class graphly extends EventEmitter {
                         }
                     }
                     if(idx > 0 && idx<secParDat.length){
-                        output = u.getCustomUTCTimeTickFormat()(d)+'|' +
-                            secParDat[idx].toFixed(2);
+                        addValues.push(secParDat[idx].toFixed(2));
                     } else {
-                        output = u.getCustomUTCTimeTickFormat()(d);
+                        addValues.push(' ');
                     }
-                    return output;
-                } else {
-                    return d;
                 }
+                return addValues.join('|');
             });
         }
         
@@ -2433,12 +2436,18 @@ class graphly extends EventEmitter {
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
 
-        /*for (var i = 0; i < this.additionalXAxis.length; i++) {
-            this.svg.append('g')
-            .attr('class', 'x_add axis')
-            .attr('transform', 'translate(0,' + this.height+20 + ')')
-            .call(this.additionalXAxis[i]);
-        }*/
+        this.addXAxisSvg = [];
+        for (let i = 0; i < this.additionalXAxis.length; i++) {
+            this.addXAxisSvg.push(
+                this.svg.append('g')
+                    .attr('class', 'x_add subaxis')
+                    .attr(
+                        'transform', 
+                        'translate(0,' + (this.height+35+(i*40)) + ')'
+                    )
+                    .call(this.additionalXAxis[i])
+            );
+        }
 
         if(this.renderSettings.yAxis.length > 0){
             this.yAxisSvg = this.svg.append('g')
@@ -2681,6 +2690,9 @@ class graphly extends EventEmitter {
 
 
         this.xAxisSvg.call(this.xAxis);
+        for (let i = 0; i < this.additionalXAxis.length; i++) {
+            this.addXAxisSvg[i].call(this.additionalXAxis[i]) ;
+        }
 
         if(this.renderSettings.yAxis.length > 0){
             this.yAxisSvg.call(this.yAxis);
@@ -3098,10 +3110,20 @@ class graphly extends EventEmitter {
 
         this.xScale.range([0, this.width]);
         this.yScale.range([this.height, 0]);
+
         this.xAxisSvg.attr('transform', 'translate(0,' + this.height + ')');
+        for (let i = 0; i < this.addXAxisSvg.length; i++) {
+            this.addXAxisSvg[i].attr(
+                'transform', 'translate(0,' + (this.height+35+(i*40)) + ')'
+            );
+            this.addXAxisSvg[i].call(this.additionalXAxis[i]);
+        }
+
         this.xAxis.tickSize(-this.height);
-        this.yAxis.innerTickSize(-this.width);
         this.xAxisSvg.call(this.xAxis);
+
+        this.yAxis.innerTickSize(-this.width);
+        
 
         if(this.renderSettings.yAxis.length > 0){
             this.yAxisSvg.call(this.yAxis);

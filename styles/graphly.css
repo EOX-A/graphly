@@ -34,6 +34,15 @@ svg {
 }
 
 
+.subaxis path,
+.subaxis line {
+    fill: none;
+    shape-rendering: crispEdges;
+    stroke: #777;
+    stroke-width: 1;
+}
+
+
 #filters .axis path,
 #filters .axis line {
     fill: none;
