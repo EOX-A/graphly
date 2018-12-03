@@ -199,6 +199,8 @@ class graphly extends EventEmitter {
         this.ignoreParameters = defaultFor(options.ignoreParameters, []);
         this.resFactor = 1;
         this.debug = defaultFor(options.debug, false);
+        this.enableSubXAxis = defaultFor(options.enableSubXAxis, false);
+        this.enableSubYAxis = defaultFor(options.enableSubYAxis, false);
 
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
@@ -227,6 +229,19 @@ class graphly extends EventEmitter {
         // TOOO: How could some defaults be guessed for rendering?
         this.dataSettings = defaultFor(options.dataSettings, {});
         this.setRenderSettings(options.renderSettings);
+
+        // Check if sub axis option set if not initialize with empty array
+        if(this.enableSubXAxis){
+            this.renderSettings.additionalXTicks = defaultFor(
+                this.renderSettings.additionalXTicks, []
+            );
+        }
+        if(this.enableSubYAxis){
+            this.renderSettings.additionalYTicks = defaultFor(
+                this.renderSettings.additionalYTicks, []
+            );
+        }
+
         this.timeScales = [];
 
         this.margin = defaultFor(
@@ -236,7 +251,6 @@ class graphly extends EventEmitter {
 
         this.subAxisMarginX = 0;
         this.subAxisMarginY = 0;
-        this.subAxisMarginY2 = 0;
         this.marginY2Offset = 0;
         this.marginCSOffset = 0;
 
@@ -324,9 +338,9 @@ class graphly extends EventEmitter {
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
         }
 
-        this.debounceZoom = debounce(function(){
+        /*this.debounceZoom = debounce(function(){
             this.onZoom();
-        }, 350);
+        }, 350);*/
 
        this.debounceResize = debounce(function(){
             this.onResize();
@@ -804,6 +818,14 @@ class graphly extends EventEmitter {
                 }
             });
         }
+
+        // Check for change in connected graph axis selection if there is a
+        // change reload graph to reset its ranges and position
+        if (this.connectedGraph){
+            this.connectedGraph.on('axisChange', ()=>{
+                this.loadData(this.data);
+            });
+        }
     }
 
     startTiming(processId){
@@ -910,6 +932,11 @@ class graphly extends EventEmitter {
     */
     connectGraph(graph){
         this.connectedGraph = graph;
+        if (this.connectedGraph){
+            this.connectedGraph.on('axisChange', ()=>{
+                this.loadData(this.data);
+            });
+        }
     }
 
     /**
@@ -1141,6 +1168,8 @@ class graphly extends EventEmitter {
          let yChoices = [];
          let y2Choices = [];
          let xChoices = [];
+         let xSubChoices = [];
+         let ySubChoices = [];
 
          let xHidden, yHidden, y2Hidden;
 
@@ -1193,6 +1222,21 @@ class graphly extends EventEmitter {
                 }
                 if(this.renderSettings.xAxis === key){
                     xChoices[xChoices.length-1].selected = true;
+                }
+            } 
+
+            if (this.data.hasOwnProperty(key)){
+
+                xSubChoices.push({value: key, label: key});
+                ySubChoices.push({value: key, label: key});
+
+                if(this.renderSettings.hasOwnProperty('additionalXTicks') &&
+                   this.renderSettings.additionalXTicks.indexOf(key)!==-1){
+                    xSubChoices[xSubChoices.length-1].selected = true;
+                }
+                if(this.renderSettings.hasOwnProperty('additionalYTicks') &&
+                   this.renderSettings.additionalYTicks.indexOf(key)!==-1){
+                    ySubChoices[ySubChoices.length-1].selected = true;
                 }
             }
         }
@@ -1404,6 +1448,51 @@ class graphly extends EventEmitter {
             }
         },false);
 
+        if(this.enableSubYAxis){
+            
+            con.append('div')
+                .style('margin-top', '20px')
+                .text('Secondary ticks');
+                
+            con.append('select')
+                .attr('id', 'subYChoices');
+
+
+            this.el.select('#subYChoices').attr('multiple', true);
+            
+            let subYParameters = new Choices(
+                this.el.select('#subYChoices').node(), {
+                    choices: ySubChoices,
+                    removeItemButton: true,
+                    placeholderValue: ' select ...',
+                    itemSelectText: '',
+                }
+            );
+
+            subYParameters.passedElement.addEventListener('addItem', function(event) {
+                that.renderSettings.additionalYTicks.push(event.detail.value);
+                that.subAxisMarginY = 80*that.renderSettings.additionalYTicks.length;
+                that.initAxis();
+                that.resize();
+                that.renderData();
+                that.createAxisLabels();
+                that.emit('axisChange');
+            }, false);
+
+            subYParameters.passedElement.addEventListener('removeItem', function(event) {
+                let index = that.renderSettings.additionalYTicks.indexOf(event.detail.value);
+                if(index!==-1){
+                    that.renderSettings.additionalYTicks.splice(index, 1);
+                    that.subAxisMarginY = 80*that.renderSettings.additionalYTicks.length;
+                    that.initAxis();
+                    that.resize();
+                    that.renderData();
+                    that.createAxisLabels();
+                    that.emit('axisChange');
+                }
+            },false);
+        }
+
 
         // Create labels for y2 axis
 
@@ -1605,7 +1694,10 @@ class graphly extends EventEmitter {
             .style('bottom', (this.margin.bottom+this.subAxisMarginX)+'px')
             .style(
                 'left',
-                this.width/2-(this.margin.left+this.subAxisMarginY)+50+'px'
+                ((
+                    (this.width+this.margin.left+this.subAxisMarginY+
+                     this.marginY2Offset+this.margin.right+this.marginCSOffset)/2)
+                -105)+'px'
             )
             .append('select')
                 .attr('id', 'xScaleChoices');
@@ -1643,6 +1735,52 @@ class graphly extends EventEmitter {
         con.append('label')
             .attr('for', 'xAxisCustomLabel')
             .text('Label');
+
+
+        if(this.enableSubXAxis){
+            
+            con.append('div')
+                .style('margin-top', '20px')
+                .text('Secondary ticks');
+                
+            con.append('select')
+                .attr('id', 'subXChoices');
+
+
+            this.el.select('#subXChoices').attr('multiple', true);
+            
+            let subXParameters = new Choices(
+                this.el.select('#subXChoices').node(), {
+                    choices: xSubChoices,
+                    removeItemButton: true,
+                    placeholderValue: ' select ...',
+                    itemSelectText: '',
+                }
+            );
+
+            subXParameters.passedElement.addEventListener('addItem', function(event) {
+                that.renderSettings.additionalXTicks.push(event.detail.value);
+                that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
+                that.initAxis();
+                that.resize();
+                that.renderData();
+                that.createAxisLabels();
+                that.emit('axisChange');
+            }, false);
+
+            subXParameters.passedElement.addEventListener('removeItem', function(event) {
+                let index = that.renderSettings.additionalXTicks.indexOf(event.detail.value);
+                if(index!==-1){
+                    that.renderSettings.additionalXTicks.splice(index, 1);
+                    that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
+                    that.initAxis();
+                    that.resize();
+                    that.renderData();
+                    that.createAxisLabels();
+                    that.emit('axisChange');
+                }
+            },false);
+        }
 
         xSettingParameters.passedElement.addEventListener('change', function(event) {
             that.xAxisLabel = null;
@@ -2617,24 +2755,24 @@ class graphly extends EventEmitter {
 
         // Define zoom behaviour based on parameter dependend x and y scales
         this.xyzoom = d3.behavior.zoom()
-          .x(this.xScale)
-          .y(this.yScale)
-          .scaleExtent([maxzoomout,Infinity])
-          .on('zoom', this.previewZoom.bind(this));
-
+            .x(this.xScale)
+            .y(this.yScale)
+            .scaleExtent([maxzoomout,Infinity])
+            .on('zoom', this.previewZoom.bind(this))
+            .on('zoomend', this.onZoom.bind(this));
         this.xzoom = d3.behavior.zoom()
-          .x(this.xScale)
-          .scaleExtent([maxzoomout,Infinity])
-          .on('zoom', this.previewZoom.bind(this));
-
-
+            .x(this.xScale)
+            .scaleExtent([maxzoomout,Infinity])
+            .on('zoom', this.previewZoom.bind(this))
+            .on('zoomend', this.onZoom.bind(this));
         this.yzoom = d3.behavior.zoom()
-          .y(this.yScale)
-          .on('zoom', this.previewZoom.bind(this));
-
+            .y(this.yScale)
+            .on('zoom', this.previewZoom.bind(this))
+            .on('zoomend', this.onZoom.bind(this));
         this.y2zoom = d3.behavior.zoom()
-          .y(this.y2Scale)
-          .on('zoom', this.previewZoom.bind(this));
+            .y(this.y2Scale)
+            .on('zoom', this.previewZoom.bind(this))
+            .on('zoomend', this.onZoom.bind(this));
 
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
@@ -2673,17 +2811,21 @@ class graphly extends EventEmitter {
             .x(this.xScale)
             .y(this.yScale)
             .scaleExtent([maxzoomout,Infinity])
-            .on('zoom', this.previewZoom.bind(this));
+            .on('zoom', this.previewZoom.bind(this))
+            .on('zoomend', this.onZoom.bind(this));
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
             .scaleExtent([maxzoomout,Infinity])
-            .on('zoom', this.previewZoom.bind(this));
+            .on('zoom', this.previewZoom.bind(this))
+            .on('zoomend', this.onZoom.bind(this));
         this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
-            .on('zoom', this.previewZoom.bind(this));
+            .on('zoom', this.previewZoom.bind(this))
+            .on('zoomend', this.onZoom.bind(this));
         this.y2zoom = d3.behavior.zoom()
             .y(this.y2Scale)
-            .on('zoom', this.previewZoom.bind(this));
+            .on('zoom', this.previewZoom.bind(this))
+            .on('zoomend', this.onZoom.bind(this));
 
         this.renderCanvas.call(this.xyzoom);
         this.el.select('#zoomXBox').call(this.xzoom);
@@ -2694,6 +2836,10 @@ class graphly extends EventEmitter {
     }
 
     onZoom() {
+        if(this.connectedGraph){
+            this.connectedGraph.zoom_update();
+            this.connectedGraph.renderData();
+        }
         this.zoom_update();
         this.renderData();
     }
@@ -2818,30 +2964,14 @@ class graphly extends EventEmitter {
 
     triggerZoomPreview(xZoom, xyZoom, xAxis, xScale){
 
-        // TODO: Only passing the zoom scale and translate is possible
-        // and should be the best way to synchronize axis, but with the debounce
-        // zoom the scale and translate is reset, to manage the overview image
-        // correctly which breaks the functionality...
-        
-        /*var xytrns = xyZoom.translate();
+        var xytrns = xyZoom.translate();
         let xtrns = xZoom.translate();
 
         if(xyZoom.scale() !== 1 || (xytrns[0]!==0 && xytrns[1]!==0) ){
             this.xzoom.scale(xyZoom.scale()).translate(xyZoom.translate());
         }else if(xZoom.scale() !== 1 || (xtrns[0]!==0 && xtrns[1]!==0) ){
             this.xzoom.scale(xZoom.scale()).translate(xZoom.translate());
-        }*/
-
-        this.xzoom = xZoom;
-
-        var xytrns = xyZoom.translate();
-
-        if(xyZoom.scale() !== 1 || (xytrns[0]!==0 && xytrns[1]!==0) ){
-            this.xzoom = xyZoom;
         }
-
-        this.xAxis = xAxis;
-        this.xScale = xScale;
 
         this.slaveGraph = true;
         this.previewZoom();
@@ -2909,7 +3039,7 @@ class graphly extends EventEmitter {
 
         if(this.debounceActive){
 
-            this.debounceZoom.bind(this)();
+            //this.debounceZoom.bind(this)();
 
             if(!this.previewActive){
                 this.renderCanvas.style('opacity','0');
@@ -2961,7 +3091,7 @@ class graphly extends EventEmitter {
 
 
         }else{
-            this.debounceZoom.bind(this)();
+            //this.debounceZoom.bind(this)();
             // While interaction is happening only render visible plot once
             // debounce finished render also reference canvas to allow interaction
             this.renderData(false);
@@ -3249,6 +3379,7 @@ class graphly extends EventEmitter {
         this.renderCanvas.style('width', null);
         this.renderCanvas.style('height', null);
 
+
         debounce = defaultFor(debounce, true);
         if(debounce){
             this.debounceResize.bind(this)();
@@ -3274,6 +3405,19 @@ class graphly extends EventEmitter {
                      this.marginCSOffset - this.subAxisMarginY;
         this.height = this.dim.height - this.margin.top - 
                       this.margin.bottom - this.subAxisMarginX;
+
+        this.renderCanvas.style(
+            'transform',
+            'translate(' + (this.margin.left+this.subAxisMarginY + 1.0) +
+            'px' + ',' + (this.margin.top + 1.0) + 'px' + ')'
+        );
+   
+        this.referenceCanvas.style(
+            'transform',
+            'translate(' + (this.margin.left+this.subAxisMarginY + 1.0) +
+            'px' + ',' + (this.margin.top + 1.0) + 'px' + ')'
+        );
+
         this.resize_update();
         this.createColorScales();
         this.createAxisLabels();
@@ -3289,6 +3433,18 @@ class graphly extends EventEmitter {
 
         this.xScale.range([0, this.width]);
         this.yScale.range([this.height, 0]);
+
+        this.svg.attr(
+            'transform',
+            'translate(' + (this.margin.left+this.subAxisMarginY+1) + ',' +
+            (this.margin.top+1) + ')'
+        );
+
+        this.topSvg.attr(
+            'transform',
+            'translate(' + (this.margin.left+this.subAxisMarginY+1) + ',' +
+            (this.margin.top+1) + ')'
+        );
 
         this.xAxisSvg.attr('transform', 'translate(0,' + this.height + ')');
         for (let i = 0; i < this.addXAxisSvg.length; i++) {
@@ -3328,7 +3484,7 @@ class graphly extends EventEmitter {
         this.referenceCanvas
             .attr('width', this.width - 1)
             .attr('height', this.height - 1);
-           
+
         // TODO: in this.svg actually the first g element is saved, this is 
         // confusing and shoulg maybe be changed, maybe change name?
         d3.select(this.svg.node().parentNode)
