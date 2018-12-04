@@ -17,11 +17,11 @@
 * @property {Object} [dataIdentifier] Contains key "parameter" with identifier 
 *       string of paramter used to separate data into groups and key 
 *       "identifiers" with array of strings with possible values in data array.
-* @property {Array String} [additionalXTicks] Array with parameter ids for 
+* @property {Array.String} [additionalXTicks] Array with parameter ids for 
 *        additional labels that should be used for the x axis
-* @property {Array String} [additionalYTicks] Array with parameter ids for 
+* @property {Array.String} [additionalYTicks] Array with parameter ids for 
 *        additional labels that should be used for the y axis
-* @property {Array String} [additionalY2Ticks] Array with parameter ids for 
+* @property {Array.String} [additionalY2Ticks] Array with parameter ids for 
 *        additional labels that should be used for the second y axis
 */
 
@@ -161,20 +161,20 @@ class graphly extends EventEmitter {
     * @param {boolean} [options.displayAlphaOptions=true] Enable/disable
     *        possibility to change alpha value for rendered parameters
     * @param {boolean} [options.fixedSize=false] Enable/disable use of fixed 
-             size. Rendering is done for specific size not allowing resizing and 
-             not using margins in the extent of the axis. 
+    *        size. Rendering is done for specific size not allowing resizing and 
+    *        not using margins in the extent of the axis. 
     * @param {Number} [options.fixedWidth=1000] Width used when using fixed size 
     *        rendering.
     * @param {Number} [options.fixedHeight=500] Height used when using fixed
-             size rendering.
+    *        size rendering.
     * @param {boolean} [options.autoColorExtent=false] Dynamically adapt color
-             extent for color range parameters
+    *        extent for color range parameters
     * @param {Object} [options.filterManager] Instanced filtermanager object to
-             connect to.
+    *        connect to.
     * @param {Object} [options.connectedGraph] Instanced graphly object to sync
-             x axis to.
+    *        x axis to.
     * @param {boolean} [options.enableFit=true] Enable/disable fitting
-             functionality.
+    *        functionality.
     * @param {boolean} [options.logX=false] Use logarithmic scale for x axis.
     * @param {boolean} [options.logY=false] Use logarithmic scale for left y axis.
     * @param {boolean} [options.logY2=false] Use logarithmic scale for right y axis.
@@ -182,7 +182,11 @@ class graphly extends EventEmitter {
              as default tick format.
     * @param {Number} [options.defaultAlpha=0.9] Alpha value used as default
     *        when rendering.
-    * @property {boolean} [debug=false] Show debug messages
+    * @param {boolean} [debug=false] Show debug messages
+    * @param {boolean} [enableSubXAxis=false] Enable selection option for x axis
+    *        subticks
+    * @param {boolean} [enableSubYAxis=false] Enable selection option for x axis
+    *        subticks
     *
     */
     constructor(options) {
