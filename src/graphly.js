@@ -52,6 +52,8 @@
 *           The object must have the 'period' value and can have a possible
 *           offset. For example longitude values from -180 to 180 would have 360
 *           as period and -180 as offset. Default offset value is 0.
+* @property {Number} [nullValue] Value to be interpreted as null, used for 
+*           colorscale extent calculation.
 */
 
 /**
@@ -2407,9 +2409,28 @@ class graphly extends EventEmitter {
                        this.dataSettings[cAxis[ca]].hasOwnProperty('extent')){
                         domain = this.dataSettings[cAxis[ca]].extent;
                     }else{
-                        domain = d3.extent(
-                            this.data[cAxis[ca]]
-                        );
+                        if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
+                           this.dataSettings[cAxis[ca]].hasOwnProperty('nullValue')){
+                            let nV = this.dataSettings[cAxis[ca]].nullValue;
+                            // If parameter has nullvalue defined ignore it 
+                            // when calculating extent
+                            domain = d3.extent(
+                                this.data[cAxis[ca]], (v)=>{
+                                    if(v !== nV){
+                                        return v;
+                                    } else {
+                                        return null;
+                                    }
+                                }
+                            );
+                        } else {
+                            domain = d3.extent(this.data[cAxis[ca]]);
+                        }
+                        // Check if domain start and ed is equal
+                        if(domain[0] === domain[1]){
+                            domain[0]-=1;
+                            domain[0]+=1;
+                        }
                         // Set current calculated extent to settings
                         this.dataSettings[cAxis[ca]].extent = domain;
                     }
