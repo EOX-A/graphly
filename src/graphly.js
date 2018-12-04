@@ -182,10 +182,10 @@ class graphly extends EventEmitter {
              as default tick format.
     * @param {Number} [options.defaultAlpha=0.9] Alpha value used as default
     *        when rendering.
-    * @param {boolean} [debug=false] Show debug messages
-    * @param {boolean} [enableSubXAxis=false] Enable selection option for x axis
+    * @param {boolean} [options.debug=false] Show debug messages
+    * @param {boolean} [options.enableSubXAxis=false] Enable selection option for x axis
     *        subticks
-    * @param {boolean} [enableSubYAxis=false] Enable selection option for x axis
+    * @param {boolean} [options.enableSubYAxis=false] Enable selection option for x axis
     *        subticks
     *
     */
