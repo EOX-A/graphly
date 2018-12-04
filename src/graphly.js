@@ -4243,7 +4243,9 @@ class graphly extends EventEmitter {
         this.el.select('#parameterSettings').remove();
         this.el.append('div')
             .attr('id', 'parameterSettings')
-            .style('left', (this.width/2)+'px')
+            .style('left', 
+                (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
+            )
             .style('display', 'none');
 
         if(this.el.select('#parameterInfo').selectAll('*').empty()){
@@ -4269,7 +4271,9 @@ class graphly extends EventEmitter {
             (this.margin.top+1) + ')');
 
         this.el.select('#parameterSettings')
-            .style('left', (this.width/2)+'px')
+            .style('left', 
+                (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
+            )
             .style('display', 'none');
     }
 
