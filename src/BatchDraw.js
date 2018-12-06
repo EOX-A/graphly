@@ -678,10 +678,14 @@ class BatchDrawer {
 
                         // Empty Rectangle
                         vec2 m = gl_PointCoord.xy*dotSize;
+                        float borderSize = 0.1 * dotSize;
+                        if(borderSize<1.2){
+                            borderSize = 1.2;
+                        }
 
                         if( (color.a > 0.0) && 
-                            (m.x >= 1.2 && m.x <= dotSize-1.2) && 
-                            (m.y >= 1.2 && m.y <= dotSize-1.2) ) {
+                            (m.x >= borderSize && m.x <= dotSize-borderSize) && 
+                            (m.y >= borderSize && m.y <= dotSize-borderSize) ) {
                             discard;
                         }
                         
@@ -725,9 +729,13 @@ class BatchDrawer {
 
                         vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
                         float dist = radius - sqrt(m.x * m.x + m.y * m.y);
+                        float borderSize = 0.1 * dotSize;
+                        if(borderSize<1.2){
+                            borderSize = 1.2;
+                        }
 
                         float t = 0.0;
-                        if((color.a >= 0.0) && dist*dotSize>=1.2){
+                        if((color.a >= 0.0) && dist*dotSize>=borderSize){
                             discard;
                         }else if (dist > border){
                             t = 1.0;
@@ -746,10 +754,15 @@ class BatchDrawer {
                     }else if(dotType == 4.0){
 
                         // + Symbol
+                        float borderSize = 0.1 * dotSize;
+                        if(borderSize<1.2){
+                            borderSize = 1.2;
+                        }
+                        borderSize = borderSize/2.0;
 
                         vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.5))*dotSize;
-                        if( m.x <= 0.5 && m.x >= -0.5 ){
-                        } else if( m.y <= 0.5 && m.y >= -0.5){
+                        if( m.x <= borderSize && m.x >= -borderSize ){
+                        } else if( m.y <= borderSize && m.y >= -borderSize){
                         } else {
                             discard;
                         }
@@ -759,9 +772,14 @@ class BatchDrawer {
                     } else if(dotType == 5.0){
 
                         // x Symbol
+                        float borderSize = 0.1 * dotSize;
+                        if(borderSize<1.2){
+                            borderSize = 1.2;
+                        }
+                        borderSize = borderSize/2.0;
 
                         vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.5))*dotSize;
-                        if( abs(abs(m.x)-abs(m.y)) >= 0.5 ) {
+                        if( abs(abs(m.x)-abs(m.y)) >= borderSize ) {
                             discard;
                         }
 
@@ -780,6 +798,7 @@ class BatchDrawer {
                     } else if(dotType == 7.0){
 
                         // Triangle empty
+
 
                         vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.0))*dotSize;
                         if( abs(m.x)*2.0 > m.y ) {
