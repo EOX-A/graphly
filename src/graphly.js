@@ -344,9 +344,9 @@ class graphly extends EventEmitter {
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
         }
 
-        /*this.debounceZoom = debounce(function(){
+        this.debounceZoom = debounce(function(){
             this.onZoom();
-        }, 350);*/
+        }, 350);
 
        this.debounceResize = debounce(function(){
             this.onResize();
@@ -2784,20 +2784,20 @@ class graphly extends EventEmitter {
             .y(this.yScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.onZoom.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.onZoom.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));
         this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.onZoom.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));
         this.y2zoom = d3.behavior.zoom()
             .y(this.y2Scale)
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.onZoom.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
@@ -2837,20 +2837,20 @@ class graphly extends EventEmitter {
             .y(this.yScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.onZoom.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.onZoom.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));
         this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.onZoom.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));
         this.y2zoom = d3.behavior.zoom()
             .y(this.y2Scale)
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.onZoom.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.renderCanvas.call(this.xyzoom);
         this.el.select('#zoomXBox').call(this.xzoom);
@@ -3003,6 +3003,10 @@ class graphly extends EventEmitter {
 
     }
 
+    debounceEndZoomEvent(){
+        this.debounceZoom.bind(this)();
+    }
+
     previewZoom() {
 
         this.topSvg.selectAll('.temporary').remove();
@@ -3064,8 +3068,6 @@ class graphly extends EventEmitter {
 
         if(this.debounceActive){
 
-            //this.debounceZoom.bind(this)();
-
             if(!this.previewActive){
                 this.renderCanvas.style('opacity','0');
                 this.oSc = this.currentScale;
@@ -3116,7 +3118,6 @@ class graphly extends EventEmitter {
 
 
         }else{
-            //this.debounceZoom.bind(this)();
             // While interaction is happening only render visible plot once
             // debounce finished render also reference canvas to allow interaction
             this.renderData(false);
@@ -4958,6 +4959,46 @@ class graphly extends EventEmitter {
     }
 
 
+    updatePreviewImage(imageEl){
+
+        if(this.debounceActive){
+            this.renderCanvas.style('opacity','1');
+            let prevImg = this.el.select('#'+imageEl);
+            this.startTiming('createPreviewImage:'+imageEl);
+            let img = this.renderCanvas.node().toDataURL();
+            this.endTiming('createPreviewImage:'+imageEl);
+            if(!prevImg.empty()){
+                prevImg.attr('xlink:href', img)
+                    .attr('transform', null)
+                    .style('display', 'none');
+            } else {
+                this.renderingContainer.insert('svg:image', ':first-child')
+                        /*.attr('id', 'previewImage2')
+                this.renderingContainer.append('svg:image')*/
+                    .attr('id', imageEl)
+                    .attr('xlink:href', img)
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('width',  this.width)
+                    .attr('height', this.height)
+                    .style('display', 'none');
+            }
+            this.previewActive = false;
+        } else {
+            let prevImg = this.el.select('#'+imageEl);
+            if(prevImg.empty()){
+                this.renderingContainer.append('svg:image')
+                    .attr('id', imageEl)
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('width',  this.width)
+                    .attr('height', this.height)
+                    .style('display', 'none');
+            }
+        }
+    }
+
+
     /**
     * Render the data as graph
     * @param {boolean} [updateReferenceCanvas=true] Update the corresponding 
@@ -5015,6 +5056,32 @@ class graphly extends EventEmitter {
 
         let idX = xAxRen;
 
+        // If y2 axis is defined start rendering it as we need to render
+        // multiple times to have individial images for manipulation in
+        // debounce option
+        if(y2AxRen.length > 0){
+            for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                let idY2 = y2AxRen[parPos];
+                let idCS = this.renderSettings.colorAxis[
+                    this.renderSettings.yAxis.length + parPos
+                ];
+                this.renderParameter(
+                    idX, idY2, idCS, this.renderSettings.y2Axis,
+                    parPos, this.currentData, this.currentInactiveData,
+                    updateReferenceCanvas
+                );
+            }
+            // Save preview image of rendering of second y axis 
+            // without data from first y axis
+            this.batchDrawer.draw();
+            this.updatePreviewImage('previewImage2');
+        }
+
+        this.batchDrawer.clear();
+        if(this.batchDrawerReference){
+            this.batchDrawerReference.clear();
+        }
+
         for (let parPos=0; parPos<yAxRen.length; parPos++){
 
             let idY = yAxRen[parPos];
@@ -5022,14 +5089,15 @@ class graphly extends EventEmitter {
 
             this.renderParameter(
                 idX, idY, idCS, this.renderSettings.yAxis,
-                parPos, this.currentData, this.currentInactiveData, updateReferenceCanvas
+                parPos, this.currentData, this.currentInactiveData,
+                updateReferenceCanvas
             );
         }
 
         this.startTiming('batchDrawer:draw');
         this.batchDrawer.draw();
         this.endTiming('batchDrawer:draw');
-
+        this.updatePreviewImage('previewImage');
 
         if(!this.fixedSize && updateReferenceCanvas){
             this.startTiming('batchDrawerReference:draw');
@@ -5037,119 +5105,30 @@ class graphly extends EventEmitter {
             this.endTiming('batchDrawerReference:draw');
         }
 
-        if(this.debounceActive){
-            this.renderCanvas.style('opacity','1');
-            let prevImg = this.el.select('#previewImage');
-            this.startTiming('createPreviewImage');
-            let img = this.renderCanvas.node().toDataURL();
-            this.endTiming('createPreviewImage');
-            if(!prevImg.empty()){
-                prevImg.attr('xlink:href', img)
-                    .attr('transform', null)
-                    .style('display', 'none');
-            } else {
-                this.renderingContainer.append('svg:image')
-                    .attr('id', 'previewImage')
-                    .attr('xlink:href', img)
-                    .attr('x', 0)
-                    .attr('y', 0)
-                    .attr('width',  this.width)
-                    .attr('height', this.height)
-                    .style('display', 'none');
-            }
-            this.previewActive = false;
-        } else {
-            let prevImg = this.el.select('#previewImage');
-            if(prevImg.empty()){
-                this.renderingContainer.append('svg:image')
-                    .attr('id', 'previewImage')
-                    .attr('x', 0)
-                    .attr('y', 0)
-                    .attr('width',  this.width)
-                    .attr('height', this.height)
-                    .style('display', 'none');
-            }
-        }
-
+        // Render y2 parameters a second time on top of current canvas
         if(y2AxRen.length > 0){
-
-            // If y2 Axis needs to be rendered we need to create a separate 
-            // image for each y axis, so we clear the rendering for the first y-Axis
-            this.batchDrawer.clear();
-            this.el.select('#regressionInfo').remove();
-            this.el.append('div')
-                .attr('id', 'regressionInfo')
-                .style('bottom', (this.margin.bottom+this.subAxisMarginX)+'px')
-                .style('left', (this.width/2)+'px');
-
             for (let parPos=0; parPos<y2AxRen.length; parPos++){
-
                 let idY2 = y2AxRen[parPos];
                 let idCS = this.renderSettings.colorAxis[
                     this.renderSettings.yAxis.length + parPos
                 ];
-                
                 this.renderParameter(
                     idX, idY2, idCS, this.renderSettings.y2Axis,
-                    parPos, this.currentData, this.currentInactiveData, updateReferenceCanvas
-                );
-            }
-
-            // Save preview image of rendering of second y axis 
-            // without data from first y axis
-            this.batchDrawer.draw();
-            if(!this.fixedSize && updateReferenceCanvas){
-                this.batchDrawerReference.draw();
-            }
-            if(this.debounceActive){
-                this.renderCanvas.style('opacity','1');
-                let prevImg = this.el.select('#previewImage2' );
-                let img = this.renderCanvas.node().toDataURL();
-                if(!prevImg.empty()){
-                    prevImg.attr('xlink:href', img)
-                        .attr('transform', null)
-                        .style('display', 'none');
-                } else {
-                    this.renderingContainer.insert('svg:image', ':first-child')
-                        .attr('id', 'previewImage2')
-                        .attr('xlink:href', img)
-                        .attr('x', 0)
-                        .attr('y', 0)
-                        .attr('width',  this.width)
-                        .attr('height', this.height)
-                        .style('display', 'none');
-                }
-                this.previewActive = false;
-            } else {
-                let prevImg = this.el.select('#previewImage2' );
-                if(prevImg.empty()){
-                    this.renderingContainer.append('svg:image')
-                        .attr('id', '#previewImage2')
-                        .attr('x', 0)
-                        .attr('y', 0)
-                        .attr('width',  this.width)
-                        .attr('height', this.height)
-                        .style('display', 'none');
-                }
-            }
-
-            // Re-render data points of first yAxis parameters
-            // that were cleared before
-            for (let parPos=0; parPos<yAxRen.length; parPos++){
-                let idY = yAxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[parPos];
-                this.renderParameter(
-                    idX, idY, idCS, this.renderSettings.yAxis,
                     parPos, this.currentData, this.currentInactiveData,
                     updateReferenceCanvas
                 );
             }
-
+            // Save preview image of rendering of second y axis 
+            // without data from first y axis
             this.batchDrawer.draw();
             if(!this.fixedSize && updateReferenceCanvas){
+                this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
+                this.endTiming('batchDrawerReference:draw');
             }
         }
+
+        
         /**
         * Event is fired when graph has finished rendering plot.
         * @event module:graphly.graphly#rendered
