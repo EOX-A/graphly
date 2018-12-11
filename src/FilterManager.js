@@ -130,7 +130,29 @@ class FilterManager extends EventEmitter {
                 this.dataSettings[d].hasOwnProperty('extent')){
                 this.extents[d] = this.dataSettings[d].extent;
             }else{
-                this.extents[d] = d3.extent(this.data[d]);
+                let domain;
+                if(this.dataSettings.hasOwnProperty(d) &&
+                    this.dataSettings[d].hasOwnProperty('nullValue')){
+                    let nV = this.dataSettings[d].nullValue;
+                    // If parameter has nullvalue defined ignore it 
+                    // when calculating extent
+                    domain = d3.extent(
+                        this.data[d], (v)=>{
+                            if(v !== nV){
+                                return v;
+                            } else {
+                                return null;
+                            }
+                        }
+                    );
+                } else {
+                    domain = d3.extent(this.data[d]);
+                }
+                if(domain[0] === domain[1]){
+                    domain[0] = domain[0]-1;
+                    domain[1] = domain[1]+1;
+                }
+                this.extents[d] = domain;
             }
             
             // TODO: Possibility to use quantiles for extent if there are huge 

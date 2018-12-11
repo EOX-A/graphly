@@ -2314,7 +2314,23 @@ class graphly extends EventEmitter {
     calculateExtent(selection) {
         let currExt, resExt; 
         for (var i = selection.length - 1; i >= 0; i--) {
-            currExt = d3.extent(this.data[selection[i]]);
+            // Check if null value has been defined
+            if(this.dataSettings[selection[i]].hasOwnProperty('nullValue')){
+                let nV = this.dataSettings[selection[i]].nullValue;
+                // If parameter has nullvalue defined ignore it 
+                // when calculating extent
+                currExt = d3.extent(
+                    this.data[selection[i]], (v)=>{
+                        if(v !== nV){
+                            return v;
+                        } else {
+                            return null;
+                        }
+                    }
+                );
+            } else {
+                currExt = d3.extent(this.data[selection[i]]);
+            }
             if(resExt){
                 if(currExt[0]<resExt[0]){
                     resExt[0] = currExt[0];
@@ -2329,9 +2345,18 @@ class graphly extends EventEmitter {
         if(selection.length === 0){
             return [0,1];
         }
+        if(isNaN(resExt[0])){
+            resExt[0] = 0;
+        }
+        if(isNaN(resExt[1])){
+            resExt[1] = resExt[0]+1;
+        }
         if(resExt[0] == resExt[1]){
             resExt[0]-=1;
             resExt[1]+=1;
+        }
+        if(resExt[0]>resExt[1]){
+            resExt = resExt.reverse();
         }
         return resExt;
     }
@@ -2426,10 +2451,18 @@ class graphly extends EventEmitter {
                         } else {
                             domain = d3.extent(this.data[cAxis[ca]]);
                         }
-                        // Check if domain start and ed is equal
-                        if(domain[0] === domain[1]){
+                        if(isNaN(domain[0])){
+                            domain[0] = 0;
+                        }
+                        if(isNaN(domain[1])){
+                            domain[1] = domain[0]+1;
+                        }
+                        if(domain[0] == domain[1]){
                             domain[0]-=1;
-                            domain[0]+=1;
+                            domain[1]+=1;
+                        }
+                        if(domain[0]>domain[1]){
+                            domain = domain.reverse();
                         }
                         // Set current calculated extent to settings
                         this.dataSettings[cAxis[ca]].extent = domain;
@@ -5044,8 +5077,38 @@ class graphly extends EventEmitter {
             if(ca !== null){
                 if(this.dataSettings.hasOwnProperty(ca)){
                     if(!this.dataSettings[ca].hasOwnProperty('extent')){
+                        let domain;
                         // Set current calculated extent to settings
-                        this.dataSettings[ca].extent = d3.extent(this.currentData[ca]);
+                        if(this.dataSettings[ca].hasOwnProperty('nullValue')){
+                            let nV = this.dataSettings[ca].nullValue;
+                            // If parameter has nullvalue defined ignore it 
+                            // when calculating extent
+                            domain = d3.extent(
+                                this.currentData[ca], (v)=>{
+                                    if(v !== nV){
+                                        return v;
+                                    } else {
+                                        return null;
+                                    }
+                                }
+                            );
+                        } else {
+                            domain = d3.extent(this.currentData[ca]);
+                        }
+                        if(isNaN(domain[0])){
+                            domain[0] = 0;
+                        }
+                        if(isNaN(domain[1])){
+                            domain[1] = domain[0]+1;
+                        }
+                        if(domain[0] == domain[1]){
+                            domain[0]-=1;
+                            domain[1]+=1;
+                        }
+                        if(domain[0]>domain[1]){
+                            domain = domain.reverse();
+                        }
+                        this.dataSettings[ca].extent = domain;
                         this.createColorScales();
                     }
                 }
