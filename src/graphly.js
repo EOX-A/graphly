@@ -2632,15 +2632,16 @@ class graphly extends EventEmitter {
                 // Find corresponding value(s) for additional axis
                 for (let x = 0; x < addXT.length; x++) {
                     secParDat = this.data[addXT[x]];
-                    let idx = 0;
+                    let idx = -1;
+                    let dataLength = currParDat.length-1;
                     for (let j = 0; j < currParDat.length; j++) {
                         if(this.xTimeScale){
-                            if(currParDat[0]-currParDat[1]<=0 &&
+                            if(currParDat[0]-currParDat[dataLength]<=0 &&
                                 currParDat[j].getTime()>=d.getTime()){
                                 idx = j-1;
                                 break;
                             }
-                            else if(currParDat[0]-currParDat[1]>0 &&
+                            else if(currParDat[0]-currParDat[dataLength]>0 &&
                                 currParDat[j].getTime()<=d.getTime()){
                                 idx = j;
                                 break;
@@ -2657,7 +2658,7 @@ class graphly extends EventEmitter {
                             }
                         }
                     }
-                    if(idx > 0 && idx<secParDat.length){
+                    if(idx >= 0 && idx<secParDat.length){
                         if(secParDat[idx]<100){
                             addValues.push(secParDat[idx].toFixed(2));
                         }else{
