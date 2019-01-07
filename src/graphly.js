@@ -6,7 +6,7 @@
 * @property {Array.String} yAxis Array of parameter id strings of parameters
 *         to be rendered on y axis (left). 
 * @property {Array.String} y2Axis Array of parameter id strings of parameters
-*        to be rendered on second y axis (right). 
+*        to be rendered on second y axis (right).
 * @property {Object} combinedParameters
 * @property {Array.String} colorAxis Array of parameter
 *        id strings of parameters to be rendered used for third dimension
@@ -189,6 +189,8 @@ class graphly extends EventEmitter {
     *        subticks
     * @param {boolean} [options.enableSubYAxis=false] Enable selection option for x axis
     *        subticks
+    * @property {boolean} [multiYAxis=false] Adds controls for managing 
+    *        multiple y axis with single x axis,
     *
     */
     constructor(options) {
@@ -207,6 +209,7 @@ class graphly extends EventEmitter {
         this.debug = defaultFor(options.debug, false);
         this.enableSubXAxis = defaultFor(options.enableSubXAxis, false);
         this.enableSubYAxis = defaultFor(options.enableSubYAxis, false);
+        this.multiYAxis = defaultFor(options.multiYAxis, false);
 
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
@@ -1972,9 +1975,11 @@ class graphly extends EventEmitter {
             .attr('id', 'zoomXBox')
             .attr('width', this.width)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
-            .attr('fill', 'none')
+            //.attr('fill', 'none')
+            .attr('fill', 'blue')
+            .attr('opacity', '0.5')
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
-            .style('visibility', 'hidden')
+            //.style('visibility', 'hidden')
             .attr('pointer-events', 'all');
 
         this.svg.append('rect')
@@ -2296,20 +2301,6 @@ class graphly extends EventEmitter {
         this.renderData();
     }
 
-    checkTimeScale(id) {
-        // See if id is from combined dataset
-        if(this.renderSettings.combinedParameters.hasOwnProperty(id)){
-            id = this.renderSettings.combinedParameters[id][0];
-        }
-        if (this.dataSettings.hasOwnProperty(id)){
-            if (this.dataSettings[id].hasOwnProperty('scaleFormat')){
-                if (this.dataSettings[id].scaleFormat === 'time'){
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     calculateExtent(selection) {
         let currExt, resExt; 
@@ -2361,129 +2352,75 @@ class graphly extends EventEmitter {
         return resExt;
     }
 
-    initAxis(){
-
-        this.svg.selectAll('*').remove();
-
-        let xExtent, yExtent, y2Extent;
-
-        // "Flatten selections"
-        let xSelection = [];
-        let ySelection = [];
-        let y2Selection = [];
-        let rs = this.renderSettings;
-
-        this.renderSettings.y2Axis = defaultFor(this.renderSettings.y2Axis, []);
-
-        if(rs.combinedParameters.hasOwnProperty(rs.xAxis)){
-            xSelection = [].concat.apply([], rs.combinedParameters[rs.xAxis]);
-        } else {
-            xSelection.push(this.renderSettings.xAxis);
+    checkTimeScale(id) {
+        // See if id is from combined dataset
+        if(this.renderSettings.combinedParameters.hasOwnProperty(id)){
+            id = this.renderSettings.combinedParameters[id][0];
         }
-
-        for (var h = 0; h < this.renderSettings.yAxis.length; h++) {
-            if(rs.combinedParameters.hasOwnProperty(rs.yAxis[h])){
-                ySelection = [].concat.apply([], rs.combinedParameters[rs.yAxis[h]]);
-            } else {
-                ySelection.push(this.renderSettings.yAxis[h]);
-            }
-        }
-
-        for (var i = 0; i < this.renderSettings.y2Axis.length; i++) {
-            if(rs.combinedParameters.hasOwnProperty(rs.y2Axis[i])){
-                y2Selection = [].concat.apply([], rs.combinedParameters[rs.y2Axis[i]]);
-            } else {
-                y2Selection.push(this.renderSettings.y2Axis[i]);
-            }
-        }
-
-
-
-        if(this.fixedXDomain !== undefined){
-            xExtent = this.fixedXDomain;
-        } else {
-            xExtent = this.calculateExtent(xSelection);
-        }
-        yExtent = this.calculateExtent(ySelection);
-        y2Extent = this.calculateExtent(y2Selection);
-
-        let xRange = xExtent[1] - xExtent[0];
-        let yRange = yExtent[1] - yExtent[0];
-        let y2Range = y2Extent[1] - y2Extent[0];
-
-        let domain;
-        if(this.renderSettings.hasOwnProperty('colorAxis')){
-            let cAxis = this.renderSettings.colorAxis;
-            // Check to see if linear colorscale or ordinal colorscale (e.g. IDs)
-            if (this.dataSettings.hasOwnProperty(cAxis)){
-                let ds = this.dataSettings[cAxis];
-                if(
-                    ds.hasOwnProperty('scaleType') && 
-                    ds.scaleType === 'ordinal' &&
-                    ds.hasOwnProperty('categories') ){
-
-                    ds.colorscaleFunction = d3.scale.ordinal()
-                        .range(d3.scale.category10().range().map(u.hexToRgb))
-                        .domain(ds.categories);
+        if (this.dataSettings.hasOwnProperty(id)){
+            if (this.dataSettings[id].hasOwnProperty('scaleFormat')){
+                if (this.dataSettings[id].scaleFormat === 'time'){
+                    return true;
                 }
             }
-            for (let ca = cAxis.length - 1; ca >= 0; ca--) {
-                if(cAxis[ca]){
-                    // Check if an extent is already configured
-                    if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
-                       this.dataSettings[cAxis[ca]].hasOwnProperty('extent')){
-                        domain = this.dataSettings[cAxis[ca]].extent;
-                    }else{
-                        if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
-                           this.dataSettings[cAxis[ca]].hasOwnProperty('nullValue')){
-                            let nV = this.dataSettings[cAxis[ca]].nullValue;
-                            // If parameter has nullvalue defined ignore it 
-                            // when calculating extent
-                            domain = d3.extent(
-                                this.data[cAxis[ca]], (v)=>{
-                                    if(v !== nV){
-                                        return v;
-                                    } else {
-                                        return null;
-                                    }
-                                }
-                            );
-                        } else {
-                            domain = d3.extent(this.data[cAxis[ca]]);
-                        }
-                        if(isNaN(domain[0])){
-                            domain[0] = 0;
-                        }
-                        if(isNaN(domain[1])){
-                            domain[1] = domain[0]+1;
-                        }
-                        if(domain[0] == domain[1]){
-                            domain[0]-=1;
-                            domain[1]+=1;
-                        }
-                        if(domain[0]>domain[1]){
-                            domain = domain.reverse();
-                        }
-                        // Set current calculated extent to settings
-                        this.dataSettings[cAxis[ca]].extent = domain;
+        }
+        return false;
+    }
+
+    customSubtickFormat(currParDat, addT, d){
+        // TODO: Check if selection is group
+        //let currParDat = this.data[xSelection[0]];
+        let secParDat;
+        let addValues = [];
+        let timeScale = this.checkTimeScale(currParDat);
+        if(timeScale){
+            addValues.push(u.getCustomUTCTimeTickFormat()(d));
+        } else {
+            addValues.push(d);
+        }
+        // Find corresponding value(s) for additional axis
+        for (let x = 0; x < addT.length; x++) {
+            secParDat = this.data[addT[x]];
+            let idx = -1;
+            let dataLength = currParDat.length-1;
+            for (let j = 0; j < currParDat.length; j++) {
+                if(timeScale){
+                    if(currParDat[0]-currParDat[dataLength]<=0 &&
+                        currParDat[j].getTime()>=d.getTime()){
+                        idx = j-1;
+                        break;
                     }
-                    
+                    else if(currParDat[0]-currParDat[dataLength]>0 &&
+                        currParDat[j].getTime()<=d.getTime()){
+                        idx = j;
+                        break;
+                    }
+                } else {
+                    if(currParDat[0]-currParDat[1]<=0 && 
+                       currParDat[j]>=d){
+                        idx = j-1;
+                        break;
+                    } else if(currParDat[0]-currParDat[1]>0 && 
+                       currParDat[j]<=d){
+                        idx = j;
+                        break;
+                    }
                 }
             }
+            if(idx >= 0 && idx<secParDat.length){
+                if(secParDat[idx]<100){
+                    addValues.push(secParDat[idx].toFixed(2));
+                }else{
+                    addValues.push(secParDat[idx].toFixed(0));
+                }
+            } else {
+                addValues.push(' ');
+            }
         }
+        return addValues.join('|');
+    }
 
-        // TODO: Allow multiple domains!
-        if(domain){
-            this.plotter.setDomain(domain);
-        }
-
-
-        let xScaleType, yScaleType, y2ScaleType;
-        // TODO: how to handle multiple different scale types
-        // For now just check first object of scale
-        this.xTimeScale = this.checkTimeScale(xSelection[0]);
-        this.yTimeScale = this.checkTimeScale(ySelection[0]);
-        this.y2TimeScale = this.checkTimeScale(y2Selection[0]);
+    initAxis(){
 
         function getScale(isTime){
             if(isTime){
@@ -2492,10 +2429,6 @@ class graphly extends EventEmitter {
                 return d3.scale.linear();
             }
         }
-
-        xScaleType = getScale(this.xTimeScale);
-        yScaleType = getScale(this.yTimeScale);
-        y2ScaleType = getScale(this.y2TimeScale);
 
         function calcExtent(extent, range, timescale, margin){
             margin = defaultFor(margin, [0.01, 0.01]);
@@ -2511,10 +2444,36 @@ class graphly extends EventEmitter {
             return returnExt;
         }
 
+        this.svg.selectAll('*').remove();
+
+        let xExtent;
+        let rs = this.renderSettings;
+
+        // "Flatten selections"
+        let xSelection = [];
+
+        if(rs.combinedParameters.hasOwnProperty(rs.xAxis)){
+            xSelection = [].concat.apply([], rs.combinedParameters[rs.xAxis]);
+        } else {
+            xSelection.push(this.renderSettings.xAxis);
+        }
+
+        if(this.fixedXDomain !== undefined){
+            xExtent = this.fixedXDomain;
+        } else {
+            xExtent = this.calculateExtent(xSelection);
+        }
+
+
+
+        let xScaleType;
+        xScaleType = getScale(this.xTimeScale);
+        this.xTimeScale = this.checkTimeScale(xSelection[0]);
+
+        let xRange = xExtent[1] - xExtent[0];
+
         // Adapt domain so that data is not directly at border
         if(!this.fixedSize){
-            yExtent = calcExtent(yExtent, yRange, this.yTimeScale, [0.02, 0.02]);
-            y2Extent = calcExtent(y2Extent, y2Range, this.y2TimeScale, [0.02, 0.02]);
             xExtent = calcExtent(xExtent, xRange, this.xTimeScale);
         }
 
@@ -2522,48 +2481,6 @@ class graphly extends EventEmitter {
             .domain([xExtent[0], xExtent[1]])
             .range([0, this.width]);
 
-
-        if(this.logY){
-            let start = yExtent[0];
-            let end = yExtent[1];
-
-            // if both positive or negative all fine else
-            if(yExtent[0]<=0 && yExtent[1]>0){
-                start = 0.005;
-            }
-            if(yExtent[0]>=0 && yExtent[1]<0){
-                start = -0.005;
-            }
-
-            this.yScale = d3.scale.log()
-                .domain([start,end])
-                .range([this.height, 0]);
-        }else{
-            this.yScale = yScaleType
-                .domain(yExtent)
-                .range([this.height, 0]);
-        }
-
-        if(this.logY2){
-            let start = y2Extent[0];
-            let end = y2Extent[1];
-
-            // if both positive or negative all fine else
-            if(y2Extent[0]<=0 && y2Extent[1]>0){
-                start = 0.005;
-            }
-            if(y2Extent[0]>=0 && y2Extent[1]<0){
-                start = -0.005;
-            }
-
-            this.y2Scale = d3.scale.log()
-                .domain([start,end])
-                .range([this.height, 0]);
-        }else{
-            this.y2Scale = y2ScaleType
-                .domain(y2Extent)
-                .range([this.height, 0]);
-        }
 
         this.xAxis = d3.svg.axis()
             .scale(this.xScale)
@@ -2619,146 +2536,12 @@ class graphly extends EventEmitter {
         // Handling of ticks adding subtick text
         if(this.renderSettings.hasOwnProperty('additionalXTicks')){
             let addXT = this.renderSettings.additionalXTicks;
-            this.xAxis.tickFormat((d)=>{
-                // TODO: Check if selection is group
-                let currParDat = this.data[xSelection[0]];
-                let secParDat;
-                let addValues = [];
-                if(this.xTimeScale){
-                    addValues.push(u.getCustomUTCTimeTickFormat()(d));
-                } else {
-                    addValues.push(d);
-                }
-                // Find corresponding value(s) for additional axis
-                for (let x = 0; x < addXT.length; x++) {
-                    secParDat = this.data[addXT[x]];
-                    let idx = -1;
-                    let dataLength = currParDat.length-1;
-                    for (let j = 0; j < currParDat.length; j++) {
-                        if(this.xTimeScale){
-                            if(currParDat[0]-currParDat[dataLength]<=0 &&
-                                currParDat[j].getTime()>=d.getTime()){
-                                idx = j-1;
-                                break;
-                            }
-                            else if(currParDat[0]-currParDat[dataLength]>0 &&
-                                currParDat[j].getTime()<=d.getTime()){
-                                idx = j;
-                                break;
-                            }
-                        } else {
-                            if(currParDat[0]-currParDat[1]<=0 && 
-                               currParDat[j]>=d){
-                                idx = j-1;
-                                break;
-                            } else if(currParDat[0]-currParDat[1]>0 && 
-                               currParDat[j]<=d){
-                                idx = j;
-                                break;
-                            }
-                        }
-                    }
-                    if(idx >= 0 && idx<secParDat.length){
-                        if(secParDat[idx]<100){
-                            addValues.push(secParDat[idx].toFixed(2));
-                        }else{
-                            addValues.push(secParDat[idx].toFixed(0));
-                        }
-                    } else {
-                        addValues.push(' ');
-                    }
-                }
-                return addValues.join('|');
-            });
-        }
-        
-        this.yAxis = d3.svg.axis()
-            .scale(this.yScale)
-            .innerTickSize(-this.width)
-            .outerTickSize(0)
-            .orient('left');
-        if(this.yTimeScale){
-            this.yAxis.tickFormat(u.getCustomUTCTimeTickFormat());
-        }
-
-        // Creating additional axis for sub parameters
-        this.additionalYAxis = [];
-        if(this.renderSettings.hasOwnProperty('additionalYTicks')){
-            let addYTicks = this.renderSettings.additionalYTicks;
-            for (let i = 0; i < addYTicks.length; i++) {
-
-                this.additionalYAxis.push(
-                    d3.svg.axis()
-                        .scale(this.yScale)
-                        .outerTickSize(5)
-                        .orient('left')
-                        .tickFormat(()=>{return '';})
-                );
-            }
-        }
-        // Handling of ticks adding subtick text
-        if(this.renderSettings.hasOwnProperty('additionalYTicks')){
-            let addYT = this.renderSettings.additionalYTicks;
-            this.yAxis.tickFormat((d)=>{
-                // TODO: Check if selection is group
-                let currParDat = this.data[ySelection[0]];
-                let secParDat;
-                let addValues = [];
-                if(this.yTimeScale){
-                    addValues.push(u.getCustomUTCTimeTickFormat()(d));
-                } else {
-                    addValues.push(d);
-                }
-                // Find corresponding value(s) for additional y axis
-                for (let y = 0; y < addYT.length; y++) {
-                    secParDat = this.data[addYT[y]];
-                    let idx = 0;
-                    for (let j = 0; j < currParDat.length; j++) {
-                        if(this.yTimeScale){
-                            // Check if values are ascending/descending
-                            if(currParDat[0]-currParDat[1]<=0 &&
-                                currParDat[j].getTime()>=d.getTime()){
-                                idx = j-1;
-                                break;
-                            }
-                            else if(currParDat[0]-currParDat[1]>0 &&
-                                currParDat[j].getTime()<=d.getTime()){
-                                idx = j;
-                                break;
-                            }
-                        } else {
-                            if(currParDat[0]-currParDat[1]<=0 && 
-                               currParDat[j]>=d){
-                                idx = j-1;
-                                break;
-                            } else if(currParDat[0]-currParDat[1]>0 && 
-                               currParDat[j]<=d){
-                                idx = j;
-                                break;
-                            }
-                        }
-                    }
-                    if(idx > 0 && idx<secParDat.length){
-                        if(secParDat[idx]<100){
-                            addValues.push(secParDat[idx].toFixed(2));
-                        }else{
-                            addValues.push(secParDat[idx].toFixed(0));
-                        }
-                    } else {
-                        addValues.push(' ');
-                    }
-                }
-                return addValues.join('|');
-            });
-        }
-
-        this.y2Axis = d3.svg.axis()
-            .scale(this.y2Scale)
-            .innerTickSize(this.width)
-            .outerTickSize(0)
-            .orient('right');
-        if(this.y2TimeScale){
-            this.y2Axis.tickFormat(u.getCustomUTCTimeTickFormat());
+            //TODO: Probably wrong
+            this.xAxis.tickFormat(this.customSubtickFormat.bind(
+                this,
+                this.data[xSelection[0]],
+                addXT
+            ));
         }
 
         this.xAxisSvg = this.svg.append('g')
@@ -2779,31 +2562,6 @@ class graphly extends EventEmitter {
             );
         }
 
-        if(this.renderSettings.yAxis.length > 0){
-            this.yAxisSvg = this.svg.append('g')
-                .attr('class', 'y axis')
-                .call(this.yAxis);
-        }
-
-        this.addYAxisSvg = [];
-        for (let i = 0; i < this.additionalYAxis.length; i++) {
-            this.addYAxisSvg.push(
-                this.svg.append('g')
-                    .attr('class', 'y_add subaxis')
-                    .attr(
-                        'transform', 'translate(-'+((i*80)+80)+ ',0)'
-                    )
-                    .call(this.additionalYAxis[i])
-            );
-        }
-
-        if(this.renderSettings.y2Axis.length > 0){
-            this.y2AxisSvg = this.svg.append('g')
-                .attr('class', 'y2 axis')
-                .call(this.y2Axis);
-        }
-
-        let maxzoomout = 0;
         let xSel = this.renderSettings.xAxis;
         if(this.dataSettings.hasOwnProperty(xSel) &&
            this.dataSettings[xSel].hasOwnProperty('periodic') ){
@@ -2812,26 +2570,296 @@ class graphly extends EventEmitter {
             maxzoomout = Math.abs(xd[1]-xd[0])/period;
         }
 
+
+
+
+
+        let multiLength = this.renderSettings.yAxis.length;
+        let heighChunk = this.height/multiLength;
+        let separation = 40;
+        this.yScale = [];
+        this.yAxis = [];
+        this.yAxisSvg = [];
+
+        for (let yPos = 0; yPos < multiLength; yPos++) {
+
+            let currYAxis = this.renderSettings.yAxis[yPos];
+            let currY2Axis = defaultFor(this.renderSettings.y2Axis[yPos], []);
+            if(!this.multiYAxis){
+                currYAxis = this.renderSettings.yAxis;
+                currY2Axis = defaultFor(this.renderSettings.y2Axis, []);
+            }
+        
+
+            let yExtent, y2Extent;
+            let ySelection = [];
+            let y2Selection = [];
+
+
+            for (var h = 0; h < currYAxis.length; h++) {
+                if(rs.combinedParameters.hasOwnProperty(rs.yAxis[h])){
+                    ySelection = [].concat.apply([], rs.combinedParameters[rs.yAxis[h]]);
+                } else {
+                    ySelection.push(currYAxis[h]);
+                }
+            }
+
+            for (var i = 0; i < currY2Axis.length; i++) {
+                if(rs.combinedParameters.hasOwnProperty(rs.y2Axis[i])){
+                    y2Selection = [].concat.apply([], rs.combinedParameters[rs.y2Axis[i]]);
+                } else {
+                    y2Selection.push(currY2Axis[i]);
+                }
+            }
+
+
+
+            yExtent = this.calculateExtent(ySelection);
+            y2Extent = this.calculateExtent(y2Selection);
+
+            let yRange = yExtent[1] - yExtent[0];
+            let y2Range = y2Extent[1] - y2Extent[0];
+
+            let domain;
+            if(this.renderSettings.hasOwnProperty('colorAxis')){
+                let cAxis = this.renderSettings.colorAxis;
+                // Check to see if linear colorscale or ordinal colorscale (e.g. IDs)
+                if (this.dataSettings.hasOwnProperty(cAxis)){
+                    let ds = this.dataSettings[cAxis];
+                    if(
+                        ds.hasOwnProperty('scaleType') && 
+                        ds.scaleType === 'ordinal' &&
+                        ds.hasOwnProperty('categories') ){
+
+                        ds.colorscaleFunction = d3.scale.ordinal()
+                            .range(d3.scale.category10().range().map(u.hexToRgb))
+                            .domain(ds.categories);
+                    }
+                }
+                for (let ca = cAxis.length - 1; ca >= 0; ca--) {
+                    if(cAxis[ca]){
+                        // Check if an extent is already configured
+                        if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
+                           this.dataSettings[cAxis[ca]].hasOwnProperty('extent')){
+                            domain = this.dataSettings[cAxis[ca]].extent;
+                        }else{
+                            if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
+                               this.dataSettings[cAxis[ca]].hasOwnProperty('nullValue')){
+                                let nV = this.dataSettings[cAxis[ca]].nullValue;
+                                // If parameter has nullvalue defined ignore it 
+                                // when calculating extent
+                                domain = d3.extent(
+                                    this.data[cAxis[ca]], (v)=>{
+                                        if(v !== nV){
+                                            return v;
+                                        } else {
+                                            return null;
+                                        }
+                                    }
+                                );
+                            } else {
+                                domain = d3.extent(this.data[cAxis[ca]]);
+                            }
+                            if(isNaN(domain[0])){
+                                domain[0] = 0;
+                            }
+                            if(isNaN(domain[1])){
+                                domain[1] = domain[0]+1;
+                            }
+                            if(domain[0] == domain[1]){
+                                domain[0]-=1;
+                                domain[1]+=1;
+                            }
+                            if(domain[0]>domain[1]){
+                                domain = domain.reverse();
+                            }
+                            // Set current calculated extent to settings
+                            this.dataSettings[cAxis[ca]].extent = domain;
+                        }
+                        
+                    }
+                }
+            }
+
+            // TODO: Allow multiple domains!
+            if(domain){
+                this.plotter.setDomain(domain);
+            }
+
+
+            let yScaleType, y2ScaleType;
+            // TODO: how to handle multiple different scale types
+            // For now just check first object of scale
+            
+            this.yTimeScale = this.checkTimeScale(ySelection[0]);
+            this.y2TimeScale = this.checkTimeScale(y2Selection[0]);
+
+            yScaleType = getScale(this.yTimeScale);
+            y2ScaleType = getScale(this.y2TimeScale);
+
+
+            // Recalculate domain so that data is not directly at border
+            if(!this.fixedSize){
+                yExtent = calcExtent(
+                    yExtent, yRange, this.yTimeScale, [0.02, 0.02]
+                );
+                y2Extent = calcExtent(
+                    y2Extent, y2Range, this.y2TimeScale, [0.02, 0.02]
+                );
+            }
+
+
+            if(this.logY){
+                let start = yExtent[0];
+                let end = yExtent[1];
+
+                // if both positive or negative all fine else
+                if(yExtent[0]<=0 && yExtent[1]>0){
+                    start = 0.005;
+                }
+                if(yExtent[0]>=0 && yExtent[1]<0){
+                    start = -0.005;
+                }
+
+                this.yScale.push(
+                    d3.scale.log()
+                        .domain([start,end])
+                        .range([
+                            yPos*heighChunk + heighChunk - separation,
+                            yPos*heighChunk
+                        ])
+                );
+            }else{
+                this.yScale.push(
+                    yScaleType
+                        .domain(yExtent)
+                        .range([
+                            yPos*heighChunk + heighChunk - separation,
+                            yPos*heighChunk
+                        ])
+                );
+            }
+
+            if(this.logY2){
+                let start = y2Extent[0];
+                let end = y2Extent[1];
+
+                // if both positive or negative all fine else
+                if(y2Extent[0]<=0 && y2Extent[1]>0){
+                    start = 0.005;
+                }
+                if(y2Extent[0]>=0 && y2Extent[1]<0){
+                    start = -0.005;
+                }
+
+                this.y2Scale = d3.scale.log()
+                    .domain([start,end])
+                    .range([this.height, 0]);
+            }else{
+                this.y2Scale = y2ScaleType
+                    .domain(y2Extent)
+                    .range([this.height, 0]);
+            }
+
+            
+            this.yAxis.push(
+                d3.svg.axis()
+                    .scale(this.yScale[yPos])
+                    .innerTickSize(-this.width)
+                    .outerTickSize(0)
+                    .orient('left')
+            );
+
+            if(this.yTimeScale){
+                this.yAxis[yPos].tickFormat(u.getCustomUTCTimeTickFormat());
+            }
+
+            // Creating additional axis for sub parameters
+            this.additionalYAxis = [];
+            if(this.renderSettings.hasOwnProperty('additionalYTicks')){
+                let addYTicks = this.renderSettings.additionalYTicks;
+                for (let i = 0; i < addYTicks.length; i++) {
+
+                    this.additionalYAxis.push(
+                        d3.svg.axis()
+                            .scale(this.yScale)
+                            .outerTickSize(5)
+                            .orient('left')
+                            .tickFormat(()=>{return '';})
+                    );
+                }
+            }
+            // Handling of ticks adding subtick text
+            if(this.renderSettings.hasOwnProperty('additionalYTicks')){
+                let addYT = this.renderSettings.additionalYTicks;
+                this.yAxis[yPos].tickFormat(this.customSubtickFormat.bind(
+                    this,
+                    this.data[ySelection[0]],
+                    addYT
+                ));
+            }
+
+
+            if(currYAxis.length > 0){
+                this.yAxisSvg.push(
+                    this.svg.append('g')
+                        .attr('class', 'y axis')
+                        .call(this.yAxis[yPos])
+                    );
+            }
+
+            this.addYAxisSvg = [];
+            for (let i = 0; i < this.additionalYAxis.length; i++) {
+                this.addYAxisSvg.push(
+                    this.svg.append('g')
+                        .attr('class', 'y_add subaxis')
+                        .attr(
+                            'transform', 'translate(-'+((i*80)+80)+ ',0)'
+                        )
+                        .call(this.additionalYAxis[i])
+                );
+            }
+
+            this.y2Axis = d3.svg.axis()
+                .scale(this.y2Scale)
+                .innerTickSize(this.width)
+                .outerTickSize(0)
+                .orient('right');
+            if(this.y2TimeScale){
+                this.y2Axis.tickFormat(u.getCustomUTCTimeTickFormat());
+            }
+
+            if(this.renderSettings.y2Axis.length > 0){
+                this.y2AxisSvg = this.svg.append('g')
+                    .attr('class', 'y2 axis')
+                    .call(this.y2Axis);
+            }
+
+        }
+
+        let maxzoomout = 0;
+        
+
         // Define zoom behaviour based on parameter dependend x and y scales
-        this.xyzoom = d3.behavior.zoom()
+        /*this.xyzoom = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));*/
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        this.yzoom = d3.behavior.zoom()
+        /*this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
         this.y2zoom = d3.behavior.zoom()
             .y(this.y2Scale)
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));*/
 
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
@@ -2846,12 +2874,12 @@ class graphly extends EventEmitter {
         this.breakTicks();
 
 
-        this.renderCanvas.call(this.xyzoom);
+        //this.renderCanvas.call(this.xyzoom);
         this.el.select('#zoomXBox').call(this.xzoom);
-        this.el.select('#zoomYBox').call(this.yzoom);
+        /*this.el.select('#zoomYBox').call(this.yzoom);
         this.el.select('#zoomY2Box').call(this.y2zoom);
 
-        this.createAxisLabels();
+        this.createAxisLabels();*/
     }
 
 
@@ -2866,30 +2894,30 @@ class graphly extends EventEmitter {
             maxzoomout = Math.abs(xd[1]-xd[0])/period;
         }
 
-        this.xyzoom = d3.behavior.zoom()
+        /*this.xyzoom = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));*/
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        this.yzoom = d3.behavior.zoom()
+        /*this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
         this.y2zoom = d3.behavior.zoom()
             .y(this.y2Scale)
             .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));*/
 
-        this.renderCanvas.call(this.xyzoom);
+        //this.renderCanvas.call(this.xyzoom);
         this.el.select('#zoomXBox').call(this.xzoom);
-        this.el.select('#zoomYBox').call(this.yzoom);
-        this.el.select('#zoomY2Box').call(this.y2zoom);
+        /*this.el.select('#zoomYBox').call(this.yzoom);
+        this.el.select('#zoomY2Box').call(this.y2zoom);*/
 
 
     }
@@ -3061,10 +3089,15 @@ class graphly extends EventEmitter {
             this.addXAxisSvg[i].call(this.additionalXAxis[i]) ;
         }
 
-        if(this.renderSettings.yAxis.length > 0){
-            this.yAxisSvg.call(this.yAxis);
+        for (let yPos=0; yPos<this.renderSettings.yAxis.length; yPos++){
+            let currYAxis = this.renderSettings.yAxis[yPos];
+            if(!this.multiYAxis){
+                currYAxis = this.renderSettings.yAxis;
+            }
+            if(currYAxis.length > 0){
+                this.yAxisSvg[yPos].call(this.yAxis[yPos]);
+            }
         }
-
         for (let i = 0; i < this.additionalYAxis.length; i++) {
             this.addYAxisSvg[i].call(this.additionalYAxis[i]) ;
         }
@@ -3080,29 +3113,29 @@ class graphly extends EventEmitter {
         ]);*/
 
         let xScale = this.xzoom.scale();
-        let yScale = this.yzoom.scale();
-        let y2Scale = this.y2zoom.scale();
-        let xyScale = this.xyzoom.scale();
+        //let yScale = this.yzoom.scale();
+        //let y2Scale = this.y2zoom.scale();
+        //let xyScale = this.xyzoom.scale();
 
-        let transXY = this.xyzoom.translate();
+        //let transXY = this.xyzoom.translate();
         let transX = this.xzoom.translate();
-        let transY = this.yzoom.translate();
-        let transY2 = this.y2zoom.translate();
+        //let transY = this.yzoom.translate();
+        //let transY2 = this.y2zoom.translate();
 
-        if(this.renderSettings.y2Axis.length > 0){
+        /*if(this.renderSettings.y2Axis.length > 0){
             if(transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1){
                 this.y2zoom
                     .scale(xyScale)
                     .translate(transXY);
             }
             this.y2AxisSvg.call(this.y2Axis);
-        }
+        }*/
 
         this.topSvg.selectAll('.highlightItem').remove();
 
         if(this.debounceActive){
 
-            if(!this.previewActive){
+            /*if(!this.previewActive){
                 this.renderCanvas.style('opacity','0');
                 this.oSc = this.currentScale;
                 this.oTr = this.currentTranlate;
@@ -3149,7 +3182,7 @@ class graphly extends EventEmitter {
                 this.svg.select('#previewImage2').attr('transform', 'translate(' + 
                 [0.0, transY2[1.0]] + ')scale(1)');
             }
-
+*/
 
         }else{
             // While interaction is happening only render visible plot once
@@ -3492,7 +3525,6 @@ class graphly extends EventEmitter {
     resize_update() {
 
         this.xScale.range([0, this.width]);
-        this.yScale.range([this.height, 0]);
 
         this.svg.attr(
             'transform',
@@ -3517,12 +3549,24 @@ class graphly extends EventEmitter {
         this.xAxis.tickSize(-this.height);
         this.xAxisSvg.call(this.xAxis);
 
-        this.yAxis.innerTickSize(-this.width);
-        
 
-        if(this.renderSettings.yAxis.length > 0){
-            this.yAxisSvg.call(this.yAxis);
+
+        for (let yPos = 0; yPos < this.yScale.length; yPos++) {
+
+            let heighChunk = this.height/this.yScale.length;
+            let separation = 40;
+            this.yScale[yPos].range([
+                yPos*heighChunk + heighChunk - separation,
+                yPos*heighChunk
+            ]);
+
+            this.yAxis[yPos].innerTickSize(-this.width);
+            
+            if(this.renderSettings.yAxis[yPos].length > 0){
+                this.yAxisSvg[yPos].call(this.yAxis[yPos]);
+            }
         }
+
 
         for (let i = 0; i < this.addYAxisSvg.length; i++) {
             this.addYAxisSvg[i].attr(
@@ -3755,11 +3799,11 @@ class graphly extends EventEmitter {
     }
 
 
-    renderPoints(data, xAxis, yAxis, cAxis, updateReferenceCanvas) {
+    renderPoints(data, xAxis, yAxis, cAxis, plotY, updateReferenceCanvas) {
 
         let lp;
         let p_x, p_y;
-        let yScale = this.yScale;
+        let yScale = this.yScale[plotY];
         let currColCache = null;
         let colCacheAvailable = false;
 
@@ -4039,10 +4083,10 @@ class graphly extends EventEmitter {
         }
     }
 
-    renderFilteredOutPoints(data, xAxis, yAxis) {
+    renderFilteredOutPoints(data, xAxis, yAxis, plotY) {
 
         let lp = data[xAxis].length;
-        let yScale = this.yScale;
+        let yScale = this.yScale[plotY];
 
         // Check if parameter part of left or right y Scale
         if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
@@ -4947,7 +4991,7 @@ class graphly extends EventEmitter {
     }
 
 
-    renderParameter(idX, idY, idCS, yAxisSet, parPos, data, inactiveData, updateReferenceCanvas){
+    renderParameter(idX, idY, idCS, plotY, yAxisSet, parPos, data, inactiveData, updateReferenceCanvas){
 
         this.startTiming('renderParameter:'+idY);
 
@@ -4965,18 +5009,22 @@ class graphly extends EventEmitter {
                     data, idY, xGroup, yGroup, idCS, updateReferenceCanvas
                 );
             } else {
-                this.renderPoints(data, idX, idY, idCS, updateReferenceCanvas);
+                this.renderPoints(
+                    data, idX, idY, idCS, plotY, updateReferenceCanvas
+                );
             }
         } else {
             if(combPars.hasOwnProperty(idY)){
-                this.renderPoints(data, idX, idY, idCS, updateReferenceCanvas);
-            } else {
-                this.renderFilteredOutPoints(
-                    inactiveData, idX, idY,
+                this.renderPoints(
+                    data, idX, idY, idCS, plotY,
                     updateReferenceCanvas
                 );
+            } else {
+                this.renderFilteredOutPoints(
+                    inactiveData, idX, idY, plotY
+                );
                 this.renderPoints(
-                    data, idX, idY, idCS,
+                    data, idX, idY, idCS, plotY,
                     updateReferenceCanvas
                 );
                 // Check if any regression type is selected for parameter
@@ -5043,8 +5091,6 @@ class graphly extends EventEmitter {
         this.startTiming('renderData');
 
         let xAxRen = this.renderSettings.xAxis;
-        let yAxRen = this.renderSettings.yAxis;
-        let y2AxRen = this.renderSettings.y2Axis;
         
         this.batchDrawer.clear();
         if(this.batchDrawerReference){
@@ -5119,78 +5165,98 @@ class graphly extends EventEmitter {
         this.updateInfoBoxes();
 
         let idX = xAxRen;
+        let yAxRen, y2AxRen; 
 
-        // If y2 axis is defined start rendering it as we need to render
-        // multiple times to have individial images for manipulation in
-        // debounce option
-        if(y2AxRen.length > 0){
-            for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                let idY2 = y2AxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[
-                    this.renderSettings.yAxis.length + parPos
-                ];
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+
+            yAxRen = this.renderSettings.yAxis[plotY];
+            y2AxRen = [];//this.renderSettings.y2Axis[plotY];
+            if(!this.multiYAxis){
+                yAxRen = this.renderSettings.yAxis;
+                y2AxRen = this.renderSettings.y2Axis;
+            }
+
+
+
+            // If y2 axis is defined start rendering it as we need to render
+            // multiple times to have individial images for manipulation in
+            // debounce option
+            /*if(y2AxRen.length > 0){
+                for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                    let idY2 = y2AxRen[parPos];
+                    let idCS = this.renderSettings.colorAxis[
+                        this.renderSettings.yAxis.length + parPos
+                    ];
+                    this.renderParameter(
+                        idX, idY2, idCS, plotY, this.renderSettings.y2Axis,
+                        parPos, this.currentData, this.currentInactiveData,
+                        updateReferenceCanvas
+                    );
+                }
+                // Save preview image of rendering of second y axis 
+                // without data from first y axis
+                this.batchDrawer.draw();
+                this.updatePreviewImage('previewImage2');
+            }*/
+
+            /*this.batchDrawer.clear();
+            if(this.batchDrawerReference){
+                this.batchDrawerReference.clear();
+            }*/
+
+            for (let parPos=0; parPos<yAxRen.length; parPos++){
+
+                let idY = yAxRen[parPos];
+                let idCS = this.renderSettings.colorAxis[parPos];
+
                 this.renderParameter(
-                    idX, idY2, idCS, this.renderSettings.y2Axis,
+                    idX, idY, idCS, plotY, this.renderSettings.yAxis,
                     parPos, this.currentData, this.currentInactiveData,
                     updateReferenceCanvas
                 );
             }
-            // Save preview image of rendering of second y axis 
-            // without data from first y axis
+
+            this.startTiming('batchDrawer:draw');
             this.batchDrawer.draw();
-            this.updatePreviewImage('previewImage2');
-        }
+            this.endTiming('batchDrawer:draw');
+            //this.updatePreviewImage('previewImage');
 
-        this.batchDrawer.clear();
-        if(this.batchDrawerReference){
-            this.batchDrawerReference.clear();
-        }
-
-        for (let parPos=0; parPos<yAxRen.length; parPos++){
-
-            let idY = yAxRen[parPos];
-            let idCS = this.renderSettings.colorAxis[parPos];
-
-            this.renderParameter(
-                idX, idY, idCS, this.renderSettings.yAxis,
-                parPos, this.currentData, this.currentInactiveData,
-                updateReferenceCanvas
-            );
-        }
-
-        this.startTiming('batchDrawer:draw');
-        this.batchDrawer.draw();
-        this.endTiming('batchDrawer:draw');
-        this.updatePreviewImage('previewImage');
-
-        if(!this.fixedSize && updateReferenceCanvas){
-            this.startTiming('batchDrawerReference:draw');
-            this.batchDrawerReference.draw();
-            this.endTiming('batchDrawerReference:draw');
-        }
-
-        // Render y2 parameters a second time on top of current canvas
-        if(y2AxRen.length > 0){
-            for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                let idY2 = y2AxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[
-                    this.renderSettings.yAxis.length + parPos
-                ];
-                this.renderParameter(
-                    idX, idY2, idCS, this.renderSettings.y2Axis,
-                    parPos, this.currentData, this.currentInactiveData,
-                    updateReferenceCanvas
-                );
-            }
-            // Save preview image of rendering of second y axis 
-            // without data from first y axis
-            this.batchDrawer.draw();
-            if(!this.fixedSize && updateReferenceCanvas){
+            /*if(!this.fixedSize && updateReferenceCanvas){
                 this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
                 this.endTiming('batchDrawerReference:draw');
             }
+
+            // Render y2 parameters a second time on top of current canvas
+            if(y2AxRen.length > 0){
+                for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                    let idY2 = y2AxRen[parPos];
+                    let idCS = this.renderSettings.colorAxis[
+                        this.renderSettings.yAxis.length + parPos
+                    ];
+                    this.renderParameter(
+                        idX, idY2, idCS, plotY,this.renderSettings.y2Axis,
+                        parPos, this.currentData, this.currentInactiveData,
+                        updateReferenceCanvas
+                    );
+                }
+                // Save preview image of rendering of second y axis 
+                // without data from first y axis
+                this.batchDrawer.draw();
+                if(!this.fixedSize && updateReferenceCanvas){
+                    this.startTiming('batchDrawerReference:draw');
+                    this.batchDrawerReference.draw();
+                    this.endTiming('batchDrawerReference:draw');
+                }
+            }*/
+
+
         }
+
+
+
+
+        
 
         
         /**

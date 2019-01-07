@@ -1,10 +1,24 @@
 
 
-
-
 var renderSettings_mie = {
-    xAxis: 'mie_altitude',
-    yAxis: ['mie_datetime'],
+    xAxis: 'mie_datetime',
+    yAxis: ['mie_altitude'],
+    y2Axis: ['latitude_of_DEM_intersection_start'],
+    combinedParameters: {
+        mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
+        mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
+    },
+    colorAxis: [
+        'mie_wind_velocity', null
+    ],
+    /*additionalXTicks: ['latitude_of_DEM_intersection_start'],
+    additionalYTicks: ['mie_altitude_top'],*/
+
+};
+
+var renderSettings_mie2 = {
+    xAxis: 'mie_datetime',
+    yAxis: ['mie_altitude'],
     y2Axis: [],
     combinedParameters: {
         mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
@@ -12,8 +26,7 @@ var renderSettings_mie = {
     },
     colorAxis: [
         'mie_wind_velocity'
-    ],
-
+    ]
 };
 
 var renderSettings_ray = {
@@ -38,9 +51,9 @@ var renderSettings_ray = {
 
 var renderSettingsSwarm = {
     xAxis: 'Longitude',
-    yAxis: ['Latitude'],
-    //y2Axis: ['F_res_IGRF12'],
-    colorAxis: [null],
+    yAxis: [['F'],['F_error']],
+    //y2Axis: ['F_error'],
+    colorAxis: [null, null],
     /*dataIdentifier: {
         parameter: 'id',
         identifiers: ['Alpha', 'Bravo']
@@ -387,6 +400,7 @@ var dataSettings = {
     mie_wind_velocity: {
         uom: 'm/s',
         colorscale: 'viridis',
+       // nullValue: 642.7306076260679
         //extent: [-140,39]
         //outline: false
     },
@@ -397,6 +411,8 @@ var dataSettings = {
 
     mie_altitude: {
         uom: 'm'
+    },
+    F: {
     }
 
 };
@@ -483,13 +499,41 @@ var filterManager = new FilterManager({
     filterSettings: filterSettings,
 });
 
+var data;
+
 
 var graph = new graphly.graphly({
     el: '#graph',
-    dataSettings: otherds,
+    dataSettings: dataSettings,
     renderSettings: renderSettingsSwarm,
+    /*dataSettings: testbed14DS,
+    renderSettings: testbed14RS,*/
     filterManager: filterManager,
     //ignoreParameters: [/mie_quality_fl.*/]
+    debounceActive: false,
+    //enableFit: false,
+    //displayColorscaleOptions: false,
+    //displayAlphaOptions: false
+    //displayParameterLabel: false,
+    //displayColorscaleOptions: false,
+    //displayAlphaOptions: false,
+    //autoColorExtent: true
+    //fixedSize: true,
+    //fixedWidth: 2000
+    multiYAxis: true,
+    debug: false,
+    enableSubXAxis: true,
+    enableSubYAxis: true
+});
+
+filterManager.setRenderNode('#filters');
+
+/*var graph2 = new graphly.graphly({
+    el: '#graph2',
+    dataSettings: dataSettings,
+    renderSettings: renderSettings_mie2,
+    filterManager: filterManager,
+    //ignoreParameters: []
     debounceActive: true,
     //enableFit: false,
     //displayColorscaleOptions: false,
@@ -500,10 +544,11 @@ var graph = new graphly.graphly({
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000
-});
-
-filterManager.setRenderNode('#filters');
-
+    debug: true,
+    enableSubXAxis: true,
+    enableSubYAxis: true,
+    connectedGraph: graph
+});*/
 /*var graph2 = new graphly.graphly({
     el: '#graph2',
     dataSettings: ds_mie,
@@ -512,9 +557,9 @@ filterManager.setRenderNode('#filters');
     //fixedSize: true,
     //fixedWidth: 12000
     //connectedGraph: graph
-});
+});*/
 
-graph.connectGraph(graph2);*/
+//graph.connectGraph(graph2);
 
 
 
@@ -528,7 +573,12 @@ filterManager.on('filterChange', function(filters){
 });
 
 d3.select('#save').on('click', function(){
-    graph.saveImage();
+    graph.saveImage('png',3);
+});
+
+
+d3.select('#reload').on('click', function(){
+    graph.loadData(data);
 });
 
 
@@ -609,8 +659,7 @@ function flattenObservationArray(input){
 
 xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
-    var data = msgpack.decode(tmp);
-
+    data = msgpack.decode(tmp);
     var ids = {
       'A': 'Alpha',
       'B': 'Bravo',
@@ -658,12 +707,15 @@ xhr.onload = function(e) {
       mie_altitude_top: mie_altitude[0],
       mie_altitude_bottom: mie_altitude[1],
       geoid_separation: geoid_separation[0]
-    };*/
+    };
+
+    graph.loadData(data);
 
 
 
     filterManager.initManager();
-    graph.loadData(data);
+    //graph.loadData(data);
+    // graph2.loadData(data);
     /*if(usesecond){
         graph2.loadData(data);
     }*/
@@ -713,3 +765,18 @@ d3.select('#datafiles').on('change', function(e){
 });
 
 
+/*function rotate() {
+    var elem = document.getElementById("animation"); 
+    var angle = 0;
+    var id = setInterval(frame, 5);
+
+    function frame() {
+        if (angle == 360) {
+            //clearInterval(id);
+            angle = 0;
+        } else {
+            angle++; 
+            elem.style.transform = 'rotate('+angle + 'deg)';
+        }
+    }
+}*/
