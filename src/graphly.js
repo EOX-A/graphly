@@ -466,7 +466,7 @@ class graphly extends EventEmitter {
                 'translate(' + (this.margin.left+this.subAxisMarginY+1) + ',' +
                 (this.margin.top+1) + ')'
             )
-            .style('clip-path','url('+this.nsId+'clipbox)');
+            /*.style('clip-path','url('+this.nsId+'clipbox)')*/;
 
         // Make sure we hide the tooltip as soon as we get out of the canvas
         // else it can kind of "stick" when moving the mouse fast
@@ -975,11 +975,20 @@ class graphly extends EventEmitter {
             this.batchDrawer.clear();
 
             this.xScale.range([0, Math.floor(this.width*this.resFactor)]);
-            this.yScale.range([Math.floor(this.height*this.resFactor), 0]);
+
+            let currHeight = this.height/this.yScale.length;
+
+            for (let yPos = 0; yPos < this.yScale.length; yPos++) {
+                this.yScale[yPos].range([
+                    Math.floor((currHeight-this.separation)*this.resFactor), 0
+                ]);
+            }
+
             this.y2Scale.range([Math.floor(this.height*this.resFactor), 0]);
 
             let xAxRen = this.renderSettings.xAxis;
-            let yAxRen = this.renderSettings.yAxis;
+
+            let yAxRen;
             let y2AxRen = this.renderSettings.y2Axis;
 
             let idX = xAxRen;
@@ -998,15 +1007,26 @@ class graphly extends EventEmitter {
                 );
             }
 
-            for (let parPos=0; parPos<yAxRen.length; parPos++){
+            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
-                let idY = yAxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[parPos];
+                yAxRen = this.renderSettings.yAxis[plotY];
+                y2AxRen = [];//this.renderSettings.y2Axis[plotY];
+                if(!this.multiYAxis){
+                    yAxRen = this.renderSettings.yAxis;
+                    y2AxRen = this.renderSettings.y2Axis;
+                }
 
-                this.renderParameter(
-                    idX, idY, idCS, this.renderSettings.yAxis,
-                    parPos, this.currentData, this.currentInactiveData, false
-                );
+
+                for (let parPos=0; parPos<yAxRen.length; parPos++){
+
+                    let idY = yAxRen[parPos];
+                    let idCS = this.renderSettings.colorAxis[parPos];
+
+                    this.renderParameter(
+                        idX, idY, idCS, plotY, this.renderSettings.yAxis,
+                        parPos, this.currentData, this.currentInactiveData, false
+                    );
+                }
             }
 
             this.batchDrawer.draw();
@@ -1963,16 +1983,11 @@ class graphly extends EventEmitter {
         this.renderingContainer = this.svg.append('g')
             .attr('id','renderingContainer')
             .attr('fill', 'none')
-            .style('clip-path','url('+this.nsId+'clipbox)');
+            /*.style('clip-path','url('+this.nsId+'clipbox)')*/;
 
         // Add clip path so only points in the area are shown
         let clippath = this.svg.append('defs').append('clipPath')
-            .attr('id', (this.nsId.substring(1)+'clipbox'))
-            .append('rect')
-                .attr('fill', 'none')
-                .attr('width', this.width)
-                .attr('height', this.height);
-
+            .attr('id', (this.nsId.substring(1)+'clipbox'));
 
         this.svg.append('rect')
             .attr('id', 'zoomXBox')
@@ -2035,6 +2050,12 @@ class graphly extends EventEmitter {
                     .attr('opacity', 0.5)
                     //.style('visibility', 'hidden')
                     .attr('pointer-events', 'all');
+
+                clippath.append('rect')
+                    .attr('fill', 'none')
+                    .attr('y', offsetY)
+                    .attr('width', this.width)
+                    .attr('height', currHeight);
 
             }
         } else {
@@ -3612,6 +3633,9 @@ class graphly extends EventEmitter {
             this.yAxis[yPos].innerTickSize(-this.width);
             
             if(this.renderSettings.yAxis[yPos].length > 0){
+                this.yAxisSvg[yPos].attr(
+                    'transform', 'translate(0,'+yPos*heighChunk+')'
+                );
                 this.yAxisSvg[yPos].call(this.yAxis[yPos]);
             }
         }
@@ -3663,9 +3687,9 @@ class graphly extends EventEmitter {
                 this.margin.bottom + this.subAxisMarginX
             );
 
-        this.el.select((this.nsId+'clipbox')).select('rect')
+        /*this.el.select((this.nsId+'clipbox')).select('rect')
             .attr('width', this.width)
-            .attr('height', this.height);
+            .attr('height', this.height);*/
 
         this.el.select('#zoomXBox')
             .attr('width', this.width)
@@ -3961,10 +3985,12 @@ class graphly extends EventEmitter {
         dotsize *= this.resFactor;
 
         let axisOffset = 0;
-        let blockSize = this.height/this.renderSettings.yAxis.length - this.separation;
+        let blockSize = (
+            this.height/this.renderSettings.yAxis.length - this.separation
+        ) * this.resFactor;
 
         if(this.multiYAxis){
-            axisOffset = plotY * (blockSize+this.separation);
+            axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
         }
 
         let x, y, valX, valY;
@@ -5295,7 +5321,7 @@ class graphly extends EventEmitter {
             this.startTiming('batchDrawer:draw');
             this.batchDrawer.draw();
             this.endTiming('batchDrawer:draw');
-            //this.updatePreviewImage('previewImage');
+            this.updatePreviewImage('previewImage');
 
             if(!this.fixedSize && updateReferenceCanvas){
                 this.startTiming('batchDrawerReference:draw');
