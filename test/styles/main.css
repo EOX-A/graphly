@@ -45,3 +45,12 @@ span label {
 #filters{
     overflow-y: scroll;
 }
+
+#animation {
+    position: absolute;
+    right: 20px;
+    margin: 20px;
+    width: 100px;
+    height: 100px;
+    background: #f00;
+}

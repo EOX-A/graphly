@@ -50,8 +50,8 @@ var renderSettings_ray = {
 };
 
 var renderSettingsSwarm = {
-    xAxis: 'Longitude',
-    yAxis: [['F'],['F_error']],
+    xAxis: 'Latitude',
+    yAxis: [['F'],['F_error'], ['F_res_IGRF12']],
     //y2Axis: ['F_error'],
     colorAxis: [null, null],
     /*dataIdentifier: {

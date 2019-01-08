@@ -211,6 +211,9 @@ class graphly extends EventEmitter {
         this.enableSubYAxis = defaultFor(options.enableSubYAxis, false);
         this.multiYAxis = defaultFor(options.multiYAxis, false);
 
+        // Separation of plots in multiplot functionality
+        this.separation = 10;
+
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
 
@@ -1982,22 +1985,10 @@ class graphly extends EventEmitter {
             //.style('visibility', 'hidden')
             .attr('pointer-events', 'all');
 
-        this.svg.append('rect')
-            .attr('id', 'zoomYBox')
-            .attr('width', this.margin.left)
-            .attr('height', this.height )
-            .attr(
-                'transform',
-                'translate(' + -(this.margin.left+this.subAxisMarginY) + 
-                ',' + 0 + ')'
-            )
-            .attr('fill', 'none')
-            .style('visibility', 'hidden')
-            .attr('pointer-events', 'all');
 
         if(this.renderSettings.y2Axis.length>0){
             this.svg.append('rect')
-                .attr('id', 'zoomY2Box')
+                .attr('class', 'zoomY2Box')
                 .attr('width', this.margin.right + this.marginY2Offset)
                 .attr('height', this.height )
                 .attr('transform', 'translate(' + (
@@ -2009,15 +2000,66 @@ class graphly extends EventEmitter {
                 .attr('pointer-events', 'all');
         }
 
-        // Add rectangle as 'outline' for plot
-        this.svg.append('rect')
-            .attr('id', 'rectangleOutline')
-            .attr('fill', 'none')
-            .attr('stroke', '#ccc')
-            .attr('stroke-width', 1)
-            .attr('shape-rendering', 'crispEdges')
-            .attr('width', this.width)
-            .attr('height', this.height);
+        // Add 1 or multiple rectangles as 'outline' for plots
+        if(this.multiYAxis){
+            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+                let multiLength = this.renderSettings.yAxis.length;
+                let heighChunk = this.height/multiLength;
+                let currHeight = heighChunk - this.separation;
+                let offsetY = plotY*heighChunk;
+
+                this.svg.append('rect')
+                .attr('class', 'rectangleOutline')
+                .attr('fill', 'none')
+                .attr('stroke', '#333')
+                .attr('stroke-width', 1)
+                .attr('shape-rendering', 'crispEdges')
+                .attr('width', this.width)
+                .attr('height', currHeight)
+                .attr(
+                    'transform',
+                    'translate(0,' + offsetY + ')'
+                );
+
+                this.svg.append('rect')
+                    .attr('id', ('zoomYBox'+plotY))
+                    .attr('class', 'zoomYBox')
+                    .attr('width', this.margin.left)
+                    .attr('height', currHeight )
+                    .attr(
+                        'transform',
+                        'translate(' + -(this.margin.left+this.subAxisMarginY) + 
+                        ',' + offsetY + ')'
+                    )
+                    .attr('fill', 'red')
+                    .attr('opacity', 0.5)
+                    //.style('visibility', 'hidden')
+                    .attr('pointer-events', 'all');
+
+            }
+        } else {
+            this.svg.append('rect')
+                .attr('class', 'rectangleOutline')
+                .attr('fill', 'none')
+                .attr('stroke', '#333')
+                .attr('stroke-width', 1)
+                .attr('shape-rendering', 'crispEdges')
+                .attr('width', this.width)
+                .attr('height', this.height);
+
+            this.svg.append('rect')
+                .attr('id', 'zoomYBox')
+                .attr('width', this.margin.left)
+                .attr('height', this.height )
+                .attr(
+                    'transform',
+                    'translate(' + -(this.margin.left+this.subAxisMarginY) + 
+                    ',' + 0 + ')'
+                )
+                .attr('fill', 'none')
+                .style('visibility', 'hidden')
+                .attr('pointer-events', 'all');
+        }
 
         this.createColorScales();
         this.createInfoBoxes();
@@ -2576,7 +2618,7 @@ class graphly extends EventEmitter {
 
         let multiLength = this.renderSettings.yAxis.length;
         let heighChunk = this.height/multiLength;
-        let separation = 40;
+        
         this.yScale = [];
         this.yAxis = [];
         this.yAxisSvg = [];
@@ -2724,19 +2766,13 @@ class graphly extends EventEmitter {
                 this.yScale.push(
                     d3.scale.log()
                         .domain([start,end])
-                        .range([
-                            yPos*heighChunk + heighChunk - separation,
-                            yPos*heighChunk
-                        ])
+                        .range([heighChunk-this.separation, 0])
                 );
             }else{
                 this.yScale.push(
                     yScaleType
                         .domain(yExtent)
-                        .range([
-                            yPos*heighChunk + heighChunk - separation,
-                            yPos*heighChunk
-                        ])
+                        .range([heighChunk-this.separation, 0])
                 );
             }
 
@@ -2804,6 +2840,9 @@ class graphly extends EventEmitter {
                 this.yAxisSvg.push(
                     this.svg.append('g')
                         .attr('class', 'y axis')
+                        .attr(
+                            'transform', 'translate(0,'+yPos*heighChunk+')'
+                        )
                         .call(this.yAxis[yPos])
                     );
             }
@@ -2852,6 +2891,26 @@ class graphly extends EventEmitter {
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
+
+        this.yzoom = [];
+        if(this.multiYAxis){
+            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+                this.yzoom.push(
+                    d3.behavior.zoom()
+                        .y(this.yScale[plotY])
+                        .on('zoom', this.previewZoom.bind(this))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                    );
+            }
+        } else {
+             this.yzoom.push(
+                d3.behavior.zoom()
+                    .y(this.yScale)
+                    .on('zoom', this.previewZoom.bind(this))
+                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
+        }
+
         /*this.yzoom = d3.behavior.zoom()
             .y(this.yScale)
             .on('zoom', this.previewZoom.bind(this))
@@ -2875,9 +2934,12 @@ class graphly extends EventEmitter {
 
 
         //this.renderCanvas.call(this.xyzoom);
+        var that = this;
         this.el.select('#zoomXBox').call(this.xzoom);
-        /*this.el.select('#zoomYBox').call(this.yzoom);
-        this.el.select('#zoomY2Box').call(this.y2zoom);
+        this.el.selectAll('.zoomYBox').each(function(d, i){
+            d3.select(this).call(that.yzoom[i]);
+        });
+        /*this.el.select('#zoomY2Box').call(this.y2zoom);
 
         this.createAxisLabels();*/
     }
@@ -2905,19 +2967,39 @@ class graphly extends EventEmitter {
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        /*this.yzoom = d3.behavior.zoom()
-            .y(this.yScale)
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        this.y2zoom = d3.behavior.zoom()
+
+        this.yzoom = [];
+        if(this.multiYAxis){
+            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+                this.yzoom.push(
+                    d3.behavior.zoom()
+                        .y(this.yScale[plotY])
+                        .on('zoom', this.previewZoom.bind(this))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                    );
+            }
+        } else {
+             this.yzoom.push(
+                d3.behavior.zoom()
+                    .y(this.yScale)
+                    .on('zoom', this.previewZoom.bind(this))
+                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
+        }
+
+
+        /*this.y2zoom = d3.behavior.zoom()
             .y(this.y2Scale)
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));*/
 
         //this.renderCanvas.call(this.xyzoom);
+        var that = this;
         this.el.select('#zoomXBox').call(this.xzoom);
-        /*this.el.select('#zoomYBox').call(this.yzoom);
-        this.el.select('#zoomY2Box').call(this.y2zoom);*/
+        this.el.selectAll('.zoomYBox').each(function(d, i){
+            d3.select(this).call(that.yzoom[i]);
+        });
+        /*this.el.select('#zoomY2Box').call(this.y2zoom);*/
 
 
     }
@@ -3191,35 +3273,6 @@ class graphly extends EventEmitter {
         }
     }
 
-
-    drawCircle(renderer, cx, cy, r, num_segments) { 
-        let theta = 2 * 3.1415926 / num_segments; 
-        let c = Math.cos(theta);//precalculate the sine and cosine
-        let s = Math.sin(theta);
-
-        x = r;//we start at angle = 0 
-        y = 0; 
-        
-        let prev_point = null;
-        for(let i = 0; i <= num_segments; i++) 
-        { 
-            if(prev_point){
-                let next_point = [x + cx, y + cy];
-                renderer.addLine(
-                    prev_point[0], prev_point[1], next_point[0],
-                    next_point[1], 5, 0.258, 0.525, 0.956, 1.0
-                );
-                prev_point = next_point;
-            }else{
-                prev_point = [x + cx, y + cy];
-            }
-            
-            //apply the rotation matrix
-            t = x;
-            x = c * x - s * y;
-            y = s * t + c * y;
-        }
-    }
 
     renderRegression(data, reg, yScale, color, thickness) {
         let result;
@@ -3554,11 +3607,7 @@ class graphly extends EventEmitter {
         for (let yPos = 0; yPos < this.yScale.length; yPos++) {
 
             let heighChunk = this.height/this.yScale.length;
-            let separation = 40;
-            this.yScale[yPos].range([
-                yPos*heighChunk + heighChunk - separation,
-                yPos*heighChunk
-            ]);
+            this.yScale[yPos].range([heighChunk-this.separation, 0]);
 
             this.yAxis[yPos].innerTickSize(-this.width);
             
@@ -3910,10 +3959,40 @@ class graphly extends EventEmitter {
 
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
         dotsize *= this.resFactor;
-        
+
+        let axisOffset = 0;
+        let blockSize = this.height/this.renderSettings.yAxis.length - this.separation;
+
+        if(this.multiYAxis){
+            axisOffset = plotY * (blockSize+this.separation);
+        }
+
+        let x, y, valX, valY;
+
         for (let j=0;j<lp; j++) {
 
-            let x, y, valX, valY;
+
+            if(!yGroup){
+                valY = data[yAxis][j];
+            } else {
+                // Check if we have a time variable
+                if(this.timeScales.indexOf(yGroup[0])!==-1){
+                    valY = new Date(
+                        data[yGroup[0]][j].getTime() +
+                        (data[yGroup[1]][j].getTime() - data[yGroup[0]][j].getTime())/2
+                    );
+                } else {
+                    valY = data[yGroup[0]][j] +
+                         (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
+                }
+            }
+
+            y = yScale(valY);
+            if(y<0 || y>blockSize){
+                continue;
+            }
+
+            y+=axisOffset;
 
             if(!xGroup){
                 valX = data[xAxis][j];
@@ -3956,23 +4035,6 @@ class graphly extends EventEmitter {
                 }
             }
             x = this.xScale(valX);
-
-            if(!yGroup){
-                valY = data[yAxis][j];
-            } else {
-                // Check if we have a time variable
-                if(this.timeScales.indexOf(yGroup[0])!==-1){
-                    valY = new Date(
-                        data[yGroup[0]][j].getTime() +
-                        (data[yGroup[1]][j].getTime() - data[yGroup[0]][j].getTime())/2
-                    );
-                } else {
-                    valY = data[yGroup[0]][j] +
-                         (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
-                }
-            }
-
-            y =  yScale(valY);
             
             // If render settings uses colorscale axis get color from there
             let rC;
@@ -4117,7 +4179,22 @@ class graphly extends EventEmitter {
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
         dotsize *= this.resFactor;
 
+        let axisOffset = 0;
+        let blockSize = this.height/this.renderSettings.yAxis.length - this.separation;
+
+        if(this.multiYAxis){
+            axisOffset = plotY * (blockSize+this.separation);
+        }
+
         for (let j=0;j<lp; j++) {
+
+            y = yScale(data[yAxis][j]);
+
+            if(y<0 || y>blockSize){
+                continue;
+            }
+
+            y+=axisOffset;
 
             valX = data[xAxis][j];
             // Manipulate value if we have a periodic parameter
@@ -4145,7 +4222,6 @@ class graphly extends EventEmitter {
             }
             x = this.xScale(valX);
 
-            let y = yScale(data[yAxis][j]);
             let rC = [0.5, 0.5, 0.5];
 
             let par_properties = {
@@ -5221,14 +5297,15 @@ class graphly extends EventEmitter {
             this.endTiming('batchDrawer:draw');
             //this.updatePreviewImage('previewImage');
 
-            /*if(!this.fixedSize && updateReferenceCanvas){
+            if(!this.fixedSize && updateReferenceCanvas){
                 this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
                 this.endTiming('batchDrawerReference:draw');
             }
 
+
             // Render y2 parameters a second time on top of current canvas
-            if(y2AxRen.length > 0){
+            /*if(y2AxRen.length > 0){
                 for (let parPos=0; parPos<y2AxRen.length; parPos++){
                     let idY2 = y2AxRen[parPos];
                     let idCS = this.renderSettings.colorAxis[
