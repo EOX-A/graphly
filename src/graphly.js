@@ -984,38 +984,45 @@ class graphly extends EventEmitter {
                 ]);
             }
 
-            this.y2Scale.range([Math.floor(this.height*this.resFactor), 0]);
+            for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
+                this.y2Scale[yPos].range([
+                    Math.floor((currHeight-this.separation)*this.resFactor), 0
+                ]);
+            }
 
             let xAxRen = this.renderSettings.xAxis;
+            
+            let yAxRen, y2AxRen;
 
-            let yAxRen;
-            let y2AxRen = this.renderSettings.y2Axis;
+            // Draw y2 first so it is on bottom
+            for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
-            let idX = xAxRen;
+                y2AxRen = this.renderSettings.y2Axis[plotY];
+                if(!this.multiYAxis){
+                    y2AxRen = this.renderSettings.y2Axis;
+                }
 
+                for (let parPos=0; parPos<y2AxRen.length; parPos++){
 
-            for (let parPos=0; parPos<y2AxRen.length; parPos++){
-
-                let idY2 = y2AxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[
-                    this.renderSettings.yAxis.length + parPos
-                ];
-                
-                this.renderParameter(
-                    idX, idY2, idCS, this.renderSettings.y2Axis,
-                    parPos, this.currentData, this.currentInactiveData, false
-                );
+                    let idY2 = y2AxRen[parPos];
+                    let idCS = this.renderSettings.colorAxis[
+                        this.renderSettings.yAxis.length + parPos
+                    ];
+                    
+                    this.renderParameter(
+                        xAxRen, idY2, idCS, plotY, this.renderSettings.y2Axis, this.y2Scale,
+                        parPos, this.currentData, this.currentInactiveData, false
+                    );
+                }
             }
 
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
                 yAxRen = this.renderSettings.yAxis[plotY];
-                y2AxRen = [];//this.renderSettings.y2Axis[plotY];
+                
                 if(!this.multiYAxis){
                     yAxRen = this.renderSettings.yAxis;
-                    y2AxRen = this.renderSettings.y2Axis;
                 }
-
 
                 for (let parPos=0; parPos<yAxRen.length; parPos++){
 
@@ -1023,7 +1030,7 @@ class graphly extends EventEmitter {
                     let idCS = this.renderSettings.colorAxis[parPos];
 
                     this.renderParameter(
-                        idX, idY, idCS, plotY, this.renderSettings.yAxis,
+                        xAxRen, idY, idCS, plotY, this.renderSettings.yAxis, this.yScale,
                         parPos, this.currentData, this.currentInactiveData, false
                     );
                 }
@@ -2001,20 +2008,6 @@ class graphly extends EventEmitter {
             .attr('pointer-events', 'all');
 
 
-        if(this.renderSettings.y2Axis.length>0){
-            this.svg.append('rect')
-                .attr('class', 'zoomY2Box')
-                .attr('width', this.margin.right + this.marginY2Offset)
-                .attr('height', this.height )
-                .attr('transform', 'translate(' + (
-                    this.width
-                    ) + ',' + 0 + ')'
-                )
-                .attr('fill', 'red')
-                .style('visibility', 'hidden')
-                .attr('pointer-events', 'all');
-        }
-
         // Add 1 or multiple rectangles as 'outline' for plots
         if(this.multiYAxis){
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
@@ -2024,17 +2017,17 @@ class graphly extends EventEmitter {
                 let offsetY = plotY*heighChunk;
 
                 this.svg.append('rect')
-                .attr('class', 'rectangleOutline')
-                .attr('fill', 'none')
-                .attr('stroke', '#333')
-                .attr('stroke-width', 1)
-                .attr('shape-rendering', 'crispEdges')
-                .attr('width', this.width)
-                .attr('height', currHeight)
-                .attr(
-                    'transform',
-                    'translate(0,' + offsetY + ')'
-                );
+                    .attr('class', 'rectangleOutline')
+                    .attr('fill', 'none')
+                    .attr('stroke', '#333')
+                    .attr('stroke-width', 1)
+                    .attr('shape-rendering', 'crispEdges')
+                    .attr('width', this.width)
+                    .attr('height', currHeight)
+                    .attr(
+                        'transform',
+                        'translate(0,' + offsetY + ')'
+                    );
 
                 this.svg.append('rect')
                     .attr('id', ('zoomYBox'+plotY))
@@ -2050,6 +2043,21 @@ class graphly extends EventEmitter {
                     .attr('opacity', 0.5)
                     //.style('visibility', 'hidden')
                     .attr('pointer-events', 'all');
+
+                if(this.renderSettings.y2Axis[plotY].length>0){
+                    this.svg.append('rect')
+                        .attr('class', 'zoomY2Box')
+                        .attr('width', this.margin.right + this.marginY2Offset)
+                        .attr('height', currHeight )
+                        .attr('transform', 'translate(' + (
+                            this.width
+                            ) + ',' + offsetY + ')'
+                        )
+                        .attr('fill', 'yellow')
+                        .attr('opacity', 0.5)
+                        //.style('visibility', 'hidden')
+                        .attr('pointer-events', 'all');
+                }
 
                 clippath.append('rect')
                     .attr('fill', 'none')
@@ -2644,6 +2652,10 @@ class graphly extends EventEmitter {
         this.yAxis = [];
         this.yAxisSvg = [];
 
+        this.y2Scale = [];
+        this.y2Axis = [];
+        this.y2AxisSvg = [];
+
         for (let yPos = 0; yPos < multiLength; yPos++) {
 
             let currYAxis = this.renderSettings.yAxis[yPos];
@@ -2809,13 +2821,17 @@ class graphly extends EventEmitter {
                     start = -0.005;
                 }
 
-                this.y2Scale = d3.scale.log()
-                    .domain([start,end])
-                    .range([this.height, 0]);
+                this.y2Scale.push(
+                    d3.scale.log()
+                        .domain([start,end])
+                        .range([this.height, 0])
+                );
             }else{
-                this.y2Scale = y2ScaleType
-                    .domain(y2Extent)
-                    .range([this.height, 0]);
+                this.y2Scale.push(
+                    y2ScaleType
+                        .domain(y2Extent)
+                        .range([this.height, 0])
+                );
             }
 
             
@@ -2861,9 +2877,9 @@ class graphly extends EventEmitter {
                 this.yAxisSvg.push(
                     this.svg.append('g')
                         .attr('class', 'y axis')
-                        .attr(
+                        /*.attr(
                             'transform', 'translate(0,'+yPos*heighChunk+')'
-                        )
+                        )*/
                         .call(this.yAxis[yPos])
                     );
             }
@@ -2880,19 +2896,23 @@ class graphly extends EventEmitter {
                 );
             }
 
-            this.y2Axis = d3.svg.axis()
-                .scale(this.y2Scale)
-                .innerTickSize(this.width)
-                .outerTickSize(0)
-                .orient('right');
+            this.y2Axis.push(
+                d3.svg.axis()
+                    .scale(this.y2Scale[yPos])
+                    .innerTickSize(this.width)
+                    .outerTickSize(0)
+                    .orient('right')
+            );
             if(this.y2TimeScale){
-                this.y2Axis.tickFormat(u.getCustomUTCTimeTickFormat());
+                this.y2Axis[yPos].tickFormat(u.getCustomUTCTimeTickFormat());
             }
 
-            if(this.renderSettings.y2Axis.length > 0){
-                this.y2AxisSvg = this.svg.append('g')
-                    .attr('class', 'y2 axis')
-                    .call(this.y2Axis);
+            if(currY2Axis.length > 0){
+                this.y2AxisSvg.push(
+                    this.svg.append('g')
+                        .attr('class', 'y2 axis')
+                        .call(this.y2Axis[yPos])
+                );
             }
 
         }
@@ -2932,15 +2952,24 @@ class graphly extends EventEmitter {
                 );
         }
 
-        /*this.yzoom = d3.behavior.zoom()
-            .y(this.yScale)
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        this.y2zoom = d3.behavior.zoom()
-            .y(this.y2Scale)
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));*/
-
+        this.y2zoom = [];
+        if(this.multiYAxis){
+            for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+                this.y2zoom.push(
+                    d3.behavior.zoom()
+                        .y(this.y2Scale[plotY])
+                        .on('zoom', this.previewZoom.bind(this))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                    );
+            }
+        } else {
+             this.y2zoom.push(
+                d3.behavior.zoom()
+                    .y(this.yScale)
+                    .on('zoom', this.previewZoom.bind(this))
+                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
+        }
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
@@ -2960,9 +2989,12 @@ class graphly extends EventEmitter {
         this.el.selectAll('.zoomYBox').each(function(d, i){
             d3.select(this).call(that.yzoom[i]);
         });
-        /*this.el.select('#zoomY2Box').call(this.y2zoom);
+        this.el.selectAll('.zoomY2Box').each(function(d, i){
+            d3.select(this).call(that.y2zoom[i]);
+        });
+        
 
-        this.createAxisLabels();*/
+        //this.createAxisLabels();
     }
 
 
@@ -3008,11 +3040,24 @@ class graphly extends EventEmitter {
                 );
         }
 
-
-        /*this.y2zoom = d3.behavior.zoom()
-            .y(this.y2Scale)
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));*/
+        this.y2zoom = [];
+        if(this.multiYAxis){
+            for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+                this.y2zoom.push(
+                    d3.behavior.zoom()
+                        .y(this.y2Scale[plotY])
+                        .on('zoom', this.previewZoom.bind(this))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                    );
+            }
+        } else {
+             this.y2zoom.push(
+                d3.behavior.zoom()
+                    .y(this.y2Scale)
+                    .on('zoom', this.previewZoom.bind(this))
+                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
+        }
 
         //this.renderCanvas.call(this.xyzoom);
         var that = this;
@@ -3020,7 +3065,9 @@ class graphly extends EventEmitter {
         this.el.selectAll('.zoomYBox').each(function(d, i){
             d3.select(this).call(that.yzoom[i]);
         });
-        /*this.el.select('#zoomY2Box').call(this.y2zoom);*/
+        this.el.selectAll('.zoomY2Box').each(function(d, i){
+            d3.select(this).call(that.y2zoom[i]);
+        });
 
 
     }
@@ -3201,6 +3248,17 @@ class graphly extends EventEmitter {
                 this.yAxisSvg[yPos].call(this.yAxis[yPos]);
             }
         }
+
+        for (let yPos=0; yPos<this.renderSettings.y2Axis.length; yPos++){
+            let currY2Axis = this.renderSettings.y2Axis[yPos];
+            if(!this.multiYAxis){
+                currY2Axis = this.renderSettings.y2Axis;
+            }
+            if(currY2Axis.length > 0){
+                this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+            }
+        }
+
         for (let i = 0; i < this.additionalYAxis.length; i++) {
             this.addYAxisSvg[i].call(this.additionalYAxis[i]) ;
         }
@@ -3624,12 +3682,11 @@ class graphly extends EventEmitter {
         this.xAxisSvg.call(this.xAxis);
 
 
+        let heighChunk = this.height/this.yScale.length;
 
         for (let yPos = 0; yPos < this.yScale.length; yPos++) {
 
-            let heighChunk = this.height/this.yScale.length;
             this.yScale[yPos].range([heighChunk-this.separation, 0]);
-
             this.yAxis[yPos].innerTickSize(-this.width);
             
             if(this.renderSettings.yAxis[yPos].length > 0){
@@ -3648,10 +3705,17 @@ class graphly extends EventEmitter {
             this.addYAxisSvg[i].call(this.additionalYAxis[i]);
         }
 
-        if(this.renderSettings.y2Axis.length > 0){
-            this.y2Axis.innerTickSize(this.width);
-            this.y2Scale.range([this.height, 0]);
-            this.y2AxisSvg.call(this.y2Axis);
+        for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
+
+            this.y2Scale[yPos].range([heighChunk-this.separation, 0]);
+            this.y2Axis[yPos].innerTickSize(-this.width);
+            
+            if(this.renderSettings.y2Axis[yPos].length > 0){
+                this.y2AxisSvg[yPos].attr(
+                    'transform', 'translate('+this.width+','+yPos*heighChunk+')'
+                );
+                this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+            }
         }
 
         this.renderCanvas
@@ -3696,26 +3760,48 @@ class graphly extends EventEmitter {
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
-        this.el.select('#zoomYBox')
-            .attr('width', this.margin.left + this.subAxisMarginY)
-            .attr('height', this.height );
 
-        this.el.select('#zoomY2Box')
-            .attr('width', this.margin.right + this.marginY2Offset)
-            .attr('height', this.height )
-            .attr('transform', 'translate(' + (
-                this.width
-                ) + ',' + 0 + ')'
-            );
+        var that = this;
+
+        this.el.selectAll('.zoomYBox').each(function(d,i){
+            d3.select(this)
+                .attr('width', that.margin.left)
+                .attr('height', heighChunk-that.separation )
+                .attr(
+                    'transform',
+                    'translate(' + -(that.margin.left+that.subAxisMarginY) + 
+                    ',' + (heighChunk*i) + ')'
+                )
+                .attr('pointer-events', 'all');
+        });
+
+        this.el.selectAll('.zoomY2Box').each(function(d,i){
+            d3.select(this)
+                .attr('width', that.margin.right + that.marginY2Offset)
+                .attr('height', heighChunk-that.separation )
+                .attr(
+                    'transform',
+                    'translate(' + that.width + 
+                    ',' + (heighChunk*i) + ')'
+                )
+                .attr('pointer-events', 'all');
+        });
+
 
         this.el.select('#zoomXBox')
             .attr('width', this.width)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
-        this.el.select('#rectangleOutline')
-            .attr('width', this.width)
-            .attr('height', this.height);
+        this.el.selectAll('.rectangleOutline').each(function(d,i){
+            d3.select(this)
+                .attr('width', that.width)
+                .attr('height', heighChunk-that.separation)
+                .attr(
+                    'transform',
+                    'translate(0,' + (heighChunk*i) + ')'
+                );
+        });
 
         this.el.select('#previewImage')
             .attr('width',  this.width)
@@ -3735,7 +3821,6 @@ class graphly extends EventEmitter {
         this.batchDrawerReference.updateCanvasSize(this.width, this.height);
         this.renderData();
         this.zoom_update();
-        //this.createHelperObjects();
     }
 
     renderRectangles(data, idY, xGroup, yGroup, cAxis, updateReferenceCanvas) {
@@ -3872,11 +3957,11 @@ class graphly extends EventEmitter {
     }
 
 
-    renderPoints(data, xAxis, yAxis, cAxis, plotY, updateReferenceCanvas) {
+    renderPoints(data, xAxis, yAxis, cAxis, plotY, yScale, updateReferenceCanvas) {
 
         let lp;
         let p_x, p_y;
-        let yScale = this.yScale[plotY];
+        yScale = yScale[plotY];
         let currColCache = null;
         let colCacheAvailable = false;
 
@@ -4171,10 +4256,10 @@ class graphly extends EventEmitter {
         }
     }
 
-    renderFilteredOutPoints(data, xAxis, yAxis, plotY) {
+    renderFilteredOutPoints(data, xAxis, yAxis, plotY, yScale) {
 
         let lp = data[xAxis].length;
-        let yScale = this.yScale[plotY];
+        yScale = yScale[plotY];
 
         // Check if parameter part of left or right y Scale
         if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
@@ -5093,7 +5178,7 @@ class graphly extends EventEmitter {
     }
 
 
-    renderParameter(idX, idY, idCS, plotY, yAxisSet, parPos, data, inactiveData, updateReferenceCanvas){
+    renderParameter(idX, idY, idCS, plotY, yAxisSet, currYScale, parPos, data, inactiveData, updateReferenceCanvas){
 
         this.startTiming('renderParameter:'+idY);
 
@@ -5112,21 +5197,21 @@ class graphly extends EventEmitter {
                 );
             } else {
                 this.renderPoints(
-                    data, idX, idY, idCS, plotY, updateReferenceCanvas
+                    data, idX, idY, idCS, plotY, currYScale, updateReferenceCanvas
                 );
             }
         } else {
             if(combPars.hasOwnProperty(idY)){
                 this.renderPoints(
-                    data, idX, idY, idCS, plotY,
+                    data, idX, idY, idCS, plotY, currYScale,
                     updateReferenceCanvas
                 );
             } else {
                 this.renderFilteredOutPoints(
-                    inactiveData, idX, idY, plotY
+                    inactiveData, idX, idY, plotY, currYScale
                 );
                 this.renderPoints(
-                    data, idX, idY, idCS, plotY,
+                    data, idX, idY, idCS, plotY, currYScale,
                     updateReferenceCanvas
                 );
                 // Check if any regression type is selected for parameter
@@ -5272,7 +5357,7 @@ class graphly extends EventEmitter {
         for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
             yAxRen = this.renderSettings.yAxis[plotY];
-            y2AxRen = [];//this.renderSettings.y2Axis[plotY];
+            y2AxRen = this.renderSettings.y2Axis[plotY];
             if(!this.multiYAxis){
                 yAxRen = this.renderSettings.yAxis;
                 y2AxRen = this.renderSettings.y2Axis;
@@ -5283,14 +5368,14 @@ class graphly extends EventEmitter {
             // If y2 axis is defined start rendering it as we need to render
             // multiple times to have individial images for manipulation in
             // debounce option
-            /*if(y2AxRen.length > 0){
+            if(y2AxRen.length > 0){
                 for (let parPos=0; parPos<y2AxRen.length; parPos++){
                     let idY2 = y2AxRen[parPos];
                     let idCS = this.renderSettings.colorAxis[
                         this.renderSettings.yAxis.length + parPos
                     ];
                     this.renderParameter(
-                        idX, idY2, idCS, plotY, this.renderSettings.y2Axis,
+                        idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
                         parPos, this.currentData, this.currentInactiveData,
                         updateReferenceCanvas
                     );
@@ -5299,7 +5384,7 @@ class graphly extends EventEmitter {
                 // without data from first y axis
                 this.batchDrawer.draw();
                 this.updatePreviewImage('previewImage2');
-            }*/
+            }
 
             /*this.batchDrawer.clear();
             if(this.batchDrawerReference){
@@ -5312,7 +5397,7 @@ class graphly extends EventEmitter {
                 let idCS = this.renderSettings.colorAxis[parPos];
 
                 this.renderParameter(
-                    idX, idY, idCS, plotY, this.renderSettings.yAxis,
+                    idX, idY, idCS, plotY, yAxRen, this.yScale,
                     parPos, this.currentData, this.currentInactiveData,
                     updateReferenceCanvas
                 );

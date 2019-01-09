@@ -51,9 +51,9 @@ var renderSettings_ray = {
 
 var renderSettingsSwarm = {
     xAxis: 'Latitude',
-    yAxis: [['F'],['F_error'], ['F_res_IGRF12']],
-    //y2Axis: ['F_error'],
-    colorAxis: [null, null],
+    yAxis: [['F'],['B_NEC_resAC_E'], ['F_res_IGRF12']],
+    y2Axis: [['SunAzimuthAngle'],['SunDeclination'], ['SunHourAngle']],
+    colorAxis: [null, null, null, null, null, null],
     /*dataIdentifier: {
         parameter: 'id',
         identifiers: ['Alpha', 'Bravo']
@@ -573,7 +573,7 @@ filterManager.on('filterChange', function(filters){
 });
 
 d3.select('#save').on('click', function(){
-    graph.saveImage('png',3);
+    graph.saveImage('png',2);
 });
 
 
