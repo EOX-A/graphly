@@ -51,9 +51,9 @@ var renderSettings_ray = {
 
 var renderSettingsSwarm = {
     xAxis: 'Latitude',
-    yAxis: [['F'],['B_NEC_resAC_E'], ['F_res_IGRF12']],
+    yAxis: [['F'],['B_NEC_resAC_E', 'B_NEC_resAC_N'], ['F_res_IGRF12']],
     y2Axis: [['SunAzimuthAngle'],['SunDeclination'], ['SunHourAngle']],
-    colorAxis: [null, null, null, null, null, null],
+    colorAxis: [null, null, null, null, null, null, null],
     /*dataIdentifier: {
         parameter: 'id',
         identifiers: ['Alpha', 'Bravo']

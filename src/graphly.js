@@ -2001,10 +2001,10 @@ class graphly extends EventEmitter {
             .attr('width', this.width)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
             //.attr('fill', 'none')
-            .attr('fill', 'blue')
-            .attr('opacity', '0.5')
+            //.attr('fill', 'blue')
+            //.attr('opacity', '0.5')
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
-            //.style('visibility', 'hidden')
+            .style('visibility', 'hidden')
             .attr('pointer-events', 'all');
 
 
@@ -2039,9 +2039,9 @@ class graphly extends EventEmitter {
                         'translate(' + -(this.margin.left+this.subAxisMarginY) + 
                         ',' + offsetY + ')'
                     )
-                    .attr('fill', 'red')
-                    .attr('opacity', 0.5)
-                    //.style('visibility', 'hidden')
+                    //.attr('fill', 'red')
+                    //.attr('opacity', 0.5)
+                    .style('visibility', 'hidden')
                     .attr('pointer-events', 'all');
 
                 if(this.renderSettings.y2Axis[plotY].length>0){
@@ -2053,9 +2053,9 @@ class graphly extends EventEmitter {
                             this.width
                             ) + ',' + offsetY + ')'
                         )
-                        .attr('fill', 'yellow')
-                        .attr('opacity', 0.5)
-                        //.style('visibility', 'hidden')
+                        //.attr('fill', 'yellow')
+                        //.attr('opacity', 0.5)
+                        .style('visibility', 'hidden')
                         .attr('pointer-events', 'all');
                 }
 
@@ -2092,7 +2092,7 @@ class graphly extends EventEmitter {
 
         this.createColorScales();
         this.createInfoBoxes();
-        this.createParameterInfo();
+        //this.createParameterInfo();
 
         // Add settings button to display/hide parameter information
         if(!this.displayParameterLabel) {
@@ -2824,13 +2824,13 @@ class graphly extends EventEmitter {
                 this.y2Scale.push(
                     d3.scale.log()
                         .domain([start,end])
-                        .range([this.height, 0])
+                        .range([heighChunk-this.separation, 0])
                 );
             }else{
                 this.y2Scale.push(
                     y2ScaleType
                         .domain(y2Extent)
-                        .range([this.height, 0])
+                        .range([heighChunk-this.separation, 0])
                 );
             }
 
@@ -2877,9 +2877,9 @@ class graphly extends EventEmitter {
                 this.yAxisSvg.push(
                     this.svg.append('g')
                         .attr('class', 'y axis')
-                        /*.attr(
+                        .attr(
                             'transform', 'translate(0,'+yPos*heighChunk+')'
-                        )*/
+                        )
                         .call(this.yAxis[yPos])
                     );
             }
@@ -2911,6 +2911,9 @@ class graphly extends EventEmitter {
                 this.y2AxisSvg.push(
                     this.svg.append('g')
                         .attr('class', 'y2 axis')
+                        .attr(
+                            'transform', 'translate(0,'+yPos*heighChunk+')'
+                        )
                         .call(this.y2Axis[yPos])
                 );
             }
@@ -4396,7 +4399,7 @@ class graphly extends EventEmitter {
                 .attr('id', 'applyButton')
                 .text('Apply')
                 .on('click', ()=>{
-                    this.createParameterInfo();
+                    //this.createParameterInfo();
                     this.resize(false);
                     this.renderData();
                     this.createColorScales();
