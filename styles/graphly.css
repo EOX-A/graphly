@@ -268,7 +268,7 @@ svg {
 }
 
 
-.ySettingsPanel{
+.yAxisPanel, .y2AxisPanel{
     background-color: white;
     border-color: #999;
     border-style: solid;
