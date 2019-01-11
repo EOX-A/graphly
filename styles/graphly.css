@@ -268,7 +268,7 @@ svg {
 }
 
 
-#ySettings, #y2Settings{
+.ySettingsPanel{
     background-color: white;
     border-color: #999;
     border-style: solid;

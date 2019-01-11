@@ -1204,34 +1204,27 @@ class graphly extends EventEmitter {
 
     createAxisLabels(){
 
-         let yChoices = [];
-         let y2Choices = [];
-         let xChoices = [];
-         let xSubChoices = [];
-         let ySubChoices = [];
-
-         let xHidden, yHidden, y2Hidden;
-
-         if(!this.el.select('#xSettings').empty()){
+        // Create x axis label
+        let xHidden;
+        if(!this.el.select('#xSettings').empty()){
             xHidden = (this.el.select('#xSettings').style('display') == 'block' ) ? 
                 false : true;
         }else{
             xHidden = true;
         }
 
-        if(!this.el.select('#ySettings').empty()){
-            yHidden = (this.el.select('#ySettings').style('display') == 'block' ) ? 
-                false : true; 
-        }else{
-            yHidden = true;
-        }
 
-        if(!this.el.select('#y2Settings').empty()){
-            y2Hidden = (this.el.select('#y2Settings').style('display') == 'block' ) ? 
-                false : true; 
-        }else{
-            y2Hidden = true;
-        }
+
+
+        let xChoices = [];
+        let xSubChoices = [];
+        
+
+        // Do some cleanup
+        this.el.selectAll('.axisLabel').on('click',null);
+        this.el.selectAll('.axisLabel').remove();
+        this.el.selectAll('.subAxisLabel').remove();
+
 
         // Go through data settings and find currently available ones
         let ds = this.dataSettings;
@@ -1246,36 +1239,17 @@ class graphly extends EventEmitter {
             }
             // Check if key is available in data first
             if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
-
-                yChoices.push({value: key, label: key});
-                y2Choices.push({value: key, label: key});
                 xChoices.push({value: key, label: key});
-
-                if(this.renderSettings.yAxis.indexOf(key)!==-1){
-                    yChoices[yChoices.length-1].selected = true;
-                    y2Choices.pop();
-                }
-                if(this.renderSettings.y2Axis.indexOf(key)!==-1){
-                    y2Choices[y2Choices.length-1].selected = true;
-                    yChoices.pop();
-                }
                 if(this.renderSettings.xAxis === key){
                     xChoices[xChoices.length-1].selected = true;
                 }
             } 
 
             if (this.data.hasOwnProperty(key)){
-
                 xSubChoices.push({value: key, label: key});
-                ySubChoices.push({value: key, label: key});
-
                 if(this.renderSettings.hasOwnProperty('additionalXTicks') &&
                    this.renderSettings.additionalXTicks.indexOf(key)!==-1){
                     xSubChoices[xSubChoices.length-1].selected = true;
-                }
-                if(this.renderSettings.hasOwnProperty('additionalYTicks') &&
-                   this.renderSettings.additionalYTicks.indexOf(key)!==-1){
-                    ySubChoices[ySubChoices.length-1].selected = true;
                 }
             }
         }
@@ -1292,410 +1266,507 @@ class graphly extends EventEmitter {
                 }
             }
             if(includePar){
-                yChoices.push({value: comKey, label: comKey});
-                y2Choices.push({value: comKey, label: comKey});
                 xChoices.push({value: comKey, label: comKey});
-
-                if(this.renderSettings.yAxis.indexOf(comKey)!==-1){
-                    yChoices[yChoices.length-1].selected = true;
-                    y2Choices.pop();
-                }
-                // Add selected attribute also to y2 axis selections
-                if(this.renderSettings.y2Axis.indexOf(comKey)!==-1){
-                    y2Choices[y2Choices.length-1].selected = true;
-                    yChoices.pop();
-                }
                 if(this.renderSettings.xAxis === comKey){
                     xChoices[xChoices.length-1].selected = true;
                 }
             }
         }
 
-        this.el.selectAll('.axisLabel').on('click',null);
-        this.el.selectAll('.axisLabel').remove();
-        this.el.selectAll('.subAxisLabel').remove();
+        let multiLength = this.renderSettings.yAxis.length;
 
-        let uniqY = this.renderSettings.yAxis;
+        for (let yPos=0; yPos<multiLength; yPos++){
 
-        let listText = [];
-        // Add uom info to unique elements
-        for (var i = 0; i < uniqY.length; i++) {
-            if(this.dataSettings.hasOwnProperty(uniqY[i]) && 
-               this.dataSettings[uniqY[i]].hasOwnProperty('uom') &&
-               this.dataSettings[uniqY[i]].uom !== null){
-                listText.push(uniqY[i]+' ['+this.dataSettings[uniqY[i]].uom+'] ');
-            }else{
-                listText.push(uniqY[i]);
+            let heighChunk = this.height/multiLength;
+            let offsetY = yPos*heighChunk;
+            let currHeightCenter = ((heighChunk - this.separation)/2) + offsetY;
+
+            let currYAxis = this.renderSettings.yAxis[yPos];
+            let currY2Axis = defaultFor(this.renderSettings.y2Axis[yPos], []);
+            if(!this.multiYAxis){
+                currYAxis = this.renderSettings.yAxis;
+                currY2Axis = defaultFor(this.renderSettings.y2Axis, []);
             }
-        }
 
-        if(listText.length === 0){
-            // No items selected, add "filler text"
-            listText.push('Add parameter ...');
-        }
-        if(this.yAxisLabel){
-            listText = [this.yAxisLabel];
-        }
-        
-        let labelytext = this.svg.append('text')
-            .attr('class', 'yAxisLabel axisLabel')
-            .attr('text-anchor', 'middle')
-            .attr('transform', 
-                'translate('+ -(this.margin.left/2+10) +','+
-                (this.height/2)+')rotate(-90)'
-            )
-            .attr('fill', '#007bff')
-            .attr('stroke', 'none')
-            .attr('font-weight', 'bold')
-            .attr('text-decoration', 'none')
-            .text(listText.join(', '));
 
-        this.addTextMouseover(labelytext);
+             // Check for available parameter options
+            let yChoices = [];
+            let y2Choices = [];
+            let ySubChoices = [];
 
-        this.el.select('#ySettings').remove();
+            // Go through data settings and find currently available ones
+            let ds = this.dataSettings;
+            for (let key in ds) {
+                // Check if key is part of a combined parameter
+                let ignoreKey = false;
+                let comKey = null;
+                for (comKey in this.renderSettings.combinedParameters){
+                    if(this.renderSettings.combinedParameters[comKey].indexOf(key) !== -1){
+                        ignoreKey = true;
+                    }
+                }
+                // Check if key is available in data first
+                if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
 
-        this.el.append('div')
-            .attr('id', 'ySettings')
-            .style('display', function(){
-                return yHidden ? 'none' : 'block';
-            })
-            .style('top', this.height/2+'px')
-            .style('left', this.margin.left+this.subAxisMarginY+15+'px')
-            .append('select')
-                .attr('id', 'yScaleChoices');
+                    yChoices.push({value: key, label: key});
+                    y2Choices.push({value: key, label: key});
 
-        this.el.select('#ySettings').append('div')
-            .attr('class', 'labelClose cross')
-            .on('click', ()=>{
-                this.el.select('#ySettings').style('display', 'none');
-            });
+                    if(currYAxis.indexOf(key)!==-1){
+                        yChoices[yChoices.length-1].selected = true;
+                        y2Choices.pop();
+                    }
+                    if(currY2Axis.indexOf(key)!==-1){
+                        y2Choices[y2Choices.length-1].selected = true;
+                        yChoices.pop();
+                    }
+                } 
 
-        let con = this.el.select('#ySettings').append('div')
-            .attr('class', 'axisOption');
-        let that = this;
+                if (this.data.hasOwnProperty(key)){
 
-        con.append('input')
-            .attr('id', 'yAxisCustomLabel')
-            .attr('type', 'text')
-            .property('value', listText.join(', '))
-            .on('input', function(){
-                that.el.select('.yAxisLabel.axisLabel').text(this.value);
-                that.yAxisLabel = this.value;
-            });
+                    xSubChoices.push({value: key, label: key});
+                    ySubChoices.push({value: key, label: key});
 
-        con.append('label')
-            .attr('for', 'yAxisCustomLabel')
-            .text('Label');
+                    if(this.renderSettings.hasOwnProperty('additionalYTicks') &&
+                       this.renderSettings.additionalYTicks.indexOf(key)!==-1){
+                        ySubChoices[ySubChoices.length-1].selected = true;
+                    }
+                }
+            }
 
-        con = this.el.select('#ySettings').append('div')
-            .attr('class', 'axisOption');
+            // Go through combined parameters and see if corresponding parameters
+            // are available in the current dataset, if they are add the combined
+            // parameter to the choices
+            let comPars =  this.renderSettings.combinedParameters;
+            for (let comKey in comPars){
+                let includePar = true;
+                for (let par=0; par<comPars[comKey].length; par++){
+                    if(!this.data.hasOwnProperty(comPars[comKey][par])){
+                        includePar = false;
+                    }
+                }
+                if(includePar){
+                    yChoices.push({value: comKey, label: comKey});
+                    y2Choices.push({value: comKey, label: comKey});
 
-        if(!this.yTimeScale){
-            con.append('input')
-                .attr('id', 'logYoption')
-                .attr('type', 'checkbox')
-                .property('checked', 
-                    defaultFor(that.logY, false)
+                    if(currYAxis.indexOf(comKey)!==-1){
+                        yChoices[yChoices.length-1].selected = true;
+                        y2Choices.pop();
+                    }
+                    // Add selected attribute also to y2 axis selections
+                    if(currY2Axis.indexOf(comKey)!==-1){
+                        y2Choices[y2Choices.length-1].selected = true;
+                        yChoices.pop();
+                    }
+                }
+            }
+
+
+            let yHidden, y2Hidden;
+
+            if(!this.el.select('#ySettings'+yPos).empty()){
+                yHidden = (this.el.select('#ySettings'+yPos).style('display') == 'block' ) ? 
+                    false : true; 
+            }else{
+                yHidden = true;
+            }
+
+            if(!this.el.select('#y2Settings'+yPos).empty()){
+                y2Hidden = (this.el.select('#y2Settings'+yPos).style('display') == 'block' ) ? 
+                    false : true; 
+            }else{
+                y2Hidden = true;
+            }
+
+            let uniqY = currYAxis;
+
+            let listText = [];
+            // Add uom info to unique elements
+            for (var i = 0; i < uniqY.length; i++) {
+                if(this.dataSettings.hasOwnProperty(uniqY[i]) && 
+                   this.dataSettings[uniqY[i]].hasOwnProperty('uom') &&
+                   this.dataSettings[uniqY[i]].uom !== null){
+                    listText.push(uniqY[i]+' ['+this.dataSettings[uniqY[i]].uom+'] ');
+                }else{
+                    listText.push(uniqY[i]);
+                }
+            }
+
+            if(listText.length === 0){
+                // No items selected, add "filler text"
+                listText.push('Add parameter ...');
+            }
+            if(this.yAxisLabel){
+                listText = [this.yAxisLabel];
+            }
+            
+            let labelytext = this.svg.append('text')
+                .attr('class', 'yAxisLabel axisLabel')
+                .attr('text-anchor', 'middle')
+                .attr('transform', 
+                    'translate('+ -(this.margin.left/2+10) +','+
+                    currHeightCenter+')rotate(-90)'
                 )
-                .on('change', function(){
-                    that.logY = !that.logY;
-                    that.initAxis();
-                    that.renderData();
+                .attr('fill', '#007bff')
+                .attr('stroke', 'none')
+                .attr('font-weight', 'bold')
+                .attr('text-decoration', 'none')
+                .text(listText.join(', '));
+
+            this.addTextMouseover(labelytext);
+
+            this.el.select('#ySettings'+yPos).remove();
+
+            let ySetDiv = this.el.append('div')
+                .attr('id', 'ySettings'+yPos)
+                .attr('class', 'ySettingsPanel')
+                .style('display', function(){
+                    return yHidden ? 'none' : 'block';
+                })
+                .style('top', currHeightCenter+'px')
+                .style('left', this.margin.left+this.subAxisMarginY+15+'px');
+
+            ySetDiv.append('select')
+                    .attr('id', 'yScaleChoices'+yPos);
+
+            ySetDiv.append('div')
+                .attr('class', 'labelClose cross')
+                .on('click', ()=>{
+                    ySetDiv.style('display', 'none');
+                });
+
+            let con = ySetDiv.append('div')
+                .attr('class', 'axisOption');
+
+            let that = this;
+
+            con.append('input')
+                .attr('id', 'yAxisCustomLabel'+yPos)
+                .attr('type', 'text')
+                .property('value', listText.join(', '))
+                .on('input', function(){
+                    that.el.select('.yAxisLabel.axisLabel').text(this.value);
+                    that.yAxisLabel = this.value;
                 });
 
             con.append('label')
-                .attr('for', 'logYoption')
-                .text('Logarithmic scale (base-10) ');
-        }
+                .attr('for', 'yAxisCustomLabel'+yPos)
+                .text('Label');
 
+            con = ySetDiv.append('div')
+                .attr('class', 'axisOption');
 
-        this.el.select('#yScaleChoices').attr('multiple', true);
+            if(!this.yTimeScale){
+                con.append('input')
+                    .attr('id', 'logYoption')
+                    .attr('type', 'checkbox')
+                    .property('checked', 
+                        defaultFor(that.logY, false)
+                    )
+                    .on('change', function(){
+                        that.logY = !that.logY;
+                        that.initAxis();
+                        that.renderData();
+                    });
 
-        this.el.select('.yAxisLabel.axisLabel').on('click', ()=>{
-            if(this.el.select('#ySettings').style('display') === 'block'){
-                this.el.select('#ySettings').style('display', 'none');
-            }else{
-                this.el.select('#ySettings').style('display', 'block');
+                con.append('label')
+                    .attr('for', 'logYoption')
+                    .text('Logarithmic scale (base-10) ');
             }
-        });
 
-        let ySettingParameters = new Choices(this.el.select('#yScaleChoices').node(), {
-          choices: yChoices,
-          removeItemButton: true,
-          placeholderValue: ' select ...',
-          itemSelectText: '',
-        });
 
-        ySettingParameters.passedElement.addEventListener('addItem', function(event) {
-            that.yAxisLabel = null;
-            let renSett = that.renderSettings;
-            // Check if the yAxis is currently showing a time parameter and the
-            // new parameter is not, then we remove the previous time parameter
-            if(that.yTimeScale){
-               renSett.yAxis.pop();
-               renSett.yAxis.push(event.detail.value);
-               renSett.colorAxis[that.renderSettings.yAxis.length-1] = null;
-            } else {
-                // If newly added parameter is a time scale we remove also the
-                // previous parameters from the y scale
-                if(that.checkTimeScale(event.detail.value)){
-                    let y2ColScale = renSett.colorAxis.slice(
-                        renSett.yAxis.length-1, renSett.colorAxis.length);
-                    if(y2ColScale.length > 0){
-                        renSett.colorAxis = [null].concat(y2ColScale);
-                    }else {
-                        renSett.colorAxis = [null];
-                    }
-                    renSett.yAxis = [event.detail.value];
+            this.el.select('#yScaleChoices'+yPos).attr('multiple', true);
+
+            var toggleView = function(divEl){
+                if(divEl.style('display') === 'block'){
+                    divEl.style('display', 'none');
+                }else{
+                    divEl.style('display', 'block');
+                }
+            };
+
+            labelytext.on('click', toggleView.bind(null, ySetDiv));
+
+            let ySettingParameters = new Choices(this.el.select('#yScaleChoices'+yPos).node(), {
+              choices: yChoices,
+              removeItemButton: true,
+              placeholderValue: ' select ...',
+              itemSelectText: '',
+            });
+
+            ySettingParameters.passedElement.addEventListener('addItem', function(event) {
+                that.yAxisLabel = null;
+                let renSett = that.renderSettings;
+                // Check if the yAxis is currently showing a time parameter and the
+                // new parameter is not, then we remove the previous time parameter
+                if(that.yTimeScale){
+                   currYAxis.pop();
+                   currYAxis.push(event.detail.value);
+                   // TODO: Get colorscale function working again
+                   //renSett.colorAxis[that.renderSettings.yAxis.length-1] = null;
                 } else {
-                    renSett.yAxis.push(event.detail.value);
-                    // If y2 axis has parameters we need to add the coloraxis element
-                    // taking them into account as color axis is shared
-                    if(renSett.y2Axis.length > 0){
-                        renSett.colorAxis.splice(
-                            renSett.yAxis.length-1, 0, null
-                        );
+                    // If newly added parameter is a time scale we remove also the
+                    // previous parameters from the y scale
+                    if(that.checkTimeScale(event.detail.value)){
+                        /*let y2ColScale = renSett.colorAxis.slice(
+                            renSett.yAxis.length-1, renSett.colorAxis.length);
+                        if(y2ColScale.length > 0){
+                            renSett.colorAxis = [null].concat(y2ColScale);
+                        }else {
+                            renSett.colorAxis = [null];
+                        }*/
+                        currYAxis = [event.detail.value];
                     } else {
-                        renSett.colorAxis.push(null);
+                        currYAxis.push(event.detail.value);
+                        // If y2 axis has parameters we need to add the coloraxis element
+                        // taking them into account as color axis is shared
+                        /*if(renSett.y2Axis.length > 0){
+                            renSett.colorAxis.splice(
+                                renSett.yAxis.length-1, 0, null
+                            );
+                        } else {
+                            renSett.colorAxis.push(null);
+                        }*/
                     }
                 }
-            }
-            
-            that.recalculateBufferSize();
-            that.initAxis();
-            that.renderData();
-            that.createAxisLabels();
-            /**
-            * Event is fired When modifying a parameter for any of the 
-            * axis settings.
-            * @event module:graphly.graphly#axisChange
-            */
-            that.emit('axisChange');
-        },false);
-        ySettingParameters.passedElement.addEventListener('removeItem', function(event) {
-            that.yAxisLabel = null;
-            let index = that.renderSettings.yAxis.indexOf(event.detail.value);
-            // TODO: Should it happen that the removed item is not in the list?
-            // Do we need to handle this case? 
-            if(index!==-1){
-                that.renderSettings.yAxis.splice(index, 1);
-                that.renderSettings.colorAxis.splice(index, 1);
-                that.initAxis();
-                that.renderData();
-                that.createAxisLabels();
-                that.emit('axisChange');
-            }
-        },false);
-
-        if(this.enableSubYAxis){
-            
-            con.append('div')
-                .style('margin-top', '20px')
-                .text('Secondary ticks');
                 
-            con.append('select')
-                .attr('id', 'subYChoices');
-
-
-            this.el.select('#subYChoices').attr('multiple', true);
-            
-            let subYParameters = new Choices(
-                this.el.select('#subYChoices').node(), {
-                    choices: ySubChoices,
-                    removeItemButton: true,
-                    placeholderValue: ' select ...',
-                    itemSelectText: '',
-                }
-            );
-
-            subYParameters.passedElement.addEventListener('addItem', function(event) {
-                that.renderSettings.additionalYTicks.push(event.detail.value);
-                that.subAxisMarginY = 80*that.renderSettings.additionalYTicks.length;
+                that.recalculateBufferSize();
                 that.initAxis();
-                that.resize();
                 that.renderData();
                 that.createAxisLabels();
+                /**
+                * Event is fired When modifying a parameter for any of the 
+                * axis settings.
+                * @event module:graphly.graphly#axisChange
+                */
                 that.emit('axisChange');
-            }, false);
+            },false);
 
-            subYParameters.passedElement.addEventListener('removeItem', function(event) {
-                let index = that.renderSettings.additionalYTicks.indexOf(event.detail.value);
+
+            ySettingParameters.passedElement.addEventListener('removeItem', function(event) {
+                that.yAxisLabel = null;
+                let index = currYAxis.indexOf(event.detail.value);
+                // TODO: Should it happen that the removed item is not in the list?
+                // Do we need to handle this case? 
                 if(index!==-1){
-                    that.renderSettings.additionalYTicks.splice(index, 1);
+                    currYAxis.splice(index, 1);
+                    //that.renderSettings.colorAxis.splice(index, 1);
+                    that.initAxis();
+                    that.renderData();
+                    that.createAxisLabels();
+                    that.emit('axisChange');
+                }
+            },false);
+
+            /*if(this.enableSubYAxis){
+                
+                con.append('div')
+                    .style('margin-top', '20px')
+                    .text('Secondary ticks');
+                    
+                con.append('select')
+                    .attr('id', 'subYChoices');
+
+
+                this.el.select('#subYChoices').attr('multiple', true);
+                
+                let subYParameters = new Choices(
+                    this.el.select('#subYChoices').node(), {
+                        choices: ySubChoices,
+                        removeItemButton: true,
+                        placeholderValue: ' select ...',
+                        itemSelectText: '',
+                    }
+                );
+
+                subYParameters.passedElement.addEventListener('addItem', function(event) {
+                    that.renderSettings.additionalYTicks.push(event.detail.value);
                     that.subAxisMarginY = 80*that.renderSettings.additionalYTicks.length;
                     that.initAxis();
                     that.resize();
                     that.renderData();
                     that.createAxisLabels();
                     that.emit('axisChange');
-                }
-            },false);
-        }
+                }, false);
 
-
-        // Create labels for y2 axis
-
-        let uniqY2 = this.renderSettings.y2Axis;
-        listText = [];
-        // Add uom info to unique elements
-        for (let i = 0; i < uniqY2.length; i++) {
-            if(this.dataSettings.hasOwnProperty(uniqY2[i]) && 
-               this.dataSettings[uniqY2[i]].hasOwnProperty('uom') &&
-               this.dataSettings[uniqY2[i]].uom !== null){
-                listText.push(uniqY2[i]+' ['+this.dataSettings[uniqY2[i]].uom+'] ');
-            }else{
-                listText.push(uniqY2[i]);
+                subYParameters.passedElement.addEventListener('removeItem', function(event) {
+                    let index = that.renderSettings.additionalYTicks.indexOf(event.detail.value);
+                    if(index!==-1){
+                        that.renderSettings.additionalYTicks.splice(index, 1);
+                        that.subAxisMarginY = 80*that.renderSettings.additionalYTicks.length;
+                        that.initAxis();
+                        that.resize();
+                        that.renderData();
+                        that.createAxisLabels();
+                        that.emit('axisChange');
+                    }
+                },false);
             }
-        }
-        let addMar = this.margin.right + this.marginY2Offset - 10;
-        if(listText.length === 0){
-            // No items selected, add "filler text"
-            listText.push('Add parameter ...');
-            addMar = 20;
-        }
-        if(this.y2AxisLabel){
-            listText = [this.y2AxisLabel];
-        }
-        
-        let labely2text = this.svg.append('text')
-            .attr('class', 'y2AxisLabel axisLabel')
-            .attr('text-anchor', 'middle')
-            .attr('transform', 
-                'translate('+ (this.width+addMar) +','+
-                (this.height/2)+')rotate(-90)'
-            )
-            .attr('fill', '#007bff')
-            .attr('stroke', 'none')
-            .attr('font-weight', 'bold')
-            .attr('text-decoration', 'none')
-            .text(listText.join(', '));
 
-        this.addTextMouseover(labely2text);
 
-        this.el.select('#y2Settings').remove();
+            // Create labels for y2 axis
 
-        this.el.append('div')
-            .attr('id', 'y2Settings')
-            .style('display', function(){
-                return y2Hidden ? 'none' : 'block';
-            })
-            .style('top', this.height/2+'px')
-            .style('left', (this.width-165)+'px')
-            .append('select')
-                .attr('id', 'y2ScaleChoices');
-
-        this.el.select('#y2Settings').append('div')
-            .attr('class', 'labelClose cross')
-            .on('click', ()=>{
-                this.el.select('#y2Settings').style('display', 'none');
-            });
-
-        con = this.el.select('#y2Settings').append('div')
-            .attr('class', 'axisOption');
-        con.append('input')
-            .attr('id', 'y2AxisCustomLabel')
-            .attr('type', 'text')
-            .property('value', listText.join(', '))
-            .on('input', function(){
-                that.el.select('.y2AxisLabel.axisLabel').text(this.value);
-                that.y2AxisLabel = this.value;
-            });
-        con.append('label')
-            .attr('for', 'y2AxisCustomLabel')
-            .text('Label');
-
-        con = this.el.select('#y2Settings').append('div')
-            .attr('class', 'axisOption');
-
-        if(!this.y2TimeScale){
-            con.append('input')
-                .attr('id', 'logY2option')
-                .attr('type', 'checkbox')
-                .property('checked', 
-                    defaultFor(that.logY2, false)
+            let uniqY2 = this.renderSettings.y2Axis;
+            listText = [];
+            // Add uom info to unique elements
+            for (let i = 0; i < uniqY2.length; i++) {
+                if(this.dataSettings.hasOwnProperty(uniqY2[i]) && 
+                   this.dataSettings[uniqY2[i]].hasOwnProperty('uom') &&
+                   this.dataSettings[uniqY2[i]].uom !== null){
+                    listText.push(uniqY2[i]+' ['+this.dataSettings[uniqY2[i]].uom+'] ');
+                }else{
+                    listText.push(uniqY2[i]);
+                }
+            }
+            let addMar = this.margin.right + this.marginY2Offset - 10;
+            if(listText.length === 0){
+                // No items selected, add "filler text"
+                listText.push('Add parameter ...');
+                addMar = 20;
+            }
+            if(this.y2AxisLabel){
+                listText = [this.y2AxisLabel];
+            }
+            
+            let labely2text = this.svg.append('text')
+                .attr('class', 'y2AxisLabel axisLabel')
+                .attr('text-anchor', 'middle')
+                .attr('transform', 
+                    'translate('+ (this.width+addMar) +','+
+                    (this.height/2)+')rotate(-90)'
                 )
-                .on('change', function(){
-                    that.logY2 = !that.logY2;
-                    that.initAxis();
-                    that.renderData();
+                .attr('fill', '#007bff')
+                .attr('stroke', 'none')
+                .attr('font-weight', 'bold')
+                .attr('text-decoration', 'none')
+                .text(listText.join(', '));
+
+            this.addTextMouseover(labely2text);
+
+            this.el.select('#y2Settings').remove();
+
+            this.el.append('div')
+                .attr('id', 'y2Settings')
+                .style('display', function(){
+                    return y2Hidden ? 'none' : 'block';
+                })
+                .style('top', this.height/2+'px')
+                .style('left', (this.width-165)+'px')
+                .append('select')
+                    .attr('id', 'y2ScaleChoices');
+
+            this.el.select('#y2Settings').append('div')
+                .attr('class', 'labelClose cross')
+                .on('click', ()=>{
+                    this.el.select('#y2Settings').style('display', 'none');
                 });
 
+            con = this.el.select('#y2Settings').append('div')
+                .attr('class', 'axisOption');
+            con.append('input')
+                .attr('id', 'y2AxisCustomLabel')
+                .attr('type', 'text')
+                .property('value', listText.join(', '))
+                .on('input', function(){
+                    that.el.select('.y2AxisLabel.axisLabel').text(this.value);
+                    that.y2AxisLabel = this.value;
+                });
             con.append('label')
-                .attr('for', 'logY2option')
-                .text('Logarithmic scale (base-10) ');
-        }
+                .attr('for', 'y2AxisCustomLabel')
+                .text('Label');
 
-        this.el.select('#y2ScaleChoices').attr('multiple', true);
+            con = this.el.select('#y2Settings').append('div')
+                .attr('class', 'axisOption');
 
-        this.el.select('.y2AxisLabel.axisLabel').on('click', ()=>{
-            if(this.el.select('#y2Settings').style('display') === 'block'){
-                this.el.select('#y2Settings').style('display', 'none');
-            }else{
-                this.el.select('#y2Settings').style('display', 'block');
+            if(!this.y2TimeScale){
+                con.append('input')
+                    .attr('id', 'logY2option')
+                    .attr('type', 'checkbox')
+                    .property('checked', 
+                        defaultFor(that.logY2, false)
+                    )
+                    .on('change', function(){
+                        that.logY2 = !that.logY2;
+                        that.initAxis();
+                        that.renderData();
+                    });
+
+                con.append('label')
+                    .attr('for', 'logY2option')
+                    .text('Logarithmic scale (base-10) ');
             }
-        });
 
-        let y2SettingParameters = new Choices(this.el.select('#y2ScaleChoices').node(), {
-          choices: y2Choices,
-          removeItemButton: true,
-          placeholderValue: ' select ...',
-          itemSelectText: '',
-        });
+            this.el.select('#y2ScaleChoices').attr('multiple', true);
 
-        y2SettingParameters.passedElement.addEventListener('addItem', function(event) {
-            let renSett = that.renderSettings;
-            that.y2AxisLabel = null;
-            // Check if the y2Axis is currently showing a time parameter and the
-            // new parameter is not, then we remove the previous time parameter
-            if(that.y2TimeScale){
-               renSett.y2Axis.pop();
-               renSett.y2Axis.push(event.detail.value);
-               renSett.colorAxis[renSett.y2Axis.length-1] = null;
-            } else {
-                // If newly added parameter is a time scale we remove also the
-                // previous parameters from the y scale
-                if(that.checkTimeScale(event.detail.value)){
-                    for (var i = renSett.y2Axis.length - 1; i >= 0; i--) {
-                        renSett.y2Axis.pop();
-                        renSett.colorAxis.pop();
-                    }
-                    renSett.y2Axis.push(event.detail.value);
-                    renSett.colorAxis.push(null);
-                } else {
-                    renSett.y2Axis.push(event.detail.value);
-                    renSett.colorAxis.push(null);
+            this.el.select('.y2AxisLabel.axisLabel').on('click', ()=>{
+                if(this.el.select('#y2Settings').style('display') === 'block'){
+                    this.el.select('#y2Settings').style('display', 'none');
+                }else{
+                    this.el.select('#y2Settings').style('display', 'block');
                 }
-            }
+            });
 
-            that.recalculateBufferSize();
-            that.initAxis();
-            that.renderData();
-            that.createAxisLabels();
-            that.emit('axisChange');
-            // One item was added and none where before, we resize the right margin
-            if(that.renderSettings.y2Axis.length === 1){
-                that.resize();
-            }
-        },false);
-        y2SettingParameters.passedElement.addEventListener('removeItem', function(event) {
-            that.y2AxisLabel = null;
-            let index = that.renderSettings.y2Axis.indexOf(event.detail.value);
-            // TODO: Should it happen that the removed item is not in the list?
-            // Do we need to handle this case? 
-            if(index!==-1){
-                that.renderSettings.y2Axis.splice(index, 1);
-                that.renderSettings.colorAxis.splice((index+that.renderSettings.yAxis.length), 1);
+            let y2SettingParameters = new Choices(this.el.select('#y2ScaleChoices').node(), {
+              choices: y2Choices,
+              removeItemButton: true,
+              placeholderValue: ' select ...',
+              itemSelectText: '',
+            });
+
+            y2SettingParameters.passedElement.addEventListener('addItem', function(event) {
+                let renSett = that.renderSettings;
+                that.y2AxisLabel = null;
+                // Check if the y2Axis is currently showing a time parameter and the
+                // new parameter is not, then we remove the previous time parameter
+                if(that.y2TimeScale){
+                   renSett.y2Axis.pop();
+                   renSett.y2Axis.push(event.detail.value);
+                   renSett.colorAxis[renSett.y2Axis.length-1] = null;
+                } else {
+                    // If newly added parameter is a time scale we remove also the
+                    // previous parameters from the y scale
+                    if(that.checkTimeScale(event.detail.value)){
+                        for (var i = renSett.y2Axis.length - 1; i >= 0; i--) {
+                            renSett.y2Axis.pop();
+                            renSett.colorAxis.pop();
+                        }
+                        renSett.y2Axis.push(event.detail.value);
+                        renSett.colorAxis.push(null);
+                    } else {
+                        renSett.y2Axis.push(event.detail.value);
+                        renSett.colorAxis.push(null);
+                    }
+                }
+
+                that.recalculateBufferSize();
                 that.initAxis();
                 that.renderData();
                 that.createAxisLabels();
                 that.emit('axisChange');
-                // No items in y2 axis we resize the right margin
-                if(that.renderSettings.y2Axis.length === 0){
+                // One item was added and none where before, we resize the right margin
+                if(that.renderSettings.y2Axis.length === 1){
                     that.resize();
                 }
-            }
-        },false);
-
+            },false);
+            y2SettingParameters.passedElement.addEventListener('removeItem', function(event) {
+                that.y2AxisLabel = null;
+                let index = that.renderSettings.y2Axis.indexOf(event.detail.value);
+                // TODO: Should it happen that the removed item is not in the list?
+                // Do we need to handle this case? 
+                if(index!==-1){
+                    that.renderSettings.y2Axis.splice(index, 1);
+                    that.renderSettings.colorAxis.splice((index+that.renderSettings.yAxis.length), 1);
+                    that.initAxis();
+                    that.renderData();
+                    that.createAxisLabels();
+                    that.emit('axisChange');
+                    // No items in y2 axis we resize the right margin
+                    if(that.renderSettings.y2Axis.length === 0){
+                        that.resize();
+                    }
+                }
+            },false);
+*/
+        }
 
         let xLabel = this.renderSettings.xAxis;
         if(this.dataSettings.hasOwnProperty(xLabel) && 
@@ -1761,7 +1832,8 @@ class graphly extends EventEmitter {
           itemSelectText: '',
         });
 
-        con = this.el.select('#xSettings').append('div')
+        let that = this;
+        let con = this.el.select('#xSettings').append('div')
             .attr('class', 'axisOption');
         con.append('input')
             .attr('id', 'xAxisCustomLabel')
@@ -1863,6 +1935,8 @@ class graphly extends EventEmitter {
                     .text(this.renderSettings.additionalYTicks[i]);
             }
         }
+
+
     }
 
     createColorScale(id, index){
@@ -2997,7 +3071,7 @@ class graphly extends EventEmitter {
         });
         
 
-        //this.createAxisLabels();
+        this.createAxisLabels();
     }
 
 
