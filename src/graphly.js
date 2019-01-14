@@ -242,12 +242,20 @@ class graphly extends EventEmitter {
         this.dataSettings = defaultFor(options.dataSettings, {});
         this.setRenderSettings(options.renderSettings);
 
+        this.logX = defaultFor(options.logX, false);
+        this.logY = defaultFor(options.logY, false);
+        this.logY2 = defaultFor(options.logY2, false);
+
         if(this.multiYAxis){
             this.yAxisLabel = [];
             this.y2AxisLabel = [];
+            this.logY = [];
+            this.logY2 = [];
             for (var i = 0; i < this.renderSettings.yAxis.length; i++) {
                 this.yAxisLabel.push(null);
                 this.y2AxisLabel.push(null);
+                this.logY.push(false);
+                this.logY2.push(false);
             }
         }
 
@@ -348,10 +356,6 @@ class graphly extends EventEmitter {
         this.fixedXDomain = undefined;
         this.mouseDown = false;
         this.prevMousePos = null;
-
-        this.logX = defaultFor(options.logX, false);
-        this.logY = defaultFor(options.logY, false);
-        this.logY2 = defaultFor(options.logY2, false);
 
         this.colorAxisTickFormat = defaultFor(options.colorAxisTickFormat, 'g');
 
@@ -1318,10 +1322,20 @@ class graphly extends EventEmitter {
                 .attr('id', 'logYoption')
                 .attr('type', 'checkbox')
                 .property('checked', 
-                    defaultFor(that.logY, false)
+                    function(){
+                        if(orientation==='left'){
+                            return defaultFor(that.logY[yPos], false)
+                        } else if (orientation === 'right'){
+                            return defaultFor(that.logY2[yPos], false)
+                        }
+                    }
                 )
                 .on('change', function(){
-                    that.logY = !that.logY;
+                    if(orientation==='left'){
+                        that.logY[yPos] = !that.logY[yPos];
+                    } else if (orientation === 'right'){
+                        that.logY2[yPos] = !that.logY2[yPos];
+                    }
                     that.initAxis();
                     that.renderData();
                 });
@@ -2674,7 +2688,7 @@ class graphly extends EventEmitter {
             }
 
 
-            if(this.logY){
+            if(this.logY[yPos]){
                 let start = yExtent[0];
                 let end = yExtent[1];
 
@@ -2699,7 +2713,7 @@ class graphly extends EventEmitter {
                 );
             }
 
-            if(this.logY2){
+            if(this.logY2[yPos]){
                 let start = y2Extent[0];
                 let end = y2Extent[1];
 
