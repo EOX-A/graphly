@@ -1023,8 +1023,9 @@ class graphly extends EventEmitter {
                     ];
                     
                     this.renderParameter(
-                        xAxRen, idY2, idCS, plotY, this.renderSettings.y2Axis, this.y2Scale,
-                        parPos, this.currentData, this.currentInactiveData, false
+                        xAxRen, idY2, idCS, plotY, y2AxRen, this.y2Scale,
+                        parPos, this.currentData, this.currentInactiveData,
+                        false
                     );
                 }
             }
@@ -1043,9 +1044,11 @@ class graphly extends EventEmitter {
                     let idCS = this.renderSettings.colorAxis[parPos];
 
                     this.renderParameter(
-                        xAxRen, idY, idCS, plotY, this.renderSettings.yAxis, this.yScale,
-                        parPos, this.currentData, this.currentInactiveData, false
+                        xAxRen, idY, idCS, plotY, yAxRen, this.yScale,
+                        parPos, this.currentData, this.currentInactiveData,
+                        false
                     );
+
                 }
             }
 
@@ -1074,9 +1077,9 @@ class graphly extends EventEmitter {
             this.svg.select('#previewImage2').style('display', 'block');
         }
 
-        if(this.displayParameterLabel && 
-            !this.el.select('#parameterInfo').selectAll('*').empty()){
-            this.svg.select('#svgInfoContainer').style('visibility', 'visible');
+        if(this.displayParameterLabel/*&& 
+            !this.el.select('#parameterInfo').selectAll('*').empty()*/){
+            this.svg.selectAll('.svgInfoContainer').style('visibility', 'visible');
         }
 
         // Set interactive blue to black for labels
@@ -1196,7 +1199,7 @@ class graphly extends EventEmitter {
 
         this.svg.select('#previewImage').style('display', 'none');
         this.svg.select('#previewImage2').style('display', 'none');
-        this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
+        this.svg.selectAll('.svgInfoContainer').style('visibility', 'hidden');
 
         this.resFactor = 1;
         this.resize();
@@ -1996,7 +1999,7 @@ class graphly extends EventEmitter {
 
         this.createColorScales();
         this.createInfoBoxes();
-        //this.createParameterInfo();
+        this.createParameterInfo();
 
         // Add settings button to display/hide parameter information
         if(!this.displayParameterLabel) {
@@ -3293,7 +3296,7 @@ class graphly extends EventEmitter {
 
                 this.batchDrawer.addLine(
                     xPoints[1], yPoints[1],
-                    xPoints[0], yPoints[0], 1,
+                    xPoints[0], yPoints[0], thickness,
                     c[0], c[1], c[2], c[3]
                 );
                 break;
@@ -3337,7 +3340,7 @@ class graphly extends EventEmitter {
 
                     this.batchDrawer.addLine(
                         px1, py1,
-                        px2, py2, 1,
+                        px2, py2, thickness,
                         c[0], c[1], c[2], c[3]
                     );
                 }
@@ -3369,7 +3372,7 @@ class graphly extends EventEmitter {
         }
     }
 
-    createRegression(data, parPos, yAxRen, inactive) {
+    createRegression(data, parPos, yAxRen, yScale, inactive) {
 
         let xAxRen = this.renderSettings.xAxis;
         let resultData;
@@ -3383,9 +3386,9 @@ class graphly extends EventEmitter {
 
                 // Check if regression is activated for this parameter and id
                 let id = datIds[i];
-                let regSett = this.dataSettings[yAxRen[parPos]];
+                let regSett = this.dataSettings[yAxRen];
 
-                if( this.dataSettings[yAxRen[parPos]].hasOwnProperty(id) ){
+                if( this.dataSettings[yAxRen].hasOwnProperty(id) ){
                     regSett = regSett[id];
                 }
 
@@ -3405,7 +3408,7 @@ class graphly extends EventEmitter {
                 };
 
                 var filteredX = data[xAxRen].filter(filterFunc.bind(this));
-                var filteredY = data[yAxRen[parPos]].filter(filterFunc.bind(this));
+                var filteredY = data[yAxRen].filter(filterFunc.bind(this));
 
                 if(this.xTimeScale){
 
@@ -3420,11 +3423,6 @@ class graphly extends EventEmitter {
                     rC = regSett.color;
                     rC[3] = 1.0;
                 }
-                
-                let yScale = this.yScale;
-                if(this.renderSettings.y2Axis.indexOf(yAxRen[parPos]) !== -1){
-                    yScale = this.y2Scale;
-                }
 
                 if(!inactive){
                     this.renderRegression(resultData, reg, yScale, rC);
@@ -3434,16 +3432,11 @@ class graphly extends EventEmitter {
             }
             
         }else{
-            let regSett = this.dataSettings[yAxRen[parPos]];
+            let regSett = this.dataSettings[yAxRen];
             let reg = {
                 type: regSett.regression,
                 order: regSett.regressionOrder
             };
-
-            let yScale = this.yScale;
-            if(this.renderSettings.y2Axis.indexOf(yAxRen[parPos]) !== -1){
-                yScale = this.y2Scale;
-            }
 
             if(typeof reg.type !== 'undefined'){
                 // TODO: Check for size mismatch?
@@ -3451,20 +3444,20 @@ class graphly extends EventEmitter {
                     resultData = data[xAxRen]
                         .map(function(d){return d.getTime();})
                         .zip(
-                            data[yAxRen[parPos]]
+                            data[yAxRen]
                         );
                 }else{
                     resultData = data[xAxRen].zip(
-                        data[yAxRen[parPos]]
+                        data[yAxRen]
                     );
                 }
                 if(!inactive){
                     // Check for predefined color
-                    if(this.dataSettings.hasOwnProperty(yAxRen[parPos]) &&
-                       this.dataSettings[yAxRen[parPos]].hasOwnProperty('color')){
+                    if(this.dataSettings.hasOwnProperty(yAxRen) &&
+                       this.dataSettings[yAxRen].hasOwnProperty('color')){
                         this.renderRegression(
                             resultData, reg, yScale,
-                            this.dataSettings[yAxRen[parPos]].color
+                            this.dataSettings[yAxRen].color
                         );
                 }else{
                     this.renderRegression(resultData, reg, yScale);
@@ -4303,7 +4296,7 @@ class graphly extends EventEmitter {
                 .attr('id', 'applyButton')
                 .text('Apply')
                 .on('click', ()=>{
-                    //this.createParameterInfo();
+                    this.createParameterInfo();
                     this.resize(false);
                     this.renderData();
                     this.createColorScales();
@@ -4386,6 +4379,29 @@ class graphly extends EventEmitter {
 
 
     createInfoBoxes(){
+
+        if(this.multiYAxis){
+
+            let currHeight = this.height / this.yScale.length;
+
+            for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+
+                if(this.el.select('#parameterInfo'+yPos).empty()){
+                    this.el.append('div')
+                        .attr('id', 'parameterInfo'+yPos)
+                        .attr('class', 'parameterInfo')
+                        .style('top', ((currHeight)*yPos + 20) +'px')
+                        .style('right', (this.margin.right+50)+'px')
+                        .style('visibility', 'hidden');
+                } else {
+                    this.el.select('#parameterInfo'+yPos).selectAll('*').remove();
+                    this.el.select('#parameterInfo'+yPos)
+                        .style('top', ((currHeight)*yPos +20) +'px')
+                        .style('right', (this.margin.right+50)+'px');
+                }
+            }
+        }
+
         // Setup div for regression info rendering
         this.el.select('#regressionInfo').remove();
         this.el.append('div')
@@ -4393,38 +4409,19 @@ class graphly extends EventEmitter {
             .style('bottom', (this.margin.bottom+this.subAxisMarginX)+'px')
             .style('left', (this.width/2)+'px');
 
-        if(this.el.select('#parameterInfo').empty()){
-            this.el.append('div')
-                .attr('id', 'parameterInfo')
-                .style('top', this.margin.top*2+'px')
-                .style(
-                    'left', 
-                    (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-                )
-                .style('visibility', 'hidden');
-        } else {
-            this.el.select('#parameterInfo').selectAll('*').remove();
-            this.el.select('#parameterInfo')
-                .style('top', this.margin.top*2+'px')
-                .style(
-                    'left', 
-                    (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-                );
-        }
+        
 
 
         this.el.select('#parameterSettings').remove();
         this.el.append('div')
             .attr('id', 'parameterSettings')
-            .style('left', 
-                (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-            )
+            .style('right', (this.margin.right+50)+'px')
             .style('display', 'none');
 
-        if(this.el.select('#parameterInfo').selectAll('*').empty()){
+        /*if(this.el.select('#parameterInfo').selectAll('*').empty()){
             this.el.select('#parameterInfo').style('visibility', 'hidden');
             this.el.select('#svgInfoContainer').style('visibility', 'hidden');
-        }
+        }*/
     }
 
     updateInfoBoxes(){
@@ -4432,21 +4429,23 @@ class graphly extends EventEmitter {
             .style('bottom', (this.margin.bottom+this.subAxisMarginX)+'px')
             .style('left', (this.width/2)+'px');
 
-        this.el.select('#parameterInfo')
-                .style('top', this.margin.top*2+'px')
-                .style(
-                    'left', 
-                    (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-                );
+        if(this.multiYAxis){
+            let currHeight = this.height / this.yScale.length;
+            for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
-        d3.select('#svgInfoContainer')
-            .attr('transform', 'translate(' + (this.width/2 - 90) + ',' +
-            (this.margin.top+1) + ')');
+                this.el.select('#parameterInfo'+yPos)
+                    .style('top', ((currHeight)*yPos + 20) +'px');
+
+                d3.select('#svgInfoContainer'+yPos)
+                    .attr('transform', 'translate(' + 
+                        (this.width - this.margin.right - 260) + ',' +
+                        ((currHeight)*yPos + 10) + ')'
+                    );
+            }
+        }
 
         this.el.select('#parameterSettings')
-            .style('left', 
-                (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-            )
+            .style('right', (this.margin.right+50)+'px')
             .style('display', 'none');
     }
 
@@ -4513,48 +4512,65 @@ class graphly extends EventEmitter {
     }
 
     createParameterInfo(){
-        d3.select('#svgInfoContainer').remove();
-        // Add rendering representation to svg
-        let infoGroup = this.svg.append('g')
-            .attr('id', 'svgInfoContainer')
-            .attr('transform', 'translate(' + (this.width/2 - 90) + ',' +
-            (this.margin.top+1) + ')')
-            .style('visibility', 'hidden');
-        infoGroup.append('rect')
-            .attr('id', 'svgInfoRect')
-            .attr('width', 280)
-            .attr('height', 100)
-            .attr('fill', 'white')
-            .attr('stroke', 'black');
 
-        if(!this.el.select('#parameterInfo').empty()){
-            this.el.select('#parameterInfo').selectAll('*').remove();
-        }
+        if(this.multiYAxis){
 
-        let yAxRen = this.renderSettings.yAxis;
-        for (let parPos=0; parPos<yAxRen.length; parPos++){
+            let currHeight = this.height/this.renderSettings.yAxis.length;
 
-            let idY = yAxRen[parPos];
-            // Add item to labels if there is no coloraxis is defined
-            this.addParameterLabel(idY);
-        }
+            for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
-        let y2AxRen = this.renderSettings.y2Axis;
-        for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                d3.select('#svgInfoContainer'+yPos).remove();
+                // Add rendering representation to svg
+                let infoGroup = this.svg.append('g')
+                    .attr('id', 'svgInfoContainer'+yPos)
+                    .attr('class', 'svgInfoContainer')
+                    .attr(
+                        'transform',
+                        'translate(' + (this.width - this.margin.right - 90) + ',' +
+                        (currHeight*yPos) + ')'
+                    )
+                    /*.style('visibility', 'hidden')*/;
 
-            let idY2 = y2AxRen[parPos];
-            // Add item to labels if there is no coloraxis is defined
-            this.addParameterLabel(idY2);
-        }
+                infoGroup.append('rect')
+                    .attr('id', 'svgInfoRect')
+                    .attr('width', 280)
+                    .attr('height', 100)
+                    .attr('fill', 'white')
+                    .attr('stroke', 'black');
 
-        // Change height of settings panel to be just under labels
-        let dim = this.el.select('#parameterInfo').node().getBoundingClientRect();
-        this.el.select('#parameterSettings')
-                .style('top', (dim.height+this.margin.top+9)+'px');
+                let parInfEl = this.el.select('#parameterInfo'+yPos);
+                if(!parInfEl.empty()){
+                    parInfEl.selectAll('*').remove();
+                }
 
-         if(this.displayParameterLabel && 
-            !this.el.select('#parameterInfo').selectAll('*').empty()){
-            this.el.select('#parameterInfo').style('visibility', 'visible');
+                let yAxRen = this.renderSettings.yAxis[yPos];
+                for (let parPos=0; parPos<yAxRen.length; parPos++){
+
+                    let idY = yAxRen[parPos];
+                    // Add item to labels if there is no coloraxis is defined
+                    this.addParameterLabel(idY, infoGroup, parInfEl, yPos);
+                }
+
+                let y2AxRen = this.renderSettings.y2Axis[yPos];
+                for (let parPos=0; parPos<y2AxRen.length; parPos++){
+
+                    let idY2 = y2AxRen[parPos];
+                    // Add item to labels if there is no coloraxis is defined
+                    this.addParameterLabel(idY2, infoGroup, parInfEl, yPos);
+                }
+
+                // Change height of settings panel to be just under labels
+                /*let dim = parInfEl.node().getBoundingClientRect();
+                this.el.select('#parameterSettings'+yPos)
+                        .style('top', (dim.height+this.margin.top+9)+'px');
+                */
+
+                if(this.displayParameterLabel && !parInfEl.selectAll('*').empty()){
+                    parInfEl.style('visibility', 'visible');
+                }
+            }
+
+
         }
     }
 
@@ -4656,31 +4672,44 @@ class graphly extends EventEmitter {
     }
 
 
-    renderParameterOptions(dataSettings, id){
+    renderParameterOptions(dataSettings, id, yPos){
+
+        let parSetEl = this.el.select('#parameterSettings');
+        if(parSetEl.style('display') === 'block' && parSetEl.attr('data-id')===id){
+            parSetEl.style('display', 'none');
+            return;
+        }
+
+        parSetEl.attr('data-id', id);
 
         let that = this;
-        this.el.select('#parameterSettings').selectAll('*').remove();
+        parSetEl.selectAll('*').remove();
 
-        this.el.select('#parameterSettings')
+        // Get parameterInfo box to know where to place parametersettings
+        let currHeight = this.height/this.renderSettings.y2Axis.length;
+        let divHeight = this.el.select('#parameterInfo'+yPos).node().offsetHeight;
+
+        parSetEl
+            .style('top', ((currHeight*yPos)+divHeight+19)+'px')
             .style('display', 'block');
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('div')
             .attr('class', 'parameterClose cross')
             .on('click', ()=>{
-                this.el.select('#parameterSettings')
+                parSetEl
                     .selectAll('*').remove();
-                this.el.select('#parameterSettings')
+                parSetEl
                     .style('display', 'none');
             });
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('label')
             .attr('for', 'displayName')
             .text('Label');
             
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('input')
             .attr('id', 'displayName')
             .attr('type', 'text')
@@ -4701,7 +4730,7 @@ class graphly extends EventEmitter {
         }
 
         if(!combined){
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'symbolSelect')
                 .text('Symbol');
@@ -4720,7 +4749,7 @@ class graphly extends EventEmitter {
             ];
 
 
-            let select = this.el.select('#parameterSettings')
+            let select = parSetEl
               .append('select')
                 .attr('id','symbolSelect')
                 .on('change',onchange);
@@ -4741,12 +4770,12 @@ class graphly extends EventEmitter {
                 that.addApply();
             }
 
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'colorSelection')
                 .text('Color');
 
-            let colorSelect = this.el.select('#parameterSettings')
+            let colorSelect = parSetEl
                 .append('input')
                 .attr('id', 'colorSelection')
                 .attr('type', 'text')
@@ -4785,12 +4814,12 @@ class graphly extends EventEmitter {
             picker.self.appendChild(x);
 
             // Add point size option
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'sizeSelection')
                 .text('Point size');
 
-            let sizeSelect = this.el.select('#parameterSettings')
+            let sizeSelect = parSetEl
                 .append('input')
                 .attr('id', 'sizeSelection')
                 .attr('type', 'text')
@@ -4801,17 +4830,17 @@ class graphly extends EventEmitter {
                     let val = Number(d3.event.currentTarget.value);
                     dataSettings.size = val;
                     that.addApply();
-                });;
+                });
         }
 
         if(this.displayAlphaOptions){
             
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'opacitySelection')
                 .text('Opacity');
 
-            this.el.select('#parameterSettings').append('input')
+            parSetEl.append('input')
                 .attr('id', 'opacityInput')
                 .attr('type', 'range')
                 .attr('min', 0)
@@ -4849,12 +4878,12 @@ class graphly extends EventEmitter {
                 active = true;
             }
 
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'colorscaleSelection')
                 .text('Apply colorscale');
 
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('input')
                 .attr('id', 'colorscaleSelection')
                 .attr('type', 'checkbox')
@@ -4882,7 +4911,7 @@ class graphly extends EventEmitter {
                     } else {
                         that.renderSettings.colorAxis[renderIndex] = null;
                     }
-                    that.renderParameterOptions(dataSettings, id);
+                    //that.renderParameterOptions(dataSettings, id);
                     that.addApply();
                 });
             // Need to add additional necessary options
@@ -4898,13 +4927,13 @@ class graphly extends EventEmitter {
             return;
         }
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('label')
             .attr('for', 'lineConnect')
             .text('Line connect');
             
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('input')
             .attr('id', 'lineConnect')
             .attr('type', 'checkbox')
@@ -4918,7 +4947,7 @@ class graphly extends EventEmitter {
             });
 
         if(this.enableFit){
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'regressionCheckbox')
                 .text('Regression');
@@ -4929,7 +4958,7 @@ class graphly extends EventEmitter {
             ];
 
 
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('input')
                 .attr('id', 'regressionCheckbox')
                 .attr('type', 'checkbox')
@@ -4956,7 +4985,7 @@ class graphly extends EventEmitter {
     }
 
 
-    addParameterLabel(id){
+    addParameterLabel(id, infoGroup, parInfEl, yPos){
 
         // TODO: check for available objects instead of deleting and recreating them
 
@@ -4983,10 +5012,9 @@ class graphly extends EventEmitter {
             }
 
 
-            let parDiv = this.el.select('#parameterInfo').append('div')
+            let parDiv = parInfEl.append('div')
                 .attr('class', 'labelitem');
 
-            let infoGroup = this.el.select('#svgInfoContainer');
             infoGroup.style('visibility', 'hidden');
 
             let dataSettings = this.dataSettings[id];
@@ -5012,11 +5040,11 @@ class graphly extends EventEmitter {
                 .html(displayName);
 
             // Update size of rect based on size of original div
-            let boundRect = this.el.select('#parameterInfo').node().getBoundingClientRect();
-            this.el.select('#svgInfoRect').attr('height', boundRect.height);
+            let boundRect = parInfEl.node().getBoundingClientRect();
+            infoGroup.select('rect').attr('height', boundRect.height);
 
             // check amount of elements and calculate offset
-            let offset = 21 + d3.select('#svgInfoContainer').selectAll('text').size() *20;
+            let offset = 21 + infoGroup.selectAll('text').size() *20;
             let labelText = infoGroup.append('text')
                 .attr('text-anchor', 'middle')
                 .attr('y', offset)
@@ -5080,12 +5108,15 @@ class graphly extends EventEmitter {
                 }
             }
 
-            parDiv.on('click', this.renderParameterOptions.bind(this, dataSettings, id));
+            parDiv.on('click', this.renderParameterOptions.bind(
+                this, dataSettings, id, yPos
+            ));
         }
     }
 
 
-    renderParameter(idX, idY, idCS, plotY, yAxisSet, currYScale, parPos, data, inactiveData, updateReferenceCanvas){
+    renderParameter(idX, idY, idCS, plotY, yAxisSet, currYScale, parPos, data,
+                    inactiveData, updateReferenceCanvas){
 
         this.startTiming('renderParameter:'+idY);
 
@@ -5123,9 +5154,13 @@ class graphly extends EventEmitter {
                 );
                 // Check if any regression type is selected for parameter
                 if(this.enableFit){
-                    this.createRegression(data, parPos, yAxisSet);
+                    this.createRegression(
+                        data, parPos, yAxisSet[parPos], currYScale[parPos]
+                    );
                     if(inactiveData[yAxisSet[parPos]].length>0){
-                        this.createRegression(this.data, parPos, yAxisSet, true);
+                        this.createRegression(
+                            this.data, parPos, yAxisSet[parPos], currYScale[parPos], true
+                        );
                     }
                 }
                 
