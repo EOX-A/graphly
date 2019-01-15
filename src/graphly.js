@@ -181,7 +181,7 @@ class graphly extends EventEmitter {
     * @param {boolean} [options.logY=false] Use logarithmic scale for left y axis.
     * @param {boolean} [options.logY2=false] Use logarithmic scale for right y axis.
     * @param {String} [options.colorAxisTickFormat='g'] d3 format string to use 
-             as default tick format.
+    *        as default tick format.
     * @param {Number} [options.defaultAlpha=0.9] Alpha value used as default
     *        when rendering.
     * @param {boolean} [options.debug=false] Show debug messages
@@ -192,6 +192,7 @@ class graphly extends EventEmitter {
     * @property {boolean} [multiYAxis=false] Adds controls for managing 
     *        multiple y axis with single x axis,
     *
+    * @param {String} [options.labelAllignment='right'] allignment for label box
     */
     constructor(options) {
         super();
@@ -210,6 +211,7 @@ class graphly extends EventEmitter {
         this.enableSubXAxis = defaultFor(options.enableSubXAxis, false);
         this.enableSubYAxis = defaultFor(options.enableSubYAxis, false);
         this.multiYAxis = defaultFor(options.multiYAxis, false);
+        this.labelAllignment = defaultFor(options.labelAllignment, 'right');
 
         // Separation of plots in multiplot functionality
         this.separation = 10;
@@ -356,6 +358,13 @@ class graphly extends EventEmitter {
         this.fixedXDomain = undefined;
         this.mouseDown = false;
         this.prevMousePos = null;
+
+
+        // TODO: FOr now if using multiaxis we disable fit functionality
+        // need to look into how to render fit curve over multiple plots
+        if(this.multiYAxis){
+            this.enableFit = false;
+        }
 
         this.colorAxisTickFormat = defaultFor(options.colorAxisTickFormat, 'g');
 
@@ -1368,6 +1377,39 @@ class graphly extends EventEmitter {
           itemSelectText: '',
         });
 
+        let colAxis = this.renderSettings.colorAxis;
+        let currColPos = 0;
+        let curryAxArr;
+        // TODO not sure this is the best way to find the corresponding colorscale
+        if(orientation === 'left'){
+            curryAxArr = this.renderSettings.yAxis;
+            for (let i = 0; i < curryAxArr.length; i++) {
+                let idx = curryAxArr[i].indexOf(elId);
+                if(idx !== -1){
+                    currColPos += idx;
+                } else {
+                    currColPos++;
+
+                }
+            }
+        } else if (orientation==='right'){
+            curryAxArr = this.renderSettings.y2Axis;
+            for (let i = 0; i < curryAxArr.length; i++) {
+                currColPos++;
+            }
+            curryAxArr = this.renderSettings.y2Axis;
+            for (let i = 0; i < curryAxArr.length; i++) {
+                let idx = curryAxArr[i].indexOf(elId);
+                if(idx !== -1){
+                    currColPos += idx;
+                } else {
+                    currColPos++;
+
+                }
+            }
+        }
+
+
         settingParameters.passedElement.addEventListener('addItem', function(event) {
             yAxisLabel[yPos] = null;
             //let renSett = that.renderSettings;
@@ -1376,8 +1418,7 @@ class graphly extends EventEmitter {
             if(that.yTimeScale){
                currAxis.pop();
                currAxis.push(event.detail.value);
-               // TODO: Get colorscale function working again
-               //renSett.colorAxis[that.renderSettings.yAxis.length-1] = null;
+               colAxis[currColPos] = null;
             } else {
                 // If newly added parameter is a time scale we remove also the
                 // previous parameters from the y scale
@@ -1772,7 +1813,7 @@ class graphly extends EventEmitter {
 
     }
 
-    createColorScale(id, index){
+    createColorScale(id, index, yPos, currYAxis){
 
         let ds = this.dataSettings[id];
         let dataRange = [0,1];
@@ -1782,9 +1823,15 @@ class graphly extends EventEmitter {
         }
 
         let innerHeight = this.height;
+        let yOffset = 0;
+        if(this.multiYAxis){
+            innerHeight = (this.height/this.renderSettings.yAxis.length)-this.separation;
+            yOffset = (innerHeight+this.separation) * yPos;
+        }
         let width = 100;
 
-        // Ther are some situations where the object is not initialiezed 
+
+        // Ther are some situations where the object is not initialized 
         // completely and size can be 0 or negative, this should prevent this
         if(innerHeight<=0){
             innerHeight = 100;
@@ -1803,13 +1850,15 @@ class graphly extends EventEmitter {
 
         colorAxis.tickFormat(d3.format(this.colorAxisTickFormat));
 
-        let csOffset = this.margin.right + this.marginY2Offset + width/2 + width*index;
+        let csOffset = this.margin.right + this.marginY2Offset + width/2 /*+ width*index*/;
         
         let g = this.el.select('svg').select('g').append("g")
             .attr('id', ('colorscale_'+id))
             .attr("class", "color axis")
             .style('pointer-events', 'all')
-            .attr("transform", "translate(" + (this.width+csOffset) + ",0)")
+            .attr('transform', 
+                'translate(' + (this.width+csOffset) + ','+yOffset+')'
+            )
             .call(colorAxis);
 
         // Check if parameter has specific colorscale configured
@@ -1862,18 +1911,35 @@ class graphly extends EventEmitter {
 
     createColorScales(){
 
-        let filteredCol = this.renderSettings.colorAxis.filter(
-            (c)=>{return c!==null;}
-        );
+        let colAxis = this.renderSettings.colorAxis;
 
         this.el.selectAll('.color.axis').remove();
 
-        for (var i = 0; i < filteredCol.length; i++) {
-            this.createColorScale(filteredCol[i], i);
+        for (var i = 0; i < colAxis.length; i++) {
+            let yPos = 0;
+            let cnt = 0;
+            let currYAxis=this.renderSettings.yAxis;
+            for (let y1 = 0; y1 < currYAxis.length; y1++) {
+                if(cnt+currYAxis[y1].length <= i){
+                    yPos++;
+                }
+                cnt += currYAxis[y1].length;
+            }
+            // If cnt is under color index continue with second y axis params
+            if(cnt<=i){
+                yPos = 0;
+                currYAxis = this.renderSettings.y2Axis;
+                for (let y2 = 0; y2 < currYAxis.length; y2++) {
+                    if(cnt+currYAxis[y2].length <= i){
+                        yPos++;
+                    }
+                    cnt += currYAxis[y2].length;
+                }
+            }
+            if(colAxis[i] !== null){
+                this.createColorScale(colAxis[i], i, yPos, currYAxis);
+            }
         }
-
-
-
     }
 
     /**
@@ -3544,7 +3610,7 @@ class graphly extends EventEmitter {
         );
 
         this.resize_update();
-        this.createColorScales();
+        //this.createColorScales();
         this.createAxisLabels();
 
         this.batchDrawer.updateCanvasSize(this.width, this.height);
@@ -4299,7 +4365,7 @@ class graphly extends EventEmitter {
                     this.createParameterInfo();
                     this.resize(false);
                     this.renderData();
-                    this.createColorScales();
+                    //this.createColorScales();
                 });
         }
     }
@@ -4391,13 +4457,25 @@ class graphly extends EventEmitter {
                         .attr('id', 'parameterInfo'+yPos)
                         .attr('class', 'parameterInfo')
                         .style('top', ((currHeight)*yPos + 20) +'px')
-                        .style('right', (this.margin.right+50)+'px')
+                        .style(this.labelAllignment, ()=>{
+                            if(this.labelAllignment === 'left'){
+                                return this.margin.left+20+'px';
+                            } else {
+                                return this.margin.right+this.marginCSOffset+50+'px';
+                            }
+                        })
                         .style('visibility', 'hidden');
                 } else {
                     this.el.select('#parameterInfo'+yPos).selectAll('*').remove();
                     this.el.select('#parameterInfo'+yPos)
                         .style('top', ((currHeight)*yPos +20) +'px')
-                        .style('right', (this.margin.right+50)+'px');
+                        .style(this.labelAllignment, ()=>{
+                            if(this.labelAllignment === 'left'){
+                                return this.margin.left+20+'px';
+                            } else {
+                                return this.margin.right+this.marginCSOffset+50+'px';
+                            }
+                        });
                 }
             }
         }
@@ -4415,7 +4493,13 @@ class graphly extends EventEmitter {
         this.el.select('#parameterSettings').remove();
         this.el.append('div')
             .attr('id', 'parameterSettings')
-            .style('right', (this.margin.right+50)+'px')
+            .style(this.labelAllignment, ()=>{
+                let xOffset = this.margin.right+this.marginCSOffset+50+'px';
+                if(this.labelAllignment === 'left'){
+                    xOffset = this.margin.left+20+'px';
+                }
+                return xOffset;
+            })
             .style('display', 'none');
 
         /*if(this.el.select('#parameterInfo').selectAll('*').empty()){
@@ -4434,18 +4518,38 @@ class graphly extends EventEmitter {
             for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
                 this.el.select('#parameterInfo'+yPos)
-                    .style('top', ((currHeight)*yPos + 20) +'px');
+                    .style('top', ((currHeight)*yPos + 20) +'px')
+                    .style(this.labelAllignment, ()=>{
+                        if(this.labelAllignment === 'left'){
+                            return this.margin.left+20+'px';
+                        } else {
+                            return this.margin.right+this.marginCSOffset+50+'px';
+                        }
+                    });
 
                 d3.select('#svgInfoContainer'+yPos)
-                    .attr('transform', 'translate(' + 
-                        (this.width - this.margin.right - 260) + ',' +
-                        ((currHeight)*yPos + 10) + ')'
-                    );
+                    .attr('transform', ()=>{
+                        let xOffset = (
+                            this.width - this.margin.right - 260
+                        );
+                        if(this.labelAllignment === 'left'){
+                            xOffset = '20';
+                        }
+                        return 'translate(' + 
+                            xOffset + ',' +
+                            ((currHeight)*yPos + 10) + ')';
+                    });
             }
         }
 
         this.el.select('#parameterSettings')
-            .style('right', (this.margin.right+50)+'px')
+            .style(this.labelAllignment, ()=>{
+                let xOffset = this.margin.right+this.marginCSOffset+50+'px';
+                if(this.labelAllignment === 'left'){
+                    xOffset = this.margin.left+20+'px';
+                }
+                return xOffset;
+            })
             .style('display', 'none');
     }
 
@@ -4524,12 +4628,16 @@ class graphly extends EventEmitter {
                 let infoGroup = this.svg.append('g')
                     .attr('id', 'svgInfoContainer'+yPos)
                     .attr('class', 'svgInfoContainer')
-                    .attr(
-                        'transform',
-                        'translate(' + (this.width - this.margin.right - 90) + ',' +
-                        (currHeight*yPos) + ')'
-                    )
-                    /*.style('visibility', 'hidden')*/;
+                    .attr('transform', ()=>{
+                        let xOffset = (this.width - this.margin.right - 260);
+                        if(this.labelAllignment === 'left'){
+                            xOffset = '20';
+                        }
+                        return 'translate(' + 
+                            xOffset + ',' +
+                            ((currHeight)*yPos + 10) + ')';
+                    })
+                    .style('visibility', 'hidden');
 
                 infoGroup.append('rect')
                     .attr('id', 'svgInfoRect')
@@ -4548,7 +4656,7 @@ class graphly extends EventEmitter {
 
                     let idY = yAxRen[parPos];
                     // Add item to labels if there is no coloraxis is defined
-                    this.addParameterLabel(idY, infoGroup, parInfEl, yPos);
+                    this.addParameterLabel(idY, infoGroup, parInfEl, yPos, 'left');
                 }
 
                 let y2AxRen = this.renderSettings.y2Axis[yPos];
@@ -4556,7 +4664,7 @@ class graphly extends EventEmitter {
 
                     let idY2 = y2AxRen[parPos];
                     // Add item to labels if there is no coloraxis is defined
-                    this.addParameterLabel(idY2, infoGroup, parInfEl, yPos);
+                    this.addParameterLabel(idY2, infoGroup, parInfEl, yPos, 'right');
                 }
 
                 // Change height of settings panel to be just under labels
@@ -4672,7 +4780,7 @@ class graphly extends EventEmitter {
     }
 
 
-    renderParameterOptions(dataSettings, id, yPos){
+    renderParameterOptions(dataSettings, id, yPos, orientation){
 
         let parSetEl = this.el.select('#parameterSettings');
         if(parSetEl.style('display') === 'block' && parSetEl.attr('data-id')===id){
@@ -4863,16 +4971,45 @@ class graphly extends EventEmitter {
 
         // Create and manage colorscale selection
         // Find index of id
-        let renderIndex = this.renderSettings.yAxis.indexOf(id);
-        if(renderIndex === -1){
-            renderIndex = this.renderSettings.y2Axis.indexOf(id);
-            if(renderIndex !== -1){
-                renderIndex += this.renderSettings.yAxis.length;
+        let currColPos = 0;
+        let curryAxArr;
+        // TODO not sure this is the best way to find the corresponding colorscale
+        if(orientation === 'left'){
+            curryAxArr = this.renderSettings.yAxis;
+            for (let i = 0; i <= yPos; i++) {
+                let idx = curryAxArr[i].indexOf(id);
+                if(i===yPos && idx !== -1){
+                    currColPos += idx;
+                } else {
+                    for (let j = 0; j < curryAxArr[i].length; j++) {
+                        currColPos++;
+                    }
+                }
+            }
+        } else if (orientation==='right'){
+            curryAxArr = this.renderSettings.yAxis;
+            for (let i = 0; i < curryAxArr.length; i++) {
+                for (let j = 0; j < curryAxArr[i].length; j++) {
+                    currColPos++;
+                }
+            }
+            curryAxArr = this.renderSettings.y2Axis;
+            for (let i = 0; i <= yPos; i++) {
+                let idx = curryAxArr[i].indexOf(id);
+                if(idx !== -1){
+                    currColPos += idx;
+                } else {
+                    for (let j = 0; j < curryAxArr[i].length; j++) {
+                        currColPos++;
+                    }
+                }
             }
         }
+
+
         // Should normally always have an index
-        if(renderIndex !== -1 && this.displayColorscaleOptions){
-            let colorAxis = this.renderSettings.colorAxis[renderIndex];
+        if(currColPos !== -1 && this.displayColorscaleOptions){
+            let colorAxis = this.renderSettings.colorAxis[currColPos];
             let active = false;
             if(colorAxis !== null){
                 active = true;
@@ -4907,9 +5044,9 @@ class graphly extends EventEmitter {
                             }
                         }
                         // Select first option
-                        that.renderSettings.colorAxis[renderIndex] = selectionChoices[0];
+                        that.renderSettings.colorAxis[currColPos] = selectionChoices[0];
                     } else {
-                        that.renderSettings.colorAxis[renderIndex] = null;
+                        that.renderSettings.colorAxis[currColPos] = null;
                     }
                     //that.renderParameterOptions(dataSettings, id);
                     that.addApply();
@@ -4917,7 +5054,7 @@ class graphly extends EventEmitter {
             // Need to add additional necessary options
             // drop down with possible parameters and colorscale
             if(active){                           
-                this.renderColorScaleOptions(renderIndex);
+                this.renderColorScaleOptions(currColPos);
             }
 
         }
@@ -4985,7 +5122,7 @@ class graphly extends EventEmitter {
     }
 
 
-    addParameterLabel(id, infoGroup, parInfEl, yPos){
+    addParameterLabel(id, infoGroup, parInfEl, yPos, orientation){
 
         // TODO: check for available objects instead of deleting and recreating them
 
@@ -5109,7 +5246,7 @@ class graphly extends EventEmitter {
             }
 
             parDiv.on('click', this.renderParameterOptions.bind(
-                this, dataSettings, id, yPos
+                this, dataSettings, id, yPos, orientation
             ));
         }
     }
@@ -5285,12 +5422,12 @@ class graphly extends EventEmitter {
                             domain = domain.reverse();
                         }
                         this.dataSettings[ca].extent = domain;
-                        this.createColorScales();
                     }
                 }
             }
         }
 
+        this.createColorScales();
         this.updateInfoBoxes();
 
         let idX = xAxRen;
