@@ -1016,6 +1016,7 @@ class graphly extends EventEmitter {
             
             let yAxRen, y2AxRen;
 
+
             // Draw y2 first so it is on bottom
             for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
@@ -1026,9 +1027,14 @@ class graphly extends EventEmitter {
 
                 for (let parPos=0; parPos<y2AxRen.length; parPos++){
 
+                    let prevY2Items = 0;
+                    if(plotY>0){
+                        prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
+                    }
+
                     let idY2 = y2AxRen[parPos];
                     let idCS = this.renderSettings.colorAxis[
-                        this.renderSettings.yAxis.length + parPos
+                        this.renderSettings.yAxis.flat().length + prevY2Items + parPos
                     ];
                     
                     this.renderParameter(
@@ -1041,6 +1047,11 @@ class graphly extends EventEmitter {
 
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
+                let prevYItems = 0;
+                if(plotY>0){
+                    prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
+                }
+
                 yAxRen = this.renderSettings.yAxis[plotY];
                 
                 if(!this.multiYAxis){
@@ -1050,7 +1061,7 @@ class graphly extends EventEmitter {
                 for (let parPos=0; parPos<yAxRen.length; parPos++){
 
                     let idY = yAxRen[parPos];
-                    let idCS = this.renderSettings.colorAxis[parPos];
+                    let idCS = this.renderSettings.colorAxis[prevYItems+parPos];
 
                     this.renderParameter(
                         xAxRen, idY, idCS, plotY, yAxRen, this.yScale,
@@ -1409,42 +1420,30 @@ class graphly extends EventEmitter {
             }
         }
 
-
         settingParameters.passedElement.addEventListener('addItem', function(event) {
+
             yAxisLabel[yPos] = null;
-            //let renSett = that.renderSettings;
-            // Check if the yAxis is currently showing a time parameter and the
-            // new parameter is not, then we remove the previous time parameter
-            if(that.yTimeScale){
-               currAxis.pop();
-               currAxis.push(event.detail.value);
-               colAxis[currColPos] = null;
-            } else {
-                // If newly added parameter is a time scale we remove also the
-                // previous parameters from the y scale
-                if(that.checkTimeScale(event.detail.value)){
-                    /*let y2ColScale = renSett.colorAxis.slice(
-                        renSett.yAxis.length-1, renSett.colorAxis.length);
-                    if(y2ColScale.length > 0){
-                        renSett.colorAxis = [null].concat(y2ColScale);
-                    }else {
-                        renSett.colorAxis = [null];
-                    }*/
-                    currAxis = [event.detail.value];
-                } else {
-                    currAxis.push(event.detail.value);
-                    // If y2 axis has parameters we need to add the coloraxis element
-                    // taking them into account as color axis is shared
-                    /*if(renSett.y2Axis.length > 0){
-                        renSett.colorAxis.splice(
-                            renSett.yAxis.length-1, 0, null
-                        );
-                    } else {
-                        renSett.colorAxis.push(null);
-                    }*/
+            let renSett = that.renderSettings;
+
+            curryAxArr[yPos].push(event.detail.value);
+            // TODO: Check for adding of time parameter
+
+            // Calculate position where element will be added into colorscale
+            // array
+            let prevItems = 0;
+            if(orientation === 'left'){
+                if(yPos>0){
+                    prevItems = renSett.yAxis.slice(0,yPos).flat().length;
                 }
+            } else if(orientation === 'right'){
+                prevItems = renSett.yAxis.flat().length;
+                prevItems += renSett.y2Axis.slice(0,yPos).flat().length;
             }
-            
+
+            renSett.colorAxis.splice(
+                prevItems+1, 0, null
+            );
+
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
@@ -1459,15 +1458,31 @@ class graphly extends EventEmitter {
 
 
         settingParameters.passedElement.addEventListener('removeItem', function(event) {
+
             yAxisLabel[yPos] = null;
+
+            let renSett = that.renderSettings;
+            // Calculate position where element will be added into colorscale
+            // array
+            let prevItems = 0;
+            if(orientation === 'left'){
+                if(yPos>0){
+                    prevItems = renSett.yAxis.slice(0,yPos).flat().length;
+                }
+            } else if(orientation === 'right'){
+                prevItems = renSett.yAxis.flat().length;
+                prevItems += renSett.y2Axis.slice(0,yPos).flat().length;
+            }
+
             let index = currAxis.indexOf(event.detail.value);
+
             // TODO: Should it happen that the removed item is not in the list?
             // Do we need to handle this case? 
             if(index!==-1){
                 currAxis.splice(index, 1);
-                //that.renderSettings.colorAxis.splice(index, 1);
+                that.renderSettings.colorAxis.splice((prevItems+index), 1);
                 that.initAxis();
-                that.renderData();
+                that.resize();
                 that.createAxisLabels();
                 that.emit('axisChange');
             }
@@ -2316,6 +2331,7 @@ class graphly extends EventEmitter {
             // If there are colorscales to be rendered we need to apply additional
             // margin to the right reducing the total width
             let csAmount = 0;
+            // TODO: change to check largest amount of cs in one of the axis
             for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
                 if(this.renderSettings.colorAxis[i] !== null){
                     csAmount++;
@@ -2845,7 +2861,6 @@ class graphly extends EventEmitter {
                 ));
             }
 
-
             if(currYAxis.length > 0){
                 this.yAxisSvg.push(
                     this.svg.append('g')
@@ -2854,8 +2869,11 @@ class graphly extends EventEmitter {
                             'transform', 'translate(0,'+yPos*heighChunk+')'
                         )
                         .call(this.yAxis[yPos])
-                    );
+                );
+            } else {
+                this.yAxisSvg.push(null);
             }
+
 
             this.addYAxisSvg = [];
             for (let i = 0; i < this.additionalYAxis.length; i++) {
@@ -2889,6 +2907,8 @@ class graphly extends EventEmitter {
                         )
                         .call(this.y2Axis[yPos])
                 );
+            } else {
+                this.y2AxisSvg.push(null);
             }
 
         }
@@ -3221,7 +3241,9 @@ class graphly extends EventEmitter {
                 currYAxis = this.renderSettings.yAxis;
             }
             if(currYAxis.length > 0){
-                this.yAxisSvg[yPos].call(this.yAxis[yPos]);
+                if(this.yAxisSvg[yPos]){
+                    this.yAxisSvg[yPos].call(this.yAxis[yPos]);
+                }
             }
         }
 
@@ -3231,7 +3253,9 @@ class graphly extends EventEmitter {
                 currY2Axis = this.renderSettings.y2Axis;
             }
             if(currY2Axis.length > 0){
-                this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+                if(this.y2AxisSvg[yPos]){
+                    this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+                }
             }
         }
 
@@ -3613,6 +3637,13 @@ class graphly extends EventEmitter {
         //this.createColorScales();
         this.createAxisLabels();
 
+        // Hide parameter info for plots wihtout parameters
+        this.el.selectAll('.parameterInfo').each(function(){
+            if(d3.select(this).node().childNodes.length === 0){
+                d3.select(this).style('display', 'none')
+            }
+        });
+
         this.batchDrawer.updateCanvasSize(this.width, this.height);
         this.batchDrawerReference.updateCanvasSize(this.width, this.height);
         this.renderData();
@@ -3656,10 +3687,12 @@ class graphly extends EventEmitter {
             this.yAxis[yPos].innerTickSize(-this.width);
             
             if(this.renderSettings.yAxis[yPos].length > 0){
-                this.yAxisSvg[yPos].attr(
-                    'transform', 'translate(0,'+yPos*heighChunk+')'
-                );
-                this.yAxisSvg[yPos].call(this.yAxis[yPos]);
+                if(this.yAxisSvg[yPos]){
+                    this.yAxisSvg[yPos].attr(
+                        'transform', 'translate(0,'+yPos*heighChunk+')'
+                    );
+                    this.yAxisSvg[yPos].call(this.yAxis[yPos]);
+                }
             }
         }
 
@@ -3677,10 +3710,12 @@ class graphly extends EventEmitter {
             this.y2Axis[yPos].innerTickSize(-this.width);
             
             if(this.renderSettings.y2Axis[yPos].length > 0){
-                this.y2AxisSvg[yPos].attr(
-                    'transform', 'translate('+this.width+','+yPos*heighChunk+')'
-                );
-                this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+                if(this.y2AxisSvg[yPos]){
+                    this.y2AxisSvg[yPos].attr(
+                        'transform', 'translate('+this.width+','+yPos*heighChunk+')'
+                    );
+                    this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+                }
             }
         }
 
@@ -4780,10 +4815,10 @@ class graphly extends EventEmitter {
     }
 
 
-    renderParameterOptions(dataSettings, id, yPos, orientation){
+    renderParameterOptions(dataSettings, id, yPos, orientation, keepOpen){
 
         let parSetEl = this.el.select('#parameterSettings');
-        if(parSetEl.style('display') === 'block' && parSetEl.attr('data-id')===id){
+        if(!keepOpen && parSetEl.style('display') === 'block' && parSetEl.attr('data-id')===id){
             parSetEl.style('display', 'none');
             return;
         }
@@ -5017,16 +5052,16 @@ class graphly extends EventEmitter {
 
             parSetEl
                 .append('label')
-                .attr('for', 'colorscaleSelection')
+                .attr('for', 'colorscaleCB')
                 .text('Apply colorscale');
 
             parSetEl
                 .append('input')
-                .attr('id', 'colorscaleSelection')
+                .attr('id', 'colorscaleCB')
                 .attr('type', 'checkbox')
                 .property('checked', active)
                 .on('change', ()=>{
-                    if(d3.select("#colorscaleSelection").property("checked")){
+                    if(d3.select("#colorscaleCB").property("checked")){
                         // Go through data settings and find currently available ones
                         let ds = this.dataSettings;
                         let selectionChoices = [];
@@ -5048,7 +5083,9 @@ class graphly extends EventEmitter {
                     } else {
                         that.renderSettings.colorAxis[currColPos] = null;
                     }
-                    //that.renderParameterOptions(dataSettings, id);
+                    that.renderParameterOptions(
+                        dataSettings, id, yPos, orientation, true
+                    );
                     that.addApply();
                 });
             // Need to add additional necessary options
@@ -5246,7 +5283,7 @@ class graphly extends EventEmitter {
             }
 
             parDiv.on('click', this.renderParameterOptions.bind(
-                this, dataSettings, id, yPos, orientation
+                this, dataSettings, id, yPos, orientation, false
             ));
         }
     }
@@ -5431,9 +5468,15 @@ class graphly extends EventEmitter {
         this.updateInfoBoxes();
 
         let idX = xAxRen;
-        let yAxRen, y2AxRen; 
+        let yAxRen, y2AxRen;
+        
 
         for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+
+            let prevYItems = 0;
+            if(plotY>0){
+                prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
+            }
 
             yAxRen = this.renderSettings.yAxis[plotY];
             y2AxRen = this.renderSettings.y2Axis[plotY];
@@ -5449,10 +5492,18 @@ class graphly extends EventEmitter {
             // debounce option
             if(y2AxRen.length > 0){
                 for (let parPos=0; parPos<y2AxRen.length; parPos++){
+
+                    let prevY2Items = 0;
+                    if(plotY>0){
+                        prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
+                    }
+
                     let idY2 = y2AxRen[parPos];
+                    
                     let idCS = this.renderSettings.colorAxis[
-                        this.renderSettings.yAxis.length + parPos
+                        this.renderSettings.yAxis.flat().length + prevY2Items +parPos
                     ];
+
                     this.renderParameter(
                         idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
                         parPos, this.currentData, this.currentInactiveData,
@@ -5473,7 +5524,9 @@ class graphly extends EventEmitter {
             for (let parPos=0; parPos<yAxRen.length; parPos++){
 
                 let idY = yAxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[parPos];
+                let idCS = this.renderSettings.colorAxis[
+                    parPos + prevYItems
+                ];
 
                 this.renderParameter(
                     idX, idY, idCS, plotY, yAxRen, this.yScale,
