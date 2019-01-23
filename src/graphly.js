@@ -399,8 +399,7 @@ class graphly extends EventEmitter {
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
             .style('opacity', 1.0)
-            //.style('background-color', 'yellow')
-            //.style('display', 'none')
+            .style('pointer-events', 'none')
             .style('position', 'absolute')
             .style('z-index', 2)
             .style(
@@ -2003,7 +2002,7 @@ class graphly extends EventEmitter {
                 let offsetY = plotY*heighChunk;
 
                 this.svg.append('rect')
-                    .attr('class', 'rectangleOutline')
+                    .attr('class', 'rectangleOutline zoomXYBox')
                     .attr('fill', 'none')
                     .attr('stroke', '#333')
                     .attr('stroke-width', 1)
@@ -2013,7 +2012,8 @@ class graphly extends EventEmitter {
                     .attr(
                         'transform',
                         'translate(0,' + offsetY + ')'
-                    );
+                    )
+                    .attr('pointer-events', 'all');
 
                 if(this.renderSettings.yAxis[plotY].length>0){
                     let rec = this.svg.append('rect')
@@ -2949,12 +2949,7 @@ class graphly extends EventEmitter {
         
 
         // Define zoom behaviour based on parameter dependend x and y scales
-        /*this.xyzoom = d3.behavior.zoom()
-            .x(this.xScale)
-            .y(this.yScale)
-            .scaleExtent([maxzoomout,Infinity])
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));*/
+
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
             .scaleExtent([maxzoomout,Infinity])
@@ -2962,14 +2957,25 @@ class graphly extends EventEmitter {
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.yzoom = [];
+        this.xyzoom = [];
         if(this.multiYAxis){
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+
                 this.yzoom.push(
                     d3.behavior.zoom()
                         .y(this.yScale[plotY])
-                        .on('zoom', this.previewZoom.bind(this))
+                        .on('zoom', this.previewZoom.bind(this,plotY))
                         .on('zoomend', this.debounceEndZoomEvent.bind(this))
                     );
+
+                this.xyzoom.push(
+                    d3.behavior.zoom()
+                        .x(this.xScale)
+                        .y(this.yScale[plotY])
+                        .scaleExtent([maxzoomout,Infinity])
+                        .on('zoom', this.previewZoom.bind(this,plotY))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
             }
         } else {
              this.yzoom.push(
@@ -2978,6 +2984,15 @@ class graphly extends EventEmitter {
                     .on('zoom', this.previewZoom.bind(this))
                     .on('zoomend', this.debounceEndZoomEvent.bind(this))
                 );
+
+              this.xyzoom.push(
+                d3.behavior.zoom()
+                    .x(this.xScale)
+                    .y(this.yScale)
+                    .scaleExtent([maxzoomout,Infinity])
+                    .on('zoom', this.previewZoom.bind(this))
+                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
+            );
         }
 
         this.y2zoom = [];
@@ -2986,7 +3001,7 @@ class graphly extends EventEmitter {
                 this.y2zoom.push(
                     d3.behavior.zoom()
                         .y(this.y2Scale[plotY])
-                        .on('zoom', this.previewZoom.bind(this))
+                        .on('zoom', this.previewZoom.bind(this,plotY))
                         .on('zoomend', this.debounceEndZoomEvent.bind(this))
                     );
             }
@@ -3010,8 +3025,6 @@ class graphly extends EventEmitter {
         this.addTimeInformation();
         this.breakTicks();
 
-
-        //this.renderCanvas.call(this.xyzoom);
         var that = this;
         this.el.select('#zoomXBox').call(this.xzoom);
         this.el.selectAll('.zoomYBox').each(function(d, i){
@@ -3019,6 +3032,9 @@ class graphly extends EventEmitter {
         });
         this.el.selectAll('.zoomY2Box').each(function(d, i){
             d3.select(this).call(that.y2zoom[i]);
+        });
+        this.el.selectAll('.zoomXYBox').each(function(d, i){
+            d3.select(this).call(that.xyzoom[i]);
         });
         
 
@@ -3037,12 +3053,6 @@ class graphly extends EventEmitter {
             maxzoomout = Math.abs(xd[1]-xd[0])/period;
         }
 
-        /*this.xyzoom = d3.behavior.zoom()
-            .x(this.xScale)
-            .y(this.yScale)
-            .scaleExtent([maxzoomout,Infinity])
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));*/
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
             .scaleExtent([maxzoomout,Infinity])
@@ -3050,22 +3060,39 @@ class graphly extends EventEmitter {
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.yzoom = [];
+        this.xyzoom = [];
         if(this.multiYAxis){
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
                 this.yzoom.push(
                     d3.behavior.zoom()
                         .y(this.yScale[plotY])
-                        .on('zoom', this.previewZoom.bind(this))
+                        .on('zoom', this.previewZoom.bind(this,plotY))
                         .on('zoomend', this.debounceEndZoomEvent.bind(this))
                     );
+                 this.xyzoom.push(
+                    d3.behavior.zoom()
+                        .x(this.xScale)
+                        .y(this.yScale[plotY])
+                        .scaleExtent([maxzoomout,Infinity])
+                        .on('zoom', this.previewZoom.bind(this,plotY))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
             }
         } else {
-             this.yzoom.push(
+            this.yzoom.push(
                 d3.behavior.zoom()
                     .y(this.yScale)
                     .on('zoom', this.previewZoom.bind(this))
                     .on('zoomend', this.debounceEndZoomEvent.bind(this))
-                );
+            );
+             this.xyzoom.push(
+                d3.behavior.zoom()
+                    .x(this.xScale)
+                    .y(this.yScale)
+                    .scaleExtent([maxzoomout,Infinity])
+                    .on('zoom', this.previewZoom.bind(this))
+                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
+            );
         }
 
         this.y2zoom = [];
@@ -3075,7 +3102,7 @@ class graphly extends EventEmitter {
                     this.y2zoom.push(
                         d3.behavior.zoom()
                             .y(this.y2Scale[plotY])
-                            .on('zoom', this.previewZoom.bind(this))
+                            .on('zoom', this.previewZoom.bind(this,plotY))
                             .on('zoomend', this.debounceEndZoomEvent.bind(this))
                         );
                 }
@@ -3089,7 +3116,6 @@ class graphly extends EventEmitter {
                 );
         }
 
-        //this.renderCanvas.call(this.xyzoom);
         var that = this;
         this.el.select('#zoomXBox').call(this.xzoom);
         this.el.selectAll('.zoomYBox').each(function(d, i){
@@ -3097,6 +3123,9 @@ class graphly extends EventEmitter {
         });
         this.el.selectAll('.zoomY2Box').each(function(d, i){
             d3.select(this).call(that.y2zoom[i]);
+        });
+        this.el.selectAll('.zoomXYBox').each(function(d, i){
+            d3.select(this).call(that.xyzoom[i]);
         });
 
 
@@ -3249,7 +3278,7 @@ class graphly extends EventEmitter {
         this.debounceZoom.bind(this)();
     }
 
-    previewZoom() {
+    previewZoom(yPos) {
 
         this.topSvg.selectAll('.temporary').remove();
         this.tooltip.style('display', 'none');
@@ -3307,24 +3336,28 @@ class graphly extends EventEmitter {
             this.xyzoom.scale()*1.1
         ]);*/
 
+        if (typeof yPos === 'undefined'){
+            yPos = 0;
+        }
+
         let xScale = this.xzoom.scale();
-        //let yScale = this.yzoom.scale();
-        //let y2Scale = this.y2zoom.scale();
-        //let xyScale = this.xyzoom.scale();
+        let yScale = this.yzoom[yPos].scale();
+        let y2Scale = this.y2zoom[yPos].scale();
+        let xyScale = this.xyzoom[yPos].scale();
 
-        //let transXY = this.xyzoom.translate();
+        let transXY = this.xyzoom[yPos].translate();
         let transX = this.xzoom.translate();
-        //let transY = this.yzoom.translate();
-        //let transY2 = this.y2zoom.translate();
+        let transY = this.yzoom[yPos].translate();
+        let transY2 = this.y2zoom[yPos].translate();
 
-        /*if(this.renderSettings.y2Axis.length > 0){
+        if(this.renderSettings.y2Axis.length > 0){
             if(transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1){
-                this.y2zoom
+                this.y2zoom[yPos]
                     .scale(xyScale)
                     .translate(transXY);
             }
-            this.y2AxisSvg.call(this.y2Axis);
-        }*/
+            this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+        }
 
         this.topSvg.selectAll('.highlightItem').remove();
 
