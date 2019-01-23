@@ -322,12 +322,7 @@ class graphly extends EventEmitter {
 
         // If there are colorscales to be rendered we need to apply additional
         // margin to the right reducing the total width
-        let csAmount = 0;
-        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
-            if(this.renderSettings.colorAxis[i] !== null){
-                csAmount++;
-            }
-        }
+        let csAmount = this.getMaxCSAmount();
         this.marginCSOffset += csAmount*100;
 
         this.width = this.dim.width - this.margin.left - 
@@ -1609,7 +1604,6 @@ class graphly extends EventEmitter {
 
                 if (this.data.hasOwnProperty(key)){
 
-                    xSubChoices.push({value: key, label: key});
                     ySubChoices.push({value: key, label: key});
 
                     if(this.renderSettings.hasOwnProperty('additionalYTicks') &&
@@ -1828,7 +1822,7 @@ class graphly extends EventEmitter {
 
     }
 
-    createColorScale(id, index, yPos, currYAxis){
+    createColorScale(id, index, yPos){
 
         let ds = this.dataSettings[id];
         let dataRange = [0,1];
@@ -1861,11 +1855,9 @@ class graphly extends EventEmitter {
             .tickSize(5)
             .scale(colorAxisScale);
 
-        let step = (colorAxisScale.domain()[1] - colorAxisScale.domain()[0]) / 10;
-
         colorAxis.tickFormat(d3.format(this.colorAxisTickFormat));
 
-        let csOffset = this.margin.right + this.marginY2Offset + width/2 /*+ width*index*/;
+        let csOffset = this.margin.right + this.marginY2Offset + width/2 + width*index;
         
         let g = this.el.select('svg').select('g').append("g")
             .attr('id', ('colorscale_'+id))
@@ -1930,29 +1922,32 @@ class graphly extends EventEmitter {
 
         this.el.selectAll('.color.axis').remove();
 
-        for (var i = 0; i < colAxis.length; i++) {
-            let yPos = 0;
-            let cnt = 0;
-            let currYAxis=this.renderSettings.yAxis;
-            for (let y1 = 0; y1 < currYAxis.length; y1++) {
-                if(cnt+currYAxis[y1].length <= i){
-                    yPos++;
-                }
-                cnt += currYAxis[y1].length;
+        let prevYItems = 0;
+        for (let plotY=0; plotY<this.renderSettings.yAxis.length; plotY++){
+            let csCounter = 0;
+            let pos;
+            if(plotY>0){
+                prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
             }
-            // If cnt is under color index continue with second y axis params
-            if(cnt<=i){
-                yPos = 0;
-                currYAxis = this.renderSettings.y2Axis;
-                for (let y2 = 0; y2 < currYAxis.length; y2++) {
-                    if(cnt+currYAxis[y2].length <= i){
-                        yPos++;
-                    }
-                    cnt += currYAxis[y2].length;
+            for (let yy = 0; yy < this.renderSettings.yAxis[plotY].length; yy++) {
+                pos = prevYItems+yy;
+                if(this.renderSettings.colorAxis[pos] !== null){
+                    this.createColorScale(colAxis[pos], csCounter, plotY);
+                    csCounter++;
                 }
             }
-            if(colAxis[i] !== null){
-                this.createColorScale(colAxis[i], i, yPos, currYAxis);
+            let prevY2Items = 0;
+            if(plotY>0){
+                prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
+            }
+            prevYItems = this.renderSettings.yAxis.flat().length;
+
+            for (let yy = 0; yy < this.renderSettings.y2Axis[plotY].length; yy++) {
+                pos = prevYItems+prevY2Items+yy;
+                if(this.renderSettings.colorAxis[pos] !== null){
+                    this.createColorScale(colAxis[pos], csCounter, plotY);
+                    csCounter++;
+                }
             }
         }
     }
@@ -1984,16 +1979,19 @@ class graphly extends EventEmitter {
         let clippath = this.svg.append('defs').append('clipPath')
             .attr('id', (this.nsId.substring(1)+'clipbox'));
 
-        this.svg.append('rect')
+        let rec = this.svg.append('rect')
             .attr('id', 'zoomXBox')
             .attr('width', this.width)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
-            //.attr('fill', 'none')
-            //.attr('fill', 'blue')
-            //.attr('opacity', '0.5')
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
             .style('visibility', 'hidden')
             .attr('pointer-events', 'all');
+
+        if(this.debug){
+            rec.attr('fill', 'blue')
+                .attr('opacity', 0.3)
+                .style('visibility', 'visible');
+        }
 
 
         // Add 1 or multiple rectangles as 'outline' for plots
@@ -2017,23 +2015,31 @@ class graphly extends EventEmitter {
                         'translate(0,' + offsetY + ')'
                     );
 
-                this.svg.append('rect')
-                    .attr('id', ('zoomYBox'+plotY))
-                    .attr('class', 'zoomYBox')
-                    .attr('width', this.margin.left)
-                    .attr('height', currHeight )
-                    .attr(
-                        'transform',
-                        'translate(' + -(this.margin.left+this.subAxisMarginY) + 
-                        ',' + offsetY + ')'
-                    )
-                    //.attr('fill', 'red')
-                    //.attr('opacity', 0.5)
-                    .style('visibility', 'hidden')
-                    .attr('pointer-events', 'all');
+                if(this.renderSettings.yAxis[plotY].length>0){
+                    let rec = this.svg.append('rect')
+                        .attr('id', ('zoomYBox'+plotY))
+                        .attr('class', 'zoomYBox')
+                        .attr('width', this.margin.left)
+                        .attr('height', currHeight )
+                        .attr(
+                            'transform',
+                            'translate(' + -(this.margin.left+this.subAxisMarginY) + 
+                            ',' + offsetY + ')'
+                        )
+                        .style('visibility', 'hidden')
+                        .attr('pointer-events', 'all');
+
+                        if(this.debug){
+                            rec.attr('fill', 'red')
+                                .attr('opacity', 0.3)
+                                .style('visibility', 'visible');
+                        }
+                }
+
 
                 if(this.renderSettings.y2Axis[plotY].length>0){
-                    this.svg.append('rect')
+                    let rec = this.svg.append('rect')
+                        .attr('id', 'zoomY2Box'+plotY)
                         .attr('class', 'zoomY2Box')
                         .attr('width', this.margin.right + this.marginY2Offset)
                         .attr('height', currHeight )
@@ -2041,10 +2047,14 @@ class graphly extends EventEmitter {
                             this.width
                             ) + ',' + offsetY + ')'
                         )
-                        //.attr('fill', 'yellow')
-                        //.attr('opacity', 0.5)
                         .style('visibility', 'hidden')
                         .attr('pointer-events', 'all');
+
+                    if(this.debug){
+                        rec.attr('fill', 'yellow')
+                            .attr('opacity', 0.3)
+                            .style('visibility', 'visible');
+                    }
                 }
 
                 clippath.append('rect')
@@ -2224,6 +2234,35 @@ class graphly extends EventEmitter {
         }
     }
 
+    getMaxCSAmount(){
+        let csAmount = 0;
+        let prevYItems = 0;
+        for (let plotY=0; plotY<this.renderSettings.yAxis.length; plotY++){
+            if(plotY>0){
+                prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
+            }
+            let currAm = 0;
+            for (let yy = 0; yy < this.renderSettings.yAxis[plotY].length; yy++) {
+                if(this.renderSettings.colorAxis[prevYItems+yy] !== null){
+                    currAm++;
+                }
+            }
+            let prevY2Items = 0;
+            if(plotY>0){
+                prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
+            }
+            prevYItems = this.renderSettings.yAxis.flat().length;
+
+            for (let yy = 0; yy < this.renderSettings.y2Axis[plotY].length; yy++) {
+                if(this.renderSettings.colorAxis[prevYItems+prevY2Items+yy] !== null){
+                    currAm++;
+                }
+            }
+            csAmount = d3.max([currAm, csAmount]);
+        }
+        return csAmount;
+    }
+
     /**
     * Load data from data object
     * @param {Object} data Data object containing parameter identifier as keys and 
@@ -2330,13 +2369,9 @@ class graphly extends EventEmitter {
             this.dim = this.el.node().getBoundingClientRect();
             // If there are colorscales to be rendered we need to apply additional
             // margin to the right reducing the total width
-            let csAmount = 0;
-            // TODO: change to check largest amount of cs in one of the axis
-            for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
-                if(this.renderSettings.colorAxis[i] !== null){
-                    csAmount++;
-                }
-            }
+
+            let csAmount = this.getMaxCSAmount();
+
             if(this.renderSettings.hasOwnProperty('y2Axis') && 
                this.renderSettings.y2Axis.length>0){
                 this.marginY2Offset = 40;
@@ -2432,7 +2467,7 @@ class graphly extends EventEmitter {
         //let currParDat = this.data[xSelection[0]];
         let secParDat;
         let addValues = [];
-        let timeScale = this.checkTimeScale(currParDat);
+        let timeScale = d instanceof Date;
         if(timeScale){
             addValues.push(u.getCustomUTCTimeTickFormat()(d));
         } else {
@@ -2527,8 +2562,8 @@ class graphly extends EventEmitter {
 
 
         let xScaleType;
-        xScaleType = getScale(this.xTimeScale);
         this.xTimeScale = this.checkTimeScale(xSelection[0]);
+        xScaleType = getScale(this.xTimeScale);
 
         let xRange = xExtent[1] - xExtent[0];
 
@@ -2547,6 +2582,7 @@ class graphly extends EventEmitter {
             .orient('bottom')
             .ticks(Math.max(this.width/120,2))
             .tickSize(-this.height);
+
         if(this.xTimeScale){
             this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
         }
@@ -2594,9 +2630,9 @@ class graphly extends EventEmitter {
             }
         }
         // Handling of ticks adding subtick text
-        if(this.renderSettings.hasOwnProperty('additionalXTicks')){
+        if(this.renderSettings.hasOwnProperty('additionalXTicks') && 
+            this.renderSettings.additionalXTicks.length>0){
             let addXT = this.renderSettings.additionalXTicks;
-            //TODO: Probably wrong
             this.xAxis.tickFormat(this.customSubtickFormat.bind(
                 this,
                 this.data[xSelection[0]],
@@ -2629,10 +2665,6 @@ class graphly extends EventEmitter {
             let xd = this.xScale.domain();
             maxzoomout = Math.abs(xd[1]-xd[0])/period;
         }
-
-
-
-
 
         let multiLength = this.renderSettings.yAxis.length;
         let heighChunk = this.height/multiLength;
@@ -3039,12 +3071,14 @@ class graphly extends EventEmitter {
         this.y2zoom = [];
         if(this.multiYAxis){
             for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
-                this.y2zoom.push(
-                    d3.behavior.zoom()
-                        .y(this.y2Scale[plotY])
-                        .on('zoom', this.previewZoom.bind(this))
-                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
-                    );
+                if(this.renderSettings.y2Axis[plotY].length>0){
+                    this.y2zoom.push(
+                        d3.behavior.zoom()
+                            .y(this.y2Scale[plotY])
+                            .on('zoom', this.previewZoom.bind(this))
+                            .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                        );
+                }
             }
         } else {
              this.y2zoom.push(
@@ -3602,12 +3636,8 @@ class graphly extends EventEmitter {
         this.dim = this.el.node().getBoundingClientRect();
         // If there are colorscales to be rendered we need to apply additional
         // margin to the right reducing the total width
-        let csAmount = 0;
-        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
-            if(this.renderSettings.colorAxis[i] !== null){
-                csAmount++;
-            }
-        }
+        let csAmount = this.getMaxCSAmount();
+        
         if(this.renderSettings.hasOwnProperty('y2Axis') && 
            this.renderSettings.y2Axis.length>0){
             this.marginY2Offset = 40;
@@ -3764,30 +3794,27 @@ class graphly extends EventEmitter {
 
         var that = this;
 
-        this.el.selectAll('.zoomYBox').each(function(d,i){
-            d3.select(this)
-                .attr('width', that.margin.left)
-                .attr('height', heighChunk-that.separation )
+        for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+            this.el.select('#zoomYBox'+yPos)
+                .attr('width', this.margin.left)
+                .attr('height', heighChunk-this.separation )
                 .attr(
                     'transform',
-                    'translate(' + -(that.margin.left+that.subAxisMarginY) + 
-                    ',' + (heighChunk*i) + ')'
+                    'translate(' + -(this.margin.left+this.subAxisMarginY) + 
+                    ',' + (heighChunk*yPos) + ')'
                 )
                 .attr('pointer-events', 'all');
-        });
 
-        this.el.selectAll('.zoomY2Box').each(function(d,i){
-            d3.select(this)
-                .attr('width', that.margin.right + that.marginY2Offset)
-                .attr('height', heighChunk-that.separation )
+            this.el.select('#zoomY2Box'+yPos)
+                .attr('width', this.margin.right + this.marginY2Offset)
+                .attr('height', heighChunk-this.separation )
                 .attr(
                     'transform',
-                    'translate(' + that.width + 
-                    ',' + (heighChunk*i) + ')'
+                    'translate(' + this.width + 
+                    ',' + (heighChunk*yPos) + ')'
                 )
                 .attr('pointer-events', 'all');
-        });
-
+        }
 
         this.el.select('#zoomXBox')
             .attr('width', this.width)
@@ -4718,7 +4745,9 @@ class graphly extends EventEmitter {
     }
 
 
-    renderColorScaleOptions(colorIndex){
+    renderColorScaleOptions(yPos, orientation, yAxisId){
+
+        let colorIndex = this.getColorIndex(orientation, yPos, yAxisId);
 
         this.el.select('#parameterSettings')
             .append('label')
@@ -4812,6 +4841,46 @@ class graphly extends EventEmitter {
             that.addApply();
         }
 
+    }
+
+    getColorIndex(orientation, yPos, yAxisId){
+         // Create and manage colorscale selection
+        // Find index of id
+        let currColPos = 0;
+        let curryAxArr;
+        // TODO not sure this is the best way to find the corresponding colorscale
+        if(orientation === 'left'){
+            curryAxArr = this.renderSettings.yAxis;
+            for (let i = 0; i <= yPos; i++) {
+                let idx = curryAxArr[i].indexOf(yAxisId);
+                if(i===yPos && idx !== -1){
+                    currColPos += idx;
+                } else {
+                    for (let j = 0; j < curryAxArr[i].length; j++) {
+                        currColPos++;
+                    }
+                }
+            }
+        } else if (orientation==='right'){
+            curryAxArr = this.renderSettings.yAxis;
+            for (let i = 0; i < curryAxArr.length; i++) {
+                for (let j = 0; j < curryAxArr[i].length; j++) {
+                    currColPos++;
+                }
+            }
+            curryAxArr = this.renderSettings.y2Axis;
+            for (let i = 0; i <= yPos; i++) {
+                let idx = curryAxArr[i].indexOf(yAxisId);
+                if(idx !== -1){
+                    currColPos += idx;
+                } else {
+                    for (let j = 0; j < curryAxArr[i].length; j++) {
+                        currColPos++;
+                    }
+                }
+            }
+        }
+        return currColPos
     }
 
 
@@ -5004,43 +5073,7 @@ class graphly extends EventEmitter {
                 });
         }
 
-        // Create and manage colorscale selection
-        // Find index of id
-        let currColPos = 0;
-        let curryAxArr;
-        // TODO not sure this is the best way to find the corresponding colorscale
-        if(orientation === 'left'){
-            curryAxArr = this.renderSettings.yAxis;
-            for (let i = 0; i <= yPos; i++) {
-                let idx = curryAxArr[i].indexOf(id);
-                if(i===yPos && idx !== -1){
-                    currColPos += idx;
-                } else {
-                    for (let j = 0; j < curryAxArr[i].length; j++) {
-                        currColPos++;
-                    }
-                }
-            }
-        } else if (orientation==='right'){
-            curryAxArr = this.renderSettings.yAxis;
-            for (let i = 0; i < curryAxArr.length; i++) {
-                for (let j = 0; j < curryAxArr[i].length; j++) {
-                    currColPos++;
-                }
-            }
-            curryAxArr = this.renderSettings.y2Axis;
-            for (let i = 0; i <= yPos; i++) {
-                let idx = curryAxArr[i].indexOf(id);
-                if(idx !== -1){
-                    currColPos += idx;
-                } else {
-                    for (let j = 0; j < curryAxArr[i].length; j++) {
-                        currColPos++;
-                    }
-                }
-            }
-        }
-
+        let currColPos = this.getColorIndex(orientation, yPos, id);
 
         // Should normally always have an index
         if(currColPos !== -1 && this.displayColorscaleOptions){
@@ -5091,7 +5124,7 @@ class graphly extends EventEmitter {
             // Need to add additional necessary options
             // drop down with possible parameters and colorscale
             if(active){                           
-                this.renderColorScaleOptions(currColPos);
+                this.renderColorScaleOptions(yPos, orientation, id);
             }
 
         }
