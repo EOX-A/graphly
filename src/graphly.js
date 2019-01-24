@@ -220,9 +220,12 @@ class graphly extends EventEmitter {
         this.el.style('font-size', '0.8em');
 
 
-        this.el.append('canvas')
+        let IRcanvas = this.el.append('canvas')
             .attr('id', 'imagerenderer')
             .style('display', 'none');
+
+        this.IRc = IRcanvas.node();
+        this.IRctx = this.IRc.getContext('2d');
 
         // We need to container to be relative to make sure all otherabsolute
         // parameters inside are relative to parent
@@ -367,9 +370,13 @@ class graphly extends EventEmitter {
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
         }
 
+        let timeDelay = 600;
+        if(this.debounceActive){
+            timeDelay = 200;
+        }
         this.debounceZoom = debounce(function(){
             this.onZoom();
-        }, 500);
+        }, timeDelay);
 
        this.debounceResize = debounce(function(){
             this.onResize();
@@ -1176,16 +1183,13 @@ class graphly extends EventEmitter {
             this.el.select('#imagerenderer').attr('width', renderWidth);
             this.el.select('#imagerenderer').attr('height', renderHeight);
 
-            var c = this.el.select('#imagerenderer').node();
-            var ctx = c.getContext('2d');
-
             // Clear possible previous renderings
-            ctx.clearRect(0, 0, c.width, c.height);
+            this.IRctx.clearRect(0, 0, this.IRc.width, this.IRc.height);
             
             // If format is jpeg we need to "remove" transparent pixels as they 
             // are turned black
             if(this.outFormat === 'jpeg'){
-                var imgData=ctx.getImageData(0,0,c.width,c.height);
+                var imgData=this.IRctx.getImageData(0,0,this.IRc.width,this.IRc.height);
                 var data=imgData.data;
                 for(var i=0;i<data.length;i+=4){
                     if(data[i+3]<255){
@@ -1195,10 +1199,10 @@ class graphly extends EventEmitter {
                         data[i+3] = 255 - data[i+3];
                     }
                 }
-                ctx.putImageData(imgData,0,0);
+                this.IRctx.putImageData(imgData,0,0);
             }
 
-            ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
+            this.IRctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
 
 
             // Set interactive blue to black for labels
@@ -1969,14 +1973,6 @@ class graphly extends EventEmitter {
 
 
     createHelperObjects(){
-        this.renderingContainer = this.svg.append('g')
-            .attr('id','renderingContainer')
-            .attr('fill', 'none')
-            /*.style('clip-path','url('+this.nsId+'clipbox)')*/;
-
-        // Add clip path so only points in the area are shown
-        let clippath = this.svg.append('defs').append('clipPath')
-            .attr('id', (this.nsId.substring(1)+'clipbox'));
 
         let rec = this.svg.append('rect')
             .attr('id', 'zoomXBox')
@@ -1995,11 +1991,37 @@ class graphly extends EventEmitter {
 
         // Add 1 or multiple rectangles as 'outline' for plots
         if(this.multiYAxis){
+
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+
                 let multiLength = this.renderSettings.yAxis.length;
                 let heighChunk = this.height/multiLength;
                 let currHeight = heighChunk - this.separation;
                 let offsetY = plotY*heighChunk;
+
+                this.svg.append('g')
+                    .attr('id','renderingContainer'+plotY)
+                    .attr('fill', 'none')
+                    .attr(
+                        'transform',
+                        'translate(0,' + heighChunk*plotY + ')'
+                    )
+                    .style('clip-path','url('+this.nsId+'clipbox)');
+
+                // Add clip path so only points in the area are shown
+                let clippath = this.svg.append('defs').append('clipPath')
+                    .attr('id', (this.nsId.substring(1)+'clipbox'))
+                    .attr(
+                        'transform',
+                        'translate(0,' + heighChunk*plotY + ')'
+                    );
+
+                clippath.append('rect')
+                    .attr('fill', 'none')
+                    .attr('y', offsetY)
+                    .attr('width', this.width)
+                    .attr('height', currHeight);
+
 
                 this.svg.append('rect')
                     .attr('class', 'rectangleOutline zoomXYBox')
@@ -2056,13 +2078,6 @@ class graphly extends EventEmitter {
                             .style('visibility', 'visible');
                     }
                 }
-
-                clippath.append('rect')
-                    .attr('fill', 'none')
-                    .attr('y', offsetY)
-                    .attr('width', this.width)
-                    .attr('height', currHeight);
-
             }
         } else {
             this.svg.append('rect')
@@ -3342,75 +3357,80 @@ class graphly extends EventEmitter {
 
         let xScale = this.xzoom.scale();
         let yScale = this.yzoom[yPos].scale();
-        let y2Scale = this.y2zoom[yPos].scale();
         let xyScale = this.xyzoom[yPos].scale();
+
+        let y2Scale = this.y2zoom[yPos].scale();
+        let transY2 = this.y2zoom[yPos].translate();
 
         let transXY = this.xyzoom[yPos].translate();
         let transX = this.xzoom.translate();
         let transY = this.yzoom[yPos].translate();
-        let transY2 = this.y2zoom[yPos].translate();
 
         if(this.renderSettings.y2Axis.length > 0){
-            if(transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1){
+            if( transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1 ){
                 this.y2zoom[yPos]
                     .scale(xyScale)
                     .translate(transXY);
             }
-            this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+            if(this.y2AxisSvg[yPos]){
+                this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+            }
         }
 
         this.topSvg.selectAll('.highlightItem').remove();
 
         if(this.debounceActive){
 
-            /*if(!this.previewActive){
+            if(!this.previewActive){
                 this.renderCanvas.style('opacity','0');
-                this.oSc = this.currentScale;
-                this.oTr = this.currentTranlate;
-                this.oT = [
-                    d3.event.translate[0]/d3.event.scale,
-                    d3.event.translate[1]/d3.event.scale,
-                ];
                 this.previewActive = true;
-                this.svg.select('#previewImage').style('display', 'block');
-                this.svg.select('#previewImage2').style('display', 'block');
+                for (let yPos=0; yPos<this.renderSettings.yAxis.length; yPos++){
+                    this.svg.select('#previewImage'+yPos).style('display', 'block');
+                    this.svg.select('#previewImage2'+yPos).style('display', 'block');
+                }
             }
 
+            for (let yPos=0; yPos<this.renderSettings.yAxis.length; yPos++){
 
-            if(xyScale!==1.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                transXY + ')scale(' + xyScale + ')');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                transXY + ')scale(' + xyScale + ')');
-            }else if(xScale !== 1.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
-            }else if(yScale !== 1.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
-            }else if(y2Scale !== 1.0){
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
-            }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                transXY + ')scale(1)');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                transXY + ')scale(1)');
-            }else if(transX[0]!==0.0 || transX[1] !==0.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(1)');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(1)');
-            }else if(transY[0]!==0.0 || transY[1] !==0.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [0.0, transY[1.0]] + ')scale(1)');
-            }else if(transY2[0]!==0.0 || transY2[1] !==0.0){
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [0.0, transY2[1.0]] + ')scale(1)');
+                let prevImg = this.el.select('#previewImage'+yPos);
+                let prevImg2 = this.el.select('#previewImage2'+yPos);
+
+                if(xyScale!==1.0){
+                    prevImg.attr('transform', 
+                        'translate(' +  transXY + ')scale(' + xyScale + ')'
+                    );
+                    prevImg2.attr('transform',
+                        'translate(' +   transXY + ')scale(' + xyScale + ')'
+                    );
+                }else if(xScale !== 1.0){
+                    prevImg.attr('transform', 'translate(' + 
+                    [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
+                    prevImg2.attr('transform', 'translate(' + 
+                    [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
+                }else if(yScale !== 1.0){
+                    prevImg.attr('transform', 'translate(' + 
+                    [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
+                }else if(y2Scale !== 1.0){
+                    prevImg2.attr('transform', 'translate(' + 
+                    [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
+                }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
+                    prevImg.attr('transform', 'translate(' + 
+                    transXY + ')scale(1)');
+                    prevImg2.attr('transform', 'translate(' + 
+                    transXY + ')scale(1)');
+                }else if(transX[0]!==0.0 || transX[1] !==0.0){
+                    prevImg.attr('transform', 'translate(' + 
+                    [transX[0], 0.0] + ')scale(1)');
+                    prevImg2.attr('transform', 'translate(' + 
+                    [transX[0], 0.0] + ')scale(1)');
+                }else if(transY[0]!==0.0 || transY[1] !==0.0){
+                    prevImg.attr('transform', 'translate(' + 
+                    [0.0, transY[1.0]] + ')scale(1)');
+                }else if(transY2[0]!==0.0 || transY2[1] !==0.0){
+                    prevImg2.attr('transform', 'translate(' + 
+                    [0.0, transY2[1.0]] + ')scale(1)');
+                }
             }
-*/
 
         }else{
             // While interaction is happening only render visible plot once
@@ -5413,31 +5433,60 @@ class graphly extends EventEmitter {
     updatePreviewImage(imageEl){
 
         if(this.debounceActive){
+
             this.renderCanvas.style('opacity','1');
-            let prevImg = this.el.select('#'+imageEl);
             this.startTiming('createPreviewImage:'+imageEl);
-            let img = this.renderCanvas.node().toDataURL();
+            
             this.endTiming('createPreviewImage:'+imageEl);
-            if(!prevImg.empty()){
-                prevImg.attr('xlink:href', img)
-                    .attr('transform', null)
-                    .style('display', 'none');
-            } else {
-                this.renderingContainer.insert('svg:image', ':first-child')
-                        /*.attr('id', 'previewImage2')
-                this.renderingContainer.append('svg:image')*/
-                    .attr('id', imageEl)
-                    .attr('xlink:href', img)
-                    .attr('x', 0)
-                    .attr('y', 0)
-                    .attr('width',  this.width)
-                    .attr('height', this.height)
-                    .style('display', 'none');
+            let heighChunk = this.height/this.renderSettings.yAxis.length;
+
+            for (let yPos=0; yPos<this.renderSettings.yAxis.length; yPos++){
+
+                // Render specific area of image corresponding to current plot
+                // Clear possible previous renderings
+                this.IRc.width = this.width;
+                this.IRc.height = heighChunk-this.separation;
+                this.IRctx.clearRect(0, 0, this.IRc.width, this.IRc.height);
+
+                this.IRctx.drawImage(
+                    this.renderCanvas.node(),
+                    0, heighChunk*yPos,
+                    this.IRc.width, this.IRc.height,
+                    0, 0,
+                    this.IRc.width, this.IRc.height
+                );
+
+                let img = this.IRc.toDataURL();
+
+                let prevImg = this.el.select('#'+imageEl+yPos);
+                let renderingContainer = this.el.select('#renderingContainer'+yPos);
+
+                if(!prevImg.empty()){
+                    prevImg.attr('xlink:href', img)
+                        .attr('transform', null)
+                        .style('display', 'none');
+                } else {
+                    renderingContainer.insert('svg:image', ':first-child')
+                        .attr('id', imageEl+yPos)
+                        .attr('xlink:href', img)
+                        .attr('x', 0)
+                        .attr('y', 0)
+                        .attr('width',  this.width)
+                        .attr('height', heighChunk-this.separation)
+                        .style('display', 'none');
+                }
+                this.previewActive = false;
             }
-            this.previewActive = false;
+
+            if(this.debug){
+                this.el.select('#'+imageEl)
+                    .style('display', 'block')
+                    .attr('opacity', 0.5);
+            }
+
         } else {
-            let prevImg = this.el.select('#'+imageEl);
-            if(prevImg.empty()){
+            //let prevImg = this.el.select('#'+imageEl);
+            /*if(prevImg.empty()){
                 this.renderingContainer.append('svg:image')
                     .attr('id', imageEl)
                     .attr('x', 0)
@@ -5445,8 +5494,10 @@ class graphly extends EventEmitter {
                     .attr('width',  this.width)
                     .attr('height', this.height)
                     .style('display', 'none');
-            }
+            }*/
         }
+
+        
     }
 
 
@@ -5488,7 +5539,7 @@ class graphly extends EventEmitter {
 
         // Check if we need to update extents which have been reset because
         // of filtering on parameter
-        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
+        /*for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
             let ca = this.renderSettings.colorAxis[i];
             if(ca !== null){
                 if(this.dataSettings.hasOwnProperty(ca)){
@@ -5528,123 +5579,151 @@ class graphly extends EventEmitter {
                     }
                 }
             }
-        }
+        }*/
 
-        this.createColorScales();
-        this.updateInfoBoxes();
+
+        if(updateReferenceCanvas){
+            this.createColorScales();
+            this.updateInfoBoxes();
+        }
 
         let idX = xAxRen;
         let yAxRen, y2AxRen;
         
 
-        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+        // Render first all y2 axis parameters
+        for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
-            let prevYItems = 0;
-            if(plotY>0){
-                prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
-            }
-
-            yAxRen = this.renderSettings.yAxis[plotY];
             y2AxRen = this.renderSettings.y2Axis[plotY];
             if(!this.multiYAxis){
-                yAxRen = this.renderSettings.yAxis;
                 y2AxRen = this.renderSettings.y2Axis;
             }
-
-
-
             // If y2 axis is defined start rendering it as we need to render
             // multiple times to have individial images for manipulation in
             // debounce option
             if(y2AxRen.length > 0){
                 for (let parPos=0; parPos<y2AxRen.length; parPos++){
-
                     let prevY2Items = 0;
                     if(plotY>0){
                         prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
                     }
-
                     let idY2 = y2AxRen[parPos];
-                    
                     let idCS = this.renderSettings.colorAxis[
                         this.renderSettings.yAxis.flat().length + prevY2Items +parPos
                     ];
-
                     this.renderParameter(
                         idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
                         parPos, this.currentData, this.currentInactiveData,
                         updateReferenceCanvas
                     );
                 }
-                // Save preview image of rendering of second y axis 
-                // without data from first y axis
-                this.batchDrawer.draw();
-                this.updatePreviewImage('previewImage2');
             }
+        }
 
-            /*this.batchDrawer.clear();
+        // Save preview image of rendering of second y axis 
+        // without data from first y axis
+        this.startTiming('batchDrawer:draw');
+        this.batchDrawer.draw();
+        this.endTiming('batchDrawer:draw');
+        this.updatePreviewImage('previewImage2');
+
+        if(!this.fixedSize && updateReferenceCanvas && !this.debounceActive){
+            this.startTiming('batchDrawerReference:draw');
+            this.batchDrawerReference.draw();
+            this.endTiming('batchDrawerReference:draw');
+        }
+
+        if(this.debounceActive){
+            // If debounce active clear all to create second clean
+            // image for left side
+            this.batchDrawer.clear();
             if(this.batchDrawerReference){
                 this.batchDrawerReference.clear();
-            }*/
+            }
+        }
 
+        // Afterwards render all y axis parameters
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+
+            let prevYItems = 0;
+            if(plotY>0){
+                prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
+            }
+            yAxRen = this.renderSettings.yAxis[plotY];
+            if(!this.multiYAxis){
+                yAxRen = this.renderSettings.yAxis;
+            }
             for (let parPos=0; parPos<yAxRen.length; parPos++){
 
                 let idY = yAxRen[parPos];
                 let idCS = this.renderSettings.colorAxis[
                     parPos + prevYItems
                 ];
-
                 this.renderParameter(
                     idX, idY, idCS, plotY, yAxRen, this.yScale,
                     parPos, this.currentData, this.currentInactiveData,
                     updateReferenceCanvas
                 );
             }
+        }
 
+        this.startTiming('batchDrawer:draw');
+        this.batchDrawer.draw();
+        this.endTiming('batchDrawer:draw');
+        this.updatePreviewImage('previewImage');
+
+        if(!this.fixedSize && updateReferenceCanvas){
+            this.startTiming('batchDrawerReference:draw');
+            this.batchDrawerReference.draw();
+            this.endTiming('batchDrawerReference:draw');
+        }
+
+
+        // If debounce is active we need to re-render the right y axis
+        // parameter as we had to clear it in order to create a clean left 
+        // y axis parameters rendering
+        if(this.debounceActive){
+            for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+
+                y2AxRen = this.renderSettings.y2Axis[plotY];
+                if(!this.multiYAxis){
+                    y2AxRen = this.renderSettings.y2Axis;
+                }
+                // If y2 axis is defined start rendering it as we need to render
+                // multiple times to have individial images for manipulation in
+                // debounce option
+                if(y2AxRen.length > 0){
+                    for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                        let prevY2Items = 0;
+                        if(plotY>0){
+                            prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
+                        }
+                        let idY2 = y2AxRen[parPos];
+                        let idCS = this.renderSettings.colorAxis[
+                            this.renderSettings.yAxis.flat().length + prevY2Items +parPos
+                        ];
+                        this.renderParameter(
+                            idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
+                            parPos, this.currentData, this.currentInactiveData,
+                            updateReferenceCanvas
+                        );
+                    }
+                }
+            }
+
+            // Save preview image of rendering of second y axis 
+            // without data from first y axis
             this.startTiming('batchDrawer:draw');
             this.batchDrawer.draw();
             this.endTiming('batchDrawer:draw');
-            this.updatePreviewImage('previewImage');
 
             if(!this.fixedSize && updateReferenceCanvas){
                 this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
                 this.endTiming('batchDrawerReference:draw');
             }
-
-
-            // Render y2 parameters a second time on top of current canvas
-            /*if(y2AxRen.length > 0){
-                for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                    let idY2 = y2AxRen[parPos];
-                    let idCS = this.renderSettings.colorAxis[
-                        this.renderSettings.yAxis.length + parPos
-                    ];
-                    this.renderParameter(
-                        idX, idY2, idCS, plotY,this.renderSettings.y2Axis,
-                        parPos, this.currentData, this.currentInactiveData,
-                        updateReferenceCanvas
-                    );
-                }
-                // Save preview image of rendering of second y axis 
-                // without data from first y axis
-                this.batchDrawer.draw();
-                if(!this.fixedSize && updateReferenceCanvas){
-                    this.startTiming('batchDrawerReference:draw');
-                    this.batchDrawerReference.draw();
-                    this.endTiming('batchDrawerReference:draw');
-                }
-            }*/
-
-
         }
 
-
-
-
-        
-
-        
         /**
         * Event is fired when graph has finished rendering plot.
         * @event module:graphly.graphly#rendered
