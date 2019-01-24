@@ -369,7 +369,7 @@ class graphly extends EventEmitter {
 
         this.debounceZoom = debounce(function(){
             this.onZoom();
-        }, 350);
+        }, 500);
 
        this.debounceResize = debounce(function(){
             this.onResize();
