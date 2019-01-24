@@ -1079,24 +1079,26 @@ class graphly extends EventEmitter {
         // We need to first render the canvas if the debounce active is false
         if(!this.debounceActive || this.resFactor !== 1){
 
-            //TODO: output image not generated correctly when debounce is active
-            this.renderCanvas.style('opacity','1');
-            let prevImg = this.el.select('#previewImage');
+            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+                //TODO: output image not generated correctly when debounce is active
+                this.renderCanvas.style('opacity','1');
+                let prevImg = this.el.select('#previewImageR'+plotY);
 
-            let img = this.renderCanvas.node().toDataURL();
-            if(!prevImg.empty()){
-                prevImg.attr('xlink:href', img)
-                    .attr('transform', 'translate(0,0)scale(1)')
-                    .style('display', 'none');
+                let img = this.renderCanvas.node().toDataURL();
+                if(!prevImg.empty()){
+                    prevImg.attr('xlink:href', img)
+                        .attr('transform', 'translate(0,0)scale(1)')
+                        .style('display', 'none');
+                }
             }
         }
 
-        this.svg.select('#previewImage').style('display', 'block');
+        this.svg.selectAll('previewImage').style('display', 'block');
         // Only show second preview image if not scaling up as we need to
         // rerender everything when doing so
-        if(this.resFactor === 1){
-            this.svg.select('#previewImage2').style('display', 'block');
-        }
+        /*if(this.resFactor === 1){
+            this.svg.select('#previewImageR').style('display', 'block');
+        }*/
 
         if(this.displayParameterLabel/*&& 
             !this.el.select('#parameterInfo').selectAll('*').empty()*/){
@@ -1158,7 +1160,7 @@ class graphly extends EventEmitter {
         // when debugging the svg_html shows the correct image, but the 
         // redering is empty
         if(!this.debounceActive || this.resFactor !== 1){
-            setTimeout(this.createOutputFile.bind(this), 10);
+            setTimeout(this.createOutputFile.bind(this), 1000);
         } else {
             this.createOutputFile();
         }
@@ -1210,13 +1212,13 @@ class graphly extends EventEmitter {
             this.svg.selectAll('.axisLabel').attr('font-weight', 'bold');
 
             let outformat = 'image/'+ this.outFormat;
-            c.toBlob((blob)=> {
+            this.IRc.toBlob((blob)=> {
                 FileSaver.saveAs(blob, this.fileSaveString);
             }, outformat ,1);
         }
 
-        this.svg.select('#previewImage').style('display', 'none');
-        this.svg.select('#previewImage2').style('display', 'none');
+
+        this.svg.selectAll('.previewImage').style('display', 'none');
         this.svg.selectAll('.svgInfoContainer').style('visibility', 'hidden');
 
         this.resFactor = 1;
@@ -3366,14 +3368,25 @@ class graphly extends EventEmitter {
         let transX = this.xzoom.translate();
         let transY = this.yzoom[yPos].translate();
 
-        if(this.renderSettings.y2Axis.length > 0){
-            if( transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1 ){
-                this.y2zoom[yPos]
+
+        if( transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1 ){
+            for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
+                // Update all right y2 axis based on xy scale and trans
+                this.y2zoom[yy]
                     .scale(xyScale)
                     .translate(transXY);
-            }
-            if(this.y2AxisSvg[yPos]){
-                this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+                if(this.y2AxisSvg[yy]){
+                    this.y2AxisSvg[yy].call(this.y2Axis[yy]);
+                }
+                // Update all left y axis that are not in current plot
+                if(yy !== yPos){
+                    this.yzoom[yy]
+                        .scale(xyScale)
+                        .translate(transXY);
+                    if(this.yAxisSvg[yy]){
+                        this.yAxisSvg[yy].call(this.yAxis[yy]);
+                    }
+                }
             }
         }
 
@@ -3385,17 +3398,19 @@ class graphly extends EventEmitter {
                 this.renderCanvas.style('opacity','0');
                 this.previewActive = true;
                 for (let yPos=0; yPos<this.renderSettings.yAxis.length; yPos++){
-                    this.svg.select('#previewImage'+yPos).style('display', 'block');
-                    this.svg.select('#previewImage2'+yPos).style('display', 'block');
+                    this.svg.select('#previewImageL'+yPos).style('display', 'block');
+                    this.svg.select('#previewImageR'+yPos).style('display', 'block');
                 }
             }
 
-            for (let yPos=0; yPos<this.renderSettings.yAxis.length; yPos++){
+            for (let imgYPos=0; imgYPos<this.renderSettings.yAxis.length; imgYPos++){
 
-                let prevImg = this.el.select('#previewImage'+yPos);
-                let prevImg2 = this.el.select('#previewImage2'+yPos);
+                let prevImg = this.el.select('#previewImageL'+imgYPos);
+                let prevImg2 = this.el.select('#previewImageR'+imgYPos);
+                let alreadyMod = false;
 
                 if(xyScale!==1.0){
+                    alreadyMod = true;
                     prevImg.attr('transform', 
                         'translate(' +  transXY + ')scale(' + xyScale + ')'
                     );
@@ -3407,28 +3422,39 @@ class graphly extends EventEmitter {
                     [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
                     prevImg2.attr('transform', 'translate(' + 
                     [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
-                }else if(yScale !== 1.0){
-                    prevImg.attr('transform', 'translate(' + 
-                    [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
-                }else if(y2Scale !== 1.0){
-                    prevImg2.attr('transform', 'translate(' + 
-                    [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
+
                 }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
+                    alreadyMod = true;
                     prevImg.attr('transform', 'translate(' + 
                     transXY + ')scale(1)');
                     prevImg2.attr('transform', 'translate(' + 
                     transXY + ')scale(1)');
+
                 }else if(transX[0]!==0.0 || transX[1] !==0.0){
                     prevImg.attr('transform', 'translate(' + 
                     [transX[0], 0.0] + ')scale(1)');
                     prevImg2.attr('transform', 'translate(' + 
                     [transX[0], 0.0] + ')scale(1)');
-                }else if(transY[0]!==0.0 || transY[1] !==0.0){
-                    prevImg.attr('transform', 'translate(' + 
-                    [0.0, transY[1.0]] + ')scale(1)');
-                }else if(transY2[0]!==0.0 || transY2[1] !==0.0){
-                    prevImg2.attr('transform', 'translate(' + 
-                    [0.0, transY2[1.0]] + ')scale(1)');
+
+                }
+
+                if(imgYPos === yPos){
+                    if(yScale !== 1.0){
+                        prevImg.attr('transform', 'translate(' + 
+                        [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
+
+                    }else if(!alreadyMod && (y2Scale !== 1.0)){
+                        prevImg2.attr('transform', 'translate(' + 
+                        [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
+
+                    } else if(transY[0]!==0.0 || transY[1] !==0.0){
+                        prevImg.attr('transform', 'translate(' + 
+                        [0.0, transY[1.0]] + ')scale(1)');
+
+                    }else if(!alreadyMod && (transY2[0]!==0.0 || transY2[1] !==0.0)){
+                        prevImg2.attr('transform', 'translate(' + 
+                        [0.0, transY2[1.0]] + ')scale(1)');
+                    }
                 }
             }
 
@@ -3884,13 +3910,9 @@ class graphly extends EventEmitter {
                 );
         });
 
-        this.el.select('#previewImage')
+        this.el.selectAll('.previewImage')
             .attr('width',  this.width)
-            .attr('height', this.height);
-
-        this.el.select('#previewImage2')
-            .attr('width',  this.width)
-            .attr('height', this.height);
+            .attr('height', heighChunk-that.separation);
 
         this.addTimeInformation();
         this.breakTicks();
@@ -5468,6 +5490,7 @@ class graphly extends EventEmitter {
                 } else {
                     renderingContainer.insert('svg:image', ':first-child')
                         .attr('id', imageEl+yPos)
+                        .attr('class', 'previewImage')
                         .attr('xlink:href', img)
                         .attr('x', 0)
                         .attr('y', 0)
@@ -5625,7 +5648,7 @@ class graphly extends EventEmitter {
         this.startTiming('batchDrawer:draw');
         this.batchDrawer.draw();
         this.endTiming('batchDrawer:draw');
-        this.updatePreviewImage('previewImage2');
+        this.updatePreviewImage('previewImageR');
 
         if(!this.fixedSize && updateReferenceCanvas && !this.debounceActive){
             this.startTiming('batchDrawerReference:draw');
@@ -5670,7 +5693,7 @@ class graphly extends EventEmitter {
         this.startTiming('batchDrawer:draw');
         this.batchDrawer.draw();
         this.endTiming('batchDrawer:draw');
-        this.updatePreviewImage('previewImage');
+        this.updatePreviewImage('previewImageL');
 
         if(!this.fixedSize && updateReferenceCanvas){
             this.startTiming('batchDrawerReference:draw');
