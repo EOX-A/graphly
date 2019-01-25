@@ -1862,7 +1862,7 @@ class graphly extends EventEmitter {
 
         colorAxis.tickFormat(d3.format(this.colorAxisTickFormat));
 
-        let csOffset = this.margin.right + this.marginY2Offset + width/2 + width*index;
+        let csOffset = this.margin.right/2 + this.marginY2Offset + width/2 + width*index;
         
         let g = this.el.select('svg').select('g').append("g")
             .attr('id', ('colorscale_'+id))
@@ -1904,7 +1904,7 @@ class graphly extends EventEmitter {
 
         g.append('text')
             .attr('text-anchor', 'middle')
-            .attr('transform', 'translate(' + (-35) + ' ,'+(innerHeight/2)+') rotate(270)')
+            .attr('transform', 'translate(' + 60 + ' ,'+(innerHeight/2)+') rotate(270)')
             .text(label);
 
         let csZoomEvent = ()=>{
