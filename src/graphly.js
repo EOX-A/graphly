@@ -406,7 +406,7 @@ class graphly extends EventEmitter {
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
             .style('opacity', 1.0)
-            .style('pointer-events', 'none')
+            //.style('pointer-events', 'none')
             .style('position', 'absolute')
             .style('z-index', 2)
             .style(
@@ -488,8 +488,7 @@ class graphly extends EventEmitter {
                 'transform',
                 'translate(' + (this.margin.left+this.subAxisMarginY+1) + ',' +
                 (this.margin.top+1) + ')'
-            )
-            /*.style('clip-path','url('+this.nsId+'clipbox)')*/;
+            );
 
         // Make sure we hide the tooltip as soon as we get out of the canvas
         // else it can kind of "stick" when moving the mouse fast
@@ -1079,29 +1078,29 @@ class graphly extends EventEmitter {
         // We need to first render the canvas if the debounce active is false
         if(!this.debounceActive || this.resFactor !== 1){
 
-            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
-                //TODO: output image not generated correctly when debounce is active
-                this.renderCanvas.style('opacity','1');
-                let prevImg = this.el.select('#previewImageR'+plotY);
+            // Render all to first previewimage
+            this.renderCanvas.style('opacity','1');
+            let prevImg = this.el.select('#previewImageR0');
 
-                let img = this.renderCanvas.node().toDataURL();
-                if(!prevImg.empty()){
-                    prevImg.attr('xlink:href', img)
-                        .attr('transform', 'translate(0,0)scale(1)')
-                        .style('display', 'none');
-                }
-            }
+            prevImg
+                .attr('width',  this.width)
+                .attr('height', this.height);
+
+            this.el.select('#renderingContainer0').style('clip-path',null);
+
+            let img = this.renderCanvas.node().toDataURL();
+            
+            prevImg.attr('xlink:href', img)
+                .attr('transform', 'translate(0,0)scale(1)');
+            
+            prevImg.style('display', 'block');
+        } else {
+            this.svg.selectAll('.previewImage').style('display', 'block');
         }
 
-        this.svg.selectAll('previewImage').style('display', 'block');
-        // Only show second preview image if not scaling up as we need to
-        // rerender everything when doing so
-        /*if(this.resFactor === 1){
-            this.svg.select('#previewImageR').style('display', 'block');
-        }*/
 
-        if(this.displayParameterLabel/*&& 
-            !this.el.select('#parameterInfo').selectAll('*').empty()*/){
+
+        if(this.displayParameterLabel){
             this.svg.selectAll('.svgInfoContainer').style('visibility', 'visible');
         }
 
@@ -1220,6 +1219,10 @@ class graphly extends EventEmitter {
 
         this.svg.selectAll('.previewImage').style('display', 'none');
         this.svg.selectAll('.svgInfoContainer').style('visibility', 'hidden');
+
+        // Set first render container as it was before
+        this.el.select('#renderingContainer0')
+            .style('clip-path','url('+this.nsId+'clipbox)');
 
         this.resFactor = 1;
         this.resize();
@@ -1991,14 +1994,33 @@ class graphly extends EventEmitter {
         }
 
 
+        
+
+
         // Add 1 or multiple rectangles as 'outline' for plots
         if(this.multiYAxis){
 
+            let multiLength = this.renderSettings.yAxis.length;
+            let heighChunk = this.height/multiLength;
+            let currHeight = heighChunk - this.separation;
+
+            // Add clip path so only points in the area are shown
+            let clippath = this.svg.append('defs').append('clipPath')
+                .attr('id', (this.nsId.substring(1)+'clipbox'))
+                .attr(
+                    'transform',
+                    'translate(0,0)'
+                );
+
+            clippath.append('rect')
+                .attr('fill', 'none')
+                .attr('y', 0)
+                .attr('width', this.width)
+                .attr('height', currHeight);
+
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
-                let multiLength = this.renderSettings.yAxis.length;
-                let heighChunk = this.height/multiLength;
-                let currHeight = heighChunk - this.separation;
+                
                 let offsetY = plotY*heighChunk;
 
                 this.svg.append('g')
@@ -2010,22 +2032,9 @@ class graphly extends EventEmitter {
                     )
                     .style('clip-path','url('+this.nsId+'clipbox)');
 
-                // Add clip path so only points in the area are shown
-                let clippath = this.svg.append('defs').append('clipPath')
-                    .attr('id', (this.nsId.substring(1)+'clipbox'))
-                    .attr(
-                        'transform',
-                        'translate(0,' + heighChunk*plotY + ')'
-                    );
-
-                clippath.append('rect')
-                    .attr('fill', 'none')
-                    .attr('y', offsetY)
-                    .attr('width', this.width)
-                    .attr('height', currHeight);
-
 
                 this.svg.append('rect')
+                    .attr('id', 'zoomXYBox'+plotY)
                     .attr('class', 'rectangleOutline zoomXYBox')
                     .attr('fill', 'none')
                     .attr('stroke', '#333')
@@ -2037,7 +2046,7 @@ class graphly extends EventEmitter {
                         'transform',
                         'translate(0,' + offsetY + ')'
                     )
-                    .attr('pointer-events', 'all');
+                    //.attr('pointer-events', 'all');
 
                 if(this.renderSettings.yAxis[plotY].length>0){
                     let rec = this.svg.append('rect')
@@ -2694,6 +2703,11 @@ class graphly extends EventEmitter {
         this.y2Axis = [];
         this.y2AxisSvg = [];
 
+
+        this.yScaleCombined = d3.scale.linear()
+            .domain([0,1])
+            .range([this.height, 0]);
+
         for (let yPos = 0; yPos < multiLength; yPos++) {
 
             let currYAxis = this.renderSettings.yAxis[yPos];
@@ -2974,26 +2988,22 @@ class graphly extends EventEmitter {
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.yzoom = [];
-        this.xyzoom = [];
+        
         if(this.multiYAxis){
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
-
                 this.yzoom.push(
                     d3.behavior.zoom()
                         .y(this.yScale[plotY])
                         .on('zoom', this.previewZoom.bind(this,plotY))
                         .on('zoomend', this.debounceEndZoomEvent.bind(this))
                     );
-
-                this.xyzoom.push(
-                    d3.behavior.zoom()
-                        .x(this.xScale)
-                        .y(this.yScale[plotY])
-                        .scaleExtent([maxzoomout,Infinity])
-                        .on('zoom', this.previewZoom.bind(this,plotY))
-                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
-                );
             }
+            this.xyzoomCombined = d3.behavior.zoom()
+                .x(this.xScale)
+                .y(this.yScaleCombined)
+                .scaleExtent([maxzoomout,Infinity])
+                .on('zoom', this.previewZoom.bind(this))
+                .on('zoomend', this.debounceEndZoomEvent.bind(this));
         } else {
              this.yzoom.push(
                 d3.behavior.zoom()
@@ -3002,14 +3012,12 @@ class graphly extends EventEmitter {
                     .on('zoomend', this.debounceEndZoomEvent.bind(this))
                 );
 
-              this.xyzoom.push(
-                d3.behavior.zoom()
-                    .x(this.xScale)
-                    .y(this.yScale)
-                    .scaleExtent([maxzoomout,Infinity])
-                    .on('zoom', this.previewZoom.bind(this))
-                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
-            );
+            this.xyzoomCombined = d3.behavior.zoom()
+                .x(this.xScale)
+                .y(this.yScaleCombined)
+                .scaleExtent([maxzoomout,Infinity])
+                .on('zoom', this.previewZoom.bind(this))
+                .on('zoomend', this.debounceEndZoomEvent.bind(this));
         }
 
         this.y2zoom = [];
@@ -3050,14 +3058,11 @@ class graphly extends EventEmitter {
         this.el.selectAll('.zoomY2Box').each(function(d, i){
             d3.select(this).call(that.y2zoom[i]);
         });
-        this.el.selectAll('.zoomXYBox').each(function(d, i){
-            d3.select(this).call(that.xyzoom[i]);
-        });
-        
+
+        this.renderCanvas.call(this.xyzoomCombined.bind(this));
 
         this.createAxisLabels();
     }
-
 
     zoom_update() {
 
@@ -3077,7 +3082,6 @@ class graphly extends EventEmitter {
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.yzoom = [];
-        this.xyzoom = [];
         if(this.multiYAxis){
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
                 this.yzoom.push(
@@ -3086,14 +3090,6 @@ class graphly extends EventEmitter {
                         .on('zoom', this.previewZoom.bind(this,plotY))
                         .on('zoomend', this.debounceEndZoomEvent.bind(this))
                     );
-                 this.xyzoom.push(
-                    d3.behavior.zoom()
-                        .x(this.xScale)
-                        .y(this.yScale[plotY])
-                        .scaleExtent([maxzoomout,Infinity])
-                        .on('zoom', this.previewZoom.bind(this,plotY))
-                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
-                );
             }
         } else {
             this.yzoom.push(
@@ -3102,15 +3098,14 @@ class graphly extends EventEmitter {
                     .on('zoom', this.previewZoom.bind(this))
                     .on('zoomend', this.debounceEndZoomEvent.bind(this))
             );
-             this.xyzoom.push(
-                d3.behavior.zoom()
-                    .x(this.xScale)
-                    .y(this.yScale)
-                    .scaleExtent([maxzoomout,Infinity])
-                    .on('zoom', this.previewZoom.bind(this))
-                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
-            );
         }
+
+        this.xyzoomCombined = d3.behavior.zoom()
+                .x(this.xScale)
+                .y(this.yScaleCombined)
+                .scaleExtent([maxzoomout,Infinity])
+                .on('zoom', this.previewZoom.bind(this))
+                .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.y2zoom = [];
         if(this.multiYAxis){
@@ -3141,19 +3136,16 @@ class graphly extends EventEmitter {
         this.el.selectAll('.zoomY2Box').each(function(d, i){
             d3.select(this).call(that.y2zoom[i]);
         });
-        this.el.selectAll('.zoomXYBox').each(function(d, i){
-            d3.select(this).call(that.xyzoom[i]);
-        });
+
+        this.renderCanvas.call(this.xyzoomCombined.bind(this));
 
 
     }
 
     onZoom() {
-        if(this.connectedGraph){
-            this.connectedGraph.zoom_update();
-            this.connectedGraph.renderData();
+        if(this.debounceActive){
+            this.zoom_update();
         }
-        this.zoom_update();
         this.renderData();
     }
 
@@ -3274,23 +3266,6 @@ class graphly extends EventEmitter {
 
     }
 
-
-    triggerZoomPreview(xZoom, xyZoom, xAxis, xScale){
-
-        var xytrns = xyZoom.translate();
-        let xtrns = xZoom.translate();
-
-        if(xyZoom.scale() !== 1 || (xytrns[0]!==0 && xytrns[1]!==0) ){
-            this.xzoom.scale(xyZoom.scale()).translate(xyZoom.translate());
-        }else if(xZoom.scale() !== 1 || (xtrns[0]!==0 && xtrns[1]!==0) ){
-            this.xzoom.scale(xZoom.scale()).translate(xZoom.translate());
-        }
-
-        this.slaveGraph = true;
-        this.previewZoom();
-
-    }
-
     debounceEndZoomEvent(){
         this.debounceZoom.bind(this)();
     }
@@ -3300,41 +3275,31 @@ class graphly extends EventEmitter {
         this.topSvg.selectAll('.temporary').remove();
         this.tooltip.style('display', 'none');
 
-        if(this.connectedGraph && !this.slaveGraph){
-            this.connectedGraph.triggerZoomPreview(
-                this.xzoom, this.xyzoom,
-                this.xAxis, this.xScale
-            );
-        }else if(this.slaveGraph){
-            this.slaveGraph = false;
-        }
-
-
         this.xAxisSvg.call(this.xAxis);
         for (let i = 0; i < this.additionalXAxis.length; i++) {
             this.addXAxisSvg[i].call(this.additionalXAxis[i]) ;
         }
 
-        for (let yPos=0; yPos<this.renderSettings.yAxis.length; yPos++){
-            let currYAxis = this.renderSettings.yAxis[yPos];
+        for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
+            let currYAxis = this.renderSettings.yAxis[yy];
             if(!this.multiYAxis){
                 currYAxis = this.renderSettings.yAxis;
             }
             if(currYAxis.length > 0){
-                if(this.yAxisSvg[yPos]){
-                    this.yAxisSvg[yPos].call(this.yAxis[yPos]);
+                if(this.yAxisSvg[yy]){
+                    this.yAxisSvg[yy].call(this.yAxis[yy]);
                 }
             }
         }
 
-        for (let yPos=0; yPos<this.renderSettings.y2Axis.length; yPos++){
-            let currY2Axis = this.renderSettings.y2Axis[yPos];
+        for (let yy=0; yy<this.renderSettings.y2Axis.length; yy++){
+            let currY2Axis = this.renderSettings.y2Axis[yy];
             if(!this.multiYAxis){
                 currY2Axis = this.renderSettings.y2Axis;
             }
             if(currY2Axis.length > 0){
-                if(this.y2AxisSvg[yPos]){
-                    this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+                if(this.y2AxisSvg[yy]){
+                    this.y2AxisSvg[yy].call(this.y2Axis[yy]);
                 }
             }
         }
@@ -3359,17 +3324,27 @@ class graphly extends EventEmitter {
 
         let xScale = this.xzoom.scale();
         let yScale = this.yzoom[yPos].scale();
-        let xyScale = this.xyzoom[yPos].scale();
+        let xyScale = this.xyzoomCombined.scale();
 
         let y2Scale = this.y2zoom[yPos].scale();
         let transY2 = this.y2zoom[yPos].translate();
 
-        let transXY = this.xyzoom[yPos].translate();
+        let transXY = this.xyzoomCombined.translate();
         let transX = this.xzoom.translate();
         let transY = this.yzoom[yPos].translate();
 
+        let heighChunk = this.height/this.renderSettings.yAxis.length;
+        let modifier = Math.ceil(
+            d3.event.sourceEvent.offsetY / heighChunk
+        );
+
+        if(xyScale !== 1){
+            transXY[1] /= modifier;
+        }
+        let xyCombinedChanged = false;
 
         if( transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1 ){
+            xyCombinedChanged = true;
             for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
                 // Update all right y2 axis based on xy scale and trans
                 this.y2zoom[yy]
@@ -3378,14 +3353,11 @@ class graphly extends EventEmitter {
                 if(this.y2AxisSvg[yy]){
                     this.y2AxisSvg[yy].call(this.y2Axis[yy]);
                 }
-                // Update all left y axis that are not in current plot
-                if(yy !== yPos){
-                    this.yzoom[yy]
-                        .scale(xyScale)
-                        .translate(transXY);
-                    if(this.yAxisSvg[yy]){
-                        this.yAxisSvg[yy].call(this.yAxis[yy]);
-                    }
+                this.yzoom[yy]
+                    .scale(xyScale)
+                    .translate(transXY);
+                if(this.yAxisSvg[yy]){
+                    this.yAxisSvg[yy].call(this.yAxis[yy]);
                 }
             }
         }
@@ -3439,7 +3411,7 @@ class graphly extends EventEmitter {
                 }
 
                 if(imgYPos === yPos){
-                    if(yScale !== 1.0){
+                    if(!xyCombinedChanged && yScale !== 1.0){
                         prevImg.attr('transform', 'translate(' + 
                         [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
 
@@ -3447,7 +3419,7 @@ class graphly extends EventEmitter {
                         prevImg2.attr('transform', 'translate(' + 
                         [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
 
-                    } else if(transY[0]!==0.0 || transY[1] !==0.0){
+                    } else if(!xyCombinedChanged && (transY[0]!==0.0 || transY[1] !==0.0)){
                         prevImg.attr('transform', 'translate(' + 
                         [0.0, transY[1.0]] + ')scale(1)');
 
@@ -3803,7 +3775,18 @@ class graphly extends EventEmitter {
                     this.yAxisSvg[yPos].call(this.yAxis[yPos]);
                 }
             }
+
+            d3.select('#renderingContainer'+yPos)
+                .attr('fill', 'none')
+                .attr(
+                    'transform',
+                    'translate(0,' + heighChunk*yPos + ')'
+                )
+                .attr('height', heighChunk-this.separation);
         }
+
+        d3.select(this.nsId+'clipbox').select('rect')
+            .attr('height', heighChunk-this.separation);
 
 
         for (let i = 0; i < this.addYAxisSvg.length; i++) {
@@ -3860,10 +3843,6 @@ class graphly extends EventEmitter {
                 this.height + this.margin.top +
                 this.margin.bottom + this.subAxisMarginX
             );
-
-        /*this.el.select((this.nsId+'clipbox')).select('rect')
-            .attr('width', this.width)
-            .attr('height', this.height);*/
 
         this.el.select('#zoomXBox')
             .attr('width', this.width)
@@ -5508,16 +5487,20 @@ class graphly extends EventEmitter {
             }
 
         } else {
-            //let prevImg = this.el.select('#'+imageEl);
-            /*if(prevImg.empty()){
-                this.renderingContainer.append('svg:image')
-                    .attr('id', imageEl)
+            // We use the "first" (0) element as preview image for non
+            // debounce rendering
+            let renderingContainer = this.el.select('#renderingContainer'+0);
+            let prevImg = this.el.select('#'+imageEl+0);
+            if(prevImg.empty()){
+                renderingContainer.append('svg:image')
+                    .attr('id', imageEl+0)
+                    .attr('class', 'previewImage')
                     .attr('x', 0)
                     .attr('y', 0)
                     .attr('width',  this.width)
                     .attr('height', this.height)
                     .style('display', 'none');
-            }*/
+            }
         }
 
         
