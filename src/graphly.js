@@ -2671,6 +2671,40 @@ class graphly extends EventEmitter {
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
 
+        if(this.multiYAxis && this.renderSettings.yAxis.length>1){
+            // Add clip path so only points in the area are shown
+            let clippathseparation = this.xAxisSvg.append('defs').append('clipPath')
+                .attr("x", "0")
+                .attr("y", "0")
+                .attr('id', this.nsId.substring(1)+'clipseparation');
+
+            let heighChunk = this.height/this.renderSettings.yAxis.length;
+            for (let yy = 0; yy<this.renderSettings.yAxis.length; yy++) {
+                clippathseparation.append('rect')
+                    .attr('fill', 'none')
+                    .attr('y', 0)
+                    .attr('width', this.width)
+                    .attr('height', heighChunk-this.separation)
+                    .attr(
+                        'transform',
+                        'translate(0,-'+(this.height-(heighChunk*yy))+')'
+                    );
+            }
+            // Add rect to contain all x axis tick labels
+            clippathseparation.append('rect')
+                .attr('fill', 'none')
+                .attr('y', 0)
+                .attr('width', this.width+this.margin.right)
+                .attr('height', this.margin.bottom)
+                .attr(
+                    'transform',
+                    'translate(0,-1)'
+                );
+        }
+
+        this.xAxisSvg.style('clip-path','url('+this.nsId+'clipseparation)');
+
+
         this.addXAxisSvg = [];
         for (let i = 0; i < this.additionalXAxis.length; i++) {
             this.addXAxisSvg.push(
@@ -3787,6 +3821,31 @@ class graphly extends EventEmitter {
 
         d3.select(this.nsId+'clipbox').select('rect')
             .attr('height', heighChunk-this.separation);
+
+        if(this.multiYAxis && this.renderSettings.yAxis.length>1){
+
+            let heighChunk = this.height/this.renderSettings.yAxis.length;
+            let yy;
+            let clipnode = d3.select(this.nsId+'clipseparation').node();
+
+            for (yy = 0; yy<this.renderSettings.yAxis.length; yy++) {
+                d3.select(clipnode.childNodes[yy])
+                    .attr('width', this.width)
+                    .attr('height', heighChunk-this.separation)
+                    .attr(
+                        'transform',
+                        'translate(0,-'+(this.height-(heighChunk*yy))+')'
+                    );
+            }
+            // Update rect to contain all x axis tick labels
+            d3.select(clipnode.childNodes[yy])
+                .attr('width', this.width+this.margin.right)
+                .attr('height', this.margin.bottom)
+                .attr(
+                    'transform',
+                    'translate(0,-1)'
+                );
+        }
 
 
         for (let i = 0; i < this.addYAxisSvg.length; i++) {
