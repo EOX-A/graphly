@@ -335,6 +335,21 @@ class BatchDrawer {
         this.GL.clear(this.GL.COLOR_BUFFER_BIT);
     }
 
+    clearRect(x,y,width, height){
+        // turn on the scissor test.
+        this.GL.enable(this.GL.SCISSOR_TEST);
+
+        // set the scissor rectangle.
+        this.GL.scissor(x, y, width, height);
+
+        // clear.
+        this.GL.clearColor(0, 0, 0, 0);
+        this.GL.clear(this.GL.COLOR_BUFFER_BIT);
+
+        // turn off the scissor test so you can render like normal again.
+        this.GL.disable(this.GL.SCISSOR_TEST);
+    }
+
 
     draw() {
 

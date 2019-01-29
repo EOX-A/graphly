@@ -5545,7 +5545,7 @@ class graphly extends EventEmitter {
 
         // Check if we need to update extents which have been reset because
         // of filtering on parameter
-        /*for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
+        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
             let ca = this.renderSettings.colorAxis[i];
             if(ca !== null){
                 if(this.dataSettings.hasOwnProperty(ca)){
@@ -5585,7 +5585,7 @@ class graphly extends EventEmitter {
                     }
                 }
             }
-        }*/
+        }
 
 
         if(updateReferenceCanvas){
@@ -5727,6 +5727,20 @@ class graphly extends EventEmitter {
                 this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
                 this.endTiming('batchDrawerReference:draw');
+            }
+        }
+
+        // We clear the spaces between plots to have crisper edges where
+        // point don't go over
+        let rSL = this.renderSettings.yAxis.length;
+        if(this.multiYAxis && rSL>1){
+            let heighChunk = this.height/rSL;
+            for(let yy=0; yy<rSL;yy++){
+                let offset = yy*heighChunk;
+                this.batchDrawer.clearRect(
+                    0, offset,
+                    this.width, this.separation+1
+                );
             }
         }
 
