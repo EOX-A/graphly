@@ -4262,6 +4262,30 @@ class graphly extends EventEmitter {
                 }
             }
 
+            // If render settings uses colorscale axis get color from there
+            let rC;
+            if(cAxis !== null){
+                if(colCacheAvailable){
+                    rC = currColCache[j];
+                } else {
+                    rC = this.plotter.getColor(data[cAxis][j]);
+                    rC = [rC[0]/255, rC[1]/255, rC[2]/255, constAlpha];
+                    this.colorCache[cAxis].push(rC);
+                }
+                
+            } else {
+                if(singleColor){
+                    rC = colorObj;
+                } else {
+                    let val = data[identParam][j];
+                    let col = this.dataSettings[yAxis][val].color;
+                    rC = [
+                        col[0], col[1], col[2],
+                        this.dataSettings[yAxis][val].alpha
+                    ];
+                }
+            }
+
             y = yScale(valY);
             if(y<0 || y>blockSize){
                 continue;
@@ -4310,31 +4334,6 @@ class graphly extends EventEmitter {
                 }
             }
             x = this.xScale(valX);
-            
-            // If render settings uses colorscale axis get color from there
-            let rC;
-            if(cAxis !== null){
-                if(colCacheAvailable){
-                    rC = currColCache[j];
-                } else {
-                    rC = this.plotter.getColor(data[cAxis][j]);
-                    rC = [rC[0]/255, rC[1]/255, rC[2]/255, constAlpha];
-                    this.colorCache[cAxis].push(rC);
-                }
-                
-            } else {
-                if(singleColor){
-                    rC = colorObj;
-                } else {
-                    let val = data[identParam][j];
-                    let col = this.dataSettings[yAxis][val].color;
-                    rC = [
-                        col[0], col[1], col[2],
-                        this.dataSettings[yAxis][val].alpha
-                    ];
-                }
-            }
-            
 
             let c = u.genColor();
 
