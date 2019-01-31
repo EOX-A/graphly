@@ -1444,7 +1444,7 @@ class graphly extends EventEmitter {
             }
 
             renSett.colorAxis.splice(
-                prevItems+1, 0, null
+                prevItems, 0, null
             );
 
             that.recalculateBufferSize();
@@ -2045,50 +2045,45 @@ class graphly extends EventEmitter {
                     .attr(
                         'transform',
                         'translate(0,' + offsetY + ')'
+                    );
+
+                let rec = this.svg.append('rect')
+                    .attr('id', ('zoomYBox'+plotY))
+                    .attr('class', 'zoomYBox')
+                    .attr('width', this.margin.left)
+                    .attr('height', currHeight )
+                    .attr(
+                        'transform',
+                        'translate(' + -(this.margin.left+this.subAxisMarginY) + 
+                        ',' + offsetY + ')'
                     )
-                    //.attr('pointer-events', 'all');
-
-                if(this.renderSettings.yAxis[plotY].length>0){
-                    let rec = this.svg.append('rect')
-                        .attr('id', ('zoomYBox'+plotY))
-                        .attr('class', 'zoomYBox')
-                        .attr('width', this.margin.left)
-                        .attr('height', currHeight )
-                        .attr(
-                            'transform',
-                            'translate(' + -(this.margin.left+this.subAxisMarginY) + 
-                            ',' + offsetY + ')'
-                        )
-                        .style('visibility', 'hidden')
-                        .attr('pointer-events', 'all');
-
-                        if(this.debug){
-                            rec.attr('fill', 'red')
-                                .attr('opacity', 0.3)
-                                .style('visibility', 'visible');
-                        }
-                }
-
-
-                if(this.renderSettings.y2Axis[plotY].length>0){
-                    let rec = this.svg.append('rect')
-                        .attr('id', 'zoomY2Box'+plotY)
-                        .attr('class', 'zoomY2Box')
-                        .attr('width', this.margin.right + this.marginY2Offset)
-                        .attr('height', currHeight )
-                        .attr('transform', 'translate(' + (
-                            this.width
-                            ) + ',' + offsetY + ')'
-                        )
-                        .style('visibility', 'hidden')
-                        .attr('pointer-events', 'all');
+                    .style('visibility', 'hidden')
+                    .attr('pointer-events', 'all');
 
                     if(this.debug){
-                        rec.attr('fill', 'yellow')
+                        rec.attr('fill', 'red')
                             .attr('opacity', 0.3)
                             .style('visibility', 'visible');
                     }
+
+                rec = this.svg.append('rect')
+                    .attr('id', 'zoomY2Box'+plotY)
+                    .attr('class', 'zoomY2Box')
+                    .attr('width', this.margin.right + this.marginY2Offset)
+                    .attr('height', currHeight )
+                    .attr('transform', 'translate(' + (
+                        this.width
+                        ) + ',' + offsetY + ')'
+                    )
+                    .style('visibility', 'hidden')
+                    .attr('pointer-events', 'all');
+
+                if(this.debug){
+                    rec.attr('fill', 'yellow')
+                        .attr('opacity', 0.3)
+                        .style('visibility', 'visible');
                 }
+
             }
         } else {
             this.svg.append('rect')
@@ -3118,12 +3113,16 @@ class graphly extends EventEmitter {
         this.yzoom = [];
         if(this.multiYAxis){
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
-                this.yzoom.push(
-                    d3.behavior.zoom()
-                        .y(this.yScale[plotY])
-                        .on('zoom', this.previewZoom.bind(this,plotY))
-                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                if(this.renderSettings.yAxis[plotY].length>0){
+                    this.yzoom.push(
+                        d3.behavior.zoom()
+                            .y(this.yScale[plotY])
+                            .on('zoom', this.previewZoom.bind(this,plotY))
+                            .on('zoomend', this.debounceEndZoomEvent.bind(this))
                     );
+                } else {
+                    this.yzoom.push(false);
+                }
             }
         } else {
             this.yzoom.push(
@@ -3151,6 +3150,8 @@ class graphly extends EventEmitter {
                             .on('zoom', this.previewZoom.bind(this,plotY))
                             .on('zoomend', this.debounceEndZoomEvent.bind(this))
                         );
+                } else {
+                    this.y2zoom.push(false);
                 }
             }
         } else {
@@ -3165,10 +3166,14 @@ class graphly extends EventEmitter {
         var that = this;
         this.el.select('#zoomXBox').call(this.xzoom);
         this.el.selectAll('.zoomYBox').each(function(d, i){
-            d3.select(this).call(that.yzoom[i]);
+            if(that.yzoom[i]){
+                d3.select(this).call(that.yzoom[i]);
+            }
         });
         this.el.selectAll('.zoomY2Box').each(function(d, i){
-            d3.select(this).call(that.y2zoom[i]);
+            if(that.y2zoom[i]){
+                d3.select(this).call(that.y2zoom[i]);
+            }
         });
 
         this.renderCanvas.call(this.xyzoomCombined.bind(this));
@@ -3357,15 +3362,29 @@ class graphly extends EventEmitter {
         }
 
         let xScale = this.xzoom.scale();
-        let yScale = this.yzoom[yPos].scale();
         let xyScale = this.xyzoomCombined.scale();
-
-        let y2Scale = this.y2zoom[yPos].scale();
-        let transY2 = this.y2zoom[yPos].translate();
 
         let transXY = this.xyzoomCombined.translate();
         let transX = this.xzoom.translate();
-        let transY = this.yzoom[yPos].translate();
+
+        let y2Scale, transY2;
+        if(this.y2zoom[yPos]){
+            y2Scale = this.y2zoom[yPos].scale();
+            transY2 = this.y2zoom[yPos].translate();
+        } else {
+            y2Scale = 1;
+            transY2 = [0,0];
+        }
+
+        let yScale, transY;
+        if(this.yzoom[yPos]){
+            yScale = this.yzoom[yPos].scale();
+            transY = this.yzoom[yPos].translate();
+        } else {
+            yScale = 1;
+            transY = [0,0];
+        }
+
 
         let heighChunk = this.height/this.renderSettings.yAxis.length;
         let modifier = Math.ceil(
@@ -3381,17 +3400,21 @@ class graphly extends EventEmitter {
             xyCombinedChanged = true;
             for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
                 // Update all right y2 axis based on xy scale and trans
-                this.y2zoom[yy]
-                    .scale(xyScale)
-                    .translate(transXY);
-                if(this.y2AxisSvg[yy]){
-                    this.y2AxisSvg[yy].call(this.y2Axis[yy]);
+                if(this.y2zoom[yy]){
+                    this.y2zoom[yy]
+                        .scale(xyScale)
+                        .translate(transXY);
+                    if(this.y2AxisSvg[yy]){
+                        this.y2AxisSvg[yy].call(this.y2Axis[yy]);
+                    }
                 }
-                this.yzoom[yy]
-                    .scale(xyScale)
-                    .translate(transXY);
-                if(this.yAxisSvg[yy]){
-                    this.yAxisSvg[yy].call(this.yAxis[yy]);
+                if(this.yzoom[yy]){
+                    this.yzoom[yy]
+                        .scale(xyScale)
+                        .translate(transXY);
+                    if(this.yAxisSvg[yy]){
+                        this.yAxisSvg[yy].call(this.yAxis[yy]);
+                    }
                 }
             }
         }
