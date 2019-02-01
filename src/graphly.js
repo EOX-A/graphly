@@ -2043,10 +2043,44 @@ class graphly extends EventEmitter {
                 .attr('width', this.width)
                 .attr('height', currHeight);
 
+            // Clear possible remove buttons
+            d3.selectAll('.removePlot').remove();
+
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
-                
                 let offsetY = plotY*heighChunk;
+
+                // Add remove button to remove plot
+                this.el.append('div')
+                    .attr('class', 'cross removePlot')
+                    .attr('data-index', plotY)
+                    .style('left', '10px')
+                    .style('top', (offsetY+10)+'px')
+                    .on('click', ()=>{
+
+                        let renSett = this.renderSettings;
+                        let index = Number(d3.select(d3.event.target).attr('data-index'));
+                        let parsLeft = renSett.yAxis[index].length;
+                        let parsRight = renSett.y2Axis[index].length;
+                        let offsetLeft = renSett.yAxis.slice(0,index).flat().length;
+                        let offsetRight = renSett.y2Axis.slice(0,index).flat().length;
+
+                        this.renderSettings.yAxis.splice(index, 1);
+                        this.renderSettings.y2Axis.splice(index, 1);
+
+                        // Remove color settings from left side
+                        renSett.colorAxis.splice(
+                            offsetLeft, parsLeft 
+                        );
+
+                        // Remove color settings from right side
+                        offsetLeft = renSett.yAxis.flat().length;
+                        renSett.colorAxis.splice(
+                            (offsetLeft+offsetRight), parsRight 
+                        );
+
+                        this.loadData(this.data);
+                    });
 
                 this.svg.append('g')
                     .attr('id','renderingContainer'+plotY)
@@ -2400,8 +2434,11 @@ class graphly extends EventEmitter {
                 }
             }
         }
+        // Do some cleanup
+        this.el.selectAll('.parameterInfo').remove();
         
         this.initAxis();
+
 
         // Make sure all elements have correct size after possible changes 
         // because of difference in data and changes in size since initialization
