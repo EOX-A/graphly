@@ -2690,10 +2690,10 @@ class graphly extends EventEmitter {
                 .attr('fill', 'none')
                 .attr('y', 0)
                 .attr('width', this.width+this.margin.right)
-                .attr('height', this.margin.bottom)
+                .attr('height', this.margin.bottom+10)
                 .attr(
                     'transform',
-                    'translate(0,-1)'
+                    'translate(0,1)'
                 );
         }
 
@@ -3280,6 +3280,7 @@ class graphly extends EventEmitter {
                 x = text.attr("x"),
                 dx = 10,
                 tspan = text.text(null);
+            text.empty();
             while (word = words.pop()) {
                 line.push(word);
                 tspan.text(line.join(" "));
@@ -3300,7 +3301,7 @@ class graphly extends EventEmitter {
         this.el.selectAll('.x.axis>.tick text:first-of-type')
             .call(this.breakTickDown);
 
-        this.el.selectAll('.y.axis>.tick text:first-of-type')
+        this.el.selectAll('.y.axis>.tick text')
             .call(this.breakTickLeft);
 
     }
@@ -3346,9 +3347,6 @@ class graphly extends EventEmitter {
         for (let i = 0; i < this.additionalYAxis.length; i++) {
             this.addYAxisSvg[i].call(this.additionalYAxis[i]) ;
         }
-
-        this.addTimeInformation();
-        this.breakTicks();
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
@@ -3492,6 +3490,9 @@ class graphly extends EventEmitter {
             // debounce finished render also reference canvas to allow interaction
             this.renderData(false);
         }
+
+        this.addTimeInformation();
+        this.breakTicks();
     }
 
 
@@ -3863,10 +3864,10 @@ class graphly extends EventEmitter {
             // Update rect to contain all x axis tick labels
             d3.select(clipnode.childNodes[yy])
                 .attr('width', this.width+this.margin.right)
-                .attr('height', this.margin.bottom)
+                .attr('height', this.margin.bottom+10)
                 .attr(
                     'transform',
-                    'translate(0,-1)'
+                    'translate(0,1)'
                 );
         }
 
