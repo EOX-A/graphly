@@ -1451,6 +1451,14 @@ class graphly extends EventEmitter {
             that.initAxis();
             that.renderData();
             that.createAxisLabels();
+
+            // Recheck if parameter info should be shown now
+            that.el.selectAll('.parameterInfo').each(function(){
+                if(d3.select(this).node().childNodes.length > 0){
+                    d3.select(this).style('display', 'block');
+                }
+            });
+
             /**
             * Event is fired When modifying a parameter for any of the 
             * axis settings.
@@ -1489,6 +1497,14 @@ class graphly extends EventEmitter {
                 that.createAxisLabels();
                 that.emit('axisChange');
             }
+
+            // Recheck if parameter info should be hidden 
+            that.el.selectAll('.parameterInfo').each(function(){
+                if(d3.select(this).node().childNodes.length === 0){
+                    d3.select(this).style('display', 'none');
+                }
+            });
+
         },false);
 
 
@@ -1993,12 +2009,21 @@ class graphly extends EventEmitter {
                 .style('visibility', 'visible');
         }
 
-
-        
-
-
         // Add 1 or multiple rectangles as 'outline' for plots
         if(this.multiYAxis){
+
+            // Add button to create new plot
+            if(d3.select('#newPlotLink').empty()){
+                this.el.append('div')
+                    .attr('id', 'newPlotLink')
+                    .style('left', (this.width/2)+this.margin.left-50+'px')
+                    .text('+ Add plot')
+                    .on('click', ()=>{
+                        this.renderSettings.yAxis.push([]);
+                        this.renderSettings.y2Axis.push([]);
+                        this.loadData(this.data);
+                    });
+            }
 
             let multiLength = this.renderSettings.yAxis.length;
             let heighChunk = this.height/multiLength;
@@ -3776,10 +3801,12 @@ class graphly extends EventEmitter {
         //this.createColorScales();
         this.createAxisLabels();
 
-        // Hide parameter info for plots wihtout parameters
+        // Hide/show parameter info depending on if they have parameters
         this.el.selectAll('.parameterInfo').each(function(){
             if(d3.select(this).node().childNodes.length === 0){
-                d3.select(this).style('display', 'none')
+                d3.select(this).style('display', 'none');
+            } else {
+                d3.select(this).style('display', 'block')
             }
         });
 
