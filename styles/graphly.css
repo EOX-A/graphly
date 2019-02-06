@@ -6,6 +6,28 @@ svg {
 }
 
 
+#newPlotLink{
+    width: 100px;
+    position: absolute;
+    cursor: pointer;
+    margin-top: -20px;
+    text-decoration: underline;
+    color: #007bff;
+    font-weight: bold;
+    user-select: none;
+
+}
+
+.removePlot{
+    position: absolute;
+    font-size: 2em;
+    z-index: 500;
+    width: 15px!important;
+    height: 15px!important;
+    cursor: pointer;
+}
+
+
 #zoomXBox {
     cursor:ew-resize;
 }
