@@ -251,17 +251,26 @@ class graphly extends EventEmitter {
         this.logY = defaultFor(options.logY, false);
         this.logY2 = defaultFor(options.logY2, false);
 
-        if(this.multiYAxis){
-            this.yAxisLabel = [];
-            this.y2AxisLabel = [];
-            this.logY = [];
-            this.logY2 = [];
-            for (var i = 0; i < this.renderSettings.yAxis.length; i++) {
-                this.yAxisLabel.push(null);
-                this.y2AxisLabel.push(null);
-                this.logY.push(false);
-                this.logY2.push(false);
+        if(!this.multiYAxis){
+            // Manage configuration as it would be a 1 element multi plot
+            // this should bring together both functionalities
+            this.renderSettings.yAxis = [this.renderSettings.yAxis];
+            if(this.renderSettings.y2Axis){
+                this.renderSettings.y2Axis = [this.renderSettings.y2Axis];
+            } else {
+                this.renderSettings.y2Axis = [[]];
             }
+        }
+
+        this.yAxisLabel = [];
+        this.y2AxisLabel = [];
+        this.logY = [];
+        this.logY2 = [];
+        for (var i = 0; i < this.renderSettings.yAxis.length; i++) {
+            this.yAxisLabel.push(null);
+            this.y2AxisLabel.push(null);
+            this.logY.push(false);
+            this.logY2.push(false);
         }
 
         // Check if sub axis option set if not initialize with empty array
@@ -1021,9 +1030,6 @@ class graphly extends EventEmitter {
             for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
                 y2AxRen = this.renderSettings.y2Axis[plotY];
-                if(!this.multiYAxis){
-                    y2AxRen = this.renderSettings.y2Axis;
-                }
 
                 for (let parPos=0; parPos<y2AxRen.length; parPos++){
 
@@ -1053,10 +1059,6 @@ class graphly extends EventEmitter {
                 }
 
                 yAxRen = this.renderSettings.yAxis[plotY];
-                
-                if(!this.multiYAxis){
-                    yAxRen = this.renderSettings.yAxis;
-                }
 
                 for (let parPos=0; parPos<yAxRen.length; parPos++){
 
@@ -1588,11 +1590,6 @@ class graphly extends EventEmitter {
 
             let currYAxis = this.renderSettings.yAxis[yPos];
             let currY2Axis = defaultFor(this.renderSettings.y2Axis[yPos], []);
-            if(!this.multiYAxis){
-                currYAxis = this.renderSettings.yAxis;
-                currY2Axis = defaultFor(this.renderSettings.y2Axis, []);
-            }
-
 
              // Check for available parameter options
             let yChoices = [];
@@ -1855,12 +1852,8 @@ class graphly extends EventEmitter {
             dataRange = ds.extent;
         }
 
-        let innerHeight = this.height;
-        let yOffset = 0;
-        if(this.multiYAxis){
-            innerHeight = (this.height/this.renderSettings.yAxis.length)-this.separation;
-            yOffset = (innerHeight+this.separation) * yPos;
-        }
+        let innerHeight = (this.height/this.renderSettings.yAxis.length)-this.separation;
+        let yOffset = (innerHeight+this.separation) * yPos;
         let width = 100;
 
 
@@ -2009,9 +2002,9 @@ class graphly extends EventEmitter {
                 .style('visibility', 'visible');
         }
 
-        // Add 1 or multiple rectangles as 'outline' for plots
-        if(this.multiYAxis){
+        // Add rectangles as 'outline' for plots
 
+        if(this.multiYAxis){
             // Add button to create new plot
             if(d3.select('#newPlotLink').empty()){
                 this.el.append('div')
@@ -2025,31 +2018,34 @@ class graphly extends EventEmitter {
                     });
             }
 
-            let multiLength = this.renderSettings.yAxis.length;
-            let heighChunk = this.height/multiLength;
-            let currHeight = heighChunk - this.separation;
-
-            // Add clip path so only points in the area are shown
-            let clippath = this.svg.append('defs').append('clipPath')
-                .attr('id', (this.nsId.substring(1)+'clipbox'))
-                .attr(
-                    'transform',
-                    'translate(0,0)'
-                );
-
-            clippath.append('rect')
-                .attr('fill', 'none')
-                .attr('y', 0)
-                .attr('width', this.width)
-                .attr('height', currHeight);
-
             // Clear possible remove buttons
             d3.selectAll('.removePlot').remove();
+        }
 
-            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+        let multiLength = this.renderSettings.yAxis.length;
+        let heighChunk = this.height/multiLength;
+        let currHeight = heighChunk - this.separation;
 
-                let offsetY = plotY*heighChunk;
+        // Add clip path so only points in the area are shown
+        let clippath = this.svg.append('defs').append('clipPath')
+            .attr('id', (this.nsId.substring(1)+'clipbox'))
+            .attr(
+                'transform',
+                'translate(0,0)'
+            );
 
+        clippath.append('rect')
+            .attr('fill', 'none')
+            .attr('y', 0)
+            .attr('width', this.width)
+            .attr('height', currHeight);
+
+
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+
+            let offsetY = plotY*heighChunk;
+
+            if(this.multiYAxis){
                 // Add remove button to remove plot
                 this.el.append('div')
                     .attr('class', 'cross removePlot')
@@ -2081,91 +2077,69 @@ class graphly extends EventEmitter {
 
                         this.loadData(this.data);
                     });
-
-                this.svg.append('g')
-                    .attr('id','renderingContainer'+plotY)
-                    .attr('fill', 'none')
-                    .attr(
-                        'transform',
-                        'translate(0,' + heighChunk*plotY + ')'
-                    )
-                    .style('clip-path','url('+this.nsId+'clipbox)');
-
-
-                this.svg.append('rect')
-                    .attr('id', 'zoomXYBox'+plotY)
-                    .attr('class', 'rectangleOutline zoomXYBox')
-                    .attr('fill', 'none')
-                    .attr('stroke', '#333')
-                    .attr('stroke-width', 1)
-                    .attr('shape-rendering', 'crispEdges')
-                    .attr('width', this.width)
-                    .attr('height', currHeight)
-                    .attr(
-                        'transform',
-                        'translate(0,' + offsetY + ')'
-                    );
-
-                let rec = this.svg.append('rect')
-                    .attr('id', ('zoomYBox'+plotY))
-                    .attr('class', 'zoomYBox')
-                    .attr('width', this.margin.left)
-                    .attr('height', currHeight )
-                    .attr(
-                        'transform',
-                        'translate(' + -(this.margin.left+this.subAxisMarginY) + 
-                        ',' + offsetY + ')'
-                    )
-                    .style('visibility', 'hidden')
-                    .attr('pointer-events', 'all');
-
-                    if(this.debug){
-                        rec.attr('fill', 'red')
-                            .attr('opacity', 0.3)
-                            .style('visibility', 'visible');
-                    }
-
-                rec = this.svg.append('rect')
-                    .attr('id', 'zoomY2Box'+plotY)
-                    .attr('class', 'zoomY2Box')
-                    .attr('width', this.margin.right + this.marginY2Offset)
-                    .attr('height', currHeight )
-                    .attr('transform', 'translate(' + (
-                        this.width
-                        ) + ',' + offsetY + ')'
-                    )
-                    .style('visibility', 'hidden')
-                    .attr('pointer-events', 'all');
-
-                if(this.debug){
-                    rec.attr('fill', 'yellow')
-                        .attr('opacity', 0.3)
-                        .style('visibility', 'visible');
-                }
-
             }
-        } else {
+
+            this.svg.append('g')
+                .attr('id','renderingContainer'+plotY)
+                .attr('fill', 'none')
+                .attr(
+                    'transform',
+                    'translate(0,' + heighChunk*plotY + ')'
+                )
+                .style('clip-path','url('+this.nsId+'clipbox)');
+
+
             this.svg.append('rect')
-                .attr('class', 'rectangleOutline')
+                .attr('id', 'zoomXYBox'+plotY)
+                .attr('class', 'rectangleOutline zoomXYBox')
                 .attr('fill', 'none')
                 .attr('stroke', '#333')
                 .attr('stroke-width', 1)
                 .attr('shape-rendering', 'crispEdges')
                 .attr('width', this.width)
-                .attr('height', this.height);
+                .attr('height', currHeight)
+                .attr(
+                    'transform',
+                    'translate(0,' + offsetY + ')'
+                );
 
-            this.svg.append('rect')
-                .attr('id', 'zoomYBox')
+            let rec = this.svg.append('rect')
+                .attr('id', ('zoomYBox'+plotY))
+                .attr('class', 'zoomYBox')
                 .attr('width', this.margin.left)
-                .attr('height', this.height )
+                .attr('height', currHeight )
                 .attr(
                     'transform',
                     'translate(' + -(this.margin.left+this.subAxisMarginY) + 
-                    ',' + 0 + ')'
+                    ',' + offsetY + ')'
                 )
-                .attr('fill', 'none')
                 .style('visibility', 'hidden')
                 .attr('pointer-events', 'all');
+
+                if(this.debug){
+                    rec.attr('fill', 'red')
+                        .attr('opacity', 0.3)
+                        .style('visibility', 'visible');
+                }
+
+            rec = this.svg.append('rect')
+                .attr('id', 'zoomY2Box'+plotY)
+                .attr('class', 'zoomY2Box')
+                .attr('width', this.margin.right + this.marginY2Offset)
+                .attr('height', currHeight )
+                .attr('transform', 'translate(' + (
+                    this.width
+                    ) + ',' + offsetY + ')'
+                )
+                .style('visibility', 'hidden')
+                .attr('pointer-events', 'all');
+
+            if(this.debug){
+                rec.attr('fill', 'yellow')
+                    .attr('opacity', 0.3)
+                    .style('visibility', 'visible');
+            }
+
         }
 
         this.createColorScales();
@@ -2728,7 +2702,7 @@ class graphly extends EventEmitter {
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
 
-        if(this.multiYAxis && this.renderSettings.yAxis.length>1){
+        if(this.renderSettings.yAxis.length>1){
             // Add clip path so only points in the area are shown
             let clippathseparation = this.xAxisSvg.append('defs').append('clipPath')
                 .attr("x", "0")
@@ -2803,11 +2777,6 @@ class graphly extends EventEmitter {
 
             let currYAxis = this.renderSettings.yAxis[yPos];
             let currY2Axis = defaultFor(this.renderSettings.y2Axis[yPos], []);
-            if(!this.multiYAxis){
-                currYAxis = this.renderSettings.yAxis;
-                currY2Axis = defaultFor(this.renderSettings.y2Axis, []);
-            }
-        
 
             let yExtent, y2Extent;
             let ySelection = [];
@@ -3079,53 +3048,29 @@ class graphly extends EventEmitter {
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.yzoom = [];
-        
-        if(this.multiYAxis){
-            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
-                this.yzoom.push(
-                    d3.behavior.zoom()
-                        .y(this.yScale[plotY])
-                        .on('zoom', this.previewZoom.bind(this,plotY))
-                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
-                    );
-            }
-            this.xyzoomCombined = d3.behavior.zoom()
-                .x(this.xScale)
-                .y(this.yScaleCombined)
-                .scaleExtent([maxzoomout,Infinity])
-                .on('zoom', this.previewZoom.bind(this))
-                .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        } else {
-             this.yzoom.push(
+
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+            this.yzoom.push(
                 d3.behavior.zoom()
-                    .y(this.yScale)
-                    .on('zoom', this.previewZoom.bind(this))
+                    .y(this.yScale[plotY])
+                    .on('zoom', this.previewZoom.bind(this,plotY))
                     .on('zoomend', this.debounceEndZoomEvent.bind(this))
                 );
-
-            this.xyzoomCombined = d3.behavior.zoom()
-                .x(this.xScale)
-                .y(this.yScaleCombined)
-                .scaleExtent([maxzoomout,Infinity])
-                .on('zoom', this.previewZoom.bind(this))
-                .on('zoomend', this.debounceEndZoomEvent.bind(this));
         }
+        this.xyzoomCombined = d3.behavior.zoom()
+            .x(this.xScale)
+            .y(this.yScaleCombined)
+            .scaleExtent([maxzoomout,Infinity])
+            .on('zoom', this.previewZoom.bind(this))
+            .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.y2zoom = [];
-        if(this.multiYAxis){
-            for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
-                this.y2zoom.push(
-                    d3.behavior.zoom()
-                        .y(this.y2Scale[plotY])
-                        .on('zoom', this.previewZoom.bind(this,plotY))
-                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
-                    );
-            }
-        } else {
-             this.y2zoom.push(
+
+        for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+            this.y2zoom.push(
                 d3.behavior.zoom()
-                    .y(this.yScale)
-                    .on('zoom', this.previewZoom.bind(this))
+                    .y(this.y2Scale[plotY])
+                    .on('zoom', this.previewZoom.bind(this,plotY))
                     .on('zoomend', this.debounceEndZoomEvent.bind(this))
                 );
         }
@@ -3173,26 +3118,18 @@ class graphly extends EventEmitter {
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.yzoom = [];
-        if(this.multiYAxis){
-            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
-                if(this.renderSettings.yAxis[plotY].length>0){
-                    this.yzoom.push(
-                        d3.behavior.zoom()
-                            .y(this.yScale[plotY])
-                            .on('zoom', this.previewZoom.bind(this,plotY))
-                            .on('zoomend', this.debounceEndZoomEvent.bind(this))
-                    );
-                } else {
-                    this.yzoom.push(false);
-                }
+
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+            if(this.renderSettings.yAxis[plotY].length>0){
+                this.yzoom.push(
+                    d3.behavior.zoom()
+                        .y(this.yScale[plotY])
+                        .on('zoom', this.previewZoom.bind(this,plotY))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
+            } else {
+                this.yzoom.push(false);
             }
-        } else {
-            this.yzoom.push(
-                d3.behavior.zoom()
-                    .y(this.yScale)
-                    .on('zoom', this.previewZoom.bind(this))
-                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
-            );
         }
 
         this.xyzoomCombined = d3.behavior.zoom()
@@ -3203,26 +3140,18 @@ class graphly extends EventEmitter {
                 .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.y2zoom = [];
-        if(this.multiYAxis){
-            for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
-                if(this.renderSettings.y2Axis[plotY].length>0){
-                    this.y2zoom.push(
-                        d3.behavior.zoom()
-                            .y(this.y2Scale[plotY])
-                            .on('zoom', this.previewZoom.bind(this,plotY))
-                            .on('zoomend', this.debounceEndZoomEvent.bind(this))
-                        );
-                } else {
-                    this.y2zoom.push(false);
-                }
+
+        for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+            if(this.renderSettings.y2Axis[plotY].length>0){
+                this.y2zoom.push(
+                    d3.behavior.zoom()
+                        .y(this.y2Scale[plotY])
+                        .on('zoom', this.previewZoom.bind(this,plotY))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                    );
+            } else {
+                this.y2zoom.push(false);
             }
-        } else {
-             this.y2zoom.push(
-                d3.behavior.zoom()
-                    .y(this.y2Scale)
-                    .on('zoom', this.previewZoom.bind(this))
-                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
-                );
         }
 
         var that = this;
@@ -3384,9 +3313,6 @@ class graphly extends EventEmitter {
 
         for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
             let currYAxis = this.renderSettings.yAxis[yy];
-            if(!this.multiYAxis){
-                currYAxis = this.renderSettings.yAxis;
-            }
             if(currYAxis.length > 0){
                 if(this.yAxisSvg[yy]){
                     this.yAxisSvg[yy].call(this.yAxis[yy]);
@@ -3396,9 +3322,6 @@ class graphly extends EventEmitter {
 
         for (let yy=0; yy<this.renderSettings.y2Axis.length; yy++){
             let currY2Axis = this.renderSettings.y2Axis[yy];
-            if(!this.multiYAxis){
-                currY2Axis = this.renderSettings.y2Axis;
-            }
             if(currY2Axis.length > 0){
                 if(this.y2AxisSvg[yy]){
                     this.y2AxisSvg[yy].call(this.y2Axis[yy]);
@@ -3910,7 +3833,7 @@ class graphly extends EventEmitter {
         d3.select(this.nsId+'clipbox').select('rect')
             .attr('height', heighChunk-this.separation);
 
-        if(this.multiYAxis && this.renderSettings.yAxis.length>1){
+        if(this.renderSettings.yAxis.length>1){
 
             let heighChunk = this.height/this.renderSettings.yAxis.length;
             let yy;
@@ -4298,14 +4221,11 @@ class graphly extends EventEmitter {
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
         dotsize *= this.resFactor;
 
-        let axisOffset = 0;
         let blockSize = (
             this.height/this.renderSettings.yAxis.length - this.separation
         ) * this.resFactor;
 
-        if(this.multiYAxis){
-            axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
-        }
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
 
         let x, y, valX, valY;
 
@@ -4518,12 +4438,8 @@ class graphly extends EventEmitter {
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
         dotsize *= this.resFactor;
 
-        let axisOffset = 0;
         let blockSize = this.height/this.renderSettings.yAxis.length - this.separation;
-
-        if(this.multiYAxis){
-            axisOffset = plotY * (blockSize+this.separation);
-        }
+        let axisOffset = plotY * (blockSize+this.separation);
 
         for (let j=0;j<lp; j++) {
 
@@ -4708,37 +4624,35 @@ class graphly extends EventEmitter {
 
     createInfoBoxes(){
 
-        if(this.multiYAxis){
 
-            let currHeight = this.height / this.yScale.length;
+        let currHeight = this.height / this.yScale.length;
 
-            for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+        for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
-                if(this.el.select('#parameterInfo'+yPos).empty()){
-                    this.el.append('div')
-                        .attr('id', 'parameterInfo'+yPos)
-                        .attr('class', 'parameterInfo')
-                        .style('top', ((currHeight)*yPos + 20) +'px')
-                        .style(this.labelAllignment, ()=>{
-                            if(this.labelAllignment === 'left'){
-                                return this.margin.left+20+'px';
-                            } else {
-                                return this.margin.right+this.marginCSOffset+50+'px';
-                            }
-                        })
-                        .style('visibility', 'hidden');
-                } else {
-                    this.el.select('#parameterInfo'+yPos).selectAll('*').remove();
-                    this.el.select('#parameterInfo'+yPos)
-                        .style('top', ((currHeight)*yPos +20) +'px')
-                        .style(this.labelAllignment, ()=>{
-                            if(this.labelAllignment === 'left'){
-                                return this.margin.left+20+'px';
-                            } else {
-                                return this.margin.right+this.marginCSOffset+50+'px';
-                            }
-                        });
-                }
+            if(this.el.select('#parameterInfo'+yPos).empty()){
+                this.el.append('div')
+                    .attr('id', 'parameterInfo'+yPos)
+                    .attr('class', 'parameterInfo')
+                    .style('top', ((currHeight)*yPos + 20) +'px')
+                    .style(this.labelAllignment, ()=>{
+                        if(this.labelAllignment === 'left'){
+                            return this.margin.left+20+'px';
+                        } else {
+                            return this.margin.right+this.marginCSOffset+50+'px';
+                        }
+                    })
+                    .style('visibility', 'hidden');
+            } else {
+                this.el.select('#parameterInfo'+yPos).selectAll('*').remove();
+                this.el.select('#parameterInfo'+yPos)
+                    .style('top', ((currHeight)*yPos +20) +'px')
+                    .style(this.labelAllignment, ()=>{
+                        if(this.labelAllignment === 'left'){
+                            return this.margin.left+20+'px';
+                        } else {
+                            return this.margin.right+this.marginCSOffset+50+'px';
+                        }
+                    });
             }
         }
 
@@ -4775,33 +4689,31 @@ class graphly extends EventEmitter {
             .style('bottom', (this.margin.bottom+this.subAxisMarginX)+'px')
             .style('left', (this.width/2)+'px');
 
-        if(this.multiYAxis){
-            let currHeight = this.height / this.yScale.length;
-            for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+        let currHeight = this.height / this.yScale.length;
+        for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
-                this.el.select('#parameterInfo'+yPos)
-                    .style('top', ((currHeight)*yPos + 20) +'px')
-                    .style(this.labelAllignment, ()=>{
-                        if(this.labelAllignment === 'left'){
-                            return this.margin.left+20+'px';
-                        } else {
-                            return this.margin.right+this.marginCSOffset+50+'px';
-                        }
-                    });
+            this.el.select('#parameterInfo'+yPos)
+                .style('top', ((currHeight)*yPos + 20) +'px')
+                .style(this.labelAllignment, ()=>{
+                    if(this.labelAllignment === 'left'){
+                        return this.margin.left+20+'px';
+                    } else {
+                        return this.margin.right+this.marginCSOffset+50+'px';
+                    }
+                });
 
-                d3.select('#svgInfoContainer'+yPos)
-                    .attr('transform', ()=>{
-                        let xOffset = (
-                            this.width - this.margin.right - 260
-                        );
-                        if(this.labelAllignment === 'left'){
-                            xOffset = '20';
-                        }
-                        return 'translate(' + 
-                            xOffset + ',' +
-                            ((currHeight)*yPos + 10) + ')';
-                    });
-            }
+            d3.select('#svgInfoContainer'+yPos)
+                .attr('transform', ()=>{
+                    let xOffset = (
+                        this.width - this.margin.right - 260
+                    );
+                    if(this.labelAllignment === 'left'){
+                        xOffset = '20';
+                    }
+                    return 'translate(' + 
+                        xOffset + ',' +
+                        ((currHeight)*yPos + 10) + ')';
+                });
         }
 
         this.el.select('#parameterSettings')
@@ -4879,68 +4791,63 @@ class graphly extends EventEmitter {
 
     createParameterInfo(){
 
-        if(this.multiYAxis){
+        let currHeight = this.height/this.renderSettings.yAxis.length;
 
-            let currHeight = this.height/this.renderSettings.yAxis.length;
+        for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
-            for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+            d3.select('#svgInfoContainer'+yPos).remove();
+            // Add rendering representation to svg
+            let infoGroup = this.svg.append('g')
+                .attr('id', 'svgInfoContainer'+yPos)
+                .attr('class', 'svgInfoContainer')
+                .attr('transform', ()=>{
+                    let xOffset = (this.width - this.margin.right - 260);
+                    if(this.labelAllignment === 'left'){
+                        xOffset = '20';
+                    }
+                    return 'translate(' + 
+                        xOffset + ',' +
+                        ((currHeight)*yPos + 10) + ')';
+                })
+                .style('visibility', 'hidden');
 
-                d3.select('#svgInfoContainer'+yPos).remove();
-                // Add rendering representation to svg
-                let infoGroup = this.svg.append('g')
-                    .attr('id', 'svgInfoContainer'+yPos)
-                    .attr('class', 'svgInfoContainer')
-                    .attr('transform', ()=>{
-                        let xOffset = (this.width - this.margin.right - 260);
-                        if(this.labelAllignment === 'left'){
-                            xOffset = '20';
-                        }
-                        return 'translate(' + 
-                            xOffset + ',' +
-                            ((currHeight)*yPos + 10) + ')';
-                    })
-                    .style('visibility', 'hidden');
+            infoGroup.append('rect')
+                .attr('id', 'svgInfoRect')
+                .attr('width', 280)
+                .attr('height', 100)
+                .attr('fill', 'white')
+                .attr('stroke', 'black');
 
-                infoGroup.append('rect')
-                    .attr('id', 'svgInfoRect')
-                    .attr('width', 280)
-                    .attr('height', 100)
-                    .attr('fill', 'white')
-                    .attr('stroke', 'black');
-
-                let parInfEl = this.el.select('#parameterInfo'+yPos);
-                if(!parInfEl.empty()){
-                    parInfEl.selectAll('*').remove();
-                }
-
-                let yAxRen = this.renderSettings.yAxis[yPos];
-                for (let parPos=0; parPos<yAxRen.length; parPos++){
-
-                    let idY = yAxRen[parPos];
-                    // Add item to labels if there is no coloraxis is defined
-                    this.addParameterLabel(idY, infoGroup, parInfEl, yPos, 'left');
-                }
-
-                let y2AxRen = this.renderSettings.y2Axis[yPos];
-                for (let parPos=0; parPos<y2AxRen.length; parPos++){
-
-                    let idY2 = y2AxRen[parPos];
-                    // Add item to labels if there is no coloraxis is defined
-                    this.addParameterLabel(idY2, infoGroup, parInfEl, yPos, 'right');
-                }
-
-                // Change height of settings panel to be just under labels
-                /*let dim = parInfEl.node().getBoundingClientRect();
-                this.el.select('#parameterSettings'+yPos)
-                        .style('top', (dim.height+this.margin.top+9)+'px');
-                */
-
-                if(this.displayParameterLabel && !parInfEl.selectAll('*').empty()){
-                    parInfEl.style('visibility', 'visible');
-                }
+            let parInfEl = this.el.select('#parameterInfo'+yPos);
+            if(!parInfEl.empty()){
+                parInfEl.selectAll('*').remove();
             }
 
+            let yAxRen = this.renderSettings.yAxis[yPos];
+            for (let parPos=0; parPos<yAxRen.length; parPos++){
 
+                let idY = yAxRen[parPos];
+                // Add item to labels if there is no coloraxis is defined
+                this.addParameterLabel(idY, infoGroup, parInfEl, yPos, 'left');
+            }
+
+            let y2AxRen = this.renderSettings.y2Axis[yPos];
+            for (let parPos=0; parPos<y2AxRen.length; parPos++){
+
+                let idY2 = y2AxRen[parPos];
+                // Add item to labels if there is no coloraxis is defined
+                this.addParameterLabel(idY2, infoGroup, parInfEl, yPos, 'right');
+            }
+
+            // Change height of settings panel to be just under labels
+            /*let dim = parInfEl.node().getBoundingClientRect();
+            this.el.select('#parameterSettings'+yPos)
+                    .style('top', (dim.height+this.margin.top+9)+'px');
+            */
+
+            if(this.displayParameterLabel && !parInfEl.selectAll('*').empty()){
+                parInfEl.style('visibility', 'visible');
+            }
         }
     }
 
@@ -5747,9 +5654,7 @@ class graphly extends EventEmitter {
         for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
             y2AxRen = this.renderSettings.y2Axis[plotY];
-            if(!this.multiYAxis){
-                y2AxRen = this.renderSettings.y2Axis;
-            }
+
             // If y2 axis is defined start rendering it as we need to render
             // multiple times to have individial images for manipulation in
             // debounce option
@@ -5801,10 +5706,8 @@ class graphly extends EventEmitter {
             if(plotY>0){
                 prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
             }
+
             yAxRen = this.renderSettings.yAxis[plotY];
-            if(!this.multiYAxis){
-                yAxRen = this.renderSettings.yAxis;
-            }
             for (let parPos=0; parPos<yAxRen.length; parPos++){
 
                 let idY = yAxRen[parPos];
@@ -5838,9 +5741,6 @@ class graphly extends EventEmitter {
             for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
                 y2AxRen = this.renderSettings.y2Axis[plotY];
-                if(!this.multiYAxis){
-                    y2AxRen = this.renderSettings.y2Axis;
-                }
                 // If y2 axis is defined start rendering it as we need to render
                 // multiple times to have individial images for manipulation in
                 // debounce option
@@ -5879,7 +5779,7 @@ class graphly extends EventEmitter {
         // We clear the spaces between plots to have crisper edges where
         // point don't go over
         let rSL = this.renderSettings.yAxis.length;
-        if(this.multiYAxis && rSL>1){
+        if(rSL>1){
             let heighChunk = this.height/rSL;
             for(let yy=0; yy<rSL;yy++){
                 let offset = yy*heighChunk;
