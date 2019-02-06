@@ -525,6 +525,16 @@ class graphly extends EventEmitter {
 
             this.renderCanvas.on('mousemove', function() {
 
+                let heighChunk = self.height/self.renderSettings.yAxis.length;
+                let modifier = Math.floor(
+                    d3.event.offsetY / heighChunk
+                );
+                // Adapt zoom center depending on which plot he mouse is positioned
+                self.xyzoomCombined.center([
+                    d3.event.offsetX,
+                    d3.event.offsetY-(heighChunk*modifier)
+                ]);
+
                 // If mouse is being pressed don't pick anything
                 if(self.mouseDown){
                     return;
@@ -3132,12 +3142,19 @@ class graphly extends EventEmitter {
             }
         }
 
+        // Preserve previous center if it was already set
+        let prevCenter = this.xyzoomCombined.center();
+
         this.xyzoomCombined = d3.behavior.zoom()
                 .x(this.xScale)
                 .y(this.yScaleCombined)
                 .scaleExtent([maxzoomout,Infinity])
                 .on('zoom', this.previewZoom.bind(this))
                 .on('zoomend', this.debounceEndZoomEvent.bind(this));
+
+        if(prevCenter){
+            this.xyzoomCombined.center(prevCenter);
+        }
 
         this.y2zoom = [];
 
@@ -3344,6 +3361,10 @@ class graphly extends EventEmitter {
             yPos = 0;
         }
 
+        if (typeof this.pXYS === 'undefined'){
+            this.pXYS = 1;
+        }
+
         let xScale = this.xzoom.scale();
         let xyScale = this.xyzoomCombined.scale();
 
@@ -3369,14 +3390,21 @@ class graphly extends EventEmitter {
         }
 
 
-        let heighChunk = this.height/this.renderSettings.yAxis.length;
-        let modifier = Math.ceil(
+        /*let heighChunk = this.height/this.renderSettings.yAxis.length;
+        let modifier = Math.floor(
             d3.event.sourceEvent.offsetY / heighChunk
         );
 
-        if(xyScale !== 1){
-            transXY[1] /= modifier;
-        }
+        // Recenter zoom point depending on which plot mouse is as we 
+        // only have one big zoom area
+        if(this.debounceActive || (this.pXYS !== xyScale)){
+            this.xyzoomCombined.center([
+                d3.event.sourceEvent.offsetX,
+                d3.event.sourceEvent.offsetY-(heighChunk*modifier)
+            ]);
+        }*/
+        this.pXYS = xyScale;
+
         let xyCombinedChanged = false;
 
         if( transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1 ){
