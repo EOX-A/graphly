@@ -1113,7 +1113,13 @@ class graphly extends EventEmitter {
 
 
         if(this.displayParameterLabel){
-            this.svg.selectAll('.svgInfoContainer').style('visibility', 'visible');
+            this.el.selectAll('.svgInfoContainer').each(function(){
+                if(d3.select(this).selectAll('text').empty()){
+                    d3.select(this).style('visibility', 'hidden');
+                } else {
+                    d3.select(this).style('visibility', 'visible');
+                }
+            });
         }
 
         // Set interactive blue to black for labels
@@ -4706,10 +4712,6 @@ class graphly extends EventEmitter {
             })
             .style('display', 'none');
 
-        /*if(this.el.select('#parameterInfo').selectAll('*').empty()){
-            this.el.select('#parameterInfo').style('visibility', 'hidden');
-            this.el.select('#svgInfoContainer').style('visibility', 'hidden');
-        }*/
     }
 
     updateInfoBoxes(){
