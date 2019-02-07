@@ -546,10 +546,12 @@ class graphly extends EventEmitter {
                     d3.event.offsetY / heighChunk
                 );
                 // Adapt zoom center depending on which plot he mouse is positioned
-                self.xyzoomCombined.center([
-                    d3.event.offsetX,
-                    d3.event.offsetY-(heighChunk*modifier)
-                ]);
+                if(typeof self.xyzoomCombined !== 'undefined'){
+                    self.xyzoomCombined.center([
+                        d3.event.offsetX,
+                        d3.event.offsetY-(heighChunk*modifier)
+                    ]);
+                }
 
                 // If mouse is being pressed don't pick anything
                 if(self.mouseDown){
@@ -2173,9 +2175,102 @@ class graphly extends EventEmitter {
                         renSett.colorAxis.splice(
                             (offsetLeft+offsetRight), parsRight 
                         );
-                        this.initAxis();
-                        this.resize();
+                        this.loadData(this.data);
                     });
+
+                // Add move up arrow 
+                if(plotY>0){
+                    this.el.append('div')
+                        .attr('class', 'arrowChangePlot')
+                        .html('&#9650;')
+                        .attr('data-index', plotY)
+                        .style('left', '10px')
+                        .style('top', (offsetY+20)+'px')
+                        .on('click', ()=>{
+
+                            let index = Number(d3.select(d3.event.target).attr('data-index'));
+                            let rS = this.renderSettings;
+
+                            let parsLeft = rS.yAxis[index].length;
+                            let parsRight = rS.y2Axis[index].length;
+                            let offsetLeft = rS.yAxis.slice(0,index).flat().length;
+                            let offsetRight = rS.y2Axis.slice(0,index).flat().length;
+
+                            let curryAxis = rS.yAxis[index];
+                            let curry2Axis = rS.y2Axis[index];
+                            let curraddYTicks = rS.additionalYTicks[index];
+
+                            rS.yAxis[index] = rS.yAxis[index-1];
+                            rS.y2Axis[index] = rS.y2Axis[index-1];
+                            rS.additionalYTicks[index] = rS.additionalYTicks[index-1];
+
+                            rS.yAxis[index-1] = curryAxis;
+                            rS.y2Axis[index-1] = curry2Axis;
+                            rS.additionalYTicks[index-1] = curraddYTicks;
+
+                            // Remove color settings from left side
+                            /*rS.colorAxis.splice(
+                                offsetLeft, parsLeft 
+                            );*/
+
+                            // Remove color settings from right side
+                            /*offsetLeft = rS.yAxis.flat().length;
+                            rS.colorAxis.splice(
+                                (offsetLeft+offsetRight), parsRight 
+                            );*/
+
+                            this.loadData(this.data);
+                        });
+                }
+
+                // Add move up arrow 
+                if(plotY<this.renderSettings.yAxis.length-1){
+                    let addoff = 45;
+                    if(plotY === 0){
+                        addoff = 20;
+                    }
+                    this.el.append('div')
+                        .attr('class', 'arrowChangePlot')
+                        .html('&#9660;')
+                        .attr('data-index', plotY)
+                        .style('left', '10px')
+                        .style('top', (offsetY+addoff)+'px')
+                        .on('click', ()=>{
+
+                            let index = Number(d3.select(d3.event.target).attr('data-index'));
+                            let rS = this.renderSettings;
+
+                            let parsLeft = rS.yAxis[index].length;
+                            let parsRight = rS.y2Axis[index].length;
+                            let offsetLeft = rS.yAxis.slice(0,index).flat().length;
+                            let offsetRight = rS.y2Axis.slice(0,index).flat().length;
+
+                            let curryAxis = rS.yAxis[index];
+                            let curry2Axis = rS.y2Axis[index];
+                            let curraddYTicks = rS.additionalYTicks[index];
+
+                            rS.yAxis[index] = rS.yAxis[index+1];
+                            rS.y2Axis[index] = rS.y2Axis[index+1];
+                            rS.additionalYTicks[index] = rS.additionalYTicks[index+1];
+
+                            rS.yAxis[index+1] = curryAxis;
+                            rS.y2Axis[index+1] = curry2Axis;
+                            rS.additionalYTicks[index+1] = curraddYTicks;
+
+                            // Remove color settings from left side
+                            /*rS.colorAxis.splice(
+                                offsetLeft, parsLeft 
+                            );*/
+
+                            // Remove color settings from right side
+                            /*offsetLeft = rS.yAxis.flat().length;
+                            rS.colorAxis.splice(
+                                (offsetLeft+offsetRight), parsRight 
+                            );*/
+
+                            this.loadData(this.data);
+                        });
+                }
             }
 
             this.svg.append('g')

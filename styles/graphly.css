@@ -20,10 +20,20 @@ svg {
 
 .removePlot{
     position: absolute;
-    font-size: 2em;
+    font-size: 1.5em;
     z-index: 500;
-    width: 15px!important;
-    height: 15px!important;
+    width: 12px!important;
+    height: 12px!important;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.arrowChangePlot{
+    position: absolute;
+    font-size: 1.5em;
+    z-index: 500;
+    margin-left:-4px;
+    color: #444!important;
     cursor: pointer;
 }
 
