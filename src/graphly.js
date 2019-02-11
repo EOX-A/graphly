@@ -260,6 +260,16 @@ class graphly extends EventEmitter {
             } else {
                 this.renderSettings.y2Axis = [[]];
             }
+            if(this.renderSettings.colorAxis){
+                this.renderSettings.colorAxis = [this.renderSettings.colorAxis];
+            } else {
+                this.renderSettings.colorAxis = [[]];
+            }
+            if(this.renderSettings.colorAxis2){
+                this.renderSettings.colorAxis2 = [this.renderSettings.colorAxis2];
+            } else {
+                this.renderSettings.colorAxis2 = [[]];
+            }
         }
 
         this.yAxisLabel = [];
@@ -1057,22 +1067,12 @@ class graphly extends EventEmitter {
             // Draw y2 first so it is on bottom
             for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
-                y2AxRen = this.renderSettings.y2Axis[plotY];
-
                 for (let parPos=0; parPos<y2AxRen.length; parPos++){
-
-                    let prevY2Items = 0;
-                    if(plotY>0){
-                        prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
-                    }
-
-                    let idY2 = y2AxRen[parPos];
-                    let idCS = this.renderSettings.colorAxis[
-                        this.renderSettings.yAxis.flat().length + prevY2Items + parPos
-                    ];
-                    
                     this.renderParameter(
-                        xAxRen, idY2, idCS, plotY, y2AxRen, this.y2Scale,
+                        xAxRen,
+                        this.renderSettings.y2Axis[plotY][parPos],
+                        this.renderSettings.colorAxis2[plotY][parPos],
+                        plotY, y2AxRen, this.y2Scale,
                         parPos, this.currentData, this.currentInactiveData,
                         false
                     );
@@ -1081,24 +1081,17 @@ class graphly extends EventEmitter {
 
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
-                let prevYItems = 0;
-                if(plotY>0){
-                    prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
-                }
-
-                yAxRen = this.renderSettings.yAxis[plotY];
-
                 for (let parPos=0; parPos<yAxRen.length; parPos++){
 
-                    let idY = yAxRen[parPos];
-                    let idCS = this.renderSettings.colorAxis[prevYItems+parPos];
-
                     this.renderParameter(
-                        xAxRen, idY, idCS, plotY, yAxRen, this.yScale,
+                        xAxRen,
+                        this.renderSettings.yAxis[plotY][parPos],
+                        this.renderSettings.colorAxis[plotY][parPos],
+                        plotY,
+                        yAxRen, this.yScale,
                         parPos, this.currentData, this.currentInactiveData,
                         false
                     );
-
                 }
             }
 
@@ -1427,37 +1420,7 @@ class graphly extends EventEmitter {
           itemSelectText: '',
         });
 
-        let colAxis = this.renderSettings.colorAxis;
-        let currColPos = 0;
-        let curryAxArr;
-        // TODO not sure this is the best way to find the corresponding colorscale
-        if(orientation === 'left'){
-            curryAxArr = this.renderSettings.yAxis;
-            for (let i = 0; i < curryAxArr.length; i++) {
-                let idx = curryAxArr[i].indexOf(elId);
-                if(idx !== -1){
-                    currColPos += idx;
-                } else {
-                    currColPos++;
-
-                }
-            }
-        } else if (orientation==='right'){
-            curryAxArr = this.renderSettings.y2Axis;
-            for (let i = 0; i < curryAxArr.length; i++) {
-                currColPos++;
-            }
-            curryAxArr = this.renderSettings.y2Axis;
-            for (let i = 0; i < curryAxArr.length; i++) {
-                let idx = curryAxArr[i].indexOf(elId);
-                if(idx !== -1){
-                    currColPos += idx;
-                } else {
-                    currColPos++;
-
-                }
-            }
-        }
+        let curryAxArr = this.renderSettings.yAxis;
 
         settingParameters.passedElement.addEventListener('addItem', function(event) {
 
@@ -1467,21 +1430,11 @@ class graphly extends EventEmitter {
             curryAxArr[yPos].push(event.detail.value);
             // TODO: Check for adding of time parameter
 
-            // Calculate position where element will be added into colorscale
-            // array
-            let prevItems = 0;
             if(orientation === 'left'){
-                if(yPos>0){
-                    prevItems = renSett.yAxis.slice(0,yPos).flat().length;
-                }
+                renSett.colorAxis[yPos].push(null);
             } else if(orientation === 'right'){
-                prevItems = renSett.yAxis.flat().length;
-                prevItems += renSett.y2Axis.slice(0,yPos).flat().length;
+                renSett.colorAxis2[yPos].push(null);
             }
-
-            renSett.colorAxis.splice(
-                prevItems, 0, null
-            );
 
             that.recalculateBufferSize();
             that.initAxis();
@@ -1509,25 +1462,19 @@ class graphly extends EventEmitter {
             yAxisLabel[yPos] = null;
 
             let renSett = that.renderSettings;
-            // Calculate position where element will be added into colorscale
-            // array
-            let prevItems = 0;
-            if(orientation === 'left'){
-                if(yPos>0){
-                    prevItems = renSett.yAxis.slice(0,yPos).flat().length;
-                }
-            } else if(orientation === 'right'){
-                prevItems = renSett.yAxis.flat().length;
-                prevItems += renSett.y2Axis.slice(0,yPos).flat().length;
-            }
-
             let index = currAxis.indexOf(event.detail.value);
 
             // TODO: Should it happen that the removed item is not in the list?
             // Do we need to handle this case? 
             if(index!==-1){
+
                 currAxis.splice(index, 1);
-                that.renderSettings.colorAxis.splice((prevItems+index), 1);
+                if(orientation === 'left'){
+                    renSett.colorAxis[yPos].splice(index,1);
+                } else if(orientation === 'right'){
+                    renSett.colorAxis2[yPos].splice(index,1);
+                }
+
                 that.initAxis();
                 that.resize();
                 that.createAxisLabels();
@@ -2028,34 +1975,20 @@ class graphly extends EventEmitter {
     createColorScales(){
 
         let colAxis = this.renderSettings.colorAxis;
+        let colAxis2 = this.renderSettings.colorAxis2;
 
         this.el.selectAll('.color.axis').remove();
 
-        let prevYItems = 0;
         for (let plotY=0; plotY<this.renderSettings.yAxis.length; plotY++){
-            let csCounter = 0;
-            let pos;
-            if(plotY>0){
-                prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
-            }
-            for (let yy = 0; yy < this.renderSettings.yAxis[plotY].length; yy++) {
-                pos = prevYItems+yy;
-                if(this.renderSettings.colorAxis[pos] !== null){
-                    this.createColorScale(colAxis[pos], csCounter, plotY);
-                    csCounter++;
+            for(let pos=0; pos<colAxis[plotY].length; pos++){
+                if(colAxis[plotY][pos] !== null){
+                    this.createColorScale(colAxis[plotY][pos], pos, plotY);
                 }
             }
-            let prevY2Items = 0;
-            if(plotY>0){
-                prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
-            }
-            prevYItems = this.renderSettings.yAxis.flat().length;
 
-            for (let yy = 0; yy < this.renderSettings.y2Axis[plotY].length; yy++) {
-                pos = prevYItems+prevY2Items+yy;
-                if(this.renderSettings.colorAxis[pos] !== null){
-                    this.createColorScale(colAxis[pos], csCounter, plotY);
-                    csCounter++;
+            for(let pos=0; pos<colAxis2[plotY].length; pos++){
+                if(colAxis2[plotY][pos] !== null){
+                    this.createColorScale(colAxis2[plotY][pos], pos, plotY);
                 }
             }
         }
@@ -2149,13 +2082,13 @@ class graphly extends EventEmitter {
 
                         let renSett = this.renderSettings;
                         let index = Number(d3.select(d3.event.target).attr('data-index'));
-                        let parsLeft = renSett.yAxis[index].length;
-                        let parsRight = renSett.y2Axis[index].length;
-                        let offsetLeft = renSett.yAxis.slice(0,index).flat().length;
-                        let offsetRight = renSett.y2Axis.slice(0,index).flat().length;
 
-                        this.renderSettings.yAxis.splice(index, 1);
-                        this.renderSettings.y2Axis.splice(index, 1);
+                        renSett.yAxis.splice(index, 1);
+                        renSett.y2Axis.splice(index, 1);
+                        // Remove color settings from left side
+                        renSett.colorAxis.splice(index, 1);
+                        renSett.colorAxis2.splice(index, 1);
+
                         let addYT = this.renderSettings.additionalYTicks; 
                         addYT.splice(index,1);
                         // Recalculate subaxis margin
@@ -2165,16 +2098,6 @@ class graphly extends EventEmitter {
                         }
                         this.subAxisMarginY = 80*maxL;
 
-                        // Remove color settings from left side
-                        renSett.colorAxis.splice(
-                            offsetLeft, parsLeft 
-                        );
-
-                        // Remove color settings from right side
-                        offsetLeft = renSett.yAxis.flat().length;
-                        renSett.colorAxis.splice(
-                            (offsetLeft+offsetRight), parsRight 
-                        );
                         this.loadData(this.data);
                     });
 
@@ -2191,33 +2114,23 @@ class graphly extends EventEmitter {
                             let index = Number(d3.select(d3.event.target).attr('data-index'));
                             let rS = this.renderSettings;
 
-                            let parsLeft = rS.yAxis[index].length;
-                            let parsRight = rS.y2Axis[index].length;
-                            let offsetLeft = rS.yAxis.slice(0,index).flat().length;
-                            let offsetRight = rS.y2Axis.slice(0,index).flat().length;
-
                             let curryAxis = rS.yAxis[index];
                             let curry2Axis = rS.y2Axis[index];
+                            let currColAx = rS.colorAxis[index];
+                            let currColAx2 = rS.colorAxis2[index];
                             let curraddYTicks = rS.additionalYTicks[index];
 
                             rS.yAxis[index] = rS.yAxis[index-1];
                             rS.y2Axis[index] = rS.y2Axis[index-1];
                             rS.additionalYTicks[index] = rS.additionalYTicks[index-1];
+                            rS.colorAxis[index] = rS.colorAxis[index-1];
+                            rS.colorAxis2[index] = rS.colorAxis2[index-1];
 
                             rS.yAxis[index-1] = curryAxis;
                             rS.y2Axis[index-1] = curry2Axis;
                             rS.additionalYTicks[index-1] = curraddYTicks;
-
-                            // Remove color settings from left side
-                            /*rS.colorAxis.splice(
-                                offsetLeft, parsLeft 
-                            );*/
-
-                            // Remove color settings from right side
-                            /*offsetLeft = rS.yAxis.flat().length;
-                            rS.colorAxis.splice(
-                                (offsetLeft+offsetRight), parsRight 
-                            );*/
+                            rS.colorAxis[index-1] = currColAx;
+                            rS.colorAxis2[index-1] = currColAx2;
 
                             this.loadData(this.data);
                         });
@@ -2240,33 +2153,23 @@ class graphly extends EventEmitter {
                             let index = Number(d3.select(d3.event.target).attr('data-index'));
                             let rS = this.renderSettings;
 
-                            let parsLeft = rS.yAxis[index].length;
-                            let parsRight = rS.y2Axis[index].length;
-                            let offsetLeft = rS.yAxis.slice(0,index).flat().length;
-                            let offsetRight = rS.y2Axis.slice(0,index).flat().length;
-
                             let curryAxis = rS.yAxis[index];
                             let curry2Axis = rS.y2Axis[index];
+                            let currColAx = rS.colorAxis[index];
+                            let currColAx2 = rS.colorAxis2[index];
                             let curraddYTicks = rS.additionalYTicks[index];
 
                             rS.yAxis[index] = rS.yAxis[index+1];
                             rS.y2Axis[index] = rS.y2Axis[index+1];
                             rS.additionalYTicks[index] = rS.additionalYTicks[index+1];
+                            rS.colorAxis[index] = rS.colorAxis[index+1];
+                            rS.colorAxis2[index] = rS.colorAxis2[index+1];
 
                             rS.yAxis[index+1] = curryAxis;
                             rS.y2Axis[index+1] = curry2Axis;
                             rS.additionalYTicks[index+1] = curraddYTicks;
-
-                            // Remove color settings from left side
-                            /*rS.colorAxis.splice(
-                                offsetLeft, parsLeft 
-                            );*/
-
-                            // Remove color settings from right side
-                            /*offsetLeft = rS.yAxis.flat().length;
-                            rS.colorAxis.splice(
-                                (offsetLeft+offsetRight), parsRight 
-                            );*/
+                            rS.colorAxis[index+1] = currColAx;
+                            rS.colorAxis2[index+1] = currColAx2;
 
                             this.loadData(this.data);
                         });
@@ -2484,29 +2387,15 @@ class graphly extends EventEmitter {
 
     getMaxCSAmount(){
         let csAmount = 0;
-        let prevYItems = 0;
         for (let plotY=0; plotY<this.renderSettings.yAxis.length; plotY++){
-            if(plotY>0){
-                prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
-            }
-            let currAm = 0;
-            for (let yy = 0; yy < this.renderSettings.yAxis[plotY].length; yy++) {
-                if(this.renderSettings.colorAxis[prevYItems+yy] !== null){
-                    currAm++;
-                }
-            }
-            let prevY2Items = 0;
-            if(plotY>0){
-                prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
-            }
-            prevYItems = this.renderSettings.yAxis.flat().length;
+            
+            csAmount = d3.max([
+                this.renderSettings.colorAxis[plotY].length, csAmount
+            ]);
 
-            for (let yy = 0; yy < this.renderSettings.y2Axis[plotY].length; yy++) {
-                if(this.renderSettings.colorAxis[prevYItems+prevY2Items+yy] !== null){
-                    currAm++;
-                }
-            }
-            csAmount = d3.max([currAm, csAmount]);
+            csAmount = d3.max([
+                this.renderSettings.colorAxis2[plotY].length, csAmount
+            ]);
         }
         return csAmount;
     }
@@ -3007,6 +2896,8 @@ class graphly extends EventEmitter {
             let y2Range = y2Extent[1] - y2Extent[0];
 
             let domain;
+            // TODO: Not sure if this is checking all it should be checking, 
+            // check second color axis (coloraxis2)
             if(this.renderSettings.hasOwnProperty('colorAxis')){
                 let cAxis = this.renderSettings.colorAxis;
                 // Check to see if linear colorscale or ordinal colorscale (e.g. IDs)
@@ -3022,47 +2913,49 @@ class graphly extends EventEmitter {
                             .domain(ds.categories);
                     }
                 }
-                for (let ca = cAxis.length - 1; ca >= 0; ca--) {
-                    if(cAxis[ca]){
-                        // Check if an extent is already configured
-                        if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
-                           this.dataSettings[cAxis[ca]].hasOwnProperty('extent')){
-                            domain = this.dataSettings[cAxis[ca]].extent;
-                        }else{
-                            if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
-                               this.dataSettings[cAxis[ca]].hasOwnProperty('nullValue')){
-                                let nV = this.dataSettings[cAxis[ca]].nullValue;
-                                // If parameter has nullvalue defined ignore it 
-                                // when calculating extent
-                                domain = d3.extent(
-                                    this.data[cAxis[ca]], (v)=>{
-                                        if(v !== nV){
-                                            return v;
-                                        } else {
-                                            return null;
+                for (let i=0; i< cAxis.length; i++) {
+                    for (let j=0; j< cAxis.length; j++) {
+                        if(cAxis[i][j]){
+                            // Check if an extent is already configured
+                            if(this.dataSettings.hasOwnProperty(cAxis[i][j]) &&
+                               this.dataSettings[cAxis[i][j]].hasOwnProperty('extent')){
+                                domain = this.dataSettings[cAxis[i][j]].extent;
+                            }else{
+                                if(this.dataSettings.hasOwnProperty(cAxis[i][j]) &&
+                                   this.dataSettings[cAxis[i][j]].hasOwnProperty('nullValue')){
+                                    let nV = this.dataSettings[cAxis[i][j]].nullValue;
+                                    // If parameter has nullvalue defined ignore it 
+                                    // when calculating extent
+                                    domain = d3.extent(
+                                        this.data[cAxis[i][j]], (v)=>{
+                                            if(v !== nV){
+                                                return v;
+                                            } else {
+                                                return null;
+                                            }
                                         }
-                                    }
-                                );
-                            } else {
-                                domain = d3.extent(this.data[cAxis[ca]]);
+                                    );
+                                } else {
+                                    domain = d3.extent(this.data[cAxis[i][j]]);
+                                }
+                                if(isNaN(domain[0])){
+                                    domain[0] = 0;
+                                }
+                                if(isNaN(domain[1])){
+                                    domain[1] = domain[0]+1;
+                                }
+                                if(domain[0] == domain[1]){
+                                    domain[0]-=1;
+                                    domain[1]+=1;
+                                }
+                                if(domain[0]>domain[1]){
+                                    domain = domain.reverse();
+                                }
+                                // Set current calculated extent to settings
+                                this.dataSettings[cAxis[i][j]].extent = domain;
                             }
-                            if(isNaN(domain[0])){
-                                domain[0] = 0;
-                            }
-                            if(isNaN(domain[1])){
-                                domain[1] = domain[0]+1;
-                            }
-                            if(domain[0] == domain[1]){
-                                domain[0]-=1;
-                                domain[1]+=1;
-                            }
-                            if(domain[0]>domain[1]){
-                                domain = domain.reverse();
-                            }
-                            // Set current calculated extent to settings
-                            this.dataSettings[cAxis[ca]].extent = domain;
+                            
                         }
-                        
                     }
                 }
             }
@@ -3903,24 +3796,19 @@ class graphly extends EventEmitter {
     }
 
     getIdColor(param, id) {
+        // TODO: What todo when parameter has colorscale
         let rC;
-        let colorParam = this.renderSettings.colorAxis[param];
-        let cA = this.dataSettings[colorParam];
         let selPar = this.renderSettings.yAxis[param];
 
-        if (cA && cA.hasOwnProperty('colorscaleFunction')){
-            rC = cA.colorscaleFunction(id);
-            rC = [rC[0]/255, rC[1]/255, rC[2]/255];
-        }else{
-            // Check if color has been defined for specific parameter
-            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
-                rC = this.dataSettings[selPar][id].color;
-            } else if(this.dataSettings[selPar].hasOwnProperty('color')){
-                rC = this.dataSettings[selPar].color;
-            } else { 
-                rC = [0.258, 0.525, 0.956];
-            }
+        // Check if color has been defined for specific parameter
+        if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+            rC = this.dataSettings[selPar][id].color;
+        } else if(this.dataSettings[selPar].hasOwnProperty('color')){
+            rC = this.dataSettings[selPar].color;
+        } else { 
+            rC = [0.258, 0.525, 0.956];
         }
+        
         return rC;
     }
 
@@ -5039,7 +4927,7 @@ class graphly extends EventEmitter {
 
                 let idY = yAxRen[parPos];
                 // Add item to labels if there is no coloraxis is defined
-                this.addParameterLabel(idY, infoGroup, parInfEl, yPos, 'left');
+                this.addParameterLabel(idY, infoGroup, parInfEl, yPos, 'left', parPos);
             }
 
             let y2AxRen = this.renderSettings.y2Axis[yPos];
@@ -5047,7 +4935,7 @@ class graphly extends EventEmitter {
 
                 let idY2 = y2AxRen[parPos];
                 // Add item to labels if there is no coloraxis is defined
-                this.addParameterLabel(idY2, infoGroup, parInfEl, yPos, 'right');
+                this.addParameterLabel(idY2, infoGroup, parInfEl, yPos, 'right', parPos);
             }
 
             // Change height of settings panel to be just under labels
@@ -5063,9 +4951,12 @@ class graphly extends EventEmitter {
     }
 
 
-    renderColorScaleOptions(yPos, orientation, yAxisId){
+    renderColorScaleOptions(yPos, orientation, yAxisId, parPos){
 
-        let colorIndex = this.getColorIndex(orientation, yPos, yAxisId);
+        let colAxis = this.renderSettings.colorAxis;
+        if(orientation==='right'){
+            colAxis = this.renderSettings.colorAxis2;
+        }
 
         this.el.select('#parameterSettings')
             .append('label')
@@ -5092,7 +4983,7 @@ class graphly extends EventEmitter {
             }
             if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
                 selectionChoices.push({value: key, label: key});
-                if(this.renderSettings.colorAxis[colorIndex] === key){
+                if(colAxis[yPos][parPos] === key){
                     selectionChoices[selectionChoices.length-1].selected = true;
                 }
             }
@@ -5112,8 +5003,8 @@ class graphly extends EventEmitter {
         function oncolorParamSelectionChange() {
             let selectValue = 
                 that.el.select('#colorParamSelection').property('value');
-            delete that.colorCache[that.renderSettings.colorAxis[colorIndex]];
-            that.renderSettings.colorAxis[colorIndex] = selectValue;
+            delete that.colorCache[colAxis[yPos][parPos]];
+            colAxis[yPos][parPos] = selectValue;
             that.addApply();
         }
 
@@ -5142,7 +5033,7 @@ class graphly extends EventEmitter {
                 .text(function (d) { return d; })
                 .attr('value', function (d) { return d; })
                 .property('selected', (d)=>{
-                    let csId = this.renderSettings.colorAxis[colorIndex];
+                    let csId = colAxis[yPos][parPos];
                     let obj = this.dataSettings[csId];
                     if(obj && obj.hasOwnProperty('colorscale')){
                         return d === this.dataSettings[csId].colorscale;
@@ -5152,7 +5043,7 @@ class graphly extends EventEmitter {
                     
                 });
         function oncolorScaleSelectionChange() {
-            let csId = that.renderSettings.colorAxis[colorIndex];
+            let csId = colAxis[yPos][parPos];
             delete that.colorCache[csId];
             let selectValue = that.el.select('#colorScaleSelection').property('value');
             that.dataSettings[csId].colorscale = selectValue;
@@ -5161,48 +5052,7 @@ class graphly extends EventEmitter {
 
     }
 
-    getColorIndex(orientation, yPos, yAxisId){
-         // Create and manage colorscale selection
-        // Find index of id
-        let currColPos = 0;
-        let curryAxArr;
-        // TODO not sure this is the best way to find the corresponding colorscale
-        if(orientation === 'left'){
-            curryAxArr = this.renderSettings.yAxis;
-            for (let i = 0; i <= yPos; i++) {
-                let idx = curryAxArr[i].indexOf(yAxisId);
-                if(i===yPos && idx !== -1){
-                    currColPos += idx;
-                } else {
-                    for (let j = 0; j < curryAxArr[i].length; j++) {
-                        currColPos++;
-                    }
-                }
-            }
-        } else if (orientation==='right'){
-            curryAxArr = this.renderSettings.yAxis;
-            for (let i = 0; i < curryAxArr.length; i++) {
-                for (let j = 0; j < curryAxArr[i].length; j++) {
-                    currColPos++;
-                }
-            }
-            curryAxArr = this.renderSettings.y2Axis;
-            for (let i = 0; i <= yPos; i++) {
-                let idx = curryAxArr[i].indexOf(yAxisId);
-                if(idx !== -1){
-                    currColPos += idx;
-                } else {
-                    for (let j = 0; j < curryAxArr[i].length; j++) {
-                        currColPos++;
-                    }
-                }
-            }
-        }
-        return currColPos
-    }
-
-
-    renderParameterOptions(dataSettings, id, yPos, orientation, keepOpen){
+    renderParameterOptions(dataSettings, id, yPos, orientation, keepOpen, parPos){
 
         let parSetEl = this.el.select('#parameterSettings');
         if(!keepOpen && parSetEl.style('display') === 'block' && parSetEl.attr('data-id')===id){
@@ -5391,13 +5241,16 @@ class graphly extends EventEmitter {
                 });
         }
 
-        let currColPos = this.getColorIndex(orientation, yPos, id);
-
         // Should normally always have an index
-        if(currColPos !== -1 && this.displayColorscaleOptions){
-            let colorAxis = this.renderSettings.colorAxis[currColPos];
+        if(this.displayColorscaleOptions){
+
+            let colorAxis = this.renderSettings.colorAxis;
+            if(orientation==='right'){
+                colorAxis = this.renderSettings.colorAxis2;
+            }
+
             let active = false;
-            if(colorAxis !== null){
+            if(colorAxis[yPos][parPos] !== null){
                 active = true;
             }
 
@@ -5430,19 +5283,19 @@ class graphly extends EventEmitter {
                             }
                         }
                         // Select first option
-                        that.renderSettings.colorAxis[currColPos] = selectionChoices[0];
+                        colorAxis[yPos][parPos] = selectionChoices[0];
                     } else {
-                        that.renderSettings.colorAxis[currColPos] = null;
+                        colorAxis[yPos][parPos] = null;
                     }
                     that.renderParameterOptions(
-                        dataSettings, id, yPos, orientation, true
+                        dataSettings, id, yPos, orientation, true, parPos
                     );
                     that.addApply();
                 });
             // Need to add additional necessary options
             // drop down with possible parameters and colorscale
-            if(active){                           
-                this.renderColorScaleOptions(yPos, orientation, id);
+            if(active){
+                this.renderColorScaleOptions(yPos, orientation, id, parPos);
             }
 
         }
@@ -5510,7 +5363,7 @@ class graphly extends EventEmitter {
     }
 
 
-    addParameterLabel(id, infoGroup, parInfEl, yPos, orientation){
+    addParameterLabel(id, infoGroup, parInfEl, yPos, orientation, parPos){
 
         // TODO: check for available objects instead of deleting and recreating them
 
@@ -5634,7 +5487,7 @@ class graphly extends EventEmitter {
             }
 
             parDiv.on('click', this.renderParameterOptions.bind(
-                this, dataSettings, id, yPos, orientation, false
+                this, dataSettings, id, yPos, orientation, false, parPos
             ));
         }
     }
@@ -5809,43 +5662,46 @@ class graphly extends EventEmitter {
 
         // Check if we need to update extents which have been reset because
         // of filtering on parameter
+        // TODO: need to recheck if this works for both axis
         for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
-            let ca = this.renderSettings.colorAxis[i];
-            if(ca !== null){
-                if(this.dataSettings.hasOwnProperty(ca)){
-                    if(!this.dataSettings[ca].hasOwnProperty('extent')){
-                        let domain;
-                        // Set current calculated extent to settings
-                        if(this.dataSettings[ca].hasOwnProperty('nullValue')){
-                            let nV = this.dataSettings[ca].nullValue;
-                            // If parameter has nullvalue defined ignore it 
-                            // when calculating extent
-                            domain = d3.extent(
-                                this.currentData[ca], (v)=>{
-                                    if(v !== nV){
-                                        return v;
-                                    } else {
-                                        return null;
+            for (let j = 0; j < this.renderSettings.colorAxis.length; j++) {
+                let ca = this.renderSettings.colorAxis[i][j];
+                if(ca !== null){
+                    if(this.dataSettings.hasOwnProperty(ca)){
+                        if(!this.dataSettings[ca].hasOwnProperty('extent')){
+                            let domain;
+                            // Set current calculated extent to settings
+                            if(this.dataSettings[ca].hasOwnProperty('nullValue')){
+                                let nV = this.dataSettings[ca].nullValue;
+                                // If parameter has nullvalue defined ignore it 
+                                // when calculating extent
+                                domain = d3.extent(
+                                    this.currentData[ca], (v)=>{
+                                        if(v !== nV){
+                                            return v;
+                                        } else {
+                                            return null;
+                                        }
                                     }
-                                }
-                            );
-                        } else {
-                            domain = d3.extent(this.currentData[ca]);
+                                );
+                            } else {
+                                domain = d3.extent(this.currentData[ca]);
+                            }
+                            if(isNaN(domain[0])){
+                                domain[0] = 0;
+                            }
+                            if(isNaN(domain[1])){
+                                domain[1] = domain[0]+1;
+                            }
+                            if(domain[0] == domain[1]){
+                                domain[0]-=1;
+                                domain[1]+=1;
+                            }
+                            if(domain[0]>domain[1]){
+                                domain = domain.reverse();
+                            }
+                            this.dataSettings[ca].extent = domain;
                         }
-                        if(isNaN(domain[0])){
-                            domain[0] = 0;
-                        }
-                        if(isNaN(domain[1])){
-                            domain[1] = domain[0]+1;
-                        }
-                        if(domain[0] == domain[1]){
-                            domain[0]-=1;
-                            domain[1]+=1;
-                        }
-                        if(domain[0]>domain[1]){
-                            domain = domain.reverse();
-                        }
-                        this.dataSettings[ca].extent = domain;
                     }
                 }
             }
@@ -5871,14 +5727,8 @@ class graphly extends EventEmitter {
             // debounce option
             if(y2AxRen.length > 0){
                 for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                    let prevY2Items = 0;
-                    if(plotY>0){
-                        prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
-                    }
                     let idY2 = y2AxRen[parPos];
-                    let idCS = this.renderSettings.colorAxis[
-                        this.renderSettings.yAxis.flat().length + prevY2Items +parPos
-                    ];
+                    let idCS = this.renderSettings.colorAxis2[plotY][parPos];
                     this.renderParameter(
                         idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
                         parPos, this.currentData, this.currentInactiveData,
@@ -5913,18 +5763,13 @@ class graphly extends EventEmitter {
         // Afterwards render all y axis parameters
         for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
-            let prevYItems = 0;
-            if(plotY>0){
-                prevYItems = this.renderSettings.yAxis.slice(0,plotY).flat().length;
-            }
 
             yAxRen = this.renderSettings.yAxis[plotY];
             for (let parPos=0; parPos<yAxRen.length; parPos++){
 
                 let idY = yAxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[
-                    parPos + prevYItems
-                ];
+                let idCS = this.renderSettings.colorAxis[plotY][parPos];
+
                 this.renderParameter(
                     idX, idY, idCS, plotY, yAxRen, this.yScale,
                     parPos, this.currentData, this.currentInactiveData,
@@ -5957,14 +5802,8 @@ class graphly extends EventEmitter {
                 // debounce option
                 if(y2AxRen.length > 0){
                     for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                        let prevY2Items = 0;
-                        if(plotY>0){
-                            prevY2Items = this.renderSettings.y2Axis.slice(0,plotY).flat().length;
-                        }
                         let idY2 = y2AxRen[parPos];
-                        let idCS = this.renderSettings.colorAxis[
-                            this.renderSettings.yAxis.flat().length + prevY2Items +parPos
-                        ];
+                        let idCS = this.renderSettings.colorAxis2[plotY][parPos];
                         this.renderParameter(
                             idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
                             parPos, this.currentData, this.currentInactiveData,
