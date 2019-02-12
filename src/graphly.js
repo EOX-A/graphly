@@ -2913,49 +2913,15 @@ class graphly extends EventEmitter {
                             .domain(ds.categories);
                     }
                 }
-                for (let i=0; i< cAxis.length; i++) {
-                    for (let j=0; j< cAxis.length; j++) {
-                        if(cAxis[i][j]){
-                            // Check if an extent is already configured
-                            if(this.dataSettings.hasOwnProperty(cAxis[i][j]) &&
-                               this.dataSettings[cAxis[i][j]].hasOwnProperty('extent')){
-                                domain = this.dataSettings[cAxis[i][j]].extent;
-                            }else{
-                                if(this.dataSettings.hasOwnProperty(cAxis[i][j]) &&
-                                   this.dataSettings[cAxis[i][j]].hasOwnProperty('nullValue')){
-                                    let nV = this.dataSettings[cAxis[i][j]].nullValue;
-                                    // If parameter has nullvalue defined ignore it 
-                                    // when calculating extent
-                                    domain = d3.extent(
-                                        this.data[cAxis[i][j]], (v)=>{
-                                            if(v !== nV){
-                                                return v;
-                                            } else {
-                                                return null;
-                                            }
-                                        }
-                                    );
-                                } else {
-                                    domain = d3.extent(this.data[cAxis[i][j]]);
-                                }
-                                if(isNaN(domain[0])){
-                                    domain[0] = 0;
-                                }
-                                if(isNaN(domain[1])){
-                                    domain[1] = domain[0]+1;
-                                }
-                                if(domain[0] == domain[1]){
-                                    domain[0]-=1;
-                                    domain[1]+=1;
-                                }
-                                if(domain[0]>domain[1]){
-                                    domain = domain.reverse();
-                                }
-                                // Set current calculated extent to settings
-                                this.dataSettings[cAxis[i][j]].extent = domain;
-                            }
-                            
-                        }
+
+                // Check if we need to update extents which have been reset because
+                // of filtering on parameter
+                for (let i = 0; i < this.renderSettings.colorAxis.length; i++) {
+                    for (let j = 0; j < this.renderSettings.colorAxis.length; j++) {
+                        this.calculateColorDomain(this.renderSettings.colorAxis[i][j]);
+                    }
+                    for (let j = 0; j < this.renderSettings.colorAxis2.length; j++) {
+                        this.calculateColorDomain(this.renderSettings.colorAxis2[i][j]);
                     }
                 }
             }
@@ -5623,6 +5589,47 @@ class graphly extends EventEmitter {
         
     }
 
+    calculateColorDomain(colorAxis) {
+        if(colorAxis !== null){
+            if(this.dataSettings.hasOwnProperty(colorAxis)){
+                if(!this.dataSettings[colorAxis].hasOwnProperty('extent')){
+                    let domain;
+                    // Set current calculated extent to settings
+                    if(this.dataSettings[colorAxis].hasOwnProperty('nullValue')){
+                        let nV = this.dataSettings[colorAxis].nullValue;
+                        // If parameter has nullvalue defined ignore it 
+                        // when calculating extent
+                        domain = d3.extent(
+                            this.currentData[colorAxis], (v)=>{
+                                if(v !== nV){
+                                    return v;
+                                } else {
+                                    return null;
+                                }
+                            }
+                        );
+                    } else {
+                        domain = d3.extent(this.currentData[colorAxis]);
+                    }
+                    if(isNaN(domain[0])){
+                        domain[0] = 0;
+                    }
+                    if(isNaN(domain[1])){
+                        domain[1] = domain[0]+1;
+                    }
+                    if(domain[0] == domain[1]){
+                        domain[0]-=1;
+                        domain[1]+=1;
+                    }
+                    if(domain[0]>domain[1]){
+                        domain = domain.reverse();
+                    }
+                    this.dataSettings[colorAxis].extent = domain;
+                }
+            }
+        }
+    }
+
 
     /**
     * Render the data as graph
@@ -5662,48 +5669,12 @@ class graphly extends EventEmitter {
 
         // Check if we need to update extents which have been reset because
         // of filtering on parameter
-        // TODO: need to recheck if this works for both axis
-        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
+        for (let i = 0; i < this.renderSettings.colorAxis.length; i++) {
             for (let j = 0; j < this.renderSettings.colorAxis.length; j++) {
-                let ca = this.renderSettings.colorAxis[i][j];
-                if(ca !== null){
-                    if(this.dataSettings.hasOwnProperty(ca)){
-                        if(!this.dataSettings[ca].hasOwnProperty('extent')){
-                            let domain;
-                            // Set current calculated extent to settings
-                            if(this.dataSettings[ca].hasOwnProperty('nullValue')){
-                                let nV = this.dataSettings[ca].nullValue;
-                                // If parameter has nullvalue defined ignore it 
-                                // when calculating extent
-                                domain = d3.extent(
-                                    this.currentData[ca], (v)=>{
-                                        if(v !== nV){
-                                            return v;
-                                        } else {
-                                            return null;
-                                        }
-                                    }
-                                );
-                            } else {
-                                domain = d3.extent(this.currentData[ca]);
-                            }
-                            if(isNaN(domain[0])){
-                                domain[0] = 0;
-                            }
-                            if(isNaN(domain[1])){
-                                domain[1] = domain[0]+1;
-                            }
-                            if(domain[0] == domain[1]){
-                                domain[0]-=1;
-                                domain[1]+=1;
-                            }
-                            if(domain[0]>domain[1]){
-                                domain = domain.reverse();
-                            }
-                            this.dataSettings[ca].extent = domain;
-                        }
-                    }
-                }
+                this.calculateColorDomain(this.renderSettings.colorAxis[i][j]);
+            }
+            for (let j = 0; j < this.renderSettings.colorAxis2.length; j++) {
+                this.calculateColorDomain(this.renderSettings.colorAxis2[i][j]);
             }
         }
 
