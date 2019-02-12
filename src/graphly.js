@@ -1420,21 +1420,23 @@ class graphly extends EventEmitter {
           itemSelectText: '',
         });
 
-        let curryAxArr = this.renderSettings.yAxis;
+        
 
         settingParameters.passedElement.addEventListener('addItem', function(event) {
 
             yAxisLabel[yPos] = null;
             let renSett = that.renderSettings;
-
-            curryAxArr[yPos].push(event.detail.value);
-            // TODO: Check for adding of time parameter
+            let curryAxArr = renSett.yAxis;
 
             if(orientation === 'left'){
                 renSett.colorAxis[yPos].push(null);
             } else if(orientation === 'right'){
+                curryAxArr = renSett.y2Axis;
                 renSett.colorAxis2[yPos].push(null);
             }
+
+            curryAxArr[yPos].push(event.detail.value);
+            // TODO: Check for adding of time parameter
 
             that.recalculateBufferSize();
             that.initAxis();
@@ -1988,7 +1990,13 @@ class graphly extends EventEmitter {
 
             for(let pos=0; pos<colAxis2[plotY].length; pos++){
                 if(colAxis2[plotY][pos] !== null){
-                    this.createColorScale(colAxis2[plotY][pos], pos, plotY);
+                    this.createColorScale(
+                        colAxis2[plotY][pos], 
+                        (this.renderSettings.colorAxis[plotY].filter(
+                            function(o) {return o !== null;}
+                        ).length+pos),
+                        plotY
+                    );
                 }
             }
         }
@@ -2039,6 +2047,8 @@ class graphly extends EventEmitter {
                     .on('click', ()=>{
                         this.renderSettings.yAxis.push([]);
                         this.renderSettings.y2Axis.push([]);
+                        this.renderSettings.colorAxis.push([]);
+                        this.renderSettings.colorAxis2.push([]);
                         this.renderSettings.additionalYTicks.push([]);
                         this.loadData(this.data);
                     });
@@ -2046,6 +2056,7 @@ class graphly extends EventEmitter {
 
             // Clear possible remove buttons
             d3.selectAll('.removePlot').remove();
+            d3.selectAll('.arrowChangePlot').remove();
         }
 
         let multiLength = this.renderSettings.yAxis.length;
@@ -2388,13 +2399,14 @@ class graphly extends EventEmitter {
     getMaxCSAmount(){
         let csAmount = 0;
         for (let plotY=0; plotY<this.renderSettings.yAxis.length; plotY++){
-            
             csAmount = d3.max([
-                this.renderSettings.colorAxis[plotY].length, csAmount
-            ]);
-
-            csAmount = d3.max([
-                this.renderSettings.colorAxis2[plotY].length, csAmount
+                this.renderSettings.colorAxis[plotY].filter(
+                    function(o) {return o !== null;}
+                ).length + 
+                this.renderSettings.colorAxis2[plotY].filter(
+                    function(o) {return o !== null;}
+                ).length,
+                csAmount
             ]);
         }
         return csAmount;
@@ -5216,7 +5228,8 @@ class graphly extends EventEmitter {
             }
 
             let active = false;
-            if(colorAxis[yPos][parPos] !== null){
+            if(typeof colorAxis[yPos][parPos] !== 'undefined' && 
+                      colorAxis[yPos][parPos]!==null){
                 active = true;
             }
 
@@ -5249,7 +5262,11 @@ class graphly extends EventEmitter {
                             }
                         }
                         // Select first option
-                        colorAxis[yPos][parPos] = selectionChoices[0];
+                        if(typeof colorAxis[yPos][parPos]!=='undefined'){
+                            colorAxis[yPos][parPos] = selectionChoices[0];
+                        } else {
+                            colorAxis[yPos].push(selectionChoices[0]);
+                        }
                     } else {
                         colorAxis[yPos][parPos] = null;
                     }
