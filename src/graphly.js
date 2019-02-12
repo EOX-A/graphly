@@ -1968,7 +1968,7 @@ class graphly extends EventEmitter {
             delete this.colorCache[id];
             g.call(colorAxis);
             this.dataSettings[id].extent = colorAxisScale.domain();
-            this.renderData();
+            this.renderData(false);
         };
 
         let csZoom = d3.behavior.zoom()
@@ -5678,7 +5678,7 @@ class graphly extends EventEmitter {
         let xAxRen = this.renderSettings.xAxis;
         
         this.batchDrawer.clear();
-        if(this.batchDrawerReference){
+        if(this.batchDrawerReference && updateReferenceCanvas){
             this.batchDrawerReference.clear();
         }
 
