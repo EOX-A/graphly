@@ -1061,37 +1061,41 @@ class graphly extends EventEmitter {
 
             let xAxRen = this.renderSettings.xAxis;
             
-            let yAxRen, y2AxRen;
+            let yAxRen = this.renderSettings.yAxis;
+            let y2AxRen = this.renderSettings.y2Axis;
+
 
 
             // Draw y2 first so it is on bottom
-            for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
-
+            for (let plotY = 0; plotY < y2AxRen.length; plotY++) {
                 for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                    this.renderParameter(
-                        xAxRen,
-                        this.renderSettings.y2Axis[plotY][parPos],
-                        this.renderSettings.colorAxis2[plotY][parPos],
-                        plotY, y2AxRen, this.y2Scale,
-                        parPos, this.currentData, this.currentInactiveData,
-                        false
-                    );
+                    if(typeof this.renderSettings.y2Axis[plotY][parPos] !== 'undefined'){
+                        this.renderParameter(
+                            xAxRen,
+                            this.renderSettings.y2Axis[plotY][parPos],
+                            this.renderSettings.colorAxis2[plotY][parPos],
+                            plotY, y2AxRen, this.y2Scale,
+                            parPos, this.currentData, this.currentInactiveData,
+                            false
+                        );
+                    }
                 }
             }
 
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
                 for (let parPos=0; parPos<yAxRen.length; parPos++){
-
-                    this.renderParameter(
-                        xAxRen,
-                        this.renderSettings.yAxis[plotY][parPos],
-                        this.renderSettings.colorAxis[plotY][parPos],
-                        plotY,
-                        yAxRen, this.yScale,
-                        parPos, this.currentData, this.currentInactiveData,
-                        false
-                    );
+                    if(typeof this.renderSettings.yAxis[plotY][parPos] !== 'undefined'){
+                        this.renderParameter(
+                            xAxRen,
+                            this.renderSettings.yAxis[plotY][parPos],
+                            this.renderSettings.colorAxis[plotY][parPos],
+                            plotY,
+                            yAxRen, this.yScale,
+                            parPos, this.currentData, this.currentInactiveData,
+                            false
+                        );
+                    }
                 }
             }
 
@@ -4531,8 +4535,10 @@ class graphly extends EventEmitter {
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
         dotsize *= this.resFactor;
 
-        let blockSize = this.height/this.renderSettings.yAxis.length - this.separation;
-        let axisOffset = plotY * (blockSize+this.separation);
+        let blockSize = (
+            this.height/this.renderSettings.yAxis.length - this.separation
+        ) * this.resFactor;
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
 
         for (let j=0;j<lp; j++) {
 
