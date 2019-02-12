@@ -2115,7 +2115,7 @@ class graphly extends EventEmitter {
                 // Add move up arrow 
                 if(plotY>0){
                     this.el.append('div')
-                        .attr('class', 'arrowChangePlot')
+                        .attr('class', 'arrowChangePlot up')
                         .html('&#9650;')
                         .attr('data-index', plotY)
                         .style('left', '10px')
@@ -2154,7 +2154,7 @@ class graphly extends EventEmitter {
                         addoff = 20;
                     }
                     this.el.append('div')
-                        .attr('class', 'arrowChangePlot')
+                        .attr('class', 'arrowChangePlot down')
                         .html('&#9660;')
                         .attr('data-index', plotY)
                         .style('left', '10px')
@@ -4038,6 +4038,18 @@ class graphly extends EventEmitter {
                     'transform',
                     'translate(0,' + (heighChunk*i) + ')'
                 );
+        });
+
+
+        this.el.selectAll('.removePlot').each(function(d,i){
+            d3.select(this).style('top', ((heighChunk*i)+10)+'px')
+        });
+
+        this.el.selectAll('.arrowChangePlot.up').each(function(d,i){
+            d3.select(this).style('top', ((heighChunk*(i+1))+20)+'px')
+        });
+        this.el.selectAll('.arrowChangePlot.down').each(function(d,i){
+            d3.select(this).style('top', ((heighChunk*(i))+45)+'px')
         });
 
         this.el.selectAll('.previewImage')
