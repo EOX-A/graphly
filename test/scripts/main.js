@@ -36,6 +36,25 @@ var renderSettings_ray = {
 
 };
 
+var aeolusl2bnew = {
+    xAxis: 'measurements',
+    yAxis: [
+        'bins',
+        //'rayleigh_dem_altitude'
+    ],
+    //y2Axis: [],
+    combinedParameters: {
+        bins: ['bins_start', 'bins_end'],
+        measurements: ['meas_start', 'meas_end']
+    },
+    colorAxis: [
+        'mie_meas_map',
+        //'mie_wind_velocity',
+    ],
+
+};
+
+
 var renderSettingsSwarm = {
     xAxis: 'Longitude',
     yAxis: ['Latitude'],
@@ -477,7 +496,6 @@ var filterSettings = {
 
 
 
-
 var filterManager = new FilterManager({
     el:'#filters',
     filterSettings: filterSettings,
@@ -487,14 +505,14 @@ var filterManager = new FilterManager({
 var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: otherds,
-    renderSettings: renderSettingsSwarm,
+    renderSettings: aeolusl2bnew,
     filterManager: filterManager,
     //ignoreParameters: [/mie_quality_fl.*/]
     debounceActive: true,
     //enableFit: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false
-    //displayParameterLabel: false,
+    displayParameterLabel: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false,
     //autoColorExtent: true
@@ -541,9 +559,9 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-//xhr.open('GET', 'data/aeolus_L1.mp', true);
+xhr.open('GET', 'data/aeolusl2b_newest.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
-xhr.open('GET', 'data/swarm.mp', true);
+//xhr.open('GET', 'data/swarm.mp', true);
 
 xhr.responseType = 'arraybuffer';
 
@@ -610,8 +628,37 @@ function flattenObservationArray(input){
 xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
     var data = msgpack.decode(tmp);
+    //console.log(data);
+    
 
-    var ids = {
+    var bins_start = [];
+    var bins_end = [];
+    for (var i = 0; i < data.ALD_U_N_2B.measurement_data.mie_measurement_map.length; i++) {
+         for (var j=0; j<data.ALD_U_N_2B.measurement_data.mie_measurement_map[i].length; j++){
+            bins_start.push(j);
+            bins_end.push(j+1);
+         }
+     }
+
+    var meas_start = [];
+    var meas_end = [];
+    for (var i = 0; i < data.ALD_U_N_2B.measurement_data.mie_measurement_map.length; i++) {
+         for (var j=0; j<data.ALD_U_N_2B.measurement_data.mie_measurement_map[i].length; j++){
+            meas_start.push(i);
+            meas_end.push(i+1);
+         }
+     }
+
+    var ds = {};
+    ds.bins_start = bins_start;
+    ds.bins_end = bins_end;
+    ds.meas_start = meas_start;
+    ds.meas_end = meas_end;
+    ds.mie_meas_map = data.ALD_U_N_2B.measurement_data.mie_measurement_map.flat();
+
+    graph.loadData(ds);
+
+    /*var ids = {
       'A': 'Alpha',
       'B': 'Bravo',
       'C': 'Charlie',
@@ -632,9 +679,9 @@ xhr.onload = function(e) {
         data['B_NEC_resAC_N'].push(data.B_NEC_resAC[i][0]);
         data['B_NEC_resAC_E'].push(data.B_NEC_resAC[i][1]);
         data['B_NEC_resAC_C'].push(data.B_NEC_resAC[i][2]); 
-    }
+    }*/
 
-    graph.loadData(data);
+    //graph.loadData(data);
 
     /*var ds = data.ALD_U_N_1B[0];
 
@@ -663,12 +710,12 @@ xhr.onload = function(e) {
 
 
     filterManager.initManager();
-    graph.loadData(data);
+    //graph.loadData(data);
     /*if(usesecond){
         graph2.loadData(data);
     }*/
 
-    filterManager.loadData(data);
+    //filterManager.loadData(data);
 };
 
 //filterManager.setRenderNode('#filters');
