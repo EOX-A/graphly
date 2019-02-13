@@ -50,10 +50,12 @@ var renderSettings_ray = {
 };
 
 var renderSettingsSwarm = {
-    xAxis: 'Latitude',
-    yAxis: [['F'],['B_NEC_resAC_E', 'B_NEC_resAC_N'], ['F_res_IGRF12']],
-    y2Axis: [['SunAzimuthAngle'],['SunDeclination'], ['SunHourAngle']],
-    colorAxis: [null, null, null, null, null, null, null],
+    xAxis: 'Timestamp',
+    yAxis:     [['F'], [], ['F_error'], []],
+    colorAxis: [[null], [], [null],      []],
+
+    y2Axis:     [[], ['B_NEC_resAC_E'],[], ['QDLon']],
+    colorAxis2: [[], [null],           [], ['F_error']],
     /*dataIdentifier: {
         parameter: 'id',
         identifiers: ['Alpha', 'Bravo']
@@ -157,7 +159,8 @@ var otherds = {
         //lineConnect: true
     },*/
     Timestamp: {
-        scaleFormat: 'time'
+        scaleFormat: 'time',
+        timeFormat: 'MJD2000'
     },
     id: {
         scaleType: 'ordinal',
@@ -413,7 +416,22 @@ var dataSettings = {
         uom: 'm'
     },
     F: {
-    }
+    },
+    Timestamp: {
+        scaleFormat: 'time'
+    },
+
+    QDLat: {
+        lineConnect: true,
+        symbol: null
+    },
+    
+    Longitude: {
+        periodic: {
+            period: 360,
+            offset: -180
+        }
+    },
 
 };
 
@@ -573,7 +591,7 @@ filterManager.on('filterChange', function(filters){
 });
 
 d3.select('#save').on('click', function(){
-    graph.saveImage('png',2);
+    graph.saveImage('png' , 2);
 });
 
 
@@ -593,7 +611,7 @@ var xhr = new XMLHttpRequest();
 
 //xhr.open('GET', 'data/aeolus_L1.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
-xhr.open('GET', 'data/swarm.mp', true);
+xhr.open('GET', 'data/swarm2.mp', true);
 
 xhr.responseType = 'arraybuffer';
 
@@ -672,6 +690,10 @@ xhr.onload = function(e) {
       for (var i = 0; i < data.Timestamp.length; i++) {
         data.id.push(ids[data.Spacecraft[i]]);
       }
+    }
+
+    for (var i = 0; i < data.Timestamp.length; i++) {
+      data.Timestamp[i] = new Date(data.Timestamp[i]*1000);
     }
     data['B_NEC_resAC_N'] = [];
     data['B_NEC_resAC_E'] = [];
