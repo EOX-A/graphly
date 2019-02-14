@@ -10,11 +10,11 @@ svg {
     width: 100px;
     position: absolute;
     cursor: pointer;
-    margin-top: -20px;
     text-decoration: underline;
     color: #007bff;
     font-weight: bold;
     user-select: none;
+    text-align: center;
 
 }
 

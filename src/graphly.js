@@ -2063,6 +2063,7 @@ class graphly extends EventEmitter {
                     .attr('id', 'newPlotLink')
                     .style('left', (this.width/2)+this.margin.left-50+'px')
                     .text('+ Add plot')
+                    .style('top', (this.margin.top-20)+'px')
                     .on('click', ()=>{
                         this.renderSettings.yAxis.push([]);
                         this.renderSettings.y2Axis.push([]);
@@ -2107,7 +2108,7 @@ class graphly extends EventEmitter {
                     .attr('class', 'cross removePlot')
                     .attr('data-index', plotY)
                     .style('left', '10px')
-                    .style('top', (offsetY+10)+'px')
+                    .style('top', (offsetY+this.margin.top+10)+'px')
                     .on('click', ()=>{
 
                         let renSett = this.renderSettings;
@@ -2138,7 +2139,7 @@ class graphly extends EventEmitter {
                         .html('&#9650;')
                         .attr('data-index', plotY)
                         .style('left', '10px')
-                        .style('top', (offsetY+20)+'px')
+                        .style('top', (offsetY+this.margin.top+20)+'px')
                         .on('click', ()=>{
 
                             let index = Number(d3.select(d3.event.target).attr('data-index'));
@@ -2177,7 +2178,7 @@ class graphly extends EventEmitter {
                         .html('&#9660;')
                         .attr('data-index', plotY)
                         .style('left', '10px')
-                        .style('top', (offsetY+addoff)+'px')
+                        .style('top', (offsetY+this.margin.top+addoff)+'px')
                         .on('click', ()=>{
 
                             let index = Number(d3.select(d3.event.target).attr('data-index'));
@@ -4062,14 +4063,14 @@ class graphly extends EventEmitter {
 
 
         this.el.selectAll('.removePlot').each(function(d,i){
-            d3.select(this).style('top', ((heighChunk*i)+10)+'px')
+            d3.select(this).style('top', ((heighChunk*i)+10+that.margin.top)+'px')
         });
 
         this.el.selectAll('.arrowChangePlot.up').each(function(d,i){
-            d3.select(this).style('top', ((heighChunk*(i+1))+20)+'px')
+            d3.select(this).style('top', ((heighChunk*(i+1))+that.margin.top+20)+'px')
         });
         this.el.selectAll('.arrowChangePlot.down').each(function(d,i){
-            d3.select(this).style('top', ((heighChunk*(i))+45)+'px')
+            d3.select(this).style('top', ((heighChunk*(i))+that.margin.top+45)+'px')
         });
 
         this.el.selectAll('.previewImage')
@@ -4748,7 +4749,7 @@ class graphly extends EventEmitter {
                 this.el.append('div')
                     .attr('id', 'parameterInfo'+yPos)
                     .attr('class', 'parameterInfo')
-                    .style('top', ((currHeight)*yPos + 20) +'px')
+                    .style('top', ((currHeight)*yPos + 10 + this.margin.top) +'px')
                     .style(this.labelAllignment, ()=>{
                         if(this.labelAllignment === 'left'){
                             return this.margin.left+20+'px';
@@ -4760,7 +4761,7 @@ class graphly extends EventEmitter {
             } else {
                 this.el.select('#parameterInfo'+yPos).selectAll('*').remove();
                 this.el.select('#parameterInfo'+yPos)
-                    .style('top', ((currHeight)*yPos +20) +'px')
+                    .style('top', ((currHeight)*yPos +10) + this.margin.top +'px')
                     .style(this.labelAllignment, ()=>{
                         if(this.labelAllignment === 'left'){
                             return this.margin.left+20+'px';
@@ -4804,7 +4805,7 @@ class graphly extends EventEmitter {
         for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
             this.el.select('#parameterInfo'+yPos)
-                .style('top', ((currHeight)*yPos + 20) +'px')
+                .style('top', ((currHeight)*yPos + 10 + this.margin.top) +'px')
                 .style(this.labelAllignment, ()=>{
                     if(this.labelAllignment === 'left'){
                         return this.margin.left+20+'px';
