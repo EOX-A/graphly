@@ -1100,6 +1100,21 @@ class graphly extends EventEmitter {
             }
 
             this.batchDrawer.draw();
+
+            // We clear the spaces between plots to have crisper edges where
+            // point don't go over
+            let rSL = this.renderSettings.yAxis.length;
+            if(rSL>1){
+                let heighChunk = this.height*this.resFactor/rSL;
+                for(let yy=0; yy<rSL;yy++){
+                    let offset = yy*heighChunk;
+                    this.batchDrawer.clearRect(
+                        0, offset,
+                        this.width*this.resFactor,
+                        ((this.separation)*this.resFactor)+1
+                    );
+                }
+            }
         }
 
         // We need to first render the canvas if the debounce active is false
@@ -2627,7 +2642,8 @@ class graphly extends EventEmitter {
         if(timeScale){
             addValues.push(u.getCustomUTCTimeTickFormat()(d));
         } else {
-            addValues.push(d);
+            // cut small decimals to solve float problems for axis labels
+            addValues.push(parseFloat(d.toFixed(11)));
         }
         // Find corresponding value(s) for additional axis
         for (let x = 0; x < addT.length; x++) {
