@@ -3261,13 +3261,13 @@ class graphly extends EventEmitter {
 
         this.renderCanvas.call(this.xyzoomCombined.bind(this));
 
-
     }
 
     onZoom() {
-        if(this.debounceActive){
-            this.zoom_update();
-        }
+        // TODO: resetting of zooms is not necessary when not using debounce
+        // but it breaks the interaction between different zoom objects
+        // maybe there is a better way of doing this instead of resetting it
+        this.zoom_update();
         this.renderData();
     }
 
@@ -3577,6 +3577,7 @@ class graphly extends EventEmitter {
             }
 
         }else{
+            // Transfer scale interactions from different zoom events
             // While interaction is happening only render visible plot once
             // debounce finished render also reference canvas to allow interaction
             this.renderData(false);
@@ -5095,7 +5096,7 @@ class graphly extends EventEmitter {
         let divHeight = this.el.select('#parameterInfo'+yPos).node().offsetHeight;
 
         parSetEl
-            .style('top', ((currHeight*yPos)+divHeight+19)+'px')
+            .style('top', ((currHeight*yPos)+divHeight+9+this.margin.top)+'px')
             .style('display', 'block');
 
         parSetEl
