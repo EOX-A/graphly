@@ -4252,21 +4252,31 @@ class graphly extends EventEmitter {
         }
 
         // Identify how colors are applied to the points
-        let singleColor = true;
+        let singleSettings = true;
         let colorObj;
         let identParam;
+        let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
+        dotsize *= this.resFactor;
 
         if (this.renderSettings.hasOwnProperty('dataIdentifier')){
-            singleColor = false;
+            singleSettings = false;
+            dotsize = {};
             identParam = this.renderSettings.dataIdentifier.parameter;
             // Check if alpha value is set for all parameters
             let identifiers = this.renderSettings.dataIdentifier.identifiers;
             for (var i = 0; i < identifiers.length; i++) {
-                if(!this.dataSettings[identParam][identifiers[i]].hasOwnProperty('alpha')){
-                    this.dataSettings[identParam][identifiers[i]].alpha = this.defaultAlpha;
+                if(!this.dataSettings[yAxis][identifiers[i]].hasOwnProperty('alpha')){
+                    this.dataSettings[yAxis][identifiers[i]].alpha = this.defaultAlpha;
                 }
+                dotsize[identifiers[i]] = defaultFor(
+                    this.dataSettings[yAxis][identifiers[i]].size,
+                    DOTSIZE
+                );
+                dotsize[identifiers[i]] *= this.resFactor;
             }
         }
+
+        
 
         let constAlpha = this.defaultAlpha;
 
@@ -4276,7 +4286,7 @@ class graphly extends EventEmitter {
             this.dataSettings[yAxis].alpha = constAlpha;
         }
 
-        if(singleColor) {
+        if(singleSettings) {
             if(this.dataSettings[yAxis].hasOwnProperty('color')){
                 colorObj = [
                     this.dataSettings[yAxis].color[0],
@@ -4332,19 +4342,21 @@ class graphly extends EventEmitter {
 
         }
 
-        let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
-        dotsize *= this.resFactor;
-
         let blockSize = (
             this.height/this.renderSettings.yAxis.length - this.separation
         ) * this.resFactor;
 
         let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
 
-        let x, y, valX, valY;
+        let x, y, valX, valY, currDotSize;
 
         for (let j=0;j<lp; j++) {
 
+            if(singleSettings){
+                currDotSize = dotsize;
+            } else {
+                currDotSize = dotsize[data[identParam][j]];
+            }
 
             if(!yGroup){
                 valY = data[yAxis][j];
@@ -4373,7 +4385,7 @@ class graphly extends EventEmitter {
                 }
                 
             } else {
-                if(singleColor){
+                if(singleSettings){
                     rC = colorObj;
                 } else {
                     let val = data[identParam][j];
@@ -4496,17 +4508,17 @@ class graphly extends EventEmitter {
                 if(!parSett.hasOwnProperty('symbol')){
                     parSett.symbol = 'circle';
                 }
-                par_properties.dotsize = dotsize;
+                par_properties.dotsize = currDotSize;
 
                 if(parSett.symbol !== null && parSett.symbol !== 'none'){
                     par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, dotsize, sym, rC[0], rC[1], rC[2], rC[3]
+                        x, y, currDotSize, sym, rC[0], rC[1], rC[2], rC[3]
                     );
                     if(!this.fixedSize && updateReferenceCanvas){
                         this.batchDrawerReference.addDot(
-                            x, y, dotsize, sym, nCol[0], nCol[1], nCol[2], -1.0
+                            x, y, currDotSize, sym, nCol[0], nCol[1], nCol[2], -1.0
                         );
                     }
                 }
