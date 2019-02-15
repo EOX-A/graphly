@@ -323,11 +323,11 @@ class graphly extends EventEmitter {
         }
 
         // Calculate necessary additional offset if sub ticks have been selected
-        if(this.renderSettings.hasOwnProperty('additionalXTicks')) {
+        if(this.enableSubXAxis) {
             this.subAxisMarginX = 40*this.renderSettings.additionalXTicks.length;
         }
 
-        if(this.renderSettings.hasOwnProperty('additionalYTicks')) {
+        if(this.enableSubYAxis) {
             let addYT = this.renderSettings.additionalYTicks;
             let maxL = 0;
             for(let i=0; i<addYT.length; i++){
@@ -1609,7 +1609,7 @@ class graphly extends EventEmitter {
 
             if (this.data.hasOwnProperty(key)){
                 xSubChoices.push({value: key, label: key});
-                if(this.renderSettings.hasOwnProperty('additionalXTicks') &&
+                if(this.enableSubXAxis &&
                    this.renderSettings.additionalXTicks.indexOf(key)!==-1){
                     xSubChoices[xSubChoices.length-1].selected = true;
                 }
@@ -1682,7 +1682,7 @@ class graphly extends EventEmitter {
 
                     ySubChoices.push({value: key, label: key});
 
-                    if(this.renderSettings.hasOwnProperty('additionalYTicks') &&
+                    if(this.enableSubYAxis &&
                        this.renderSettings.additionalYTicks[yPos].indexOf(key)!==-1){
                         ySubChoices[ySubChoices.length-1].selected = true;
                     }
@@ -2803,7 +2803,7 @@ class graphly extends EventEmitter {
             }
         }
         // Handling of ticks adding subtick text
-        if(this.renderSettings.hasOwnProperty('additionalXTicks') && 
+        if(this.renderSettings.additionalXTicks && 
             this.renderSettings.additionalXTicks.length>0){
             let addXT = this.renderSettings.additionalXTicks;
             this.xAxis.tickFormat(this.customSubtickFormat.bind(
@@ -3048,7 +3048,7 @@ class graphly extends EventEmitter {
                 this.yAxis[yPos].tickFormat(u.getCustomUTCTimeTickFormat());
             }
 
-            if(this.renderSettings.hasOwnProperty('additionalYTicks')){
+            if(this.enableSubYAxis){
                 this.additionalYAxis.push(
                     d3.svg.axis()
                         .scale(this.yScale[yPos])
@@ -3058,7 +3058,7 @@ class graphly extends EventEmitter {
                 );
             }
             // Handling of ticks adding subtick text
-            if(this.renderSettings.hasOwnProperty('additionalYTicks')){
+            if(this.enableSubYAxis){
                 let addYT = this.renderSettings.additionalYTicks[yPos];
                 this.yAxis[yPos].tickFormat(this.customSubtickFormat.bind(
                     this,
@@ -3080,18 +3080,20 @@ class graphly extends EventEmitter {
                 this.yAxisSvg.push(null);
             }
 
-            let currAddYAxis = [];
-            for (let i = 0; i < this.renderSettings.additionalYTicks[yPos].length; i++) {
-                currAddYAxis.push(
-                    this.svg.append('g')
-                        .attr('class', 'y_add subaxis')
-                        .attr(
-                            'transform', 'translate(-'+((i*80)+80)+ ','+yPos*heighChunk+')'
-                        )
-                        .call(this.additionalYAxis[yPos])
-                );
+            if(this.enableSubYAxis){
+                let currAddYAxis = [];
+                for (let i = 0; i < this.renderSettings.additionalYTicks[yPos].length; i++) {
+                    currAddYAxis.push(
+                        this.svg.append('g')
+                            .attr('class', 'y_add subaxis')
+                            .attr(
+                                'transform', 'translate(-'+((i*80)+80)+ ','+yPos*heighChunk+')'
+                            )
+                            .call(this.additionalYAxis[yPos])
+                    );
+                }
+                this.addYAxisSvg.push(currAddYAxis);
             }
-            this.addYAxisSvg.push(currAddYAxis);
 
             this.y2Axis.push(
                 d3.svg.axis()
