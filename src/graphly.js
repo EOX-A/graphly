@@ -1297,14 +1297,13 @@ class graphly extends EventEmitter {
         let elHidden;
         let settObj = this.el.select('#'+elId);
 
-        settObj.remove();
-
         if(!settObj.empty()){
             elHidden = (settObj.style('display') == 'block' ) ? 
                 false : true;
         }else{
             elHidden = true;
         }
+        settObj.remove();
 
         let uniq = currAxis;
 
@@ -1460,7 +1459,6 @@ class graphly extends EventEmitter {
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
-            that.createAxisLabels();
 
             // Recheck if parameter info should be shown now
             that.el.selectAll('.parameterInfo').each(function(){
