@@ -54,6 +54,24 @@ var aeolusl2bnew = {
 
 };
 
+var aeolusl2a = {
+    xAxis: 'measurements',
+    yAxis: [
+        'altitude',
+        //'rayleigh_dem_altitude'
+    ],
+    //y2Axis: [],
+    combinedParameters: {
+        altitude: ['alt_start', 'alt_end'],
+        measurements: ['meas_start', 'meas_end']
+    },
+    colorAxis: [
+        'group_backscatter_variance'
+        //'mie_wind_velocity',
+    ],
+
+};
+
 
 var renderSettingsSwarm = {
     xAxis: 'Longitude',
@@ -145,6 +163,10 @@ var ds_mie = {
 
 
 var otherds = {
+
+    group_backscatter_variance:{
+        nullValue: -1
+    },
     
     T_elec: {
         symbol: 'circle',
@@ -505,7 +527,7 @@ var filterManager = new FilterManager({
 var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: otherds,
-    renderSettings: aeolusl2bnew,
+    renderSettings: aeolusl2a,
     filterManager: filterManager,
     //ignoreParameters: [/mie_quality_fl.*/]
     debounceActive: true,
@@ -559,7 +581,8 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/aeolusl2b_newest.mp', true);
+//xhr.open('GET', 'data/aeolusl2b_newest.mp', true);
+xhr.open('GET', 'data/aeolusl2a.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
 //xhr.open('GET', 'data/swarm.mp', true);
 
@@ -631,7 +654,49 @@ xhr.onload = function(e) {
     //console.log(data);
     
 
-    var bins_start = [];
+    // L2A
+    var meas_start = [];
+    var meas_end = [];
+    var alt_start = [];
+    var alt_end = [];
+    var gD = data.ALD_U_N_2A.group_data;
+    //var mD = data.ALD_U_N_2A.measurement_data;
+    var oD = data.ALD_U_N_2A.observation_data;
+    var backscatter = [];
+    //var group_backscatter_variance=[];
+
+
+
+    for (var i = 0; i < gD.group_start_obs.length; i++) {
+        var currObsStart = gD.group_start_obs[i]-1;
+        var currObsEnd = gD.group_end_obs[i]-1; // Not needed yet as start and end is equal
+        var currMeasStart = (currObsStart*30) + gD.group_start_meas_obs[i];
+        var currMeasEnd = (currObsStart*30) + gD.group_end_meas_obs[i];
+        var heighBinIndex = gD.group_height_bin_index[i]-1;
+        var currAltStart = oD.mie_altitude_obs[currObsStart][heighBinIndex];
+        var currAltEnd = oD.mie_altitude_obs[currObsStart][heighBinIndex+1];
+        meas_start.push(currMeasStart);
+        meas_end.push(currMeasEnd);
+        alt_start.push(currAltEnd);
+        alt_end.push(currAltStart);
+        backscatter.push(gD.group_backscatter[i]);
+     }
+
+
+
+    var ds = {};
+    ds.alt_start = alt_start;
+    ds.alt_end = alt_end;
+    ds.meas_start = meas_start;
+    ds.meas_end = meas_end;
+    ds.backscatter = backscatter;
+    ds.group_backscatter_variance = gD.group_backscatter_variance;
+    ds.group_extinction_variance = gD.group_extinction_variance;
+
+    graph.loadData(ds);
+
+    // L2B
+    /*var bins_start = [];
     var bins_end = [];
     for (var i = 0; i < data.ALD_U_N_2B.measurement_data.mie_measurement_map.length; i++) {
          for (var j=0; j<data.ALD_U_N_2B.measurement_data.mie_measurement_map[i].length; j++){
@@ -656,7 +721,8 @@ xhr.onload = function(e) {
     ds.meas_end = meas_end;
     ds.mie_meas_map = data.ALD_U_N_2B.measurement_data.mie_measurement_map.flat();
 
-    graph.loadData(ds);
+    graph.loadData(ds);*/
+
 
     /*var ids = {
       'A': 'Alpha',
