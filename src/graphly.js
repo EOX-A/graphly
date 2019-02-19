@@ -2865,14 +2865,6 @@ class graphly extends EventEmitter {
             );
         }
 
-        let xSel = this.renderSettings.xAxis;
-        if(this.dataSettings.hasOwnProperty(xSel) &&
-           this.dataSettings[xSel].hasOwnProperty('periodic') ){
-            let period = this.dataSettings[xSel].periodic.period;
-            let xd = this.xScale.domain();
-            maxzoomout = Math.abs(xd[1]-xd[0])/period;
-        }
-
         let multiLength = this.renderSettings.yAxis.length;
         let heighChunk = this.height/multiLength;
         
@@ -3044,9 +3036,10 @@ class graphly extends EventEmitter {
                     .orient('left')
             );
 
-            if(this.yTimeScale){
-                this.yAxis[yPos].tickFormat(u.getCustomUTCTimeTickFormat());
-            }
+            // Check if axis is using periodic parameter (only one parameter)
+            let tickformat = d3.format('g');
+            let yS = this.renderSettings.yAxis[yPos];
+            let axisformat;
 
             if(this.enableSubYAxis){
                 this.additionalYAxis.push(
@@ -3058,15 +3051,49 @@ class graphly extends EventEmitter {
                 );
             }
             // Handling of ticks adding subtick text
-            if(this.enableSubYAxis){
+            
+
+            if(this.yTimeScale){
+                axisformat = u.getCustomUTCTimeTickFormat();
+            }else if(yS.length === 1){
+                if(this.dataSettings.hasOwnProperty(yS[0]) && 
+                   this.dataSettings[yS[0]].hasOwnProperty('periodic')){
+
+                    axisformat = (d,i)=>{
+                        let offset = defaultFor(
+                            this.dataSettings[ySelection].periodic.offset, 0
+                        );
+                        let period = this.dataSettings[ySelection].periodic.period;
+
+                        let dm = d-offset;
+                        if(d<0){
+                            dm = d-offset;
+                        }
+                        let offsetAmount = Math.floor(dm/period);
+                        if(dm%period !== 0){
+                            d -= offsetAmount*period;
+                            d = tickformat(d.toFixed(10));
+                        } else {
+                            d = tickformat(period+offset)+' / '+tickformat(offset);
+                        }
+                        return d;
+                    };
+                }
+            } else if(this.enableSubYAxis){
                 let addYT = this.renderSettings.additionalYTicks[yPos];
                 this.yAxis[yPos].tickFormat(this.customSubtickFormat.bind(
                     this,
                     this.data[ySelection[0]],
                     addYT
                 ));
+            } else {
+                axisformat = tickformat;
             }
 
+
+            this.yAxis[yPos].tickFormat(axisformat);
+
+    
             if(currYAxis.length > 0){
                 this.yAxisSvg.push(
                     this.svg.append('g')
@@ -3123,6 +3150,13 @@ class graphly extends EventEmitter {
 
         let maxzoomout = 0;
         
+        let xSel = this.renderSettings.xAxis;
+        if(this.dataSettings.hasOwnProperty(xSel) &&
+           this.dataSettings[xSel].hasOwnProperty('periodic') ){
+            let period = this.dataSettings[xSel].periodic.period;
+            let xd = this.xScale.domain();
+            maxzoomout = Math.abs(xd[1]-xd[0])/period;
+        }
 
         // Define zoom behaviour based on parameter dependend x and y scales
 
@@ -3133,19 +3167,32 @@ class graphly extends EventEmitter {
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.yzoom = [];
-
+        let maxZOut = 0;
         for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+            let maxZOutY = 0;
+            if(this.renderSettings.yAxis[plotY].length === 1){
+                let ySel = this.renderSettings.yAxis[plotY][0];
+                if(this.dataSettings.hasOwnProperty(ySel) &&
+                   this.dataSettings[ySel].hasOwnProperty('periodic') ){
+                    let period = this.dataSettings[ySel].periodic.period;
+                    let xd = this.yScale[plotY].domain();
+                    maxZOutY = Math.abs(xd[1]-xd[0])/period;
+                    maxZOut = d3.max([maxZOutY, maxZOut]);
+                }
+            }
             this.yzoom.push(
                 d3.behavior.zoom()
                     .y(this.yScale[plotY])
+                    .scaleExtent([maxZOutY,Infinity])
                     .on('zoom', this.previewZoom.bind(this,plotY))
                     .on('zoomend', this.debounceEndZoomEvent.bind(this))
                 );
         }
+        maxZOut = d3.max([maxzoomout, maxZOut]);
         this.xyzoomCombined = d3.behavior.zoom()
             .x(this.xScale)
             .y(this.yScaleCombined)
-            .scaleExtent([maxzoomout,Infinity])
+            .scaleExtent([maxZOut,Infinity])
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
@@ -3203,12 +3250,24 @@ class graphly extends EventEmitter {
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
         this.yzoom = [];
-
+        let maxZOut = 0;
         for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+            let maxZOutY = 0;
+            if(this.renderSettings.yAxis[plotY].length === 1){
+                let ySel = this.renderSettings.yAxis[plotY][0];
+                if(this.dataSettings.hasOwnProperty(ySel) &&
+                   this.dataSettings[ySel].hasOwnProperty('periodic') ){
+                    let period = this.dataSettings[ySel].periodic.period;
+                    let xd = this.yScale[plotY].domain();
+                    maxZOutY = Math.abs(xd[1]-xd[0])/period;
+                    maxZOut = d3.max([maxZOutY, maxZOut]);
+                }
+            }
             if(this.renderSettings.yAxis[plotY].length>0){
                 this.yzoom.push(
                     d3.behavior.zoom()
                         .y(this.yScale[plotY])
+                        .scaleExtent([maxZOutY,Infinity])
                         .on('zoom', this.previewZoom.bind(this,plotY))
                         .on('zoomend', this.debounceEndZoomEvent.bind(this))
                 );
@@ -3216,6 +3275,7 @@ class graphly extends EventEmitter {
                 this.yzoom.push(false);
             }
         }
+        maxZOut = d3.max([maxzoomout, maxZOut]);
 
         // Preserve previous center if it was already set
         let prevCenter = this.xyzoomCombined.center();
@@ -3223,7 +3283,7 @@ class graphly extends EventEmitter {
         this.xyzoomCombined = d3.behavior.zoom()
                 .x(this.xScale)
                 .y(this.yScaleCombined)
-                .scaleExtent([maxzoomout,Infinity])
+                .scaleExtent([maxZOut,Infinity])
                 .on('zoom', this.previewZoom.bind(this))
                 .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
@@ -4327,8 +4387,6 @@ class graphly extends EventEmitter {
         // Check if cyclic axis and if currently displayed axis range needs to
         // offset to be shown in "next cycle" above or below
         let xMax, xMin, period, xoffset;
-        let yMax = yScale.domain()[1];
-        let yMin = yScale.domain()[0];
 
         let xperiodic = false;
         if(this.dataSettings.hasOwnProperty(xAxis) && 
@@ -4340,7 +4398,19 @@ class graphly extends EventEmitter {
             period = this.dataSettings[xAxis].periodic.period;
             xMax = this.xScale.domain()[1]-xoffset;
             xMin = this.xScale.domain()[0]+xoffset;
+        }
 
+        let yMax, yMin, yoffset, yperiod;
+        let yperiodic = false;
+        if(this.dataSettings.hasOwnProperty(yAxis) && 
+           this.dataSettings[yAxis].hasOwnProperty('periodic')){
+            yoffset = defaultFor(
+                this.dataSettings[yAxis].periodic.offset, 0
+            );
+            yperiodic = true;
+            yperiod = this.dataSettings[yAxis].periodic.period;
+            yMax = this.yScale[plotY].domain()[1]-yoffset;
+            yMin = this.yScale[plotY].domain()[0]+yoffset;
         }
 
         let blockSize = (
@@ -4398,10 +4468,35 @@ class graphly extends EventEmitter {
                 }
             }
 
+            // Manipulate value if we have a periodic parameter
+            if(yperiodic){
+                let shiftpos = Math.abs(parseInt(yMax/yperiod));
+                let shiftneg = Math.abs(parseInt(yMin/yperiod));
+                if(yoffset===0){
+                    shiftneg = Math.abs(Math.floor(yMin/yperiod));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valY = valY + shift*yperiod;
+                    if(valY-yoffset > yMax){
+                        valY -= yperiod;
+                    }
+                    if(valY+yoffset < yMin){
+                        valY += yperiod;
+                    }
+                    
+                }
+            }
+
             y = yScale(valY);
             if(y<0 || y>blockSize){
                 continue;
             }
+
 
             y+=axisOffset;
 
@@ -4559,6 +4654,19 @@ class graphly extends EventEmitter {
             period = this.dataSettings[xAxis].periodic.period;
             xMax = this.xScale.domain()[1]-xoffset;
             xMin = this.xScale.domain()[0]+xoffset;
+        }
+
+        let yperiodic = false;
+        let yperiod, yoffset;
+        if(this.dataSettings.hasOwnProperty(yAxis) && 
+           this.dataSettings[yAxis].hasOwnProperty('periodic')){
+            yoffset = defaultFor(
+                this.dataSettings[yAxis].periodic.offset, 0
+            );
+            yperiodic = true;
+            yperiod = this.dataSettings[yAxis].periodic.period;
+            yMax = this.yScale[plotY].domain()[1]-yoffset;
+            yMin = this.yScale[plotY].domain()[0]+yoffset;
 
         }
 
@@ -4572,7 +4680,32 @@ class graphly extends EventEmitter {
 
         for (let j=0;j<lp; j++) {
 
-            y = yScale(data[yAxis][j]);
+            valY = data[yAxis][j];
+
+            // Manipulate value if we have a periodic parameter
+            if(yperiodic){
+                let shiftpos = Math.abs(parseInt(yMax/yperiod));
+                let shiftneg = Math.abs(parseInt(yMin/yperiod));
+                if(yoffset===0){
+                    shiftneg = Math.abs(Math.floor(yMin/yperiod));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valY = valY + shift*yperiod;
+                    if(valY-yoffset > yMax){
+                        valY -= yperiod;
+                    }
+                    if(valY+yoffset < yMin){
+                        valY += yperiod;
+                    }
+                }
+            }
+
+            y = yScale(valY);
 
             if(y<0 || y>blockSize){
                 continue;

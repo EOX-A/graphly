@@ -50,12 +50,12 @@ var renderSettings_ray = {
 };
 
 var renderSettingsSwarm = {
-    xAxis: 'Timestamp',
-    yAxis:     [['F'], [], ['F_error'], []],
-    colorAxis: [[null], [], [null],      []],
+    xAxis: 'Longitude',
+    yAxis:     [['F'],['Latitude']],
+    colorAxis: [[null], [null]],
 
-    y2Axis:     [[], ['B_NEC_resAC_E'],[], ['QDLon']],
-    colorAxis2: [[], [null],           [], ['F_error']],
+    y2Axis:     [[], []],
+    colorAxis2: [[], []],
     /*dataIdentifier: {
         parameter: 'id',
         identifiers: ['Alpha', 'Bravo']
@@ -176,6 +176,12 @@ var otherds = {
         periodic: {
             period: 360,
             offset: -180
+        }
+    },
+    Latitude: {
+        periodic: {
+            period: 180,
+            offset: 0
         }
     },
 
@@ -430,6 +436,13 @@ var dataSettings = {
         periodic: {
             period: 360,
             offset: -180
+        }
+    },
+
+    Latitude: {
+        periodic: {
+            period: 180,
+            offset: -90
         }
     },
 
