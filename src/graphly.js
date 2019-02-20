@@ -251,8 +251,8 @@ class graphly extends EventEmitter {
         this.logY = defaultFor(options.logY, false);
         this.logY2 = defaultFor(options.logY2, false);
 
-        this.defaultTickSize = 14;
-        this.defaultLabelSize = 14;
+        this.defaultTickSize = 12;
+        this.defaultLabelSize = 12;
 
         if(!this.multiYAxis){
             // Manage configuration as it would be a 1 element multi plot
