@@ -6,7 +6,7 @@ svg {
 }
 
 
-#newPlotLink{
+#newPlotLink, #globalSettings{
     width: 100px;
     position: absolute;
     cursor: pointer;
@@ -16,6 +16,21 @@ svg {
     user-select: none;
     text-align: center;
 
+}
+
+#globalSettingsContainer{
+    position: absolute;
+    background-color: white;
+    border-color: #444;
+    border-style: solid;
+    border-width: 1px;
+    padding: 4px;
+    z-index: 50;
+    display: none;
+}
+
+#labelFontSize, #tickFontSize{
+    width: 146px;
 }
 
 .removePlot{

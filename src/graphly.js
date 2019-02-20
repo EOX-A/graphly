@@ -251,6 +251,9 @@ class graphly extends EventEmitter {
         this.logY = defaultFor(options.logY, false);
         this.logY2 = defaultFor(options.logY2, false);
 
+        this.defaultTickSize = 14;
+        this.defaultLabelSize = 14;
+
         if(!this.multiYAxis){
             // Manage configuration as it would be a 1 element multi plot
             // this should bring together both functionalities
@@ -1198,8 +1201,8 @@ class graphly extends EventEmitter {
             .attr('shape-rendering', 'crispEdges');
 
         // Set fontsize for text explicitly
-        this.svg.selectAll('text')
-            .attr('font-size', '12px');
+        /*this.svg.selectAll('text')
+            .attr('font-size', '12px');*/
 
         // TODO: We introduce a short timeout here because it seems for some
         // reason the rendered image is not ready when not using the debounce
@@ -1899,6 +1902,9 @@ class graphly extends EventEmitter {
                 }
             }
         }
+
+        d3.selectAll('.axisLabel').attr('font-size', this.defaultLabelSize+'px');
+        d3.selectAll('.svgaxisLabel').attr('font-size', this.defaultLabelSize+'px');
     }
 
     createColorScale(id, index, yPos){
@@ -2059,7 +2065,7 @@ class graphly extends EventEmitter {
             if(d3.select('#newPlotLink').empty()){
                 this.el.append('div')
                     .attr('id', 'newPlotLink')
-                    .style('left', (this.width/2)+this.margin.left-50+'px')
+                    .style('left', (this.width/2)+this.margin.left+40+'px')
                     .text('+ Add plot')
                     .style('top', (this.margin.top-20)+'px')
                     .on('click', ()=>{
@@ -2076,6 +2082,62 @@ class graphly extends EventEmitter {
             d3.selectAll('.removePlot').remove();
             d3.selectAll('.arrowChangePlot').remove();
         }
+
+        if(d3.select('#globalSettings').empty()){
+
+            let con = this.el.append('div')
+                .attr('id', 'globalSettingsContainer')
+                .style('left', (this.width/2)+this.margin.left-75+'px')
+                .style('width', '150px')
+                .style('top', (this.margin.top)+1+'px');
+
+            con.append('label')
+                .attr('for', 'labelFontSize')
+                .text('Label font size');
+
+            con.append('input')
+                .attr('id', 'labelFontSize')
+                .attr('type', 'text')
+                .property('value', this.defaultLabelSize)
+                .on('input', ()=>{
+                    this.defaultLabelSize = d3.event.currentTarget.value;
+                    d3.selectAll('.axisLabel').attr('font-size', this.defaultLabelSize+'px');
+                    d3.selectAll('.svgaxisLabel').attr('font-size', this.defaultLabelSize+'px');
+                    d3.selectAll('.labelitem').style('font-size', this.defaultLabelSize+'px');
+                });
+
+            con.append('label')
+                .attr('for', 'tickFontSize')
+                .text('Label font size');
+
+            con.append('input')
+                .attr('id', 'tickFontSize')
+                .attr('type', 'text')
+                .property('value', this.defaultTickSize)
+                .on('input', ()=>{
+                    this.defaultTickSize = d3.event.currentTarget.value;
+                    this.svg.selectAll('.tick').attr('font-size', this.defaultTickSize+'px');
+                });
+
+            this.el.append('div')
+                .attr('id', 'globalSettings')
+                .style('left', (this.width/2)+this.margin.left-40+'px')
+                .text('Config')
+                .style('top', (this.margin.top-20)+'px')
+                .on('click', ()=>{
+                    let vis = d3.select('#globalSettingsContainer').style('display');
+                    if (vis === 'block'){
+                         d3.select('#globalSettingsContainer').style('display', 'none');
+                    } else {
+                        d3.select('#globalSettingsContainer').style('display', 'block');
+                        d3.select('#labelFontSize').node().focus();
+                        d3.select('#labelFontSize').node().select();
+                    }
+                });
+        }
+
+
+
 
         let multiLength = this.renderSettings.yAxis.length;
         let heighChunk = this.height/multiLength;
@@ -3645,6 +3707,9 @@ class graphly extends EventEmitter {
 
         this.addTimeInformation();
         this.breakTicks();
+
+        // Set size of ticks once they have changed
+        this.svg.selectAll('.tick').attr('font-size', this.defaultTickSize+'px');
     }
 
 
@@ -3936,6 +4001,11 @@ class graphly extends EventEmitter {
         this.batchDrawerReference.updateCanvasSize(this.width, this.height);
         this.renderData();
         this.zoom_update();
+
+        // Update size of labels
+        d3.selectAll('.axisLabel').attr('font-size', this.defaultLabelSize+'px');
+        d3.selectAll('.svgaxisLabel').attr('font-size', this.defaultLabelSize+'px');
+        d3.selectAll('.labelitem').style('font-size', this.defaultLabelSize+'px');
     }
 
 
@@ -5588,6 +5658,7 @@ class graphly extends EventEmitter {
             // check amount of elements and calculate offset
             let offset = 21 + infoGroup.selectAll('text').size() *20;
             let labelText = infoGroup.append('text')
+                .attr('class', 'svgaxisLabel')
                 .attr('text-anchor', 'middle')
                 .attr('y', offset)
                 .attr('x', 153)
