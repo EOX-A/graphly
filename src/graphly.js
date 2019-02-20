@@ -1107,7 +1107,7 @@ class graphly extends EventEmitter {
             // We clear the spaces between plots to have crisper edges where
             // point don't go over
             let rSL = this.renderSettings.yAxis.length;
-            if(rSL>1){
+            if(rSL>0){
                 let heighChunk = this.height*this.resFactor/rSL;
                 for(let yy=0; yy<rSL;yy++){
                     let offset = yy*heighChunk;
@@ -2074,6 +2074,7 @@ class graphly extends EventEmitter {
                         this.renderSettings.colorAxis.push([]);
                         this.renderSettings.colorAxis2.push([]);
                         this.renderSettings.additionalYTicks.push([]);
+                        this.emit('axisChange');
                         this.loadData(this.data);
                     });
             }
@@ -2162,7 +2163,7 @@ class graphly extends EventEmitter {
 
             let offsetY = plotY*heighChunk;
 
-            if(this.multiYAxis){
+            if(this.multiYAxis && this.renderSettings.yAxis.length>1){
                 // Add remove button to remove plot
                 this.el.append('div')
                     .attr('class', 'cross removePlot')
@@ -2189,6 +2190,7 @@ class graphly extends EventEmitter {
                         }
                         this.subAxisMarginY = 80*maxL;
 
+                        this.emit('axisChange');
                         this.loadData(this.data);
                     });
 
@@ -2223,11 +2225,12 @@ class graphly extends EventEmitter {
                             rS.colorAxis[index-1] = currColAx;
                             rS.colorAxis2[index-1] = currColAx2;
 
+                            this.emit('axisChange');
                             this.loadData(this.data);
                         });
                 }
 
-                // Add move up arrow 
+                // Add move dwon arrow 
                 if(plotY<this.renderSettings.yAxis.length-1){
                     let addoff = 45;
                     if(plotY === 0){
@@ -2262,6 +2265,7 @@ class graphly extends EventEmitter {
                             rS.colorAxis[index+1] = currColAx;
                             rS.colorAxis2[index+1] = currColAx2;
 
+                            this.emit('axisChange');
                             this.loadData(this.data);
                         });
                 }
@@ -2880,7 +2884,7 @@ class graphly extends EventEmitter {
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
 
-        if(this.renderSettings.yAxis.length>1){
+        if(this.renderSettings.yAxis.length>0){
             // Add clip path so only points in the area are shown
             let clippathseparation = this.xAxisSvg.append('defs').append('clipPath')
                 .attr("x", "0")
@@ -6069,7 +6073,7 @@ class graphly extends EventEmitter {
         // We clear the spaces between plots to have crisper edges where
         // point don't go over
         let rSL = this.renderSettings.yAxis.length;
-        if(rSL>1){
+        if(rSL>0){
             let heighChunk = this.height/rSL;
             for(let yy=0; yy<rSL;yy++){
                 let offset = yy*heighChunk;
