@@ -451,6 +451,13 @@ var dataSettings = {
             offset: 0,
             specialTicks: true
         }
+    },
+    QDLatitude_periodic: {
+        periodic: {
+            period: 360,
+            offset: 0,
+            specialTicks: true
+        }
     }
 
 };
@@ -740,6 +747,27 @@ xhr.onload = function(e) {
             }
             
         } else if (data.OrbitDirection[i] === 0){
+            //TODO what to do here? Should in principle not happen
+        }
+      }
+    }
+
+    if(data.hasOwnProperty('QDLat') && data.hasOwnProperty('QDOrbitDirection')) {
+      data['QDLatitude_periodic'] = [];
+      for (var i = 0; i < data.QDLat.length; i++) {
+        if(data.QDOrbitDirection[i] === 1){
+            // range 90 -270
+            data.QDLatitude_periodic.push(data.QDLat[i]+180);
+        } else if (data.QDOrbitDirection[i] === -1){
+            if(data.QDLat[i]<0){
+                // range 0 - 90
+                data.QDLatitude_periodic.push((data.QDLat[i]*-1));
+            } else {
+                // range 270 - 360
+                data.QDLatitude_periodic.push(360-data.QDLat[i]);
+            }
+            
+        } else if (data.QDOrbitDirection[i] === 0){
             //TODO what to do here? Should in principle not happen
         }
       }
