@@ -2109,7 +2109,7 @@ class graphly extends EventEmitter {
 
             con.append('label')
                 .attr('for', 'tickFontSize')
-                .text('Label font size');
+                .text('Tick font size');
 
             con.append('input')
                 .attr('id', 'tickFontSize')
@@ -3124,26 +3124,50 @@ class graphly extends EventEmitter {
             }else if(yS.length === 1){
                 if(this.dataSettings.hasOwnProperty(yS[0]) && 
                    this.dataSettings[yS[0]].hasOwnProperty('periodic')){
-
-                    axisformat = (d,i)=>{
-                        let offset = defaultFor(
-                            this.dataSettings[ySelection].periodic.offset, 0
-                        );
-                        let period = this.dataSettings[ySelection].periodic.period;
-
-                        let dm = d-offset;
-                        if(d<0){
-                            dm = d-offset;
-                        }
-                        let offsetAmount = Math.floor(dm/period);
-                        if(dm%period !== 0){
-                            d -= offsetAmount*period;
-                            d = tickformat(d.toFixed(10));
-                        } else {
-                            d = tickformat(period+offset)+' / '+tickformat(offset);
-                        }
-                        return d;
-                    };
+                    let perSet = this.dataSettings[yS[0]].periodic;
+                    if(perSet.hasOwnProperty('specialTicks')){
+                        axisformat = (d,i)=>{
+                            let period = perSet.period;
+                            let tickText;
+                            let dm = Math.abs(d)%period;
+                            let sign = '+ ';
+                            if(dm<180){
+                                sign = '- ';
+                            }
+                            if(dm > 0 && dm < 90){
+                                tickText = sign+dm%90 + '↓';
+                            } else if(dm === 180){
+                                tickText = dm%180 + '↑';
+                            } else if(dm > 90 && dm < 270){
+                                tickText = sign+dm%90 + '↑';
+                            } else if(dm > 270 && dm < 360){
+                                tickText = sign+dm%90 + '↓';
+                            } else if(dm === 0){
+                                tickText = dm + '↓';
+                            } else if(dm === 90){
+                                tickText = sign+dm;
+                            }  else {
+                                tickText = dm%180;
+                            }
+                            return tickText;
+                        };
+                    } else {
+                        axisformat = (d,i)=>{
+                            let offset = defaultFor(
+                                perSet.offset, 0
+                            );
+                            let period = perSet.period;
+                            let dm = d-offset;
+                            let offsetAmount = Math.floor(dm/period);
+                            if(dm%period !== 0){
+                                d -= offsetAmount*period;
+                                d = tickformat(d.toFixed(10));
+                            } else {
+                                d = tickformat(period+offset)+' / '+tickformat(offset);
+                            }
+                            return d;
+                        };
+                    }
                 }
             } else if(this.enableSubYAxis){
                 let addYT = this.renderSettings.additionalYTicks[yPos];

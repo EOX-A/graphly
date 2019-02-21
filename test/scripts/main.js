@@ -50,12 +50,12 @@ var renderSettings_ray = {
 };
 
 var renderSettingsSwarm = {
-    xAxis: 'Longitude',
-    yAxis:     [['F'],['Latitude']],
-    colorAxis: [[null], [null]],
+    xAxis: 'Timestamp',
+    yAxis:     [['Latitude_periodic']],
+    colorAxis: [[null]],
 
-    y2Axis:     [[], []],
-    colorAxis2: [[], []],
+    y2Axis:     [[]],
+    colorAxis2: [[]],
     /*dataIdentifier: {
         parameter: 'id',
         identifiers: ['Alpha', 'Bravo']
@@ -445,6 +445,13 @@ var dataSettings = {
             offset: -90
         }
     },
+    Latitude_periodic: {
+        periodic: {
+            period: 360,
+            offset: 0,
+            specialTicks: true
+        }
+    }
 
 };
 
@@ -624,7 +631,7 @@ var xhr = new XMLHttpRequest();
 
 //xhr.open('GET', 'data/aeolus_L1.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
-xhr.open('GET', 'data/swarm2.mp', true);
+xhr.open('GET', 'data/swarmorbit.mp', true);
 
 xhr.responseType = 'arraybuffer';
 
@@ -702,6 +709,46 @@ xhr.onload = function(e) {
       data['id'] = [];
       for (var i = 0; i < data.Timestamp.length; i++) {
         data.id.push(ids[data.Spacecraft[i]]);
+      }
+    }
+
+    if(data.hasOwnProperty('B_NEC')) {
+      data['B_N'] = [];
+      data['B_E'] = [];
+      data['B_C'] = [];
+      for (var i = 0; i < data.B_NEC.length; i++) {
+        data['B_N'].push(data.B_NEC[i][0]);
+        data['B_E'].push(data.B_NEC[i][1]);
+        data['B_C'].push(data.B_NEC[i][2]);
+      }
+    }
+    delete data.B_NEC;
+
+    if(data.hasOwnProperty('Latitude') && data.hasOwnProperty('OrbitDirection')) {
+      data['Latitude_periodic'] = [];
+      for (var i = 0; i < data.Latitude.length; i++) {
+        if(data.OrbitDirection[i] === 1){
+            // range 90 -270
+            data.Latitude_periodic.push(data.Latitude[i]+180);
+        } else if (data.OrbitDirection[i] === -1){
+            if(data.Latitude[i]<0){
+                // range 0 - 90
+                data.Latitude_periodic.push((data.Latitude[i]*-1));
+            } else {
+                // range 270 - 360
+                data.Latitude_periodic.push(360-data.Latitude[i]);
+            }
+            
+        } else if (data.OrbitDirection[i] === 0){
+            //TODO what to do here? Should in principle not happen
+        }
+      }
+    }
+
+    if(data.hasOwnProperty('QDLatitude') && data.hasOwnProperty('QDOrbitDirection')) {
+      data['QDLatitudePole'] = [];
+      for (var i = 0; i < data.QDLatitude.length; i++) {
+        data.QDLatitudePole.push(ids[data.Spacecraft[i]]);
       }
     }
 
