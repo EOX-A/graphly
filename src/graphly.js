@@ -3117,7 +3117,6 @@ class graphly extends EventEmitter {
                 );
             }
             // Handling of ticks adding subtick text
-            
 
             if(this.yTimeScale){
                 axisformat = u.getCustomUTCTimeTickFormat();
@@ -3136,17 +3135,19 @@ class graphly extends EventEmitter {
                             }
                             if(dm > 0 && dm < 90){
                                 tickText = sign+dm%90 + '↓';
-                            } else if(dm === 180){
-                                tickText = dm%180 + '↑';
-                            } else if(dm > 90 && dm < 270){
+                            }  else if(dm > 90 && dm < 180){
+                                tickText = sign+(180-dm) + '↑';
+                            } else if(dm > 180 && dm < 270){
                                 tickText = sign+dm%90 + '↑';
-                            } else if(dm > 270 && dm < 360){
-                                tickText = sign+dm%90 + '↓';
+                            }  else if(dm > 270 && dm < 360){
+                                tickText = sign+(360-dm) + '↓';
                             } else if(dm === 0){
                                 tickText = dm + '↓';
                             } else if(dm === 90){
                                 tickText = sign+dm;
-                            }  else {
+                            } else if(dm === 180){
+                                tickText = dm%180 + '↑';
+                            } else {
                                 tickText = dm%180;
                             }
                             return tickText;
@@ -4902,6 +4903,7 @@ class graphly extends EventEmitter {
                 .on('click', ()=>{
                     this.createParameterInfo();
                     this.resize(false);
+                    this.emit('axisChange');
                     //this.renderData();
                     //this.createColorScales();
                 });
