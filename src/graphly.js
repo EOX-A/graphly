@@ -402,7 +402,17 @@ class graphly extends EventEmitter {
             this.enableFit = false;
         }
 
-        this.colorAxisTickFormat = defaultFor(options.colorAxisTickFormat, 'g');
+
+        function customColorAxisTickFormat(value){
+           var tickFormat = parseFloat(value.toFixed(11));
+           return tickFormat;
+        }
+
+        if(options.hasOwnProperty('colorAxisTickFormat')){
+            this.colorAxisTickFormat = d3.format(options.colorAxisTickFormat);
+        } else {
+            this.colorAxisTickFormat = customColorAxisTickFormat;
+        }
 
         if(this.filterManager){
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
@@ -456,7 +466,7 @@ class graphly extends EventEmitter {
 
         // Set parameters
         let params = {
-            forceGL1: false, // use WebGL 1 even if WebGL 2 is available
+            forceGL1: true, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             coordinateSystem: 'pixels',
             contextParams: {
@@ -1936,7 +1946,7 @@ class graphly extends EventEmitter {
             .tickSize(5)
             .scale(colorAxisScale);
 
-        colorAxis.tickFormat(d3.format(this.colorAxisTickFormat));
+        colorAxis.tickFormat(this.colorAxisTickFormat);
 
         let csOffset = this.margin.right/2 + this.marginY2Offset + width/2 + width*index;
         
