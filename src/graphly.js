@@ -466,7 +466,7 @@ class graphly extends EventEmitter {
 
         // Set parameters
         let params = {
-            forceGL1: true, // use WebGL 1 even if WebGL 2 is available
+            forceGL1: false, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             coordinateSystem: 'pixels',
             contextParams: {
@@ -4779,15 +4779,45 @@ class graphly extends EventEmitter {
 
         }
 
+        // Identify how colors are applied to the points
+        let singleSettings = true;
+        let colorObj;
+        let identParam;
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
         dotsize *= this.resFactor;
+
+        if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+            singleSettings = false;
+            dotsize = {};
+            identParam = this.renderSettings.dataIdentifier.parameter;
+            // Check if alpha value is set for all parameters
+            let identifiers = this.renderSettings.dataIdentifier.identifiers;
+            for (var i = 0; i < identifiers.length; i++) {
+                if(!this.dataSettings[yAxis][identifiers[i]].hasOwnProperty('alpha')){
+                    this.dataSettings[yAxis][identifiers[i]].alpha = this.defaultAlpha;
+                }
+                dotsize[identifiers[i]] = defaultFor(
+                    this.dataSettings[yAxis][identifiers[i]].size,
+                    DOTSIZE
+                );
+                dotsize[identifiers[i]] *= this.resFactor;
+            }
+        }
 
         let blockSize = (
             this.height/this.renderSettings.yAxis.length - this.separation
         ) * this.resFactor;
         let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
 
+        let currDotSize;
+
         for (let j=0;j<lp; j++) {
+
+            if(singleSettings){
+                currDotSize = dotsize;
+            } else {
+                currDotSize = dotsize[data[identParam][j]];
+            }
 
             valY = data[yAxis][j];
 
@@ -4889,7 +4919,7 @@ class graphly extends EventEmitter {
                     }
                     var sym = defaultFor(dotType[symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, dotsize, sym, rC[0], rC[1], rC[2], 0.2
+                        x, y, currDotSize, sym, rC[0], rC[1], rC[2], 0.2
                     );
                 }
             }
