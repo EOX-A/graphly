@@ -2005,8 +2005,117 @@ class graphly extends EventEmitter {
           .on('zoom', csZoomEvent);
 
         g.call(csZoom);
+        
+        g.append('text')
+            .attr('class', 'modifyColorscaleIcon')
+            .text('✐')
+            .style('font-size', '1.7em')
+            .attr('transform', 'translate(' + 55 + ' ,' + 15 + ') rotate(' + 270 + ')')
+            .on('click', function (){
+                let evtx = d3.event.layerX;
+                let evty = d3.event.layerY; 
+                this.positionAxisForms(colorAxis, id, g, evtx, evty);
+            }.bind(this))
+    }
+    
+    positionAxisForms(colorAxis, id, g, evtx, evty){
+    // takes care of positioning and defining functions of axis edit forms
+        // to pre-fill forms
+        let extent = this.dataSettings[id].extent;
+        // offset of form from the click event position
+        let formYOffset = 20;
+        let formXOffset = 2;
+
+        d3.selectAll('.rangeEdit')
+            .classed('hidden', false);
+
+        d3.select('#rangeEditMax')
+            .property('value', extent[1])
+            .style('top', evty + formYOffset  + 'px')
+            .style('left', evtx + formXOffset + 'px')
+            .node()
+            .focus();
+        d3.select('#rangeEditMax')
+            .node()
+            .select();
+
+        let formMaxPos = d3.select('#rangeEditMax').node().getBoundingClientRect();
+
+        d3.select('#rangeEditMin')
+            .property('value', extent[0])
+            .style('top', evty + formYOffset + formMaxPos.height + 'px')
+            .style('left', evtx + formXOffset + 'px')
+
+        let formMinPos = d3.select('#rangeEditMin').node().getBoundingClientRect();
+
+        d3.selectAll('#rangeEditMax, #rangeEditMin')
+            .on('keypress', function(){
+                // confirm forms on enter
+                if(d3.event.keyCode === 13){
+                    this.submitAxisForm(colorAxis, id, g);
+                }
+            }.bind(this))
+
+        d3.select('#rangeEditConfirm')
+            .style('top', evty + formYOffset + formMaxPos.height +'px')
+            .style('left', evtx + formXOffset + formMinPos.width + 'px')
+            .on('click', function(){
+                this.submitAxisForm(colorAxis, id, g);
+            }.bind(this));
+
+
+        d3.select('#rangeEditCancel')
+            .style('top', evty +  formYOffset + 'px')
+            .style('left', evtx + formXOffset + formMaxPos.width + 'px')
+            .on('click', function(){
+                d3.selectAll('.rangeEdit')
+                    .classed('hidden', true);
+                });
     }
 
+    submitAxisForm (axis, id, axisElement) {
+        let min = Number(d3.select('#rangeEditMin').property('value'));
+        let max = Number(d3.select('#rangeEditMax').property('value'));
+        //checks for invalid values
+        if (!isNaN(min) && !isNaN(max)){
+            // if user reversed order, fix it
+            let newDataDomain = (min < max) ? [min, max] : [max, min];
+
+            //update domain of axis scale
+            let updateAxis = () => {
+                delete this.colorCache[id];
+                axisElement.call(axis);
+                this.dataSettings[id].extent = axis.scale().domain();
+                this.renderData(false);
+            };
+
+            axis.scale().domain(newDataDomain);
+            updateAxis();
+
+            //update colorscale zoom to take changes into account
+            let csZoom = d3.behavior.zoom()
+                .y(axis.scale())
+                .on('zoom', updateAxis);
+            axisElement.call(csZoom);
+
+            d3.selectAll('#rangeEditMin, #rangeEditMax')
+                .classed('wrongFormInput', false);
+
+            d3.selectAll('.rangeEdit')
+                .classed('hidden', true);
+
+      } else {
+            if (isNaN(min)){
+                d3.select('#rangeEditMin')
+                    .classed('wrongFormInput', true);
+            }
+            if (isNaN(max)){
+                d3.select('rangeEditMax')
+                    .classed('wrongFormInput', true);
+            }
+        }
+    }
+    
     createColorScales(){
 
         let colAxis = this.renderSettings.colorAxis;
@@ -2375,7 +2484,28 @@ class graphly extends EventEmitter {
                     });
             }
         }
-
+        
+        // range edit forms 
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditMax')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditMin')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditCancel')
+            .attr('type', 'button')
+            .attr('value', '✕');
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditConfirm')
+            .attr('type', 'button')
+            .attr('value', '✔');
     }
 
     
