@@ -23,6 +23,8 @@
 *        additional labels that should be used for the y axis
 * @property {Array.String} [additionalY2Ticks] Array with parameter ids for 
 *        additional labels that should be used for the second y axis
+* @property {boolean} [reversedYAxis] Option to revert y axis extent 
+*        (high values on bottom, low values on top)
 */
 
 /**

@@ -58,6 +58,8 @@ class FilterManager extends EventEmitter {
     *        as labels.
     * @param options.filterSettings {FilterSettings} Optional additional Filter 
     *        Settings.
+    * @param options.filterAxisTickFormat {String} Optional d3 format string to
+    *        be used for tick styling.
     */
 
     constructor(params) {
@@ -408,6 +410,7 @@ class FilterManager extends EventEmitter {
             .range([heightRange, 0])
             .domain(extents[d]).nice();
 
+
         this.y[d].brush = d3.svg.brush()
             .y(this.y[d])
             .on("brushend", this._brushEnd.bind(this))
@@ -446,8 +449,6 @@ class FilterManager extends EventEmitter {
         var tempScale = d3.scale.linear()
             .domain([0, bins+1])
             .range(this.y[d].domain());
-
-        tempScale.tickFormat(d3.format(this.filterAxisTickFormat));
 
         var tickArray = d3.range(bins+1).map(tempScale);
 
@@ -740,6 +741,8 @@ class FilterManager extends EventEmitter {
         this.hist_data = {};
         this.x_hist = {};
         this.axis = d3.svg.axis().orient("left");
+
+        this.axis.tickFormat(d3.format(this.filterAxisTickFormat));
         
         var data = {};
 
