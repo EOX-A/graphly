@@ -73,6 +73,7 @@ class FilterManager extends EventEmitter {
         this.dataSettings = defaultFor(this.filterSettings.dataSettings, {});
         this.showCloseButtons = defaultFor(params.showCloseButtons, false);
         this.replaceUnderlines = defaultFor(params.replaceUnderlines, false);
+        this.filterAxisTickFormat = defaultFor(params.filterAxisTickFormat, 'g');
         
         this.initManager();
         this.extents = {};
@@ -415,7 +416,7 @@ class FilterManager extends EventEmitter {
                 let brush_top = d3.select(this).selectAll('.resize.n');
                 let brush_bottom = d3.select(this).selectAll('.resize.s');
                 let extent = d3.event.target.extent()
-                let format = d3.format('.02f');
+                let format = d3.format('.2s');
 
                 brush_top.select('text').remove();
                 brush_bottom.select('text').remove();
@@ -445,6 +446,8 @@ class FilterManager extends EventEmitter {
         var tempScale = d3.scale.linear()
             .domain([0, bins+1])
             .range(this.y[d].domain());
+
+        tempScale.tickFormat(d3.format(this.filterAxisTickFormat));
 
         var tickArray = d3.range(bins+1).map(tempScale);
 

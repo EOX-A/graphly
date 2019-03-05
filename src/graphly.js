@@ -278,6 +278,10 @@ class graphly extends EventEmitter {
             this.renderSettings.combinedParameters, {}
         );
 
+        this.renderSettings.reversedYAxis = defaultFor(
+            this.renderSettings.reversedYAxis, false
+        );
+
         this.renderSettings.y2Axis = defaultFor(
             this.renderSettings.y2Axis, []
         );
@@ -971,7 +975,12 @@ class graphly extends EventEmitter {
             this.batchDrawer.clear();
 
             this.xScale.range([0, Math.floor(this.width*this.resFactor)]);
-            this.yScale.range([Math.floor(this.height*this.resFactor), 0]);
+
+            if(this.renderSettings.reversedYAxis){
+                this.yScale.range([0, (this.height*this.resFactor)]);
+            } else  {
+                this.yScale.range([(this.height*this.resFactor), 0]);
+            }
             this.y2Scale.range([Math.floor(this.height*this.resFactor), 0]);
 
             let xAxRen = this.renderSettings.xAxis;
@@ -1860,19 +1869,24 @@ class graphly extends EventEmitter {
                 dCS.length>0){
                 for(let co=0;co<dCS.length; co++){
                     g.append('text')
-                        .text(co)
+                        .text((co+1))
                         .style('font-size', '10px')
                         .attr('transform', 'translate('+
                             (-35+(Math.floor(co*11/innerHeight))*28) +','
                              + (co*11%innerHeight) + ')'
                         );
                     g.append('rect')
-                        .attr('fill', CP.RGB2HEX(dCS[co]))
-                        .attr('width', '5px')
-                        .attr('height', '5px')
+                        .attr('fill', '#'+ CP.RGB2HEX(
+                                dCS[co].map(function(c){
+                                    return Math.round(c*255);
+                                })
+                            )
+                        )
+                        .attr('width', '10px')
+                        .attr('height', '10px')
                         .attr('transform', 'translate('+
-                            (-35+(Math.floor(co*11/innerHeight))*28) +','
-                             + (co*11%innerHeight) + ')'
+                            (-48+(Math.floor(co*11/innerHeight))*28) +','
+                             + ((co*11%innerHeight)-9) + ')'
                         );
                 }
             }
@@ -1894,10 +1908,10 @@ class graphly extends EventEmitter {
                 .scale(colorAxisScale);
 
             //let step = (colorAxisScale.domain()[1] - colorAxisScale.domain()[0]) / 10;
-            g.call(colorAxis);
 
             colorAxis.tickFormat(d3.format(this.colorAxisTickFormat));
 
+            g.call(colorAxis);
             // Check if parameter has specific colorscale configured
             let cs = 'viridis';
             let cA = this.dataSettings[id];
@@ -2237,13 +2251,15 @@ class graphly extends EventEmitter {
             if(ds.hasOwnProperty(key) && 
                ds[key].hasOwnProperty('csDiscrete') &&
                ds[key].csDiscrete) {
-                if(!this.discreteColorScales.hasOwnProperty(key)){
+                if(!this.discreteColorScales.hasOwnProperty(key) && 
+                    this.data.hasOwnProperty(key)){
                     // Generate discrete colorscale
                     let dsC = []
 
                     var maxCols = d3.max(this.data[key]);
-                    for(let c=0;c<maxCols+1;c++){
-                        var col = this.getRandomColor();
+                    var minCols = d3.min(this.data[key]);
+                    for(let c=0;c<(maxCols-minCols)+1;c++){
+                        var col = u.getdiscreteColor();
                         dsC.push([
                             col[0]/255, col[1]/255, col[2]/255, 1.0
                         ]);
@@ -2569,10 +2585,10 @@ class graphly extends EventEmitter {
             .range([0, this.width]);
 
 
-        if(this.logY){
-            let start = yExtent[0];
-            let end = yExtent[1];
+        let start = yExtent[0];
+        let end = yExtent[1];
 
+        if(this.logY){
             // if both positive or negative all fine else
             if(yExtent[0]<=0 && yExtent[1]>0){
                 start = 0.005;
@@ -2580,13 +2596,19 @@ class graphly extends EventEmitter {
             if(yExtent[0]>=0 && yExtent[1]<0){
                 start = -0.005;
             }
+            yScaleType = d3.scale.log();
+            
+        } else {
+            yScaleType = d3.scale.linear();
+        }
 
-            this.yScale = d3.scale.log()
-                .domain([start,end])
-                .range([this.height, 0]);
-        }else{
+        if(this.renderSettings.reversedYAxis){
             this.yScale = yScaleType
-                .domain(yExtent)
+                .domain([start,end])
+                .range([0, this.height]);
+        } else  {
+            this.yScale = yScaleType
+                .domain([start,end])
                 .range([this.height, 0]);
         }
 
@@ -3540,6 +3562,12 @@ class graphly extends EventEmitter {
         this.xScale.range([0, this.width]);
         this.yScale.range([this.height, 0]);
 
+        if(this.renderSettings.reversedYAxis){
+            this.yScale.range([0, this.height]);
+        } else  {
+            this.yScale.range([this.height, 0]);
+        }
+
         this.svg.attr(
             'transform',
             'translate(' + (this.margin.left+this.subAxisMarginY+1) + ',' +
@@ -3667,14 +3695,6 @@ class graphly extends EventEmitter {
         //this.createHelperObjects();
     }
 
-    getRandomColor() {
-        var letters = '0123456789ABCDEF'.split('');
-        var color = '';
-        for (var i = 0; i < 6; i++ ) {
-            color += letters[Math.round(Math.random() * 15)];
-        }
-        return CP.HEX2RGB(color);
-    }
 
     renderRectangles(data, idY, xGroup, yGroup, cAxis, updateReferenceCanvas) {
 
@@ -3696,6 +3716,7 @@ class graphly extends EventEmitter {
         let discreteColorScale = false;
         let colorObj;
         let identParam;
+        let discreteCSOffset = 0;
 
         if (this.renderSettings.hasOwnProperty('dataIdentifier')){
             singleColor = false;
@@ -3759,6 +3780,9 @@ class graphly extends EventEmitter {
                 this.colorCache[cAxis] = this.discreteColorScales[cAxis];
                 colCacheAvailable = true;
                 currColCache = this.colorCache[cAxis];
+                discreteCSOffset = d3.min(data[cAxis]);
+            } else if(discreteColorScale){
+                discreteCSOffset = d3.min(data[cAxis]);
             }
         }
 
@@ -3794,7 +3818,7 @@ class graphly extends EventEmitter {
             if(cAxis !== null){
                 if(colCacheAvailable){
                     if(discreteColorScale){
-                        rC = currColCache[data[cAxis][i]];
+                        rC = currColCache[(data[cAxis][i]-discreteCSOffset)];
                     } else {
                         rC = currColCache[i];
                     }
