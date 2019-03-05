@@ -1867,29 +1867,32 @@ class graphly extends EventEmitter {
         if(this.dataSettings[id].hasOwnProperty('csDiscrete') && this.dataSettings[id].csDiscrete ){
             // Check if colors are already calculated
             let dCS = this.discreteColorScales[id];
-            if(this.discreteColorScales.hasOwnProperty(id) && 
-                dCS.length>0){
-                for(let co=0;co<dCS.length; co++){
-                    g.append('text')
-                        .text((co+1))
-                        .style('font-size', '10px')
-                        .attr('transform', 'translate('+
-                            (-35+(Math.floor(co*11/innerHeight))*28) +','
-                             + (co*11%innerHeight) + ')'
-                        );
-                    g.append('rect')
-                        .attr('fill', '#'+ CP.RGB2HEX(
-                                dCS[co].map(function(c){
-                                    return Math.round(c*255);
-                                })
+            if(this.discreteColorScales.hasOwnProperty(id)) {
+                var csIds = Object.keys(dCS); 
+                if(csIds.length>0) {
+
+                    for(let co=0;co<csIds.length; co++){
+                        g.append('text')
+                            .text(csIds[co])
+                            .style('font-size', '10px')
+                            .attr('transform', 'translate('+
+                                (-44+(Math.floor(co*11/innerHeight))*35) +','
+                                 + (co*11%innerHeight) + ')'
+                            );
+                        g.append('rect')
+                            .attr('fill', '#'+ CP.RGB2HEX(
+                                    dCS[csIds[co]].map(function(c){
+                                        return Math.round(c*255);
+                                    })
+                                )
                             )
-                        )
-                        .attr('width', '10px')
-                        .attr('height', '10px')
-                        .attr('transform', 'translate('+
-                            (-48+(Math.floor(co*11/innerHeight))*28) +','
-                             + ((co*11%innerHeight)-9) + ')'
-                        );
+                            .attr('width', '10px')
+                            .attr('height', '10px')
+                            .attr('transform', 'translate('+
+                                (-55+(Math.floor(co*11/innerHeight))*35) +','
+                                 + ((co*11%innerHeight)-9) + ')'
+                            );
+                    }
                 }
             }
         } else {
@@ -2245,6 +2248,10 @@ class graphly extends EventEmitter {
 
         this.recalculateBufferSize();
 
+        function onlyUnique(value, index, self) { 
+            return self.indexOf(value) === index;
+        }
+
         // Check for special formatting of data
         let ds = this.dataSettings;
         for (let key in ds) {
@@ -2255,16 +2262,15 @@ class graphly extends EventEmitter {
                ds[key].csDiscrete) {
                 if(!this.discreteColorScales.hasOwnProperty(key) && 
                     this.data.hasOwnProperty(key)){
-                    // Generate discrete colorscale
-                    let dsC = []
+                    // Generate discrete colorscale as object key value
+                    let dsC = {};
 
-                    var maxCols = d3.max(this.data[key]);
-                    var minCols = d3.min(this.data[key]);
-                    for(let c=0;c<(maxCols-minCols)+1;c++){
+                    var uniqueValues = this.data[key].filter(onlyUnique);
+                    for(let c=0;c<uniqueValues.length;c++){
                         var col = u.getdiscreteColor();
-                        dsC.push([
+                        dsC[uniqueValues[c]] = [
                             col[0]/255, col[1]/255, col[2]/255, 1.0
-                        ]);
+                        ];
                     }
                     this.discreteColorScales[key] = dsC;
                 }
@@ -3820,7 +3826,7 @@ class graphly extends EventEmitter {
             if(cAxis !== null){
                 if(colCacheAvailable){
                     if(discreteColorScale){
-                        rC = currColCache[(data[cAxis][i]-discreteCSOffset)];
+                        rC = currColCache[data[cAxis][i]];
                     } else {
                         rC = currColCache[i];
                     }
