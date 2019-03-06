@@ -2252,6 +2252,11 @@ class graphly extends EventEmitter {
             return self.indexOf(value) === index;
         }
 
+        // Cleanup of previous generated data
+        for (let k in this.discreteColorScales){
+            delete this.discreteColorScales[k];
+        }
+
         // Check for special formatting of data
         let ds = this.dataSettings;
         for (let key in ds) {
