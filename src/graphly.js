@@ -302,6 +302,7 @@ class graphly extends EventEmitter {
         );
 
         this.discreteColorScales = {};
+        this.activeArrows = false;
 
         // If there are colorscales to be rendered we need to apply additional
         // margin to the right reducing the total width
@@ -2212,6 +2213,15 @@ class graphly extends EventEmitter {
              arrays of values as corresponding parameter. {'parId1': [1, 2, 3], 
              'parId2': [0.6, 0.1, 3.2]}
     */
+    addGroupArrows(values){
+        this.activeArrows = true;
+        this.arrowValues = values;
+    }
+
+    removeGroupArrows(){
+        this.activeArrows = true;
+    }
+
     loadData(data){
         
         this.startTiming('loadData');
@@ -3237,6 +3247,8 @@ class graphly extends EventEmitter {
             // debounce finished render also reference canvas to allow interaction
             this.renderData(false);
         }
+
+        this.renderArrows();
     }
 
 
@@ -3697,6 +3709,7 @@ class graphly extends EventEmitter {
 
         this.addTimeInformation();
         this.breakTicks();
+        this.renderArrows();
 
     }
 
@@ -5142,6 +5155,58 @@ class graphly extends EventEmitter {
     }
 
 
+    renderArrows(){
+        if(!this.activeArrows){
+            return;
+        }
+        this.el.select('#arrowContainer').remove();
+
+        let arrCont = this.svg.append('g')
+            .attr('id', 'arrowContainer')
+            .attr('transform', 'translate(0,'+(this.height+16)+')')
+            .style('clip-path','url('+this.nsId+'arrowclipbox)');
+
+        // Create clip path
+        arrCont.append('defs').append('clipPath')
+            .attr('id', (this.nsId.substring(1)+'arrowclipbox'))
+            .append('rect')
+                .attr('fill', 'none')
+                .attr('width', this.width)
+                .attr('height', 30);
+
+        arrCont.append("svg:defs").append("svg:marker")
+            .attr("id", "arrow")
+                .attr("viewBox", "0 -5 10 10")
+                .attr('refX', 5)
+                .attr("markerWidth", 2)
+                .attr("markerHeight", 2)
+                .attr("orient", "auto")
+            .append("svg:path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("stroke", "green")
+                .attr("fill", "green");
+
+        var aV = this.arrowValues;
+        for(let gr=0; gr<this.arrowValues.length; gr++){
+            arrCont.append('line')
+                .attr('marker-end', "url(#arrow)")
+                .attr("x1", this.xScale(aV[gr][0])+5)
+                .attr("y1", 9)
+                .attr("x2", this.xScale(aV[gr][1])-5)
+                .attr("y2", 9)
+                .attr("stroke-width", 7)
+                .attr("stroke", "green");
+
+            arrCont.append('text')
+                .text('g'+aV[gr][2])
+                .attr("y", 24)
+                .attr("x", this.xScale( (aV[gr][0]+aV[gr][1])/2 ))
+                .attr('fill', 'green')
+                .attr('text-anchor', 'middle');
+        }
+    }
+
+
     /**
     * Render the data as graph
     * @param {boolean} [updateReferenceCanvas=true] Update the corresponding 
@@ -5227,6 +5292,8 @@ class graphly extends EventEmitter {
         }
 
         this.updateInfoBoxes();
+        this.renderArrows();
+
 
         let idX = xAxRen;
 
