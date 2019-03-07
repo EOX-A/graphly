@@ -2219,7 +2219,8 @@ class graphly extends EventEmitter {
     }
 
     removeGroupArrows(){
-        this.activeArrows = true;
+        this.activeArrows = false;
+        this.arrowValues = null;
     }
 
     loadData(data){
