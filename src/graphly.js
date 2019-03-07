@@ -254,7 +254,7 @@ class graphly extends EventEmitter {
 
         this.margin = defaultFor(
             options.margin,
-            {top: 10, left: 90, bottom: 50, right: 30}
+            {top: 10, left: 90, bottom: 50, right: 40}
         );
 
         this.subAxisMarginX = 0;
@@ -1856,13 +1856,14 @@ class graphly extends EventEmitter {
             innerHeight = 100;
         }
 
-        let csOffset = this.margin.right + this.marginY2Offset + width/2 + width*index;
+        //let csOffset = this.margin.right + this.marginY2Offset + width/2 + width*index;
+        let csOffset = this.margin.left + this.width + this.margin.right/2 + width*index;
             
         let g = this.el.select('svg').select('g').append("g")
             .attr('id', ('colorscale_'+id))
             .attr("class", "color axis")
             .style('pointer-events', 'all')
-            .attr("transform", "translate(" + (this.width+csOffset) + ",0)");
+            .attr("transform", "translate(" + (csOffset-30) + ",0)");
 
         // Check to see if we create a discrete or linear colorscale
         if(this.dataSettings[id].hasOwnProperty('csDiscrete') && this.dataSettings[id].csDiscrete ){
@@ -1964,6 +1965,115 @@ class graphly extends EventEmitter {
               .on('zoom', csZoomEvent);
 
             g.call(csZoom);
+
+            g.append('text')
+            .attr('class', 'modifyColorscaleIcon')
+            .text('✐')
+            .style('font-size', '1.7em')
+            .attr('transform', 'translate(' + 60 + ' ,-' + 5 + ') rotate(' + 180 + ')')
+            .on('click', function (){
+                let evtx = d3.event.layerX;
+                let evty = d3.event.layerY; 
+                this.createAxisForms(colorAxis, id, g, evtx, evty);
+            }.bind(this))
+        }
+    }
+
+    createAxisForms(axis, id, g, evtx, evty){
+        // takes care of positioning and defining functions of axis edit forms
+        // to pre-fill forms
+        let extent = this.dataSettings[id].extent;
+        // offset of form from the click event position
+        let formYOffset = 20;
+        let formXOffset = 2;
+
+        d3.selectAll('.rangeEdit')
+            .classed('hidden', false);
+
+        d3.select('#rangeEditMax')
+            .property('value', extent[1])
+            .style('top', evty + formYOffset  + 'px')
+            .style('left', evtx + formXOffset + 'px')
+            .node()
+            .focus();
+        d3.select('#rangeEditMax')
+            .node()
+            .select();
+
+        let formMaxPos = d3.select('#rangeEditMax').node().getBoundingClientRect();
+
+        d3.select('#rangeEditMin')
+            .property('value', extent[0])
+            .style('top', evty + formYOffset + formMaxPos.height + 5 + 'px')
+            .style('left', evtx + formXOffset + 'px')
+
+        let formMinPos = d3.select('#rangeEditMin').node().getBoundingClientRect();
+
+        d3.selectAll('#rangeEditMax, #rangeEditMin')
+            .on('keypress', function(){
+                // confirm forms on enter
+                if(d3.event.keyCode === 13){
+                    this.updateAxis(axis, id, g);
+                }
+            }.bind(this))
+
+        d3.select('#rangeEditConfirm')
+            .style('top', evty + formYOffset + formMaxPos.height + 5 +'px')
+            .style('left', evtx + formXOffset + formMinPos.width + 'px')
+            .on('click', function(){
+                this.updateAxis(axis, id, g);
+            }.bind(this));
+
+
+        d3.select('#rangeEditCancel')
+            .style('top', evty +  formYOffset + 'px')
+            .style('left', evtx + formXOffset + formMaxPos.width + 'px')
+            .on('click', function(){
+                d3.selectAll('.rangeEdit')
+                    .classed('hidden', true);
+                });
+    }
+
+    updateAxis (axis, id, axisElement) {
+        let min = Number(d3.select('#rangeEditMin').property('value'));
+        let max = Number(d3.select('#rangeEditMax').property('value'));
+        //checks for invalid values
+        if (!isNaN(min) && !isNaN(max)){
+            // if user reversed order, fix it
+            let newDataDomain = (min < max) ? [min, max] : [max, min];
+
+             //update domain of axis scale
+            let updateAxis = () => {
+                delete this.colorCache[id];
+                axisElement.call(axis);
+                this.dataSettings[id].extent = axis.scale().domain();
+                this.renderData(false);
+            };
+
+             axis.scale().domain(newDataDomain);
+            updateAxis();
+
+             //update colorscale zoom to take changes into account
+            let csZoom = d3.behavior.zoom()
+                .y(axis.scale())
+                .on('zoom', updateAxis);
+            axisElement.call(csZoom);
+
+             d3.selectAll('#rangeEditMin, #rangeEditMax')
+                .classed('wrongFormInput', false);
+
+             d3.selectAll('.rangeEdit')
+                .classed('hidden', true);
+
+       } else {
+            if (isNaN(min)){
+                d3.select('#rangeEditMin')
+                    .classed('wrongFormInput', true);
+            }
+            if (isNaN(max)){
+                d3.select('rangeEditMax')
+                    .classed('wrongFormInput', true);
+            }
         }
     }
 
@@ -1978,6 +2088,29 @@ class graphly extends EventEmitter {
         for (var i = 0; i < filteredCol.length; i++) {
             this.createColorScale(filteredCol[i], i);
         }
+
+
+         // range edit forms 
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditMax')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditMin')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditCancel')
+            .attr('type', 'button')
+            .attr('value', '✕');
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditConfirm')
+            .attr('type', 'button')
+            .attr('value', '✔');
 
 
 

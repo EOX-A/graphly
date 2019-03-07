@@ -430,3 +430,38 @@ svg {
     width: 41px;
     z-index: 20;
 }
+
+.modifyColorscaleIcon:hover, #rangeEditCancel:hover, #rangeEditConfirm{
+    cursor: pointer;
+}
+
+#rangeEditCancel, #rangeEditConfirm{
+    padding: 0;
+    width: 16px;
+    height: 22px;
+    margin-top: 1px;
+}
+
+.rangeEdit{
+    margin: 2px;
+    position: absolute;
+    border-radius: 1px;
+    border-width: 1px;
+    font-size: 0.9em;
+    z-index: 20;
+    height: 17px;
+}
+
+#rangeEditMin, #rangeEditMax{
+    padding-left: 2px;
+    min-width: 22px;
+    width: auto;
+}
+
+.wrongFormInput{
+    background-color: #ffd0d0!important;
+}
+
+.hidden{
+    display: none;
+}
