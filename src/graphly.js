@@ -2016,7 +2016,7 @@ class graphly extends EventEmitter {
             .attr('class', 'modifyColorscaleIcon')
             .text('✐')
             .style('font-size', '1.7em')
-            .attr('transform', 'translate(' + 60 + ' ,-' + 5 + ') rotate(' + 180 + ')')
+            .attr('transform', 'translate(-' + 45 + ' ,' + 0 + ') rotate(' + 90 + ')')
             .on('click', function (){
                 let evtx = d3.event.layerX;
                 let evty = d3.event.layerY; 
