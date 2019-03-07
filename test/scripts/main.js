@@ -36,7 +36,7 @@ var renderSettings_ray = {
 
 };
 
-var aeolusl2bnew = {
+var aeolusl2b = {
     xAxis: 'measurements',
     yAxis: [
         'bins',
@@ -44,13 +44,14 @@ var aeolusl2bnew = {
     ],
     //y2Axis: [],
     combinedParameters: {
-        bins: ['bins_start', 'bins_end'],
+        bins: ['bins_end', 'bins_start'],
         measurements: ['meas_start', 'meas_end']
     },
     colorAxis: [
         'mie_meas_map',
         //'mie_wind_velocity',
     ],
+    reversedYAxis: true
 
 };
 
@@ -289,13 +290,18 @@ var otherds = {
 
     Num_Corrupt_Rayleigh: {
         symbol: 'circle'
+    },
+
+    mie_meas_map: {
+        colorscale: 'jet',
+        csDiscrete: true
     }
 
 
 };
 
 
-var filterSettings = {
+var filterSettings2 = {
     parameterMatrix: {
         'height': [
             'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'mie_altitude_top', 'mie_altitude_bottom'
@@ -360,7 +366,9 @@ var filterSettings = {
         'Num_Corrupt_Measurement_Bins',
         'Num_Corrupt_Reference_Pulses',
         'Num_Mie_Core_Algo_Fails_Measurements',
-        //'Num_Ground_Echo_Not_Detected_Measurements'
+        //'Num_Ground_Echo_Not_Detected_Measurements',
+        'group_backscatter_variance',
+        'group_extinction_variance'
 
 
     ],
@@ -410,7 +418,13 @@ var renderSettings = {
 
 var dataSettings = {
 
-   
+    'group_backscatter_variance':{
+        nullValue: -1
+    },
+    
+    'group_extinction_variance':{
+        nullValue: -1
+    },
     mie_datetime_start: {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
@@ -487,7 +501,7 @@ var filterSettings = {
     ],
     dataSettings: dataSettings,
     visibleFilters: [
-        'mie_quality_flag_data', 'mie_wind_velocity', 'F', 'n', 'F_error'
+        'mie_quality_flag_data', 'mie_wind_velocity', 'F', 'n', 'F_error','group_backscatter_variance','group_extinction_variance'
       
     ],
     //boolParameter: [],
@@ -521,13 +535,14 @@ var filterSettings = {
 var filterManager = new FilterManager({
     el:'#filters',
     filterSettings: filterSettings,
+    filterAxisTickFormat: '.2s'
 });
 
 
 var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: otherds,
-    renderSettings: aeolusl2a,
+    renderSettings: aeolusl2b,
     filterManager: filterManager,
     //ignoreParameters: [/mie_quality_fl.*/]
     debounceActive: true,
@@ -540,6 +555,7 @@ var graph = new graphly.graphly({
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000
+    margin: {top: 10, left: 90, bottom: 80, right: 30}
 });
 
 filterManager.setRenderNode('#filters');
@@ -581,8 +597,8 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-//xhr.open('GET', 'data/aeolusl2b_newest.mp', true);
-xhr.open('GET', 'data/aeolusl2a.mp', true);
+xhr.open('GET', 'data/aeolusl2b_newest.mp', true);
+//xhr.open('GET', 'data/aeolusl2a.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
 //xhr.open('GET', 'data/swarm.mp', true);
 
@@ -652,10 +668,12 @@ xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
     var data = msgpack.decode(tmp);
     //console.log(data);
+
+    filterManager.initManager();
     
 
     // L2A
-    var meas_start = [];
+    /*var meas_start = [];
     var meas_end = [];
     var alt_start = [];
     var alt_end = [];
@@ -693,35 +711,78 @@ xhr.onload = function(e) {
     ds.group_backscatter_variance = gD.group_backscatter_variance;
     ds.group_extinction_variance = gD.group_extinction_variance;
 
-    graph.loadData(ds);
+    graph.loadData(ds);*/
 
     // L2B
-    /*var bins_start = [];
-    var bins_end = [];
-    for (var i = 0; i < data.ALD_U_N_2B.measurement_data.mie_measurement_map.length; i++) {
-         for (var j=0; j<data.ALD_U_N_2B.measurement_data.mie_measurement_map[i].length; j++){
-            bins_start.push(j);
-            bins_end.push(j+1);
-         }
-     }
 
+    //var maxLength = data.ALD_U_N_2B.measurement_data.mie_measurement_map.length;
+    var bins_start = [];
+    var bins_end = [];
     var meas_start = [];
     var meas_end = [];
-    for (var i = 0; i < data.ALD_U_N_2B.measurement_data.mie_measurement_map.length; i++) {
+    var measurement_map = [];
+
+
+    /*for (var i = minLength; i < maxLength; i++) {
          for (var j=0; j<data.ALD_U_N_2B.measurement_data.mie_measurement_map[i].length; j++){
-            meas_start.push(i);
-            meas_end.push(i+1);
+            if(data.ALD_U_N_2B.measurement_data.mie_measurement_map[i][j] !== 0){
+                bins_start.push(j);
+                bins_end.push(j+1);
+
+                meas_start.push(i);
+                meas_end.push(i+1);
+
+                mie_meas_map.push(data.ALD_U_N_2B.measurement_data.mie_measurement_map[i][j])
+            }
          }
-     }
+     }*/
+    var ds = data.ALD_U_N_2B;
+    var mGD = ds.mie_grouping_data.mie_grouping_start_obs;
+     //for (var i = 0; i < mGD.length; i++) {
+    for (var i = 20; i < 23; i++) {
+
+        var measStart = mGD[i]*30;
+        var obs_mie_bins_start = [];
+        var obs_mie_bins_end = [];
+        var obs_mie_meas_start = [];
+        var obs_mie_meas_end = [];
+        var obs_mie_measurement_map = [];
+
+        for (var j=0; j<ds.measurement_data.mie_measurement_map[measStart].length; j++){
+
+        // Iterate over the 30 measurements of the observation
+        for (var m=0; m<30; m++) {
+
+          if(ds.measurement_data.mie_measurement_map[measStart+m][j] !== 0){
+              obs_mie_bins_start.push(j);
+              obs_mie_bins_end.push(j+1);
+              obs_mie_meas_start.push(measStart+m);
+              obs_mie_meas_end.push((measStart+m+1));
+              obs_mie_measurement_map.push(
+                ds.measurement_data.mie_measurement_map[measStart+m][j]
+              );
+          }
+        }
+        }
+        bins_start.push(obs_mie_bins_start);
+        bins_end.push(obs_mie_bins_end);
+        meas_start.push(obs_mie_meas_start);
+        meas_end.push(obs_mie_meas_end);
+        measurement_map.push(obs_mie_measurement_map);
+
+      }
+
 
     var ds = {};
-    ds.bins_start = bins_start;
-    ds.bins_end = bins_end;
-    ds.meas_start = meas_start;
-    ds.meas_end = meas_end;
-    ds.mie_meas_map = data.ALD_U_N_2B.measurement_data.mie_measurement_map.flat();
+    ds.bins_start = bins_start.flat();
+    ds.bins_end = bins_end.flat();
+    ds.meas_start = meas_start.flat();
+    ds.meas_end = meas_end.flat();
+    ds.mie_meas_map = measurement_map.flat();//data.ALD_U_N_2B.measurement_data.mie_measurement_map.flat()
 
-    graph.loadData(ds);*/
+    graph.addGroupArrows([[630,660,21],[660,690,22],[690,720,23]]);
+
+    graph.loadData(ds);
 
 
     /*var ids = {
@@ -774,14 +835,12 @@ xhr.onload = function(e) {
     };*/
 
 
-
-    filterManager.initManager();
     //graph.loadData(data);
     /*if(usesecond){
         graph2.loadData(data);
     }*/
 
-    //filterManager.loadData(data);
+    filterManager.loadData(ds);
 };
 
 //filterManager.setRenderNode('#filters');
