@@ -2010,7 +2010,7 @@ class graphly extends EventEmitter {
             .attr('class', 'modifyColorscaleIcon')
             .text('✐')
             .style('font-size', '1.7em')
-            .attr('transform', 'translate(' + 55 + ' ,' + 15 + ') rotate(' + 270 + ')')
+            .attr('transform', 'translate(' + 60 + ' ,-' + 5 + ') rotate(' + 180 + ')')
             .on('click', function (){
                 let evtx = d3.event.layerX;
                 let evty = d3.event.layerY; 
@@ -2043,7 +2043,7 @@ class graphly extends EventEmitter {
 
         d3.select('#rangeEditMin')
             .property('value', extent[0])
-            .style('top', evty + formYOffset + formMaxPos.height + 'px')
+            .style('top', evty + formYOffset + formMaxPos.height + 5 + 'px')
             .style('left', evtx + formXOffset + 'px')
 
         let formMinPos = d3.select('#rangeEditMin').node().getBoundingClientRect();
@@ -2057,7 +2057,7 @@ class graphly extends EventEmitter {
             }.bind(this))
 
         d3.select('#rangeEditConfirm')
-            .style('top', evty + formYOffset + formMaxPos.height +'px')
+            .style('top', evty + formYOffset + formMaxPos.height + 5 +'px')
             .style('left', evtx + formXOffset + formMinPos.width + 'px')
             .on('click', function(){
                 this.submitAxisForm(colorAxis, id, g);

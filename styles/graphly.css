@@ -482,22 +482,27 @@ svg {
     cursor: pointer;
 }
 
-.rangeEdit{
+#rangeEditCancel, #rangeEditConfirm{
     padding: 0;
-    margin: 0;
+    width: 16px;
+    height: 22px;
+    margin-top: 1px;
+}
+
+.rangeEdit{
+    margin: 2px;
     position: absolute;
     border-radius: 1px;
     border-width: 1px;
     font-size: 0.9em;
     z-index: 20;
     height: 17px;
-    padding-left: 2px;
 }
 
 #rangeEditMin, #rangeEditMax{
+    padding-left: 2px;
     min-width: 22px;
     width: auto;
-    background-color: #cfcfd1;
 }
 
 .wrongFormInput{
