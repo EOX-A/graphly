@@ -1081,8 +1081,8 @@ class graphly extends EventEmitter {
 
             // Draw y2 first so it is on bottom
             for (let plotY = 0; plotY < y2AxRen.length; plotY++) {
-                for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                    if(typeof this.renderSettings.y2Axis[plotY][parPos] !== 'undefined'){
+                for (let parPos=0; parPos<y2AxRen[plotY].length; parPos++){
+                    if(typeof y2AxRen[plotY][parPos] !== 'undefined'){
                         this.renderParameter(
                             xAxRen,
                             this.renderSettings.y2Axis[plotY][parPos],
@@ -1097,8 +1097,8 @@ class graphly extends EventEmitter {
 
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
-                for (let parPos=0; parPos<yAxRen.length; parPos++){
-                    if(typeof this.renderSettings.yAxis[plotY][parPos] !== 'undefined'){
+                for (let parPos=0; parPos<yAxRen[plotY].length; parPos++){
+                    if(typeof yAxRen[plotY][parPos] !== 'undefined'){
                         this.renderParameter(
                             xAxRen,
                             this.renderSettings.yAxis[plotY][parPos],
