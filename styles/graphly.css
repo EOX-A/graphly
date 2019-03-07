@@ -25,7 +25,7 @@ svg {
     border-style: solid;
     border-width: 1px;
     padding: 4px;
-    z-index: 50;
+    z-index: 501;
     display: none;
 }
 

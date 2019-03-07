@@ -361,6 +361,11 @@ class graphly extends EventEmitter {
             options.displayAlphaOptions, true
         );
 
+        this.colorscaleOptionLabel = defaultFor(
+            options.colorscaleOptionLabel,
+            'Apply colorscale'
+        );
+
         // If there are colorscales to be rendered we need to apply additional
         // margin to the right reducing the total width
         let csAmount = this.getMaxCSAmount();
@@ -743,6 +748,7 @@ class graphly extends EventEmitter {
                     // Add close button
                     this.tooltip.append('div')
                         .attr('class', 'labelClose cross')
+                        .style('margin-right', '10px')
                         .on('click', ()=>{
                             this.topSvg.selectAll('*').remove();
                             this.tooltip.style('display', 'none');
@@ -2210,6 +2216,12 @@ class graphly extends EventEmitter {
                 .style('left', (this.width/2)+this.margin.left-75+'px')
                 .style('width', '150px')
                 .style('top', (this.margin.top)+1+'px');
+
+            con.append('div')
+                .attr('class', 'labelClose cross')
+                .on('click', ()=>{
+                    d3.select('#globalSettingsContainer').style('display', 'none');
+                });
 
             con.append('label')
                 .attr('for', 'labelFontSize')
@@ -5687,7 +5699,7 @@ class graphly extends EventEmitter {
             parSetEl
                 .append('label')
                 .attr('for', 'colorscaleCB')
-                .text('Apply colorscale');
+                .text(this.colorscaleOptionLabel);
 
             parSetEl
                 .append('input')
