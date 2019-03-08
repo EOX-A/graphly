@@ -2131,25 +2131,23 @@ class graphly extends EventEmitter {
 
         let colAxis = this.renderSettings.colorAxis;
         let colAxis2 = this.renderSettings.colorAxis2;
+        
 
         this.el.selectAll('.color.axis').remove();
 
         for (let plotY=0; plotY<this.renderSettings.yAxis.length; plotY++){
+
+            let csIndex = 0;
+
             for(let pos=0; pos<colAxis[plotY].length; pos++){
                 if(colAxis[plotY][pos] !== null){
-                    this.createColorScale(colAxis[plotY][pos], pos, plotY);
+                    this.createColorScale(colAxis[plotY][pos], csIndex++, plotY);
                 }
             }
 
             for(let pos=0; pos<colAxis2[plotY].length; pos++){
                 if(colAxis2[plotY][pos] !== null){
-                    this.createColorScale(
-                        colAxis2[plotY][pos], 
-                        (this.renderSettings.colorAxis[plotY].filter(
-                            function(o) {return o !== null;}
-                        ).length+pos),
-                        plotY
-                    );
+                    this.createColorScale(colAxis2[plotY][pos], csIndex++, plotY);
                 }
             }
         }
