@@ -320,10 +320,12 @@ class graphly extends EventEmitter {
         this.marginY2Offset = 0;
         this.marginCSOffset = 0;
 
+
         if(this.renderSettings.hasOwnProperty('y2Axis') && 
-           this.renderSettings.y2Axis.length>0){
+           this.getMaxArrayLenght(this.renderSettings.y2Axis)>0){
             this.marginY2Offset = 40;
         }
+
 
         // Calculate necessary additional offset if sub ticks have been selected
         if(this.enableSubXAxis) {
@@ -1363,7 +1365,7 @@ class graphly extends EventEmitter {
             )
         }else if(orientation === 'right'){
             labelText.attr('transform', 
-                'translate('+ (this.width+this.margin.right*2) +','+
+                'translate('+ (this.width+this.marginY2Offset+20) +','+
                 currHeightCenter+')rotate(-90)'
             )
         }
@@ -1477,7 +1479,8 @@ class graphly extends EventEmitter {
 
             that.recalculateBufferSize();
             that.initAxis();
-            that.renderData();
+            that.resize(false);
+            //that.renderData();
 
             // Recheck if parameter info should be shown now
             that.el.selectAll('.parameterInfo').each(function(){
@@ -1514,7 +1517,7 @@ class graphly extends EventEmitter {
                 }
 
                 that.initAxis();
-                that.resize();
+                that.resize(false);
                 that.createAxisLabels();
                 that.emit('axisChange');
             }
@@ -2010,7 +2013,7 @@ class graphly extends EventEmitter {
           .y(colorAxisScale)
           .on('zoom', csZoomEvent);
 
-        g.call(csZoom);
+        g.call(csZoom).on('dblclick.zoom', null);
         
         g.append('text')
             .attr('class', 'modifyColorscaleIcon')
@@ -2632,6 +2635,14 @@ class graphly extends EventEmitter {
         }
     }
 
+    getMaxArrayLenght(compList){
+        let maxL = 0;
+        for (let x=0; x<compList.length; x++){
+            maxL = d3.max([ compList[x].length, maxL]);
+        }
+        return maxL;
+    }
+
     getMaxCSAmount(){
         let csAmount = 0;
         for (let plotY=0; plotY<this.renderSettings.yAxis.length; plotY++){
@@ -2761,11 +2772,12 @@ class graphly extends EventEmitter {
             let csAmount = this.getMaxCSAmount();
 
             if(this.renderSettings.hasOwnProperty('y2Axis') && 
-               this.renderSettings.y2Axis.length>0){
+               this.getMaxArrayLenght(this.renderSettings.y2Axis)>0){
                 this.marginY2Offset = 40;
             } else {
                 this.marginY2Offset = 0;
             }
+
             this.marginCSOffset = csAmount*100;
             this.width = this.dim.width - this.margin.left - 
                          this.margin.right - this.marginY2Offset - 
@@ -4141,11 +4153,12 @@ class graphly extends EventEmitter {
         let csAmount = this.getMaxCSAmount();
         
         if(this.renderSettings.hasOwnProperty('y2Axis') && 
-           this.renderSettings.y2Axis.length>0){
+           this.getMaxArrayLenght(this.renderSettings.y2Axis)>0){
             this.marginY2Offset = 40;
         } else {
             this.marginY2Offset = 0;
         }
+
         this.marginCSOffset = csAmount*100;
         this.width = this.dim.width - this.margin.left - 
                      this.margin.right - this.marginY2Offset - 
@@ -4216,6 +4229,14 @@ class graphly extends EventEmitter {
 
         this.xAxis.tickSize(-this.height);
         this.xAxisSvg.call(this.xAxis);
+
+        // Update config and add plot buttons 
+        this.el.select('#globalSettingsContainer')
+            .style('left', (this.width/2)+this.margin.left-75+'px');
+        this.el.select('#globalSettings')
+            .style('left', (this.width/2)+this.margin.left-40+'px');
+        this.el.select('#newPlotLink')
+            .style('left', (this.width/2)+this.margin.left+40+'px');
 
 
         let heighChunk = this.height/this.yScale.length;
@@ -5086,8 +5107,6 @@ class graphly extends EventEmitter {
                     this.createParameterInfo();
                     this.resize(false);
                     this.emit('axisChange');
-                    //this.renderData();
-                    //this.createColorScales();
                 });
         }
     }
