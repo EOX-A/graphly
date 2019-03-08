@@ -2916,6 +2916,70 @@ class graphly extends EventEmitter {
         return addValues.join('|');
     }
 
+    getAxisFormat(parameter, enableSubAxis, additionalTicks){
+
+        let tickformat = d3.format('g');
+        let axisformat = tickformat;
+
+        if(this.dataSettings.hasOwnProperty(parameter) && 
+           this.dataSettings[parameter].hasOwnProperty('periodic')){
+            let perSet = this.dataSettings[parameter].periodic;
+            if(perSet.hasOwnProperty('specialTicks')){
+                axisformat = (d)=>{
+                    let period = perSet.period;
+                    let tickText;
+                    let dm = Math.abs(d)%period;
+                    let sign = '+ ';
+                    if(dm<180){
+                        sign = '- ';
+                    }
+                    if(dm > 0 && dm < 90){
+                        tickText = sign+dm%90 + '↓';
+                    }  else if(dm > 90 && dm < 180){
+                        tickText = sign+(180-dm) + '↑';
+                    } else if(dm > 180 && dm < 270){
+                        tickText = sign+dm%90 + '↑';
+                    }  else if(dm > 270 && dm < 360){
+                        tickText = sign+(360-dm) + '↓';
+                    } else if(dm === 0){
+                        tickText = dm + '↓';
+                    } else if(dm === 90){
+                        tickText = sign+dm;
+                    } else if(dm === 180){
+                        tickText = dm%180 + '↑';
+                    } else {
+                        tickText = dm%180;
+                    }
+                    return tickText;
+                };
+            } else {
+                axisformat = (d)=>{
+                    let offset = defaultFor(
+                        perSet.offset, 0
+                    );
+                    let period = perSet.period;
+                    let dm = d-offset;
+                    let offsetAmount = Math.floor(dm/period);
+                    if(dm%period !== 0){
+                        d -= offsetAmount*period;
+                        d = tickformat(d.toFixed(10));
+                    } else {
+                        d = tickformat(period+offset)+' / '+tickformat(offset);
+                    }
+                    return d;
+                };
+            }
+        } else if(this.checkTimeScale(parameter)){
+            axisformat = u.getCustomUTCTimeTickFormat();
+            //this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
+        } else if(enableSubAxis){
+            axisformat = this.customSubtickFormat.bind(
+                this, this.data[parameter], additionalTicks
+            );
+        }
+        return axisformat;
+    }
+
     initAxis(){
 
         function getScale(isTime){
@@ -2986,36 +3050,6 @@ class graphly extends EventEmitter {
             .ticks(Math.max(this.width/120,2))
             .tickSize(-this.height);
 
-        if(this.xTimeScale){
-            this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
-        }
-        // Check if axis is using periodic parameter
-        let tickformat = d3.format('g');
-        if(this.dataSettings.hasOwnProperty(xSelection) && 
-           this.dataSettings[xSelection].hasOwnProperty('periodic')){
-
-            this.xAxis.tickFormat((d,i)=>{
-                let offset = defaultFor(
-                    this.dataSettings[xSelection].periodic.offset, 0
-                );
-                let period = this.dataSettings[xSelection].periodic.period;
-
-                let dm = d-offset;
-                if(d<0){
-                    dm = d-offset;
-                }
-                let offsetAmount = Math.floor(dm/period);
-                if(dm%period !== 0){
-                    d -= offsetAmount*period;
-                    d = tickformat(d.toFixed(10));
-                } else {
-                    d = tickformat(period+offset)+' / '+tickformat(offset);
-                }
-                return d;
-            });
-        }
-
-
         // Creating additional axis for sub parameters
         this.additionalXAxis = [];
         if(this.renderSettings.hasOwnProperty('additionalXTicks')){
@@ -3032,16 +3066,14 @@ class graphly extends EventEmitter {
                 );
             }
         }
-        // Handling of ticks adding subtick text
-        if(this.renderSettings.additionalXTicks && 
-            this.renderSettings.additionalXTicks.length>0){
-            let addXT = this.renderSettings.additionalXTicks;
-            this.xAxis.tickFormat(this.customSubtickFormat.bind(
-                this,
-                this.data[xSelection[0]],
-                addXT
-            ));
-        }
+
+        let xS = this.renderSettings.xAxis;
+
+        let axisformat = this.getAxisFormat(
+            xS, this.enableSubXAxis, this.renderSettings.additionalXTicks
+        );
+
+        this.xAxis.tickFormat(axisformat);
 
         this.xAxisSvg = this.svg.append('g')
             .attr('class', 'x axis')
@@ -3266,89 +3298,17 @@ class graphly extends EventEmitter {
                     .orient('left')
             );
 
+
             // Check if axis is using periodic parameter (only one parameter)
-            let tickformat = d3.format('g');
             let yS = this.renderSettings.yAxis[yPos];
-            let axisformat;
-
-            if(this.enableSubYAxis){
-                this.additionalYAxis.push(
-                    d3.svg.axis()
-                        .scale(this.yScale[yPos])
-                        .outerTickSize(5)
-                        .orient('left')
-                        .tickFormat(()=>{return '';})
-                );
-            }
-            // Handling of ticks adding subtick text
-
-            if(this.yTimeScale){
-                axisformat = u.getCustomUTCTimeTickFormat();
-            }else if(yS.length === 1){
-                if(this.dataSettings.hasOwnProperty(yS[0]) && 
-                   this.dataSettings[yS[0]].hasOwnProperty('periodic')){
-                    let perSet = this.dataSettings[yS[0]].periodic;
-                    if(perSet.hasOwnProperty('specialTicks')){
-                        axisformat = (d,i)=>{
-                            let period = perSet.period;
-                            let tickText;
-                            let dm = Math.abs(d)%period;
-                            let sign = '+ ';
-                            if(dm<180){
-                                sign = '- ';
-                            }
-                            if(dm > 0 && dm < 90){
-                                tickText = sign+dm%90 + '↓';
-                            }  else if(dm > 90 && dm < 180){
-                                tickText = sign+(180-dm) + '↑';
-                            } else if(dm > 180 && dm < 270){
-                                tickText = sign+dm%90 + '↑';
-                            }  else if(dm > 270 && dm < 360){
-                                tickText = sign+(360-dm) + '↓';
-                            } else if(dm === 0){
-                                tickText = dm + '↓';
-                            } else if(dm === 90){
-                                tickText = sign+dm;
-                            } else if(dm === 180){
-                                tickText = dm%180 + '↑';
-                            } else {
-                                tickText = dm%180;
-                            }
-                            return tickText;
-                        };
-                    } else {
-                        axisformat = (d,i)=>{
-                            let offset = defaultFor(
-                                perSet.offset, 0
-                            );
-                            let period = perSet.period;
-                            let dm = d-offset;
-                            let offsetAmount = Math.floor(dm/period);
-                            if(dm%period !== 0){
-                                d -= offsetAmount*period;
-                                d = tickformat(d.toFixed(10));
-                            } else {
-                                d = tickformat(period+offset)+' / '+tickformat(offset);
-                            }
-                            return d;
-                        };
-                    }
-                }
-            } else if(this.enableSubYAxis){
-                let addYT = this.renderSettings.additionalYTicks[yPos];
-                this.yAxis[yPos].tickFormat(this.customSubtickFormat.bind(
-                    this,
-                    this.data[ySelection[0]],
-                    addYT
-                ));
-            } else {
-                axisformat = tickformat;
-            }
+           
+            let yAxisformat = this.getAxisFormat(
+                yS[0], this.enableSubYAxis,
+                this.renderSettings.additionalYTicks[yPos]
+            );
+            this.yAxis[yPos].tickFormat(yAxisformat);
 
 
-            this.yAxis[yPos].tickFormat(axisformat);
-
-    
             if(currYAxis.length > 0){
                 this.yAxisSvg.push(
                     this.svg.append('g')
@@ -3607,37 +3567,56 @@ class graphly extends EventEmitter {
                 .attr('class', 'end-date')
                 .text(function(d){return dateFormat(d);});
         }
-        if(this.yTimeScale) {
-            this.el.selectAll('.y.axis>.tick:nth-of-type(2)')
-                .append('text')
-                .attr('dy', '-42px')
-                .attr('dx', '-60px')
-                .attr("transform", "rotate(-90)")
-                .attr('class', 'start-date')
-                .text(function(d){return dateFormat(d);});
-            this.el.selectAll('.y.axis>.tick:nth-last-of-type(2)')
-                .append('text')
-                .attr('dy', '-42px')
-                .attr('dx', '-60px')
-                .attr("transform", "rotate(-90)")
-                .attr('class', 'end-date')
-                .text(function(d){return dateFormat(d);});
+
+        let rsY = this.renderSettings.yAxis;
+
+        for (let posY=0; posY<rsY.length; posY++) {
+
+            if(this.checkTimeScale(rsY[posY][0])){
+                let yAx = this.el.selectAll('.y.axis')[0][posY];
+                if(yAx){
+                    d3.select(yAx).selectAll('.tick:nth-of-type(2)')
+                        .append('text')
+                        .attr('dy', '-60px')
+                        .attr('dx', '-60px')
+                        .attr("transform", "rotate(-90)")
+                        .attr('class', 'start-date')
+                        .text(function(d){return dateFormat(d);});
+                    d3.select(yAx).selectAll('.tick:nth-last-of-type(2)')
+                        .append('text')
+                        .attr('dy', '-60px')
+                        .attr('dx', '-60px')
+                        .attr("transform", "rotate(-90) translate(-55,0)")
+                        .attr('class', 'end-date')
+                        .text(function(d){return dateFormat(d);});
+                }
+            }
         }
-        if(this.y2TimeScale) {
-            this.el.selectAll('.y2.axis>.tick:nth-of-type(2)')
-                .append('text')
-                .attr('dy', this.width+52)
-                .attr('dx', '-60px')
-                .attr("transform", "rotate(-90)")
-                .attr('class', 'start-date')
-                .text(function(d){return dateFormat(d);});
-            this.el.selectAll('.y2.axis>.tick:nth-last-of-type(2)')
-                .append('text')
-                .attr('dy',  this.width+52)
-                .attr('dx', '-60px')
-                .attr("transform", "rotate(-90)")
-                .attr('class', 'end-date')
-                .text(function(d){return dateFormat(d);});
+
+
+        let rsY2 = this.renderSettings.y2Axis;
+
+        for (let posY=0; posY<rsY2.length; posY++) {
+
+            if(this.checkTimeScale(rsY2[posY][0])){
+                let yAx = this.el.selectAll('.y2.axis')[0][posY];
+                if(yAx){
+                    d3.select(yAx).selectAll('.tick:nth-of-type(2)')
+                        .append('text')
+                        .attr('dy', '60px')
+                        .attr('dx', '60px')
+                        .attr('transform', 'rotate(-90) translate(-125,0)')
+                        .attr('class', 'start-date')
+                        .text(function(d){return dateFormat(d);});
+                    d3.select(yAx).selectAll('.tick:nth-last-of-type(2)')
+                        .append('text')
+                        .attr('dy', '60px')
+                        .attr('dx', '60px')
+                        .attr('transform', 'rotate(-90) translate(-125,0)')
+                        .attr('class', 'end-date')
+                        .text(function(d){return dateFormat(d);});
+                }
+            }
         }
     }
 
