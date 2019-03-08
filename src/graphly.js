@@ -1906,18 +1906,20 @@ class graphly extends EventEmitter {
             let aYT = this.renderSettings.additionalYTicks;
             let heighChunk = this.height/this.renderSettings.yAxis.length;
             for (let i = 0; i < aYT.length; i++) {
-                for(let j=0; j<aYT[i].length; j++){
+                if(typeof aYT[i] !== 'undefined'){
+                    for(let j=0; j<aYT[i].length; j++){
 
-                    this.svg.append('text')
-                        .attr('class', 'subYAxisLabel subAxisLabel')
-                        .attr('text-anchor', 'middle')
-                        .attr('transform',
-                            'translate('+ -((j*80)+this.margin.left/2+90) +','+
-                            (heighChunk*i+heighChunk/2)+')rotate(-90)'
-                        )
-                        .attr('stroke', 'none')
-                        .attr('text-decoration', 'none')
-                        .text(aYT[i][j]);
+                        this.svg.append('text')
+                            .attr('class', 'subYAxisLabel subAxisLabel')
+                            .attr('text-anchor', 'middle')
+                            .attr('transform',
+                                'translate('+ -((j*80)+this.margin.left/2+90) +','+
+                                (heighChunk*i+heighChunk/2)+')rotate(-90)'
+                            )
+                            .attr('stroke', 'none')
+                            .attr('text-decoration', 'none')
+                            .text(aYT[i][j]);
+                    }
                 }
             }
         }
@@ -2969,13 +2971,13 @@ class graphly extends EventEmitter {
                     return d;
                 };
             }
-        } else if(this.checkTimeScale(parameter)){
-            axisformat = u.getCustomUTCTimeTickFormat();
-            //this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
         } else if(enableSubAxis){
             axisformat = this.customSubtickFormat.bind(
                 this, this.data[parameter], additionalTicks
             );
+        } else if(this.checkTimeScale(parameter)){
+            axisformat = u.getCustomUTCTimeTickFormat();
+            //this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
         }
         return axisformat;
     }
@@ -3322,10 +3324,27 @@ class graphly extends EventEmitter {
                 this.yAxisSvg.push(null);
             }
 
+            // Creating additional axis for sub parameters
+            if(this.renderSettings.hasOwnProperty('additionalYTicks')){
+                let addYTicks = this.renderSettings.additionalYTicks[yPos];
+                if(typeof addYTicks !== 'undefined'){
+                    for (let i = 0; i < addYTicks.length; i++) {
+
+                        this.additionalYAxis.push(
+                            d3.svg.axis()
+                                .scale(this.yScale[yPos])
+                                .outerTickSize(5)
+                                .orient('left')
+                                .tickFormat(()=>{return '';})
+                        );
+                    }
+                }
+            }
+
             if(this.enableSubYAxis){
-                let currAddYAxis = [];
+                let currAddYAxisSVG = [];
                 for (let i = 0; i < this.renderSettings.additionalYTicks[yPos].length; i++) {
-                    currAddYAxis.push(
+                    currAddYAxisSVG.push(
                         this.svg.append('g')
                             .attr('class', 'y_add subaxis')
                             .attr(
@@ -3334,7 +3353,7 @@ class graphly extends EventEmitter {
                             .call(this.additionalYAxis[yPos])
                     );
                 }
-                this.addYAxisSvg.push(currAddYAxis);
+                this.addYAxisSvg.push(currAddYAxisSVG);
             }
 
             this.y2Axis.push(
