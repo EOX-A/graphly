@@ -431,7 +431,11 @@ svg {
     z-index: 20;
 }
 
-.modifyColorscaleIcon:hover, #rangeEditCancel:hover, #rangeEditConfirm{
+.modifyAxisIcon{
+    pointer-events: all;
+}
+
+.modifyAxisIcon:hover, #rangeEditCancel:hover, #rangeEditConfirm{
     cursor: pointer;
 }
 
