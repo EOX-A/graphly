@@ -1857,13 +1857,13 @@ class graphly extends EventEmitter {
         }
 
         //let csOffset = this.margin.right + this.marginY2Offset + width/2 + width*index;
-        let csOffset = this.margin.left + this.width + this.margin.right/2 + width*index;
+        let csOffset = this.margin.left + this.width + this.marginY2Offset + width*index;
             
         let g = this.el.select('svg').select('g').append("g")
             .attr('id', ('colorscale_'+id))
             .attr("class", "color axis")
             .style('pointer-events', 'all')
-            .attr("transform", "translate(" + (csOffset-30) + ",0)");
+            .attr("transform", "translate(" + (csOffset-10) + ",0)");
 
         // Check to see if we create a discrete or linear colorscale
         if(this.dataSettings[id].hasOwnProperty('csDiscrete') && this.dataSettings[id].csDiscrete ){
@@ -1982,7 +1982,6 @@ class graphly extends EventEmitter {
     createAxisForms(axis, parameterid, g, evtx, evty, zoom){
         // takes care of positioning and defining functions of axis edit forms
         // to pre-fill forms
-        //let extent = this.dataSettings[id].extent;
         let extent = axis.scale().domain();
         // offset of form from the click event position
         let formYOffset = 20;
@@ -2040,18 +2039,7 @@ class graphly extends EventEmitter {
             .on('keypress', function(){
                 // confirm forms on enter
                 if(d3.event.keyCode === 13){
-                    //this.updateAxis(axis, id, g);
-                    let min = Number(d3.select('#rangeEditMin').property('value'));
-                    let max = Number(d3.select('#rangeEditMax').property('value'));
-                    axis.scale().domain([min,max]);
-                    g.call(axis);
-                    zoom.y(axis.scale());
-                    if(parameterid && this.colorCache.hasOwnProperty(parameterid)){
-                        delete this.colorCache[parameterid];
-                        this.dataSettings[parameterid].extent = axis.scale().domain();
-                    }
-                    this.renderData(false);
-                    this.el.selectAll('.rangeEdit').remove();
+                    this.updateAxis(axis, g, zoom, parameterid);
                 }
             }.bind(this))
 
@@ -2059,11 +2047,7 @@ class graphly extends EventEmitter {
             .style('top', evty + formYOffset + formMaxPos.height + 5 +'px')
             .style('left', evtx + formXOffset + formMinPos.width + 'px')
             .on('click', function(){
-                let min = Number(d3.select('#rangeEditMin').property('value'));
-                let max = Number(d3.select('#rangeEditMax').property('value'));
-                axis.scale().domain([min,max]);
-                this.renderData(false);
-                this.el.selectAll('.rangeEdit').remove();
+                this.updateAxis(axis, g, zoom, parameterid);
             }.bind(this));
 
 
@@ -2076,7 +2060,7 @@ class graphly extends EventEmitter {
                 });
     }
 
-    updateAxis (axis, id, axisElement) {
+    updateAxis (axis, g, zoom, parameterid) {
         let min = Number(d3.select('#rangeEditMin').property('value'));
         let max = Number(d3.select('#rangeEditMax').property('value'));
         //checks for invalid values
@@ -2084,28 +2068,17 @@ class graphly extends EventEmitter {
             // if user reversed order, fix it
             let newDataDomain = (min < max) ? [min, max] : [max, min];
 
-             //update domain of axis scale
-            let updateAxis = () => {
-                delete this.colorCache[id];
-                axisElement.call(axis);
-                this.dataSettings[id].extent = axis.scale().domain();
-                this.renderData(false);
-            };
-
             axis.scale().domain(newDataDomain);
-            updateAxis();
-
-             //update colorscale zoom to take changes into account
-            let csZoom = d3.behavior.zoom()
-                .y(axis.scale())
-                .on('zoom', updateAxis);
-            axisElement.call(csZoom);
-
-             d3.selectAll('#rangeEditMin, #rangeEditMax')
-                .classed('wrongFormInput', false);
-
-             d3.selectAll('.rangeEdit')
-                .classed('hidden', true);
+            g.call(axis);
+            zoom.y(axis.scale());
+            if(parameterid && this.colorCache.hasOwnProperty(parameterid)){
+                delete this.colorCache[parameterid];
+                this.dataSettings[parameterid].extent = axis.scale().domain();
+            }
+            this.addTimeInformation();
+            this.breakTicks();
+            this.renderData(false);
+            this.el.selectAll('.rangeEdit').remove();
 
        } else {
             if (isNaN(min)){
@@ -2167,7 +2140,7 @@ class graphly extends EventEmitter {
 
         this.svg.append('rect')
             .attr('id', 'zoomXBox')
-            .attr('width', this.width)
+            .attr('width', this.width-20)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
             .attr('fill', 'none')
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
@@ -2191,10 +2164,10 @@ class graphly extends EventEmitter {
             this.svg.append('rect')
                 .attr('id', 'zoomY2Box')
                 .attr('width', this.margin.right + this.marginY2Offset)
-                .attr('height', this.height )
+                .attr('height', this.height-20 )
                 .attr('transform', 'translate(' + (
                     this.width
-                    ) + ',' + 0 + ')'
+                    ) + ',' + 20 + ')'
                 )
                 .attr('fill', 'red')
                 .style('visibility', 'hidden')
@@ -3008,6 +2981,20 @@ class graphly extends EventEmitter {
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
 
+        // TODO: Allow axis scale edit for time selection
+        if(!this.checkTimeScale(this.renderSettings.xAxis)){
+            this.xAxisSvg.append('text')
+                .attr('class', 'modifyAxisIcon xaxis')
+                .text('✐')
+                .style('font-size', '1.7em')
+                .attr('transform', 'translate(' + this.width + ' ,' + 20 + ') rotate(' + 180 + ')')
+                .on('click', function (){
+                    let evtx = d3.event.layerX;
+                    let evty = d3.event.layerY; 
+                    this.createAxisForms(this.xAxis, null, this.xAxisSvg, evtx, evty, this.xzoom);
+                }.bind(this));
+        }
+
         this.addXAxisSvg = [];
         for (let i = 0; i < this.additionalXAxis.length; i++) {
             this.addXAxisSvg.push(
@@ -3026,19 +3013,20 @@ class graphly extends EventEmitter {
                 .attr('class', 'y axis')
                 .call(this.yAxis);
 
-            var that = this;
-            this.yAxisSvg.append('text')
-                .attr('class', 'modifyAxisIcon')
-                .text('✐')
-                .style('font-size', '1.7em')
-                .attr('transform', 'translate(-' + 65 + ' ,' + 0 + ') rotate(' + 90 + ')')
-                .on('click', function (){
-                    let evtx = d3.event.layerX;
-                    let evty = d3.event.layerY; 
-                    this.createAxisForms(
-                        that.yAxis, 'deletethis', that.yAxisSvg, evtx, evty, this.yzoom
-                    );
-                }.bind(this))
+            if(!this.checkTimeScale(this.renderSettings.yAxis[0])){
+                this.yAxisSvg.append('text')
+                    .attr('class', 'modifyAxisIcon')
+                    .text('✐')
+                    .style('font-size', '1.7em')
+                    .attr('transform', 'translate(-' + 65 + ' ,' + 0 + ') rotate(' + 90 + ')')
+                    .on('click', function (){
+                        let evtx = d3.event.layerX;
+                        let evty = d3.event.layerY; 
+                        this.createAxisForms(
+                            this.yAxis, null, this.yAxisSvg, evtx, evty, this.yzoom
+                        );
+                    }.bind(this));
+                }
         }
 
 
@@ -3058,6 +3046,22 @@ class graphly extends EventEmitter {
             this.y2AxisSvg = this.svg.append('g')
                 .attr('class', 'y2 axis')
                 .call(this.y2Axis);
+
+            if(!this.checkTimeScale(this.renderSettings.y2Axis[0])){
+                this.y2AxisSvg.append('text')
+                    .attr('class', 'modifyAxisIcon y2')
+                    .text('✐')
+                    .style('font-size', '1.7em')
+                    .style('float', 'right')
+                    .attr('transform', 'translate(' + (this.width+70) + ' ,' + 0 + ') rotate(' + 180 + ')')
+                    .on('click', function (){
+                        let evtx = d3.event.layerX;
+                        let evty = d3.event.layerY; 
+                        this.createAxisForms(
+                            this.y2Axis, null, this.y2AxisSvg, evtx, evty, this.y2zoom
+                        );
+                    }.bind(this))
+                }
         }
 
         let maxzoomout = 0;
@@ -3783,7 +3787,17 @@ class graphly extends EventEmitter {
         this.xAxisSvg.call(this.xAxis);
 
         this.yAxis.innerTickSize(-this.width);
-        
+
+        this.el.selectAll('.modifyAxisIcon.y2')
+            .attr(
+                'transform',
+                'translate(' + (this.width+70) + ' ,' + 0 + ') rotate(' + 180 + ')'
+            );
+        this.el.selectAll('.modifyAxisIcon.xaxis')
+            .attr(
+                'transform',
+                'translate(' + this.width + ' ,' + 20 + ') rotate(' + 180 + ')'
+            );
 
         if(this.renderSettings.yAxis.length > 0){
             this.yAxisSvg.call(this.yAxis);
@@ -3840,7 +3854,7 @@ class graphly extends EventEmitter {
             .attr('height', this.height);
 
         this.el.select('#zoomXBox')
-            .attr('width', this.width)
+            .attr('width', this.width-20)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
@@ -3850,16 +3864,11 @@ class graphly extends EventEmitter {
 
         this.el.select('#zoomY2Box')
             .attr('width', this.margin.right + this.marginY2Offset)
-            .attr('height', this.height )
+            .attr('height', this.height-20 )
             .attr('transform', 'translate(' + (
                 this.width
-                ) + ',' + 0 + ')'
+                ) + ',' + 20 + ')'
             );
-
-        this.el.select('#zoomXBox')
-            .attr('width', this.width)
-            .attr('height', (this.margin.bottom+this.subAxisMarginX))
-            .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
         this.el.select('#rectangleOutline')
             .attr('width', this.width)
