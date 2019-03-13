@@ -1974,18 +1974,28 @@ class graphly extends EventEmitter {
                 .on('click', function (){
                     let evtx = d3.event.layerX;
                     let evty = d3.event.layerY; 
-                    this.createAxisForms(colorAxis, id, g, evtx, evty, csZoom);
+                    this.createAxisForms(
+                        colorAxis, id, g, evtx, evty, csZoom, 'right'
+                    );
                 }.bind(this))
         }
     }
 
-    createAxisForms(axis, parameterid, g, evtx, evty, zoom){
+    createAxisForms(axis, parameterid, g, evtx, evty, zoom, openposition){
         // takes care of positioning and defining functions of axis edit forms
         // to pre-fill forms
         let extent = axis.scale().domain();
         // offset of form from the click event position
         let formYOffset = 20;
         let formXOffset = 2;
+
+        if(openposition === 'left'){
+            formXOffset = -80;
+        }
+        if(openposition === 'middleleft'){
+            formYOffset = 0;
+            formXOffset = -100;
+        }
 
         // Cleanup
         this.el.selectAll('.rangeEdit').remove();
@@ -2991,7 +3001,10 @@ class graphly extends EventEmitter {
                 .on('click', function (){
                     let evtx = d3.event.layerX;
                     let evty = d3.event.layerY; 
-                    this.createAxisForms(this.xAxis, null, this.xAxisSvg, evtx, evty, this.xzoom);
+                    this.createAxisForms(
+                        this.xAxis, null, this.xAxisSvg,
+                        evtx, evty, this.xzoom, 'middleleft'
+                    );
                 }.bind(this));
         }
 
@@ -3023,7 +3036,8 @@ class graphly extends EventEmitter {
                         let evtx = d3.event.layerX;
                         let evty = d3.event.layerY; 
                         this.createAxisForms(
-                            this.yAxis, null, this.yAxisSvg, evtx, evty, this.yzoom
+                            this.yAxis, null, this.yAxisSvg,
+                            evtx, evty, this.yzoom, 'right'
                         );
                     }.bind(this));
                 }
@@ -3058,7 +3072,8 @@ class graphly extends EventEmitter {
                         let evtx = d3.event.layerX;
                         let evty = d3.event.layerY; 
                         this.createAxisForms(
-                            this.y2Axis, null, this.y2AxisSvg, evtx, evty, this.y2zoom
+                            this.y2Axis, null, this.y2AxisSvg,
+                            evtx, evty, this.y2zoom, 'left'
                         );
                     }.bind(this))
                 }
