@@ -1047,6 +1047,9 @@ class graphly extends EventEmitter {
             this.svg.select('#svgInfoContainer').style('visibility', 'visible');
         }
 
+        // Hide axis edit buttons
+        this.svg.selectAll('.modifyAxisIcon').style('display', 'none');
+
         // Set interactive blue to black for labels
         this.svg.selectAll('.axisLabel').attr('fill', 'black');
         this.svg.selectAll('.axisLabel').attr('font-weight', 'normal');
@@ -1165,6 +1168,7 @@ class graphly extends EventEmitter {
         this.svg.select('#previewImage').style('display', 'none');
         this.svg.select('#previewImage2').style('display', 'none');
         this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
+        this.svg.selectAll('.modifyAxisIcon').style('display', 'block');
 
         this.resFactor = 1;
         this.resize();
