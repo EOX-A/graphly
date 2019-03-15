@@ -2865,6 +2865,7 @@ class graphly extends EventEmitter {
     customSubtickFormat(currParDat, addT, d){
         // TODO: Check if selection is group
         //let currParDat = this.data[xSelection[0]];
+        let tickformat = d3.format('g');
         let secParDat;
         let addValues = [];
         let timeScale = d instanceof Date;
@@ -2872,7 +2873,7 @@ class graphly extends EventEmitter {
             addValues.push(u.getCustomUTCTimeTickFormat()(d));
         } else {
             // cut small decimals to solve float problems for axis labels
-            addValues.push(parseFloat(d.toFixed(11)));
+            addValues.push(tickformat(d.toFixed(11)));
         }
         // Find corresponding value(s) for additional axis
         for (let x = 0; x < addT.length; x++) {
@@ -2926,6 +2927,7 @@ class graphly extends EventEmitter {
             let perSet = this.dataSettings[parameter].periodic;
             if(perSet.hasOwnProperty('specialTicks')){
                 axisformat = (d)=>{
+                    d = tickformat(d.toFixed(11));
                     let period = perSet.period;
                     let tickText;
                     let dm = Math.abs(d)%period;
@@ -2962,11 +2964,10 @@ class graphly extends EventEmitter {
                     let offsetAmount = Math.floor(dm/period);
                     if(dm%period !== 0){
                         d -= offsetAmount*period;
-                        d = tickformat(d.toFixed(10));
                     } else {
                         d = tickformat(period+offset)+' / '+tickformat(offset);
                     }
-                    return d;
+                    return tickformat(d.toFixed(11));
                 };
             }
         } else if(enableSubAxis){
@@ -2976,6 +2977,10 @@ class graphly extends EventEmitter {
         } else if(this.checkTimeScale(parameter)){
             axisformat = u.getCustomUTCTimeTickFormat();
             //this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
+        } else {
+            axisformat = (d)=>{
+                return tickformat(d.toFixed(11));
+            };
         }
         return axisformat;
     }
