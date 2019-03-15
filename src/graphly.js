@@ -2967,11 +2967,12 @@ class graphly extends EventEmitter {
                     let dm = d-offset;
                     let offsetAmount = Math.floor(dm/period);
                     if(dm%period !== 0){
-                        d -= offsetAmount*period;
+                        d = tickformat( (d - (offsetAmount*period)).toFixed(11) );
                     } else {
-                        d = tickformat(period+offset)+' / '+tickformat(offset);
+                        d = tickformat((period+offset).toFixed(11) )+' / '+
+                            tickformat( offset.toFixed(11) );
                     }
-                    return tickformat(d.toFixed(11));
+                    return d;
                 };
             }
         } else if(enableSubAxis){
