@@ -3,9 +3,9 @@
 
 
 var renderSettings_mie = {
-    xAxis: 'mie_altitude',
-    yAxis: ['mie_datetime'],
-    y2Axis: [],
+    xAxis: 'mie_datetime',
+    yAxis: ['mie_altitude'],
+    //y2Axis: ['geoid_separation'],
     combinedParameters: {
         mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
@@ -22,9 +22,9 @@ var renderSettings_ray = {
         'rayleigh_altitude',
         //'rayleigh_dem_altitude'
     ],
-    //y2Axis: [],
+    y2Axis: [],
     combinedParameters: {
-        rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
+        rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_end'],
         rayleigh_altitude: ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
         mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
@@ -154,6 +154,10 @@ var ds_mie = {
         timeFormat: 'MJD2000_S'
     },
     mie_datetime_end: {
+        scaleFormat: 'time',
+        timeFormat: 'MJD2000_S'
+    },
+    mie_datetime: {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
@@ -541,8 +545,8 @@ var filterManager = new FilterManager({
 
 var graph = new graphly.graphly({
     el: '#graph',
-    dataSettings: otherds,
-    renderSettings: aeolusl2b,
+    dataSettings: ds_mie,
+    renderSettings: renderSettings_mie,
     filterManager: filterManager,
     //ignoreParameters: [/mie_quality_fl.*/]
     debounceActive: true,
@@ -560,17 +564,17 @@ var graph = new graphly.graphly({
 
 filterManager.setRenderNode('#filters');
 
-/*var graph2 = new graphly.graphly({
+var graph2 = new graphly.graphly({
     el: '#graph2',
-    dataSettings: ds_mie,
-    renderSettings: renderSettings_mie,
+    dataSettings: ds_rayleigh,
+    renderSettings: renderSettings_ray,
     filterManager: filterManager,
     //fixedSize: true,
     //fixedWidth: 12000
-    //connectedGraph: graph
+    connectedGraph: graph
 });
 
-graph.connectGraph(graph2);*/
+graph.connectGraph(graph2);
 
 
 
@@ -592,12 +596,13 @@ graph.on('pointSelect', function(values){
     console.log(values);
 });
 
-var usesecond = false;
+var usesecond = true;
 
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/aeolusl2b_newest.mp', true);
+xhr.open('GET', 'data/aeolus_L1.mp', true);
+//xhr.open('GET', 'data/aeolusl2b_newest.mp', true);
 //xhr.open('GET', 'data/aeolusl2a.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
 //xhr.open('GET', 'data/swarm.mp', true);
@@ -716,26 +721,13 @@ xhr.onload = function(e) {
     // L2B
 
     //var maxLength = data.ALD_U_N_2B.measurement_data.mie_measurement_map.length;
-    var bins_start = [];
+    /*var bins_start = [];
     var bins_end = [];
     var meas_start = [];
     var meas_end = [];
     var measurement_map = [];
 
 
-    /*for (var i = minLength; i < maxLength; i++) {
-         for (var j=0; j<data.ALD_U_N_2B.measurement_data.mie_measurement_map[i].length; j++){
-            if(data.ALD_U_N_2B.measurement_data.mie_measurement_map[i][j] !== 0){
-                bins_start.push(j);
-                bins_end.push(j+1);
-
-                meas_start.push(i);
-                meas_end.push(i+1);
-
-                mie_meas_map.push(data.ALD_U_N_2B.measurement_data.mie_measurement_map[i][j])
-            }
-         }
-     }*/
     var ds = data.ALD_U_N_2B;
     var mGD = ds.mie_grouping_data.mie_grouping_start_obs;
      //for (var i = 0; i < mGD.length; i++) {
@@ -782,7 +774,7 @@ xhr.onload = function(e) {
 
     graph.addGroupArrows([[630,660,21],[660,690,22],[690,720,23]]);
 
-    graph.loadData(ds);
+    graph.loadData(ds);*/
 
 
     /*var ids = {
@@ -810,7 +802,7 @@ xhr.onload = function(e) {
 
     //graph.loadData(data);
 
-    /*var ds = data.ALD_U_N_1B[0];
+    var ds = data.ALD_U_N_1B[0];
 
     var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
     var mie_HLOS_wind_speed = flattenObservationArray(ds.mie_HLOS_wind_speed);
@@ -831,14 +823,21 @@ xhr.onload = function(e) {
       mie_quality_flag_data: mie_bin_quality_flag,
       mie_altitude_top: mie_altitude[0],
       mie_altitude_bottom: mie_altitude[1],
-      geoid_separation: geoid_separation[0]
-    };*/
+      geoid_separation: geoid_separation[0],
+
+      rayleigh_datetime_start: time[0],
+      rayleigh_datetime_end: time[1],
+      rayleigh_wind_velocity: mie_HLOS_wind_speed,
+      rayleigh_quality_flag_data: mie_bin_quality_flag,
+      rayleigh_altitude_top: mie_altitude[0],
+      rayleigh_altitude_bottom: mie_altitude[1],
+    };
 
 
-    //graph.loadData(data);
-    /*if(usesecond){
+    graph.loadData(data);
+    if(usesecond){
         graph2.loadData(data);
-    }*/
+    }
 
     filterManager.loadData(ds);
 };
