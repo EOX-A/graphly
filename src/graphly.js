@@ -1085,6 +1085,8 @@ class graphly extends EventEmitter {
             let yAxRen = this.renderSettings.yAxis;
             let y2AxRen = this.renderSettings.y2Axis;
 
+            // Hide axis edit buttons
+            this.svg.selectAll('.modifyColorscaleIcon').style('display', 'none');
 
 
             // Draw y2 first so it is on bottom
@@ -1288,6 +1290,8 @@ class graphly extends EventEmitter {
 
         this.svg.selectAll('.previewImage').style('display', 'none');
         this.svg.selectAll('.svgInfoContainer').style('visibility', 'hidden');
+        // Hide axis edit buttons
+        this.svg.selectAll('.modifyColorscaleIcon').style('display', 'block');
 
         // Set first render container as it was before
         this.el.select('#renderingContainer0')
