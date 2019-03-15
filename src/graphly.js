@@ -2584,6 +2584,103 @@ class graphly extends EventEmitter {
         return resExt;
     }
 
+    getAxisFormat(parameter, enableSubAxis, additionalTicks){
+
+        let tickformat = d3.format('g');
+        let axisformat = tickformat;
+
+        // If combined parameter just take first one
+        if(parameter instanceof Array){
+            parameter = parameter[0];
+        }
+
+        if(this.dataSettings.hasOwnProperty(parameter) && 
+           this.dataSettings[parameter].hasOwnProperty('periodic')){
+            let perSet = this.dataSettings[parameter].periodic;
+            axisformat = (d)=>{
+                let offset = defaultFor(
+                    perSet.offset, 0
+                );
+                let period = perSet.period;
+                let dm = d-offset;
+                let offsetAmount = Math.floor(dm/period);
+                if(dm%period !== 0){
+                    d -= offsetAmount*period;
+                } else {
+                    d = tickformat(period+offset)+' / '+tickformat(offset);
+                }
+                return tickformat(d.toFixed(11));
+            };
+        } else if(enableSubAxis){
+            axisformat = this.customSubtickFormat.bind(
+                this, this.data[parameter], additionalTicks
+            );
+        } else if(this.checkTimeScale(parameter)){
+            axisformat = u.getCustomUTCTimeTickFormat();
+        } else {
+            axisformat = (d)=>{
+                return tickformat(d.toFixed(11));
+            };
+        }
+        return axisformat;
+    }
+
+    customSubtickFormat(currParDat, addT, d){
+        // TODO: Check if selection is group
+        //let currParDat = this.data[xSelection[0]];
+        let tickformat = d3.format('g');
+        let secParDat;
+        let addValues = [];
+        let timeScale = d instanceof Date;
+        if(timeScale){
+            addValues.push(u.getCustomUTCTimeTickFormat()(d));
+        } else {
+            // cut small decimals to solve float problems for axis labels
+            addValues.push(tickformat(d.toFixed(11)));
+        }
+        // Find corresponding value(s) for additional axis
+        for (let x = 0; x < addT.length; x++) {
+            secParDat = this.data[addT[x]];
+            let idx = -1;
+            let dataLength = currParDat.length-1;
+            for (let j = 0; j < currParDat.length; j++) {
+                if(timeScale){
+                    if(currParDat[0]-currParDat[dataLength]<=0 &&
+                        currParDat[j].getTime()>=d.getTime()){
+                        idx = j-1;
+                        break;
+                    }
+                    else if(currParDat[0]-currParDat[dataLength]>0 &&
+                        currParDat[j].getTime()<=d.getTime()){
+                        idx = j;
+                        break;
+                    }
+                } else {
+                    if(currParDat[0]-currParDat[1]<=0 && 
+                       currParDat[j]>=d){
+                        idx = j-1;
+                        break;
+                    } else if(currParDat[0]-currParDat[1]>0 && 
+                       currParDat[j]<=d){
+                        idx = j;
+                        break;
+                    }
+                }
+            }
+            if(idx >= 0 && idx<secParDat.length){
+                if(secParDat[idx]<100){
+                    addValues.push(secParDat[idx].toFixed(2));
+                }else{
+                    addValues.push(secParDat[idx].toFixed(0));
+                }
+            } else {
+                addValues.push(' ');
+            }
+        }
+        return addValues.join('|');
+    }
+
+
     initAxis(){
 
         this.svg.selectAll('*').remove();
@@ -2799,34 +2896,6 @@ class graphly extends EventEmitter {
             .orient('bottom')
             .ticks(Math.max(this.width/120,2))
             .tickSize(-this.height);
-        if(this.xTimeScale){
-            this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
-        }
-        // Check if axis is using periodic parameter
-        let tickformat = d3.format('g');
-        if(this.dataSettings.hasOwnProperty(xSelection) && 
-           this.dataSettings[xSelection].hasOwnProperty('periodic')){
-
-            this.xAxis.tickFormat((d,i)=>{
-                let offset = defaultFor(
-                    this.dataSettings[xSelection].periodic.offset, 0
-                );
-                let period = this.dataSettings[xSelection].periodic.period;
-
-                let dm = d-offset;
-                if(d<0){
-                    dm = d-offset;
-                }
-                let offsetAmount = Math.floor(dm/period);
-                if(dm%period !== 0){
-                    d -= offsetAmount*period;
-                    d = tickformat(d.toFixed(10));
-                } else {
-                    d = tickformat(period+offset)+' / '+tickformat(offset);
-                }
-                return d;
-            });
-        }
 
 
         // Creating additional axis for sub parameters
@@ -2845,70 +2914,25 @@ class graphly extends EventEmitter {
                 );
             }
         }
-        // Handling of ticks adding subtick text
-        if(this.renderSettings.hasOwnProperty('additionalXTicks')){
-            let addXT = this.renderSettings.additionalXTicks;
-            this.xAxis.tickFormat((d)=>{
-                // TODO: Check if selection is group
-                let currParDat = this.data[xSelection[0]];
-                let secParDat;
-                let addValues = [];
-                if(this.xTimeScale){
-                    addValues.push(u.getCustomUTCTimeTickFormat()(d));
-                } else {
-                    addValues.push(d);
-                }
-                // Find corresponding value(s) for additional axis
-                for (let x = 0; x < addXT.length; x++) {
-                    secParDat = this.data[addXT[x]];
-                    let idx = -1;
-                    let dataLength = currParDat.length-1;
-                    for (let j = 0; j < currParDat.length; j++) {
-                        if(this.xTimeScale){
-                            if(currParDat[0]-currParDat[dataLength]<=0 &&
-                                currParDat[j].getTime()>=d.getTime()){
-                                idx = j-1;
-                                break;
-                            }
-                            else if(currParDat[0]-currParDat[dataLength]>0 &&
-                                currParDat[j].getTime()<=d.getTime()){
-                                idx = j;
-                                break;
-                            }
-                        } else {
-                            if(currParDat[0]-currParDat[1]<=0 && 
-                               currParDat[j]>=d){
-                                idx = j-1;
-                                break;
-                            } else if(currParDat[0]-currParDat[1]>0 && 
-                               currParDat[j]<=d){
-                                idx = j;
-                                break;
-                            }
-                        }
-                    }
-                    if(idx >= 0 && idx<secParDat.length){
-                        if(secParDat[idx]<100){
-                            addValues.push(secParDat[idx].toFixed(2));
-                        }else{
-                            addValues.push(secParDat[idx].toFixed(0));
-                        }
-                    } else {
-                        addValues.push(' ');
-                    }
-                }
-                return addValues.join('|');
-            });
-        }
-        
+
+        this.xAxis.tickFormat(this.getAxisFormat(
+            xSelection,
+            this.enableSubXAxis,
+            this.renderSettings.additionalXTicks
+        ));
+
+
         this.yAxis = d3.svg.axis()
             .scale(this.yScale)
             .innerTickSize(-this.width)
             .outerTickSize(0)
             .orient('left');
-        if(this.yTimeScale){
-            this.yAxis.tickFormat(u.getCustomUTCTimeTickFormat());
-        }
+
+        this.yAxis.tickFormat(this.getAxisFormat(
+            this.renderSettings.yAxis[0],
+            this.enableSubYAxis,
+            this.renderSettings.additionalYTicks
+        ));
 
         // Creating additional axis for sub parameters
         this.additionalYAxis = [];
@@ -2925,70 +2949,17 @@ class graphly extends EventEmitter {
                 );
             }
         }
-        // Handling of ticks adding subtick text
-        if(this.renderSettings.hasOwnProperty('additionalYTicks')){
-            let addYT = this.renderSettings.additionalYTicks;
-            this.yAxis.tickFormat((d)=>{
-                // TODO: Check if selection is group
-                let currParDat = this.data[ySelection[0]];
-                let secParDat;
-                let addValues = [];
-                if(this.yTimeScale){
-                    addValues.push(u.getCustomUTCTimeTickFormat()(d));
-                } else {
-                    addValues.push(d);
-                }
-                // Find corresponding value(s) for additional y axis
-                for (let y = 0; y < addYT.length; y++) {
-                    secParDat = this.data[addYT[y]];
-                    let idx = 0;
-                    for (let j = 0; j < currParDat.length; j++) {
-                        if(this.yTimeScale){
-                            // Check if values are ascending/descending
-                            if(currParDat[0]-currParDat[1]<=0 &&
-                                currParDat[j].getTime()>=d.getTime()){
-                                idx = j-1;
-                                break;
-                            }
-                            else if(currParDat[0]-currParDat[1]>0 &&
-                                currParDat[j].getTime()<=d.getTime()){
-                                idx = j;
-                                break;
-                            }
-                        } else {
-                            if(currParDat[0]-currParDat[1]<=0 && 
-                               currParDat[j]>=d){
-                                idx = j-1;
-                                break;
-                            } else if(currParDat[0]-currParDat[1]>0 && 
-                               currParDat[j]<=d){
-                                idx = j;
-                                break;
-                            }
-                        }
-                    }
-                    if(idx > 0 && idx<secParDat.length){
-                        if(secParDat[idx]<100){
-                            addValues.push(secParDat[idx].toFixed(2));
-                        }else{
-                            addValues.push(secParDat[idx].toFixed(0));
-                        }
-                    } else {
-                        addValues.push(' ');
-                    }
-                }
-                return addValues.join('|');
-            });
-        }
+
 
         this.y2Axis = d3.svg.axis()
             .scale(this.y2Scale)
             .innerTickSize(this.width)
             .outerTickSize(0)
             .orient('right');
-        if(this.y2TimeScale){
-            this.y2Axis.tickFormat(u.getCustomUTCTimeTickFormat());
-        }
+
+        this.y2Axis.tickFormat(this.getAxisFormat(
+            this.renderSettings.y2Axis[0],false, []
+        ));
 
         this.xAxisSvg = this.svg.append('g')
             .attr('class', 'x axis')
