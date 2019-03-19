@@ -5873,15 +5873,31 @@ class graphly extends EventEmitter {
 
             let displayName;
 
+            let colorAxis = this.renderSettings.colorAxis;
+            if(orientation==='right'){
+                colorAxis = this.renderSettings.colorAxis2;
+            }
+
+            let colorAxisLabel = null;
+            if(typeof colorAxis[yPos][parPos] !== 'undefined' && 
+                      colorAxis[yPos][parPos]!==null){
+                colorAxisLabel = colorAxis[yPos][parPos];
+            }
+
             if(dataSettings.hasOwnProperty('displayName')){
                 displayName = dataSettings.displayName;
-            }else{
+            }else if(colorAxisLabel !== null){
+                displayName = colorAxisLabel;
+                if(parIds[i]!==null){
+                    displayName += ' ('+parIds[i]+')';
+                }
+            }else {
                 displayName = id;
                 if(parIds[i]!==null){
                     displayName += ' ('+parIds[i]+')';
                 }
             }
-            dataSettings.displayName = displayName;
+            //dataSettings.displayName = displayName;
 
             parDiv.append('div')
                 .style('display', 'inline')
