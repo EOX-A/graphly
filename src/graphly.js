@@ -1919,8 +1919,14 @@ class graphly extends EventEmitter {
                 .scale(colorAxisScale);
 
             //let step = (colorAxisScale.domain()[1] - colorAxisScale.domain()[0]) / 10;
+            let csformat;
+            if(this.colorAxisTickFormat === 'customSc'){
+                csformat = u.customScientificTickFormat;
+            } else {
+                csformat = d3.format(this.filterAxisTickFormat);
+            }
+            colorAxis.tickFormat(csformat);
 
-            colorAxis.tickFormat(d3.format(this.colorAxisTickFormat));
 
             g.call(colorAxis);
             // Check if parameter has specific colorscale configured
@@ -2393,6 +2399,18 @@ class graphly extends EventEmitter {
         this.renderSettings.combinedParameters = defaultFor(
             this.renderSettings.combinedParameters, {}
         );
+
+        // Check if sub axis option set if not initialize with empty array
+        if(this.enableSubXAxis){
+            this.renderSettings.additionalXTicks = defaultFor(
+                this.renderSettings.additionalXTicks, []
+            );
+        }
+        if(this.enableSubYAxis){
+            this.renderSettings.additionalYTicks = defaultFor(
+                this.renderSettings.additionalYTicks, []
+            );
+        }
 
         this.recalculateBufferSize();
 

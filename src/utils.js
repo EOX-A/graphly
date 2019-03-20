@@ -33,6 +33,14 @@ Array.prototype.pushArray = function() {
     }
 };
 
+String.prototype.allReplace = function(obj) {
+    var retStr = this;
+    for (var x in obj) {
+        retStr = retStr.replace(new RegExp(x, 'g'), obj[x]);
+    }
+    return retStr;
+};
+
 
 export function addSymbol(el, symbol, color, center, stroke, size , className){
 
@@ -223,6 +231,38 @@ export function getCustomUTCTimeTickFormat() {
         ["%B", function(d) { return d.getUTCMonth(); }],
         ["%Y", function() { return true; }]
     ]);
+}
+
+export function customScientificTickFormat(d) {
+    var gFormat = d3.format('g');
+    var sFormat = d3.format('s');
+    d = d.toFixed(11);
+    if( (d>0.001 && d<9999) || (d<-0.001 && d>-9999) ){
+        return gFormat(d);
+    } else {
+        return sFormat(d).allReplace({
+            'Y': 'ₓ10²⁴',
+            'Z': 'ₓ10²¹',
+            'E': 'ₓ10¹⁸',
+            'P': 'ₓ10¹⁵',
+            'T': 'ₓ10¹²',
+            'G': 'ₓ10⁹',
+            'M': 'ₓ10⁶',
+            'k': 'ₓ10³',
+            'h': 'ₓ10²;',
+            'da':'ₓ10¹;',
+            'd': 'ₓ10⁻¹',
+            'c': 'ₓ10⁻²',
+            'm': 'ₓ10⁻³',
+            'µ': 'ₓ10⁻⁶',
+            'n': 'ₓ10⁻⁹',
+            'p': 'ₓ10⁻¹²',
+            'f': 'ₓ10⁻¹⁵',
+            'a': 'ₓ10⁻¹⁸',
+            'z': 'ₓ10⁻²¹',
+            'y': 'ₓ10⁻²⁴'
+        });
+    }
 }
 
 
