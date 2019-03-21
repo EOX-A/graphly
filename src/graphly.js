@@ -2029,7 +2029,7 @@ class graphly extends EventEmitter {
         }
 
         // Cleanup
-        this.el.selectAll('.rangeEdit').remove();
+        d3.selectAll('.rangeEdit').remove();
 
          // range edit forms 
         this.el.append('input')
