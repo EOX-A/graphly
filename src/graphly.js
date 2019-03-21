@@ -348,6 +348,7 @@ class graphly extends EventEmitter {
         this.logY2 = defaultFor(options.logY2, false);
 
         this.colorAxisTickFormat = defaultFor(options.colorAxisTickFormat, 'g');
+        this.defaultAxisTickFormat = defaultFor(options.defaultAxisTickFormat, 'g');
 
         if(this.filterManager){
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
@@ -2606,7 +2607,14 @@ class graphly extends EventEmitter {
 
     getAxisFormat(parameter, enableSubAxis, additionalTicks){
 
-        let tickformat = d3.format('g');
+        let tickformat;
+        if(this.defaultAxisTickFormat === 'customSc'){
+            tickformat = u.customScientificTickFormat;
+        } else if(this.defaultAxisTickFormat === 'customExp'){
+            tickformat = u.customExponentTickFormat;
+        } else {
+            tickformat = d3.format(this.defaultAxisTickFormat);
+        }
         let axisformat = tickformat;
 
         // If combined parameter just take first one
@@ -2629,26 +2637,24 @@ class graphly extends EventEmitter {
                 } else {
                     d = tickformat(period+offset)+' / '+tickformat(offset);
                 }
-                return tickformat(d.toFixed(11));
+                return tickformat(d.toFixed(14));
             };
         } else if(enableSubAxis){
             axisformat = this.customSubtickFormat.bind(
-                this, this.data[parameter], additionalTicks
+                this, this.data[parameter], additionalTicks, tickformat
             );
         } else if(this.checkTimeScale(parameter)){
             axisformat = u.getCustomUTCTimeTickFormat();
         } else {
             axisformat = (d)=>{
-                return tickformat(d.toFixed(11));
+                return tickformat(d.toFixed(14));
             };
         }
         return axisformat;
     }
 
-    customSubtickFormat(currParDat, addT, d){
+    customSubtickFormat(currParDat, addT, d, tickformat){
         // TODO: Check if selection is group
-        //let currParDat = this.data[xSelection[0]];
-        let tickformat = d3.format('g');
         let secParDat;
         let addValues = [];
         let timeScale = d instanceof Date;
