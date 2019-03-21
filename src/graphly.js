@@ -1875,16 +1875,19 @@ class graphly extends EventEmitter {
             // Check if colors are already calculated
             let dCS = this.discreteColorScales[id];
             if(this.discreteColorScales.hasOwnProperty(id)) {
-                var csIds = Object.keys(dCS); 
+                let csIds = Object.keys(dCS); 
+                let minValue = d3.min(csIds.map(Number));
+                let topOffset = 35;
+
                 if(csIds.length>0) {
 
                     for(let co=0;co<csIds.length; co++){
                         g.append('text')
-                            .text(csIds[co])
-                            .style('font-size', '10px')
+                            .text(Number(csIds[co])-minValue)
+                            .style('font-size', '0.9em')
                             .attr('transform', 'translate('+
-                                (-44+(Math.floor(co*11/innerHeight))*35) +','
-                                 + (co*11%innerHeight) + ')'
+                                (-44+(Math.floor(co*11/innerHeight))*32) +','
+                                 + ( (co*11%innerHeight)+topOffset ) + ')'
                             );
                         g.append('rect')
                             .attr('fill', '#'+ CP.RGB2HEX(
@@ -1896,12 +1899,27 @@ class graphly extends EventEmitter {
                             .attr('width', '10px')
                             .attr('height', '10px')
                             .attr('transform', 'translate('+
-                                (-55+(Math.floor(co*11/innerHeight))*35) +','
-                                 + ((co*11%innerHeight)-9) + ')'
+                                (-55+(Math.floor(co*11/innerHeight))*32) +','
+                                 + ( (co*11%innerHeight)-9+topOffset ) + ')'
                             );
                     }
                 }
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate(' + (0) + ' ,'+(-2)+')')
+                    .text(id);
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate(' + (0) + ' ,'+(12)+')')
+                    .attr('font-size', '0.9em')
+                    .text('measurement offset:');
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate(' + (0) + ' ,'+(25)+')')
+                    .attr('font-size', '0.9em')
+                    .text(minValue);
             }
+
         } else {
             let ds = this.dataSettings[id];
             let dataRange = [0,1];
@@ -2653,7 +2671,7 @@ class graphly extends EventEmitter {
         return axisformat;
     }
 
-    customSubtickFormat(currParDat, addT, d, tickformat){
+    customSubtickFormat(currParDat, addT, tickformat, d ){
         // TODO: Check if selection is group
         let secParDat;
         let addValues = [];
