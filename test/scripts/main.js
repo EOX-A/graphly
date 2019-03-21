@@ -558,7 +558,9 @@ var graph = new graphly.graphly({
     //displayAlphaOptions: false,
     //autoColorExtent: true
     //fixedSize: true,
-    //fixedWidth: 2000
+    //fixedWidth: 2000,
+    colorAxisTickFormat: 'customExp',
+    defaultAxisTickFormat: 'customExp',
     margin: {top: 10, left: 90, bottom: 80, right: 30}
 });
 
