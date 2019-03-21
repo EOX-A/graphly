@@ -1922,6 +1922,8 @@ class graphly extends EventEmitter {
             let csformat;
             if(this.colorAxisTickFormat === 'customSc'){
                 csformat = u.customScientificTickFormat;
+            } else if(this.colorAxisTickFormat === 'customExp'){
+                csformat = u.customExponentTickFormat;
             } else {
                 csformat = d3.format(this.filterAxisTickFormat);
             }

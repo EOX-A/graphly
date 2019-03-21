@@ -214,6 +214,40 @@ class FilterManager extends EventEmitter {
         this._filtersChanged();
     }
 
+    customExponentTickFormat(d) {
+        var gFormat = d3.format('g');
+        var sFormat = d3.format('e');
+        d = d.toFixed(14);
+        if( (d>0.001 && d<9999) || (d<-0.001 && d>-9999) || d == 0.0){
+            return gFormat(d);
+        } else {
+            return sFormat(d).allReplace({
+                'e[+]12': '×10¹²',
+                'e[+]11': '×10¹¹',
+                'e[+]10': '×10¹⁰',
+                'e[+]9': '×10⁹',
+                'e[+]8': '×10⁸',
+                'e[+]7': '×10⁷',
+                'e[+]6': '×10⁶',
+                'e[+]5': '×10⁵',
+                'e[+]4': '×10⁴',
+                'e[+]3': '×10³',
+                'e[+]2': '×10²;',
+                'e[-]2': '×10⁻²;',
+                'e[-]3': '×10⁻³',
+                'e[-]4': '×10⁻⁴',
+                'e[-]5': '×10⁻⁵',
+                'e[-]6': '×10⁻⁶',
+                'e[-]7': '×10⁻⁷',
+                'e[-]8': '×10⁻⁸',
+                'e[-]9': '×10⁻⁹',
+                'e[-]10': '×10⁻¹⁰',
+                'e[-]11': '×10⁻¹¹',
+                'e[-]12': '×10⁻¹²'
+            });
+        }
+    }
+
     customScientificTickFormat(d) {
         var gFormat = d3.format('g');
         var sFormat = d3.format('s');
@@ -777,7 +811,9 @@ class FilterManager extends EventEmitter {
         let fformat;
         if(this.filterAxisTickFormat === 'customSc'){
             fformat = this.customScientificTickFormat;
-        }else {
+        } else if(this.filterAxisTickFormat === 'customExp'){
+            fformat = this.customExponentTickFormat;
+        } else {
             fformat = d3.format(this.filterAxisTickFormat);
         }
         this.axis.tickFormat(fformat);
