@@ -1094,7 +1094,7 @@ class graphly extends EventEmitter {
                 for (let parPos=0; parPos<y2AxRen[plotY].length; parPos++){
                     if(typeof y2AxRen[plotY][parPos] !== 'undefined'){
                         this.renderParameter(
-                            xAxRen,
+                            false, xAxRen,
                             this.renderSettings.y2Axis[plotY][parPos],
                             this.renderSettings.colorAxis2[plotY][parPos],
                             plotY, y2AxRen, this.y2Scale,
@@ -1110,7 +1110,7 @@ class graphly extends EventEmitter {
                 for (let parPos=0; parPos<yAxRen[plotY].length; parPos++){
                     if(typeof yAxRen[plotY][parPos] !== 'undefined'){
                         this.renderParameter(
-                            xAxRen,
+                            true, xAxRen,
                             this.renderSettings.yAxis[plotY][parPos],
                             this.renderSettings.colorAxis[plotY][parPos],
                             plotY,
@@ -4562,7 +4562,7 @@ class graphly extends EventEmitter {
     }
 
 
-    renderPoints(data, xAxis, yAxis, cAxis, plotY, yScale, updateReferenceCanvas) {
+    renderPoints(data, xAxis, yAxis, cAxis, plotY, yScale, leftYAxis, updateReferenceCanvas) {
 
         let lp;
         let p_x, p_y;
@@ -4586,9 +4586,11 @@ class graphly extends EventEmitter {
         }
 
         // Check if parameter part of left or right y Scale
+        /*let rightYaxis = false;
         if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
             yScale = this.y2Scale;
-        }
+            rightYaxis = true;
+        }*/
 
         // Identify how colors are applied to the points
         let singleSettings = true;
@@ -4681,7 +4683,7 @@ class graphly extends EventEmitter {
         let yMax, yMin, yoffset, yperiod;
         let yperiodic = false;
         if(this.dataSettings.hasOwnProperty(yAxis) && 
-           this.dataSettings[yAxis].hasOwnProperty('periodic')){
+           this.dataSettings[yAxis].hasOwnProperty('periodic') && leftYAxis){
             yoffset = defaultFor(
                 this.dataSettings[yAxis].periodic.offset, 0
             );
@@ -4904,7 +4906,7 @@ class graphly extends EventEmitter {
         }
     }
 
-    renderFilteredOutPoints(data, xAxis, yAxis, plotY, yScale) {
+    renderFilteredOutPoints(data, xAxis, yAxis, plotY, yScale, leftYAxis) {
 
         let lp = data[xAxis].length;
         yScale = yScale[plotY];
@@ -4937,7 +4939,7 @@ class graphly extends EventEmitter {
         let yperiodic = false;
         let yperiod, yoffset;
         if(this.dataSettings.hasOwnProperty(yAxis) && 
-           this.dataSettings[yAxis].hasOwnProperty('periodic')){
+           this.dataSettings[yAxis].hasOwnProperty('periodic') && leftYAxis){
             yoffset = defaultFor(
                 this.dataSettings[yAxis].periodic.offset, 0
             );
@@ -5981,8 +5983,8 @@ class graphly extends EventEmitter {
     }
 
 
-    renderParameter(idX, idY, idCS, plotY, yAxisSet, currYScale, parPos, data,
-                    inactiveData, updateReferenceCanvas){
+    renderParameter(leftYAxis, idX, idY, idCS, plotY, yAxisSet, currYScale, 
+                    parPos, data, inactiveData, updateReferenceCanvas){
 
         this.startTiming('renderParameter:'+idY);
 
@@ -6001,21 +6003,22 @@ class graphly extends EventEmitter {
                 );
             } else {
                 this.renderPoints(
-                    data, idX, idY, idCS, plotY, currYScale, updateReferenceCanvas
+                    data, idX, idY, idCS, plotY,
+                    currYScale, leftYAxis, updateReferenceCanvas
                 );
             }
         } else {
             if(combPars.hasOwnProperty(idY)){
                 this.renderPoints(
-                    data, idX, idY, idCS, plotY, currYScale,
+                    data, idX, idY, idCS, plotY, currYScale, leftYAxis,
                     updateReferenceCanvas
                 );
             } else {
                 this.renderFilteredOutPoints(
-                    inactiveData, idX, idY, plotY, currYScale
+                    inactiveData, idX, idY, plotY, currYScale, leftYAxis
                 );
                 this.renderPoints(
-                    data, idX, idY, idCS, plotY, currYScale,
+                    data, idX, idY, idCS, plotY, currYScale, leftYAxis,
                     updateReferenceCanvas
                 );
                 // Check if any regression type is selected for parameter
@@ -6223,7 +6226,7 @@ class graphly extends EventEmitter {
                     let idY2 = y2AxRen[parPos];
                     let idCS = this.renderSettings.colorAxis2[plotY][parPos];
                     this.renderParameter(
-                        idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
+                        false, idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
                         parPos, this.currentData, this.currentInactiveData,
                         updateReferenceCanvas
                     );
@@ -6264,7 +6267,7 @@ class graphly extends EventEmitter {
                 let idCS = this.renderSettings.colorAxis[plotY][parPos];
 
                 this.renderParameter(
-                    idX, idY, idCS, plotY, yAxRen, this.yScale,
+                    true, idX, idY, idCS, plotY, yAxRen, this.yScale,
                     parPos, this.currentData, this.currentInactiveData,
                     updateReferenceCanvas
                 );
@@ -6298,7 +6301,7 @@ class graphly extends EventEmitter {
                         let idY2 = y2AxRen[parPos];
                         let idCS = this.renderSettings.colorAxis2[plotY][parPos];
                         this.renderParameter(
-                            idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
+                            false, idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
                             parPos, this.currentData, this.currentInactiveData,
                             updateReferenceCanvas
                         );
