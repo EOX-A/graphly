@@ -1533,7 +1533,7 @@ class graphly extends EventEmitter {
                 listText.push(uniqY2[i]);
             }
         }
-        let addMar = this.margin.right + this.marginY2Offset - 10;
+        let addMar = 30 + this.marginY2Offset;
         if(listText.length === 0){
             // No items selected, add "filler text"
             listText.push('Add parameter ...');
@@ -1981,7 +1981,7 @@ class graphly extends EventEmitter {
 
             g.append('text')
                 .attr('text-anchor', 'middle')
-                .attr('transform', 'translate(' + (-35) + ' ,'+(innerHeight/2)+') rotate(270)')
+                .attr('transform', 'translate(' + (45) + ' ,'+(innerHeight/2)+') rotate(270)')
                 .text(label);
 
             let csZoomEvent = ()=>{
