@@ -1124,20 +1124,6 @@ class graphly extends EventEmitter {
 
             this.batchDrawer.draw();
 
-            // We clear the spaces between plots to have crisper edges where
-            // point don't go over
-            let rSL = this.renderSettings.yAxis.length;
-            if(rSL>0){
-                let heighChunk = this.height*this.resFactor/rSL;
-                for(let yy=0; yy<rSL;yy++){
-                    let offset = yy*heighChunk;
-                    this.batchDrawer.clearRect(
-                        0, offset,
-                        this.width*this.resFactor,
-                        ((this.separation)*this.resFactor)+1
-                    );
-                }
-            }
         }
 
         // We need to first render the canvas if the debounce active is false
@@ -4693,10 +4679,6 @@ class graphly extends EventEmitter {
             yMin = this.yScale[plotY].domain()[0]+yoffset;
         }
 
-        let blockSize = (
-            this.height/this.renderSettings.yAxis.length - this.separation
-        ) * this.resFactor;
-
         let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
 
         let x, y, valX, valY, currDotSize;
@@ -4773,9 +4755,9 @@ class graphly extends EventEmitter {
             }
 
             y = yScale(valY);
-            if(y<0 || y>blockSize){
+            /*if(y<0 || y>blockSize){
                 continue;
-            }
+            }*/
 
 
             y+=axisOffset;
@@ -4904,6 +4886,7 @@ class graphly extends EventEmitter {
             p_x = x;
             p_y = y;
         }
+
     }
 
     renderFilteredOutPoints(data, xAxis, yAxis, plotY, yScale, leftYAxis) {
@@ -6256,11 +6239,38 @@ class graphly extends EventEmitter {
             }
         }
 
-        // Afterwards render all y axis parameters
-        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+        let amountOfPlots = this.renderSettings.yAxis.length;
 
+        // Afterwards render all y axis parameters
+        for (let plotY = 0; plotY < amountOfPlots; plotY++) {
 
             yAxRen = this.renderSettings.yAxis[plotY];
+            // Set current "rendering area" so that other plots are not
+            // overplotted turn on the scissor test.
+            this.batchDrawer.getContext().enable(
+                this.batchDrawer.getContext().SCISSOR_TEST
+            );
+
+            let blockSize = (
+                this.height/this.renderSettings.yAxis.length
+            ) * this.resFactor;
+
+            let revPlotY = (amountOfPlots-1)-plotY;
+            let axisOffset = revPlotY * (
+                    (this.height/this.renderSettings.yAxis.length)+
+                    (this.separation*revPlotY)+1
+                )  * this.resFactor;
+
+            if(plotY === amountOfPlots-1){
+                axisOffset+=this.separation+1;
+                blockSize-=this.separation;
+            }
+
+            // set the scissor rectangle.
+            this.batchDrawer.getContext().scissor(
+                0, axisOffset, this.width, blockSize
+            );
+
             for (let parPos=0; parPos<yAxRen.length; parPos++){
 
                 let idY = yAxRen[parPos];
@@ -6272,18 +6282,24 @@ class graphly extends EventEmitter {
                     updateReferenceCanvas
                 );
             }
+
+            this.startTiming('batchDrawer:draw');
+            this.batchDrawer.draw();
+            this.endTiming('batchDrawer:draw');
+            this.updatePreviewImage('previewImageL');
+
+            if(!this.fixedSize && updateReferenceCanvas){
+                this.startTiming('batchDrawerReference:draw');
+                this.batchDrawerReference.draw();
+                this.endTiming('batchDrawerReference:draw');
+            }
+            // turn off the scissor test so you can render like normal again.
+            this.batchDrawer.getContext().disable(
+                this.batchDrawer.getContext().SCISSOR_TEST
+            );
+
         }
 
-        this.startTiming('batchDrawer:draw');
-        this.batchDrawer.draw();
-        this.endTiming('batchDrawer:draw');
-        this.updatePreviewImage('previewImageL');
-
-        if(!this.fixedSize && updateReferenceCanvas){
-            this.startTiming('batchDrawerReference:draw');
-            this.batchDrawerReference.draw();
-            this.endTiming('batchDrawerReference:draw');
-        }
 
 
         // If debounce is active we need to re-render the right y axis
@@ -6319,20 +6335,6 @@ class graphly extends EventEmitter {
                 this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
                 this.endTiming('batchDrawerReference:draw');
-            }
-        }
-
-        // We clear the spaces between plots to have crisper edges where
-        // point don't go over
-        let rSL = this.renderSettings.yAxis.length;
-        if(rSL>0){
-            let heighChunk = this.height/rSL;
-            for(let yy=0; yy<rSL;yy++){
-                let offset = yy*heighChunk;
-                this.batchDrawer.clearRect(
-                    0, offset,
-                    this.width, this.separation+1
-                );
             }
         }
 
