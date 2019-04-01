@@ -264,7 +264,7 @@ class graphly extends EventEmitter {
 
         if(this.renderSettings.hasOwnProperty('y2Axis') && 
            this.renderSettings.y2Axis.length>0){
-            this.marginY2Offset = 40;
+            this.marginY2Offset = 20;
         }
 
         // Calculate necessary additional offset if sub ticks have been selected
@@ -1533,7 +1533,7 @@ class graphly extends EventEmitter {
                 listText.push(uniqY2[i]);
             }
         }
-        let addMar = 15 + this.marginY2Offset;
+        let addMar = 40 + this.marginY2Offset;
         if(listText.length === 0){
             // No items selected, add "filler text"
             listText.push('Add parameter ...');
@@ -2536,7 +2536,7 @@ class graphly extends EventEmitter {
             }
             if(this.renderSettings.hasOwnProperty('y2Axis') && 
                this.renderSettings.y2Axis.length>0){
-                this.marginY2Offset = 40;
+                this.marginY2Offset = 20;
             } else {
                 this.marginY2Offset = 0;
             }
@@ -3086,7 +3086,7 @@ class graphly extends EventEmitter {
                     .text('✐')
                     .style('font-size', '1.7em')
                     .style('float', 'right')
-                    .attr('transform', 'translate(' + (this.width+70) + ' ,' + 0 + ') rotate(' + 180 + ')')
+                    .attr('transform', 'translate(' + (this.width+60) + ' ,' + 0 + ') rotate(' + 180 + ')')
                     .on('click', function (){
                         let evtx = d3.event.layerX;
                         let evty = d3.event.layerY; 
@@ -3752,7 +3752,7 @@ class graphly extends EventEmitter {
         }
         if(this.renderSettings.hasOwnProperty('y2Axis') && 
            this.renderSettings.y2Axis.length>0){
-            this.marginY2Offset = 40;
+            this.marginY2Offset = 20;
         } else {
             this.marginY2Offset = 0;
         }
@@ -3825,7 +3825,7 @@ class graphly extends EventEmitter {
         this.el.selectAll('.modifyAxisIcon.y2')
             .attr(
                 'transform',
-                'translate(' + (this.width+70) + ' ,' + 0 + ') rotate(' + 180 + ')'
+                'translate(' + (this.width+60) + ' ,' + 0 + ') rotate(' + 180 + ')'
             );
         this.el.selectAll('.modifyAxisIcon.xaxis')
             .attr(
