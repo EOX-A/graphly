@@ -1533,7 +1533,7 @@ class graphly extends EventEmitter {
                 listText.push(uniqY2[i]);
             }
         }
-        let addMar = 30 + this.marginY2Offset;
+        let addMar = 15 + this.marginY2Offset;
         if(listText.length === 0){
             // No items selected, add "filler text"
             listText.push('Add parameter ...');
@@ -1868,7 +1868,7 @@ class graphly extends EventEmitter {
             .attr('id', ('colorscale_'+id))
             .attr("class", "color axis")
             .style('pointer-events', 'all')
-            .attr("transform", "translate(" + (csOffset-10) + ",0)");
+            .attr("transform", "translate(" + (csOffset) + ",0)");
 
         // Check to see if we create a discrete or linear colorscale
         if(this.dataSettings[id].hasOwnProperty('csDiscrete') && this.dataSettings[id].csDiscrete ){
@@ -1981,7 +1981,7 @@ class graphly extends EventEmitter {
 
             g.append('text')
                 .attr('text-anchor', 'middle')
-                .attr('transform', 'translate(' + (45) + ' ,'+(innerHeight/2)+') rotate(270)')
+                .attr('transform', 'translate(' + (60) + ' ,'+(innerHeight/2)+') rotate(270)')
                 .text(label);
 
             let csZoomEvent = ()=>{
