@@ -212,6 +212,7 @@ class graphly extends EventEmitter {
         this.enableSubYAxis = defaultFor(options.enableSubYAxis, false);
         this.multiYAxis = defaultFor(options.multiYAxis, false);
         this.labelAllignment = defaultFor(options.labelAllignment, 'right');
+        this.zoomActivity = false;
 
         // Separation of plots in multiplot functionality
         this.separation = 10;
@@ -3555,8 +3556,10 @@ class graphly extends EventEmitter {
         // TODO: resetting of zooms is not necessary when not using debounce
         // but it breaks the interaction between different zoom objects
         // maybe there is a better way of doing this instead of resetting it
-        this.zoom_update();
-        this.renderData();
+        if(!this.zoomActivity){
+            this.zoom_update();
+            this.renderData();
+        }
     }
 
 
@@ -3697,11 +3700,13 @@ class graphly extends EventEmitter {
     }
 
     debounceEndZoomEvent(){
+        this.zoomActivity = false;
         this.debounceZoom.bind(this)();
     }
 
     previewZoom(yPos) {
 
+        this.zoomActivity = true;
         this.topSvg.selectAll('.temporary').remove();
         this.tooltip.style('display', 'none');
 
@@ -3794,6 +3799,7 @@ class graphly extends EventEmitter {
 
         if( transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1 ){
             xyCombinedChanged = true;
+            //console.log( transXY[0] +'; '+ transXY[1] +'; '+ xyScale);
             for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
                 // Update all right y2 axis based on xy scale and trans
                 if(this.y2zoom[yy]){
