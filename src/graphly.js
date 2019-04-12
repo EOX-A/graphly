@@ -5307,7 +5307,7 @@ class graphly extends EventEmitter {
         }
 
         for (let f in this.filters){
-            let filter = this.filters[f];
+            let currFilter = this.filters[f];
             let currentDataset = data[f];
 
             // Check if parameter is actually in current data
@@ -5342,14 +5342,20 @@ class graphly extends EventEmitter {
                 
                 if(applicableFilter){
                     let tmpArray = data[p];
-                    data[p] = data[p].filter((e,i)=>{
-                        return filter(currentDataset[i]);
+                    data[p] = data[p].map((rec, i)=>{
+                        if(currFilter(currentDataset[i])){
+                            return rec;
+                        } else {
+                            return NaN;
+                        }
                     });
-                    inactiveData[p].pushArray(
-                        tmpArray.filter((e,i)=>{
-                            return !filter(currentDataset[i]);
-                        })
-                    );
+                    inactiveData[p] = tmpArray.map((rec, i)=>{
+                        if(!currFilter(currentDataset[i])){
+                            return rec;
+                        } else {
+                            return NaN;
+                        }
+                    });
                 }
             }
         }
