@@ -196,6 +196,8 @@ class graphly extends EventEmitter {
     * @param {Array} [options.colorscales] Array of strings with colorscale 
     *        identifiers that should be provided for selection, default list
     *        includes colorscales from plotty
+    * @param {boolean} [options.showFilteredData=true] Option to show greyed out
+    *        data points when filtering
     */
     constructor(options) {
         super();
@@ -370,6 +372,11 @@ class graphly extends EventEmitter {
         this.colorscaleOptionLabel = defaultFor(
             options.colorscaleOptionLabel,
             'Apply colorscale'
+        );
+
+        this.showFilteredData = defaultFor(
+            options.showFilteredData,
+            true
         );
 
         // If there are colorscales to be rendered we need to apply additional
@@ -2256,6 +2263,20 @@ class graphly extends EventEmitter {
                 .on('input', ()=>{
                     this.defaultTickSize = d3.event.currentTarget.value;
                     this.svg.selectAll('.tick').attr('font-size', this.defaultTickSize+'px');
+                });
+
+            con.append('label')
+                .attr('for', 'showFilteredDataOption')
+                .text('Show filtered data');
+
+            con.append('input')
+                .attr('id', 'showFilteredDataOption')
+                .attr('type', 'checkbox')
+                .property('checked', this.showFilteredData)
+                .on('input', ()=>{
+                    this.showFilteredData = 
+                        d3.select("#showFilteredDataOption").property("checked");
+                    this.renderData(false);
                 });
 
             this.el.append('div')
@@ -5349,13 +5370,11 @@ class graphly extends EventEmitter {
                             return NaN;
                         }
                     });
-                    inactiveData[p] = tmpArray.map((rec, i)=>{
-                        if(!currFilter(currentDataset[i])){
-                            return rec;
-                        } else {
-                            return NaN;
-                        }
-                    });
+                    inactiveData[p].pushArray(
+                        tmpArray.filter((e,i)=>{
+                            return !currFilter(currentDataset[i]);
+                        })
+                    );
                 }
             }
         }
@@ -6020,9 +6039,11 @@ class graphly extends EventEmitter {
                     updateReferenceCanvas
                 );
             } else {
-                this.renderFilteredOutPoints(
-                    inactiveData, idX, idY, plotY, currYScale, leftYAxis
-                );
+                if(this.showFilteredData) {
+                    this.renderFilteredOutPoints(
+                        inactiveData, idX, idY, plotY, currYScale, leftYAxis
+                    );
+                }
                 this.renderPoints(
                     data, idX, idY, idCS, plotY, currYScale, leftYAxis,
                     updateReferenceCanvas
