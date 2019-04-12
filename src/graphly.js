@@ -6305,7 +6305,7 @@ class graphly extends EventEmitter {
                 )  * this.resFactor;
 
             axisOffset+=(this.separation)+1;
-            blockSize-=this.separation;
+            blockSize-=this.separation+1;
 
             // set the scissor rectangle.
             this.batchDrawer.getContext().scissor(
