@@ -147,8 +147,8 @@ class graphly extends EventEmitter {
     * @constructor
     * @param {Object} options Parameters to configure the plot.
     * @param {String} options.el Required d3 selector identifier for container
-    * @param {RenderSettings} options.renderSettings Configuration options for what
-    *        should be rendered.
+    * @param {RenderSettings} options.renderSettings Configuration options for
+    *        what should be rendered.
     * @param {DataSettings} options.dataSettings Additional information to 
     *        set parameter specific rules.
     * @param {boolean} [options.debounceActive=true] Setting to determine if 
@@ -185,14 +185,17 @@ class graphly extends EventEmitter {
     * @param {Number} [options.defaultAlpha=0.9] Alpha value used as default
     *        when rendering.
     * @param {boolean} [options.debug=false] Show debug messages
-    * @param {boolean} [options.enableSubXAxis=false] Enable selection option for x axis
-    *        subticks
-    * @param {boolean} [options.enableSubYAxis=false] Enable selection option for x axis
-    *        subticks
+    * @param {boolean} [options.enableSubXAxis=false] Enable selection option
+    *        for x axis subticks
+    * @param {boolean} [options.enableSubYAxis=false] Enable selection option
+    *        for x axis subticks
     * @property {boolean} [multiYAxis=false] Adds controls for managing 
     *        multiple y axis with single x axis,
     *
     * @param {String} [options.labelAllignment='right'] allignment for label box
+    * @param {Array} [options.colorscales] Array of strings with colorscale 
+    *        identifiers that should be provided for selection, default list
+    *        includes colorscales from plotty
     */
     constructor(options) {
         super();
@@ -402,6 +405,16 @@ class graphly extends EventEmitter {
         this.fixedXDomain = undefined;
         this.mouseDown = false;
         this.prevMousePos = null;
+
+        this.colorscales = defaultFor(
+            options.colorscales,
+            [
+              'viridis', 'inferno', 'rainbow', 'jet', 'hsv', 'hot', 'cool', 'spring',
+              'summer', 'autumn', 'winter', 'bone', 'copper', 'greys', 'yignbu',
+              'greens', 'yiorrd', 'bluered', 'rdbu', 'picnic', 'portland',
+              'blackbody', 'earth', 'electric', 'magma', 'plasma'
+            ]
+        );
 
 
         // TODO: FOr now if using multiaxis we disable fit functionality
@@ -5477,15 +5490,13 @@ class graphly extends EventEmitter {
             .attr('id','colorScaleSelection')
             .on('change',oncolorScaleSelectionChange);
 
-        let colorscales = [
-          'viridis', 'inferno', 'rainbow', 'jet', 'hsv', 'hot', 'cool', 'spring',
-          'summer', 'autumn', 'winter', 'bone', 'copper', 'greys', 'yignbu',
-          'greens', 'yiorrd', 'bluered', 'rdbu', 'picnic', 'portland',
-          'blackbody', 'earth', 'electric', 'magma', 'plasma'
-        ];
-
+        // Check if colorscales are available in plotty
+        this.colorscales = this.colorscales.filter((cs)=>{
+            return plotty.colorscales.hasOwnProperty(cs);
+        });
+        
         labelColorScaleSelect.selectAll('option')
-            .data(colorscales).enter()
+            .data(this.colorscales).enter()
             .append('option')
                 .text(function (d) { return d; })
                 .attr('value', function (d) { return d; })
