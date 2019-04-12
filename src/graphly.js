@@ -6301,14 +6301,11 @@ class graphly extends EventEmitter {
 
             let revPlotY = (amountOfPlots-1)-plotY;
             let axisOffset = revPlotY * (
-                    (this.height/this.renderSettings.yAxis.length)+
-                    (this.separation*revPlotY)+1
+                    (this.height/this.renderSettings.yAxis.length)
                 )  * this.resFactor;
 
-            if(plotY === amountOfPlots-1){
-                axisOffset+=this.separation+1;
-                blockSize-=this.separation;
-            }
+            axisOffset+=(this.separation)+1;
+            blockSize-=this.separation;
 
             // set the scissor rectangle.
             this.batchDrawer.getContext().scissor(
