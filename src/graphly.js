@@ -4762,11 +4762,15 @@ class graphly extends EventEmitter {
                     rC = colorObj;
                 } else {
                     let val = data[identParam][j];
-                    let col = this.dataSettings[yAxis][val].color;
-                    rC = [
-                        col[0], col[1], col[2],
-                        this.dataSettings[yAxis][val].alpha
-                    ];
+                    if(val){
+                        let col = this.dataSettings[yAxis][val].color;
+                        rC = [
+                            col[0], col[1], col[2],
+                            this.dataSettings[yAxis][val].alpha
+                        ];
+                    } else {
+                        rC = colorObj;
+                    }
                 }
             }
 
