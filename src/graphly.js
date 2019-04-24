@@ -98,7 +98,6 @@ let regression = require('regression');
 let d3 = require('d3');
 //global.d3 = d3;
 let msgpack = require('msgpack-lite');
-global.msgpack = msgpack;
 let plotty = require('plotty');
 let Papa = require('papaparse');
 
@@ -112,6 +111,8 @@ let FilterManager = require('./FilterManager.js');
 let canvg = require('./vendor/canvg.js');
 
 global.FilterManager = FilterManager;
+global.plotty = plotty;
+global.msgpack = msgpack;
 
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
