@@ -187,9 +187,11 @@ class graphly extends EventEmitter {
     *        when rendering.
     * @param {boolean} [options.debug=false] Show debug messages
     * @param {boolean} [options.enableSubXAxis=false] Enable selection option
-    *        for x axis subticks
+    *        for x axis subticks, can also be a String if only enabled for one
+    *        parameter.
     * @param {boolean} [options.enableSubYAxis=false] Enable selection option
-    *        for x axis subticks
+    *        for x axis subticks, can also be a String if only enabled for one
+    *        parameter.
     * @property {boolean} [multiYAxis=false] Adds controls for managing 
     *        multiple y axis with single x axis,
     *
@@ -1545,45 +1547,33 @@ class graphly extends EventEmitter {
 
 
         if(this.enableSubYAxis && orientation === 'left'){
-            
-            con.append('div')
-                .style('margin-top', '20px')
-                .text('Secondary ticks');
+            if( (typeof this.enableSubXAxis !== 'string') || 
+                (
+                    this.renderSettings.yAxis[yPos].length === 1 &&
+                    this.renderSettings.yAxis[yPos][0] === this.enableSubYAxis
+                ) ){
+
+                con.append('div')
+                    .style('margin-top', '20px')
+                    .text('Secondary ticks');
+                    
+                let selCh = con.append('select')
+                    .attr('id', 'subYChoices'+yPos)
+                    .attr('multiple', true);
+
                 
-            let selCh = con.append('select')
-                .attr('id', 'subYChoices'+yPos)
-                .attr('multiple', true);
+                let subYParameters = new Choices(
+                    selCh.node(), {
+                        choices: ySubChoices,
+                        removeItemButton: true,
+                        placeholderValue: ' select ...',
+                        itemSelectText: '',
+                    }
+                );
 
-            
-            let subYParameters = new Choices(
-                selCh.node(), {
-                    choices: ySubChoices,
-                    removeItemButton: true,
-                    placeholderValue: ' select ...',
-                    itemSelectText: '',
-                }
-            );
-
-            subYParameters.passedElement.addEventListener('addItem', function(event) {
-                let addYT = that.renderSettings.additionalYTicks;
-                addYT[yPos].push(event.detail.value);
-                let maxL = 0;
-                for(let i=0;i<addYT.length;i++){
-                    maxL = Math.max(maxL, addYT[i].length);
-                }
-                that.subAxisMarginY = 80*maxL;
-                that.initAxis();
-                that.resize();
-                //that.renderData();
-                that.createAxisLabels();
-                that.emit('axisChange');
-            }, false);
-
-            subYParameters.passedElement.addEventListener('removeItem', function(event) {
-                let addYT = that.renderSettings.additionalYTicks;
-                let index = addYT[yPos].indexOf(event.detail.value);
-                if(index!==-1){
-                    addYT[yPos].splice(index, 1);
+                subYParameters.passedElement.addEventListener('addItem', function(event) {
+                    let addYT = that.renderSettings.additionalYTicks;
+                    addYT[yPos].push(event.detail.value);
                     let maxL = 0;
                     for(let i=0;i<addYT.length;i++){
                         maxL = Math.max(maxL, addYT[i].length);
@@ -1594,8 +1584,27 @@ class graphly extends EventEmitter {
                     //that.renderData();
                     that.createAxisLabels();
                     that.emit('axisChange');
-                }
-            },false);
+                }, false);
+
+                subYParameters.passedElement.addEventListener('removeItem', function(event) {
+                    let addYT = that.renderSettings.additionalYTicks;
+                    let index = addYT[yPos].indexOf(event.detail.value);
+                    if(index!==-1){
+                        addYT[yPos].splice(index, 1);
+                        let maxL = 0;
+                        for(let i=0;i<addYT.length;i++){
+                            maxL = Math.max(maxL, addYT[i].length);
+                        }
+                        that.subAxisMarginY = 80*maxL;
+                        that.initAxis();
+                        that.resize();
+                        //that.renderData();
+                        that.createAxisLabels();
+                        that.emit('axisChange');
+                    }
+                },false);
+            }
+            
         }
 
 
@@ -1842,48 +1851,51 @@ class graphly extends EventEmitter {
 
 
         if(this.enableSubXAxis){
-            
-            con.append('div')
-                .style('margin-top', '20px')
-                .text('Secondary ticks');
+            if( (typeof this.enableSubXAxis !== 'string') || 
+                (this.renderSettings.xAxis === this.enableSubXAxis) ){
+
+                con.append('div')
+                    .style('margin-top', '20px')
+                    .text('Secondary ticks');
+                    
+                con.append('select')
+                    .attr('id', 'subXChoices');
+
+
+                this.el.select('#subXChoices').attr('multiple', true);
                 
-            con.append('select')
-                .attr('id', 'subXChoices');
+                let subXParameters = new Choices(
+                    this.el.select('#subXChoices').node(), {
+                        choices: xSubChoices,
+                        removeItemButton: true,
+                        placeholderValue: ' select ...',
+                        itemSelectText: '',
+                    }
+                );
 
-
-            this.el.select('#subXChoices').attr('multiple', true);
-            
-            let subXParameters = new Choices(
-                this.el.select('#subXChoices').node(), {
-                    choices: xSubChoices,
-                    removeItemButton: true,
-                    placeholderValue: ' select ...',
-                    itemSelectText: '',
-                }
-            );
-
-            subXParameters.passedElement.addEventListener('addItem', function(event) {
-                that.renderSettings.additionalXTicks.push(event.detail.value);
-                that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
-                that.initAxis();
-                that.resize();
-                //that.renderData();
-                that.createAxisLabels();
-                that.emit('axisChange');
-            }, false);
-
-            subXParameters.passedElement.addEventListener('removeItem', function(event) {
-                let index = that.renderSettings.additionalXTicks.indexOf(event.detail.value);
-                if(index!==-1){
-                    that.renderSettings.additionalXTicks.splice(index, 1);
+                subXParameters.passedElement.addEventListener('addItem', function(event) {
+                    that.renderSettings.additionalXTicks.push(event.detail.value);
                     that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
                     that.initAxis();
                     that.resize();
                     //that.renderData();
                     that.createAxisLabels();
                     that.emit('axisChange');
-                }
-            },false);
+                }, false);
+
+                subXParameters.passedElement.addEventListener('removeItem', function(event) {
+                    let index = that.renderSettings.additionalXTicks.indexOf(event.detail.value);
+                    if(index!==-1){
+                        that.renderSettings.additionalXTicks.splice(index, 1);
+                        that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
+                        that.initAxis();
+                        that.resize();
+                        //that.renderData();
+                        that.createAxisLabels();
+                        that.emit('axisChange');
+                    }
+                },false);
+            }
         }
 
         xSettingParameters.passedElement.addEventListener('change', function(event) {
@@ -4327,7 +4339,7 @@ class graphly extends EventEmitter {
             // Update rect to contain all x axis tick labels
             d3.select(clipnode.childNodes[yy])
                 .attr('width', this.width+this.margin.right)
-                .attr('height', this.margin.bottom+10)
+                .attr('height', this.margin.bottom+10+this.subAxisMarginX)
                 .attr(
                     'transform',
                     'translate(0,1)'
