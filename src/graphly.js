@@ -435,8 +435,12 @@ class graphly extends EventEmitter {
 
 
         function customColorAxisTickFormat(value){
-           var tickFormat = parseFloat(value.toFixed(11));
-           return tickFormat;
+            if(value  instanceof Date){
+                tickFormat = u.getCustomUTCTimeTickFormat()(value);
+            } else {
+                var tickFormat = parseFloat(value.toFixed(11));
+            }
+            return tickFormat;
         }
 
         if(options.hasOwnProperty('colorAxisTickFormat')){
@@ -1973,6 +1977,11 @@ class graphly extends EventEmitter {
         }
 
         let colorAxisScale = d3.scale.linear();
+
+        if(this.checkTimeScale(id)){
+            colorAxisScale = d3.time.scale.utc();
+        }
+
         colorAxisScale.domain(dataRange);
         colorAxisScale.range([innerHeight, 0]);
 
@@ -5536,7 +5545,8 @@ class graphly extends EventEmitter {
         this.colorscales = this.colorscales.filter((cs)=>{
             return plotty.colorscales.hasOwnProperty(cs);
         });
-        
+
+
         labelColorScaleSelect.selectAll('option')
             .data(this.colorscales).enter()
             .append('option')
@@ -5550,8 +5560,17 @@ class graphly extends EventEmitter {
                     } else {
                         return false;
                     }
-                    
                 });
+
+        // Check if any colorscale has been selected, if not set viridis
+        // to default
+        if(labelColorScaleSelect.selectAll('option[selected]').empty()){
+            labelColorScaleSelect.selectAll('option[value="viridis"]').property(
+                'selected', true
+            );
+        }
+
+
         function oncolorScaleSelectionChange() {
             let csId = colAxis[yPos][parPos];
             delete that.colorCache[csId];

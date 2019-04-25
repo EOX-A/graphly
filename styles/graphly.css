@@ -5,6 +5,14 @@ svg {
   /*shape-rendering: crispEdges;*/
 }
 
+/*trying to solve issues in firefox that adds big round borders on text inputs*/
+input[type=text] {
+    border-top-width: 1px;
+    border-left-width: 1px;
+    border-bottom-width: 2px;
+    border-right-width: 1px;
+}
+
 
 #newPlotLink, #globalSettings{
     width: 100px;
