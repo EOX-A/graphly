@@ -1903,6 +1903,9 @@ class graphly extends EventEmitter {
         }
 
         xSettingParameters.passedElement.addEventListener('change', function(event) {
+            //Reset subaxis parameters when changing main parameter
+            that.renderSettings.additionalXTicks = [];
+
             that.xAxisLabel = null;
             that.renderSettings.xAxis = event.detail.value;
             that.recalculateBufferSize();
@@ -2049,17 +2052,20 @@ class graphly extends EventEmitter {
           .on('zoom', csZoomEvent);
 
         g.call(csZoom).on('dblclick.zoom', null);
+
+        if(!this.checkTimeScale(id)){
+            g.append('text')
+                .attr('class', 'modifyColorscaleIcon')
+                .text('✐')
+                .style('font-size', '1.7em')
+                .attr('transform', 'translate(-' + 45 + ' ,' + 0 + ') rotate(' + 90 + ')')
+                .on('click', function (){
+                    let evtx = d3.event.layerX;
+                    let evty = d3.event.layerY; 
+                    this.positionAxisForms(colorAxis, id, g, evtx, evty);
+                }.bind(this))
+        }
         
-        g.append('text')
-            .attr('class', 'modifyColorscaleIcon')
-            .text('✐')
-            .style('font-size', '1.7em')
-            .attr('transform', 'translate(-' + 45 + ' ,' + 0 + ') rotate(' + 90 + ')')
-            .on('click', function (){
-                let evtx = d3.event.layerX;
-                let evty = d3.event.layerY; 
-                this.positionAxisForms(colorAxis, id, g, evtx, evty);
-            }.bind(this))
     }
     
     positionAxisForms(colorAxis, id, g, evtx, evty){
@@ -2862,7 +2868,13 @@ class graphly extends EventEmitter {
                     }
                 );
             } else {
-                currExt = d3.extent(this.data[selection[i]]);
+                if(this.checkTimeScale(selection[i])){
+                    currExt = d3.extent(this.data[selection[i]], (item)=>{
+                        return item.getTime();
+                    });
+                } else {
+                    currExt = d3.extent(this.data[selection[i]]);
+                }
             }
             if(resExt){
                 if(currExt[0]<resExt[0]){
@@ -3046,14 +3058,8 @@ class graphly extends EventEmitter {
         function calcExtent(extent, range, timescale, margin){
             margin = defaultFor(margin, [0.01, 0.01]);
             let returnExt = [];
-            if(timescale){
-                range = extent[1].getTime() - extent[0].getTime();
-                returnExt[0] = new Date(extent[0].getTime() - range*margin[0]);
-                returnExt[1] = new Date(extent[1].getTime() + range*margin[1]);
-            }else{
-                returnExt[0] = extent[0] - range*margin[0];
-                returnExt[1] = extent[1] + range*margin[1];
-            }
+            returnExt[0] = extent[0] - range*margin[0];
+            returnExt[1] = extent[1] + range*margin[1];
             return returnExt;
         }
 
@@ -6197,7 +6203,13 @@ class graphly extends EventEmitter {
                             }
                         );
                     } else {
-                        domain = d3.extent(this.currentData[colorAxis]);
+                        if(this.checkTimeScale(colorAxis)){
+                            domain = d3.extent(
+                                this.currentData[colorAxis],
+                                (item)=>{return item.getTime()});
+                        } else {
+                            domain = d3.extent(this.currentData[colorAxis]);
+                        }
                     }
                     if(isNaN(domain[0])){
                         domain[0] = 0;
