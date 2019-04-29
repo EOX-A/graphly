@@ -58,6 +58,8 @@ class FilterManager extends EventEmitter {
     *        as labels.
     * @param options.filterSettings {FilterSettings} Optional additional Filter 
     *        Settings.
+    * @param options.ignoreParameters {array} Optional array with parameter ids
+    *        to be ignored
     */
 
     constructor(params) {
@@ -73,6 +75,7 @@ class FilterManager extends EventEmitter {
         this.dataSettings = defaultFor(this.filterSettings.dataSettings, {});
         this.showCloseButtons = defaultFor(params.showCloseButtons, false);
         this.replaceUnderlines = defaultFor(params.replaceUnderlines, false);
+        this.ignoreParameters = defaultFor(params.ignoreParameters, []);
         
         this.initManager();
         this.extents = {};
@@ -781,6 +784,10 @@ class FilterManager extends EventEmitter {
                 }
                 // Check if filter is a grouped filter
                 if (this.filterSettings.parameterMatrix.hasOwnProperty(p)){
+                    applicableFilter = false;
+                }
+
+                if(this.ignoreParameters.indexOf(p) !== -1){
                     applicableFilter = false;
                 }
 
