@@ -51,15 +51,15 @@ var renderSettings_ray = {
 
 var renderSettingsSwarm = {
     xAxis: 'Timestamp',
-    yAxis:     [['Latitude_periodic']],
-    colorAxis: [[null]],
+    yAxis:     [['F'], ['F_error']],
+    colorAxis: [[null], [null]],
 
-    y2Axis:     [[]],
-    colorAxis2: [[]],
-    /*dataIdentifier: {
+    y2Axis:     [[], []],
+    colorAxis2: [[], []],
+    dataIdentifier: {
         parameter: 'id',
         identifiers: ['Alpha', 'Bravo']
-    }*/
+    }
 };
 
 var renderSettingsMRC = {
@@ -422,6 +422,12 @@ var dataSettings = {
         uom: 'm'
     },
     F: {
+        'lineConnect': true,
+        size: 5
+    },
+    F_error: {
+        'lineConnect': true,
+        size: 5
     },
     Timestamp: {
         scaleFormat: 'time'
@@ -567,8 +573,10 @@ var graph = new graphly.graphly({
     //fixedWidth: 2000
     multiYAxis: true,
     debug: false,
-    enableSubXAxis: true,
-    enableSubYAxis: true
+    enableSubXAxis: 'Timestamp',
+    enableSubYAxis: 'Timestamp',
+    colorscales: ['jet', 'viridis', 'pakito', 'plasma'],
+    //showFilteredData: false
 });
 
 filterManager.setRenderNode('#filters');
