@@ -4500,6 +4500,7 @@ class graphly extends EventEmitter {
                     this.resize(false);
                     this.renderData();
                     this.createColorScales();
+                    this.emit('styleChange');
                 });
         }
     }
