@@ -2116,6 +2116,7 @@ class graphly extends EventEmitter {
                 delete this.colorCache[parameterid];
                 this.dataSettings[parameterid].extent = axis.scale().domain();
             }
+            this.emit('axisExtentChanged');
             this.addTimeInformation();
             this.breakTicks();
             this.renderData(false);
