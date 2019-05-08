@@ -5719,6 +5719,15 @@ class graphly extends EventEmitter {
                 
             });
 
+            function update() {
+                picker.set(this.value).enter();
+            }
+
+            picker.source.oncut = update;
+            picker.source.onpaste = update;
+            picker.source.onkeyup = update;
+            picker.source.oninput = update;
+
             let x = document.createElement('a');
                 x.href = 'javascript:;';
                 x.innerHTML = 'Close';
