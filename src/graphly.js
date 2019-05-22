@@ -23,6 +23,10 @@
 *        additional labels that should be used for the y axis
 * @property {Array.String} [additionalY2Ticks] Array with parameter ids for 
 *        additional labels that should be used for the second y axis
+* @property {Object} [availableParameters] When using dataIdentifier an object
+*        with keys for each possible identifier and an array with parameter 
+*        identifiers as stringslist of can be provided so that only those
+*        are shown as parameter labels that allow configuration
 */
 
 /**
@@ -283,6 +287,10 @@ class graphly extends EventEmitter {
                 this.renderSettings.colorAxis2 = [[]];
             }
         }
+
+        this.renderSettings.availableParameters = defaultFor(
+            this.renderSettings.availableParameters, false
+        );
 
         this.yAxisLabel = [];
         this.y2AxisLabel = [];
@@ -5927,6 +5935,14 @@ class graphly extends EventEmitter {
         }
 
         for (var i = 0; i < parIds.length; i++) {
+
+            // Check if current combination is available in data as per config
+            if(this.renderSettings.availableParameters.hasOwnProperty(parIds[i])){
+                if(this.renderSettings.availableParameters[parIds[i]].indexOf(id) === -1){
+                    continue;
+                }
+            }
+
 
             // Check if parameter is combined for x and y axis
             let combined = false;
