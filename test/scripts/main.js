@@ -54,16 +54,16 @@ var renderSettingsSwarm = {
     yAxis:     [['F'], ['F_error']],
     colorAxis: [[null], [null]],
 
-    y2Axis:     [[], []],
-    colorAxis2: [[], []],
+    y2Axis:     [['F_error'], []],
+    colorAxis2: [[null], []],
     dataIdentifier: {
         parameter: 'id',
-        identifiers: ['Alpha', 'Bravo']
-    },
+        identifiers: ['Alpha', 'Upload']
+    }/*,
     availableParameters: {
         'Alpha': ["Spacecraft", "Timestamp", "Latitude", "Longitude", "Radius", "F", "F_error", "B_NEC_resAC", "B_VFM", "B_error", "B_NEC", "Kp", "Dst", "F107", "QDLat", "QDLon", "MLT", "OrbitNumber", "OrbitDirection", "QDOrbitDirection", "SunDeclination", "SunRightAscension", "SunHourAngle", "SunAzimuthAngle", "SunZenithAngle"],
-        'Bravo': ["Spacecraft", "Timestamp", "Latitude", "Longitude", "Radius", "Kp", "Dst", "F107", "QDLat", "QDLon", "MLT", "Relative_STEC_RMS", "Relative_STEC", "Absolute_STEC", "GPS_Position", "LEO_Position", "SunDeclination", "SunRightAscension", "SunHourAngle", "SunAzimuthAngle", "SunZenithAngle"]
-    }
+        'Upload': ["Spacecraft", "Timestamp", "Latitude", "Longitude", "Radius", "Kp", "Dst", "F107", "QDLat", "QDLon", "MLT", "Relative_STEC_RMS", "Relative_STEC", "Absolute_STEC", "GPS_Position", "LEO_Position", "SunDeclination", "SunRightAscension", "SunHourAngle", "SunAzimuthAngle", "SunZenithAngle"]
+    }*/
 };
 
 var renderSettingsMRC = {
@@ -552,6 +552,7 @@ var filterSettings = {
 var filterManager = new FilterManager({
     el:'#filters',
     filterSettings: filterSettings,
+    ignoreParameters: '__info__'
 });
 
 var data;
@@ -564,8 +565,8 @@ var graph = new graphly.graphly({
     /*dataSettings: testbed14DS,
     renderSettings: testbed14RS,*/
     filterManager: filterManager,
-    //ignoreParameters: [/mie_quality_fl.*/]
-    debounceActive: false,
+    ignoreParameters: ['__info__'],
+    debounceActive: true,
     //enableFit: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false
@@ -650,7 +651,7 @@ var xhr = new XMLHttpRequest();
 
 //xhr.open('GET', 'data/aeolus_L1.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
-xhr.open('GET', 'data/swarmorbit.mp', true);
+xhr.open('GET', 'data/swarmupload.mp', true);
 
 xhr.responseType = 'arraybuffer';
 
@@ -721,7 +722,8 @@ xhr.onload = function(e) {
       'A': 'Alpha',
       'B': 'Bravo',
       'C': 'Charlie',
-      'NSC': 'NSC'
+      '-': 'NSC',
+      'U': 'Upload'
     };
 
     if(data.hasOwnProperty('Spacecraft')) {

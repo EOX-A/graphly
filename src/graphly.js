@@ -6256,6 +6256,34 @@ class graphly extends EventEmitter {
     }
 
 
+    enableScissorTest(plotY){
+        // Set current "rendering area" so that other plots are not
+        // overplotted turn on the scissor test.
+        this.batchDrawer.getContext().enable(
+            this.batchDrawer.getContext().SCISSOR_TEST
+        );
+
+        let amountOfPlots = this.renderSettings.yAxis.length;
+        let blockSize = (
+            this.height/amountOfPlots
+        ) * this.resFactor;
+
+        let revPlotY = (amountOfPlots-1)-plotY;
+        let axisOffset = revPlotY * (
+                (this.height/amountOfPlots)
+            )  * this.resFactor;
+
+        axisOffset+=(this.separation)+1;
+        blockSize-=this.separation+1;
+
+        // set the scissor rectangle.
+        this.batchDrawer.getContext().scissor(
+            0, axisOffset, this.width, blockSize
+        );
+
+    }
+
+
     /**
     * Render the data as graph
     * @param {boolean} [updateReferenceCanvas=true] Update the corresponding 
@@ -6314,9 +6342,11 @@ class graphly extends EventEmitter {
         
 
         // Render first all y2 axis parameters
-        for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
             y2AxRen = this.renderSettings.y2Axis[plotY];
+
+            this.enableScissorTest(plotY);
 
             // If y2 axis is defined start rendering it as we need to render
             // multiple times to have individial images for manipulation in
@@ -6332,14 +6362,25 @@ class graphly extends EventEmitter {
                     );
                 }
             }
-        }
 
+            this.startTiming('batchDrawer:draw');
+            this.batchDrawer.draw();
+            this.endTiming('batchDrawer:draw');
+
+            if(!this.fixedSize && updateReferenceCanvas){
+                this.startTiming('batchDrawerReference:draw');
+                this.batchDrawerReference.draw();
+                this.endTiming('batchDrawerReference:draw');
+            }
+            // turn off the scissor test so you can render like normal again.
+            this.batchDrawer.getContext().disable(
+                this.batchDrawer.getContext().SCISSOR_TEST
+            );
+        }
         // Save preview image of rendering of second y axis 
         // without data from first y axis
-        this.startTiming('batchDrawer:draw');
-        this.batchDrawer.draw();
-        this.endTiming('batchDrawer:draw');
         this.updatePreviewImage('previewImageR');
+
 
         if(!this.fixedSize && updateReferenceCanvas && !this.debounceActive){
             this.startTiming('batchDrawerReference:draw');
@@ -6356,34 +6397,12 @@ class graphly extends EventEmitter {
             }
         }
 
-        let amountOfPlots = this.renderSettings.yAxis.length;
-
         // Afterwards render all y axis parameters
-        for (let plotY = 0; plotY < amountOfPlots; plotY++) {
+        for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
             yAxRen = this.renderSettings.yAxis[plotY];
-            // Set current "rendering area" so that other plots are not
-            // overplotted turn on the scissor test.
-            this.batchDrawer.getContext().enable(
-                this.batchDrawer.getContext().SCISSOR_TEST
-            );
-
-            let blockSize = (
-                this.height/this.renderSettings.yAxis.length
-            ) * this.resFactor;
-
-            let revPlotY = (amountOfPlots-1)-plotY;
-            let axisOffset = revPlotY * (
-                    (this.height/this.renderSettings.yAxis.length)
-                )  * this.resFactor;
-
-            axisOffset+=(this.separation)+1;
-            blockSize-=this.separation+1;
-
-            // set the scissor rectangle.
-            this.batchDrawer.getContext().scissor(
-                0, axisOffset, this.width, blockSize
-            );
+            
+            this.enableScissorTest(plotY);
 
             for (let parPos=0; parPos<yAxRen.length; parPos++){
 
@@ -6400,7 +6419,6 @@ class graphly extends EventEmitter {
             this.startTiming('batchDrawer:draw');
             this.batchDrawer.draw();
             this.endTiming('batchDrawer:draw');
-            this.updatePreviewImage('previewImageL');
 
             if(!this.fixedSize && updateReferenceCanvas){
                 this.startTiming('batchDrawerReference:draw');
@@ -6413,6 +6431,7 @@ class graphly extends EventEmitter {
             );
 
         }
+        this.updatePreviewImage('previewImageL');
 
 
 
@@ -6421,6 +6440,8 @@ class graphly extends EventEmitter {
         // y axis parameters rendering
         if(this.debounceActive){
             for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+
+                this.enableScissorTest(plotY);
 
                 y2AxRen = this.renderSettings.y2Axis[plotY];
                 // If y2 axis is defined start rendering it as we need to render
@@ -6437,18 +6458,23 @@ class graphly extends EventEmitter {
                         );
                     }
                 }
-            }
 
-            // Save preview image of rendering of second y axis 
-            // without data from first y axis
-            this.startTiming('batchDrawer:draw');
-            this.batchDrawer.draw();
-            this.endTiming('batchDrawer:draw');
+                // Save preview image of rendering of second y axis 
+                // without data from first y axis
+                this.startTiming('batchDrawer:draw');
+                this.batchDrawer.draw();
+                this.endTiming('batchDrawer:draw');
 
-            if(!this.fixedSize && updateReferenceCanvas){
-                this.startTiming('batchDrawerReference:draw');
-                this.batchDrawerReference.draw();
-                this.endTiming('batchDrawerReference:draw');
+                if(!this.fixedSize && updateReferenceCanvas){
+                    this.startTiming('batchDrawerReference:draw');
+                    this.batchDrawerReference.draw();
+                    this.endTiming('batchDrawerReference:draw');
+                }
+
+                // turn off the scissor test so you can render like normal again.
+                this.batchDrawer.getContext().disable(
+                    this.batchDrawer.getContext().SCISSOR_TEST
+                );
             }
         }
 
