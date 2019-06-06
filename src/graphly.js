@@ -4490,7 +4490,8 @@ class graphly extends EventEmitter {
         this.zoom_update();
     }
 
-    renderRectangles(data, idY, xGroup, yGroup, cAxis, updateReferenceCanvas) {
+    renderRectangles(data, xAxis, yAxis, xGroup, yGroup, cAxis, yScale, plotY,
+                     leftYAxis, updateReferenceCanvas) {
 
         // TODO: How to decide which item to take for counting
         // should we compare changes and look for errors in config?
@@ -4499,11 +4500,7 @@ class graphly extends EventEmitter {
         let currColCache = null;
         let colCacheAvailable = false;
 
-        let yScale = this.yScale;
-        // Check if parameter part of left or right y Scale
-        if(this.renderSettings.y2Axis.indexOf(idY) !== -1){
-            yScale = this.y2Scale;
-        }
+        yScale = yScale[plotY];
 
         // Identify how colors are applied to the points
         let singleColor = true;
@@ -4524,15 +4521,15 @@ class graphly extends EventEmitter {
 
         let constAlpha = this.defaultAlpha;
 
-        if(this.dataSettings[idY].hasOwnProperty('alpha')){
-            constAlpha = this.dataSettings[idY].alpha;
+        if(this.dataSettings[yAxis].hasOwnProperty('alpha')){
+            constAlpha = this.dataSettings[yAxis].alpha;
         } else {
-            this.dataSettings[idY].alpha = constAlpha;
+            this.dataSettings[yAxis].alpha = constAlpha;
         }
 
         if(singleColor) {
-            if(this.dataSettings[idY].hasOwnProperty('color')){
-                colorObj = this.dataSettings[idY].color.slice();
+            if(this.dataSettings[yAxis].hasOwnProperty('color')){
+                colorObj = this.dataSettings[yAxis].color.slice();
             } else {
                 colorObj = [0.258, 0.525, 0.956];
             }
@@ -4563,12 +4560,80 @@ class graphly extends EventEmitter {
             }
         }
 
+        // Check if cyclic axis and if currently displayed axis range needs to
+        // offset to be shown in "next cycle" above or below
+        let xMax, xMin, period, xoffset;
+
+        let xperiodic = false;
+        if(this.dataSettings.hasOwnProperty(xAxis) && 
+           this.dataSettings[xAxis].hasOwnProperty('periodic')){
+            xoffset = defaultFor(
+                this.dataSettings[xAxis].periodic.offset, 0
+            );
+            xperiodic = true;
+            period = this.dataSettings[xAxis].periodic.period;
+            xMax = this.xScale.domain()[1]-xoffset;
+            xMin = this.xScale.domain()[0]+xoffset;
+        }
+
+        let yMax, yMin, yoffset, yperiod;
+        let yperiodic = false;
+        if(this.dataSettings.hasOwnProperty(yAxis) && 
+           this.dataSettings[yAxis].hasOwnProperty('periodic') && leftYAxis){
+            yoffset = defaultFor(
+                this.dataSettings[yAxis].periodic.offset, 0
+            );
+            yperiodic = true;
+            yperiod = this.dataSettings[yAxis].periodic.period;
+            yMax = this.yScale[plotY].domain()[1]-yoffset;
+            yMin = this.yScale[plotY].domain()[0]+yoffset;
+        }
+
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
+
         for (let i=0; i<l; i++) {
+
+            // Manipulate value if we have a periodic parameter
+            let valY = data[yGroup[0]][i];
+            let valY2 = data[yGroup[1]][i]
+            if(yperiodic){
+                let shiftpos = Math.abs(parseInt(yMax/yperiod));
+                let shiftneg = Math.abs(parseInt(yMin/yperiod));
+                if(yoffset===0){
+                    shiftneg = Math.abs(Math.floor(yMin/yperiod));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valY = valY + shift*yperiod;
+                    if(valY-yoffset > yMax){
+                        valY -= yperiod;
+                    }
+                    if(valY+yoffset < yMin){
+                        valY += yperiod;
+                    }
+
+                    valY2 = valY2 + shift*yperiod;
+                    if(valY2-yoffset > yMax){
+                        valY2 -= yperiod;
+                    }
+                    if(valY2+yoffset < yMin){
+                        valY2 += yperiod;
+                    }
+                }
+            }
 
             let x1 = (this.xScale(data[xGroup[0]][i]));
             let x2 = (this.xScale(data[xGroup[1]][i]));
-            let y1 = (yScale(data[yGroup[0]][i]));
-            let y2 = (yScale(data[yGroup[1]][i]));
+
+            let y1 = yScale(valY);
+            y1+=axisOffset;
+            let y2 = yScale(valY2);
+            y2+=axisOffset;
+
 
             let idC = u.genColor();
 
@@ -4835,11 +4900,6 @@ class graphly extends EventEmitter {
             }
 
             y = yScale(valY);
-            /*if(y<0 || y>blockSize){
-                continue;
-            }*/
-
-
             y+=axisOffset;
 
             if(!xGroup){
@@ -6091,7 +6151,8 @@ class graphly extends EventEmitter {
                 let xGroup = this.renderSettings.combinedParameters[idX];
                 let yGroup = this.renderSettings.combinedParameters[idY];
                 this.renderRectangles(
-                    data, idY, xGroup, yGroup, idCS, updateReferenceCanvas
+                    data, idX, idY, xGroup, yGroup, idCS, currYScale, plotY,
+                    leftYAxis, updateReferenceCanvas
                 );
             } else {
                 this.renderPoints(

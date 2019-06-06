@@ -18,15 +18,14 @@ var renderSettings_mie = {
 
 var renderSettings_mie2 = {
     xAxis: 'mie_datetime',
-    yAxis: ['mie_altitude'],
-    y2Axis: [],
+    yAxis: [['mie_altitude']],
+    y2Axis: [[]],
     combinedParameters: {
         mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
     },
-    colorAxis: [
-        'mie_wind_velocity'
-    ]
+    colorAxis: [['mie_wind_velocity']],
+    colorAxis2: [[]]
 };
 
 var renderSettings_ray = {
@@ -561,7 +560,7 @@ var data;
 var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: dataSettings,
-    renderSettings: renderSettingsSwarm,
+    renderSettings: renderSettings_mie2,
     /*dataSettings: testbed14DS,
     renderSettings: testbed14RS,*/
     filterManager: filterManager,
@@ -649,9 +648,9 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-//xhr.open('GET', 'data/aeolus_L1.mp', true);
+xhr.open('GET', 'data/aeolus_L1.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
-xhr.open('GET', 'data/swarmupload.mp', true);
+//xhr.open('GET', 'data/swarmupload.mp', true);
 
 xhr.responseType = 'arraybuffer';
 
@@ -718,7 +717,8 @@ function flattenObservationArray(input){
 xhr.onload = function(e) {
     var tmp = new Uint8Array(this.response);
     data = msgpack.decode(tmp);
-    var ids = {
+    
+    /*var ids = {
       'A': 'Alpha',
       'B': 'Bravo',
       'C': 'Charlie',
@@ -807,9 +807,9 @@ xhr.onload = function(e) {
         data['B_NEC_resAC_C'].push(data.B_NEC_resAC[i][2]); 
     }
 
-    graph.loadData(data);
+    graph.loadData(data);*/
 
-    /*var ds = data.ALD_U_N_1B[0];
+    var ds = data.ALD_U_N_1B[0];
 
     var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
     var mie_HLOS_wind_speed = flattenObservationArray(ds.mie_HLOS_wind_speed);
