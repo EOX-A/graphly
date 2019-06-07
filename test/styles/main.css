@@ -54,3 +54,9 @@ span label {
     height: 100px;
     background: #f00;
 }
+
+.groupSelect{
+    position: absolute;
+    margin-top: -12px;
+    z-index: 5;
+}

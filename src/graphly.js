@@ -236,7 +236,7 @@ class graphly extends EventEmitter {
         this.zoomActivity = false;
 
         // Separation of plots in multiplot functionality
-        this.separation = 10;
+        this.separation = 25;
 
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
@@ -3211,6 +3211,37 @@ class graphly extends EventEmitter {
             .range([this.height, 0]);
 
         for (let yPos = 0; yPos < multiLength; yPos++) {
+
+            // Add group selection drop down and functionality
+            if(this.renderSettings.renderGroups !== false && 
+                this.renderSettings.groups!== false){
+
+                let groups = Object.keys(this.renderSettings.renderGroups);
+                let currG = this.renderSettings.groups[yPos];
+
+                let select = this.el
+                    .append('select')
+                        .attr('class','groupSelect')
+                        .style('top', Math.round(yPos*heighChunk)+'px')
+                        .style('left', Math.round(this.width/2)+'px')
+                        .on('change', function(){
+                            console.log(groups[this.selectedIndex]);
+                        });
+
+                select.selectAll('option')
+                    .data(groups).enter()
+                    .append('option')
+                        .text((d) => { return d; })
+                        .property('selected', (d) => { return d===currG; });
+
+                /*function onchange() {
+                    selectValue = d3.select('select').property('value')
+                    d3.select('body')
+                        .append('p')
+                        .text(selectValue + ' is the last selected option.')
+                };*/
+
+            }
 
             let currYAxis = this.renderSettings.yAxis[yPos];
             let currY2Axis = defaultFor(this.renderSettings.y2Axis[yPos], []);
@@ -6321,6 +6352,10 @@ class graphly extends EventEmitter {
             this.batchDrawer.getContext().SCISSOR_TEST
         );
 
+        this.batchDrawerReference.getContext().enable(
+            this.batchDrawerReference.getContext().SCISSOR_TEST
+        );
+
         let amountOfPlots = this.renderSettings.yAxis.length;
         let blockSize = (
             this.height/amountOfPlots
@@ -6336,6 +6371,10 @@ class graphly extends EventEmitter {
 
         // set the scissor rectangle.
         this.batchDrawer.getContext().scissor(
+            0, axisOffset, this.width, blockSize
+        );
+
+        this.batchDrawerReference.getContext().scissor(
             0, axisOffset, this.width, blockSize
         );
 
@@ -6434,6 +6473,9 @@ class graphly extends EventEmitter {
             this.batchDrawer.getContext().disable(
                 this.batchDrawer.getContext().SCISSOR_TEST
             );
+            this.batchDrawerReference.getContext().disable(
+                this.batchDrawerReference.getContext().SCISSOR_TEST
+            );
         }
         // Save preview image of rendering of second y axis 
         // without data from first y axis
@@ -6487,6 +6529,9 @@ class graphly extends EventEmitter {
             this.batchDrawer.getContext().disable(
                 this.batchDrawer.getContext().SCISSOR_TEST
             );
+            this.batchDrawerReference.getContext().disable(
+                this.batchDrawerReference.getContext().SCISSOR_TEST
+            );
 
         }
         this.updatePreviewImage('previewImageL');
@@ -6532,6 +6577,9 @@ class graphly extends EventEmitter {
                 // turn off the scissor test so you can render like normal again.
                 this.batchDrawer.getContext().disable(
                     this.batchDrawer.getContext().SCISSOR_TEST
+                );
+                this.batchDrawerReference.getContext().disable(
+                    this.batchDrawerReference.getContext().SCISSOR_TEST
                 );
             }
         }

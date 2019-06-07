@@ -9,7 +9,7 @@ var renderSettings_mie = {
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
     },
     colorAxis: [
-        'mie_wind_velocity', null
+        'mie_HLOS_wind_speed', null
     ],
     /*additionalXTicks: ['latitude_of_DEM_intersection_start'],
     additionalYTicks: ['mie_altitude_top'],*/
@@ -32,7 +32,7 @@ var renderSettings_mie = {
             'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
             'mie_datetime_start', 'mie_datetime_end', 'mie_startlat',
             'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
-            'mie_geo_height', 'mie_wind_velocity', 'mie_observation_type'
+            'mie_geo_height', 'mie_HLOS_wind_speed', 'mie_observation_type'
         ],
         [
             'rayleigh_latitude', 'rayleigh_longitude', 'rayleigh_altitude',
@@ -45,16 +45,16 @@ var renderSettings_mie = {
 
 var renderSettingsAeolus = {
     xAxis: 'mie_datetime',
-    yAxis: [['mie_altitude'], ['mie_altitude']],
+    yAxis: [['mie_altitude'], ['rayleigh_altitude']],
     y2Axis: [[], []],
-    groups: ['mie', 'mie'],
+    groups: ['mie', 'rayleigh'],
     combinedParameters: {
         rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
         rayleigh_altitude: ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
         mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
     },
-    colorAxis: [['mie_wind_velocity'], ['mie_quality_flag_data']],
+    colorAxis: [['mie_HLOS_wind_speed'], ['rayleigh_HLOS_wind_speed']],
     colorAxis2: [[], []],
     renderGroups: {
         mie: {
@@ -62,7 +62,7 @@ var renderSettingsAeolus = {
                 'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
                 'mie_datetime_start', 'mie_datetime_end', 'mie_startlat',
                 'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
-                'mie_geo_height', 'mie_wind_velocity', 'mie_observation_type'
+                'mie_geo_height', 'mie_HLOS_wind_speed', 'mie_observation_type'
             ],
         },
         rayleigh: {
@@ -71,7 +71,7 @@ var renderSettingsAeolus = {
                 'rayleigh_dem_altitude', 'rayleigh_datetime_start',
                 'rayleigh_datetime_stop', 'rayleigh_startlat', 'rayleigh_endlat',
                 'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'height',
-                'rayleigh_geo_height', 'rayleigh_wind_velocity'
+                'rayleigh_geo_height', 'rayleigh_wind_velocity', 'rayleigh_HLOS_wind_speed'
             ]
         }
     },
@@ -106,7 +106,7 @@ var renderSettings_ray = {
     },
     colorAxis: [
         'rayleigh_wind_velocity',
-        //'mie_wind_velocity',
+        //'mie_HLOS_wind_speed',
     ],
 
 };
@@ -186,7 +186,7 @@ var ds_mie = {
         uom: 'm',
         lineConnect: true
     },
-    mie_wind_velocity: {
+    mie_HLOS_wind_speed: {
         uom: 'm/s',
         colorscale: 'plasma',
         //extent: [-5000,5000]
@@ -359,14 +359,15 @@ var filterSettings = {
             'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
             'mie_datetime_start', 'mie_datetime_end', 'mie_startlat',
             'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
-            'mie_geo_height', 'mie_wind_velocity', 'mie_observation_type'
+            'mie_geo_height', 'mie_HLOS_wind_speed', 'mie_observation_type',
+            'mie_quality_flag_data'
         ],
         [
             'rayleigh_latitude', 'rayleigh_longitude', 'rayleigh_altitude',
             'rayleigh_dem_altitude', 'rayleigh_datetime_start',
             'rayleigh_datetime_stop', 'rayleigh_startlat', 'rayleigh_endlat',
             'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'height',
-            'rayleigh_geo_height', 'rayleigh_wind_velocity'
+            'rayleigh_geo_height', 'rayleigh_HLOS_wind_speed'
         ]
     ],
     dataSettings: otherds,
@@ -377,7 +378,6 @@ var filterSettings = {
         'latitude',
         'longitude',
         'rayleigh_wind_velocity',
-        'mie_wind_velocity',
         'mie_observation_type',
         'Laser_Freq_Offset',
         'Mie_Valid',
@@ -389,7 +389,8 @@ var filterSettings = {
         'Num_Rayleigh_Used',
         'Num_Corrupt_Mie',
         'Num_Corrupt_Rayleigh',
-
+        'rayleigh_HLOS_wind_speed',
+        'mie_HLOS_wind_speed',
         'Frequency_Offset',
         'Frequency_Valid',
         'Measurement_Response_Valid',
@@ -446,7 +447,7 @@ var renderSettings = {
         ],
         time: ['mie_datetime_start', 'mie_datetime_end'],
     },
-    colorAxis: ['mie_wind_velocity'],
+    colorAxis: ['mie_HLOS_wind_speed'],
     positionAlias: {
         'latitude': 'mie_latitude',
         'longitude': 'mie_longitude',
@@ -472,11 +473,19 @@ var dataSettings = {
         timeFormat: 'MJD2000_S'
     },
 
-    mie_wind_velocity: {
+    mie_HLOS_wind_speed: {
         uom: 'm/s',
         colorscale: 'viridis',
        // nullValue: 642.7306076260679
         //extent: [-140,39]
+        //outline: false
+    },
+
+    rayleigh_HLOS_wind_speed: {
+        uom: 'm/s',
+        colorscale: 'plasma',
+       // nullValue: 642.7306076260679
+        extent: [-50,50]
         //outline: false
     },
 
@@ -556,58 +565,6 @@ var testbed14DS = {
         //outline: false
     }
 };
-
-var filterSettings = {
-    parameterMatrix: {
-        'height': [
-            'mie_altitude_bottom', 'mie_altitude_top'
-        ],
-        'latitude': [
-            'mie_latitude'
-        ],
-        'longitude': [
-           'mie_longitude'
-        ]
-    },
-    filterRelation: [
-        [
-            'mie_quality_flag_data', 'mie_wind_velocity', 'mie_latitude', 'mie_altitude',
-            'mie_latitude_start', 'mie_latitude_end', 'mie_altitude_top', 'mie_altitude_bottom',
-            'time', 'mie_datetime_start', 'mie_datetime_end', 'latitude_of_DEM_intersection_start',
-            'latitude_of_DEM_intersection_end', 'latitude_of_DEM_intersection'
-        ]
-    ],
-    dataSettings: dataSettings,
-    visibleFilters: [
-        'mie_quality_flag_data', 'mie_wind_velocity', 'F', 'n', 'F_error'
-      
-    ],
-    //boolParameter: [],
-    maskParameter: {
-        'mie_quality_flag_data': {
-            values: [
-                ['Bit 1', 'Overall validity. Data invalid 1, otherwise 0 '],
-                ['Bit 2', 'Set to 1 if signal-to-noise below SNR_Threshold, default 0 '],
-                ['Bit 3', 'Data saturation found 1, otherwise 0 '],
-                ['Bit 4', 'Data spike found 1, otherwise 0 '],
-                ['Bit 5', 'Reference pulse invalid 1, otherwise 0 '],
-                ['Bit 6', 'Source packet invalid 1, otherwise 0 '],
-                ['Bit 7', 'Number of corresponding valid pulses is below Meas_Cavity_Lock_Status_Thresh 1, otherwise 0 '],
-                ['Bit 8', 'Spacecraft attitude not on target 1, otherwise 0 '],
-                ['Bit 9', 'For Mie, peak not found 1, otherwise 0. For Rayleigh, rayleigh response not found 1, otherwise 0 '],
-                ['Bit 10','Set to 1 if the absolute wind velocity above Wind_Velocity_Threshold, default 0 '],
-                ['Bit 11','Set to 1 if polynomial fit of error responses was used but no valid root of the polynomial was found, otherwise 0. '],
-                ['Bit 12','Bin was detected as ground bin, otherwise 0. '],
-                ['Bit 13','Spare, set to 0'],
-                ['Bit 14','Spare, set to 0'],
-                ['Bit 15','Spare, set to 0'],
-                ['Bit 16','Spare, set to 0']
-            ]
-        }
-    },
-    //choiceParameter: {}
-};
-
 
 
 
@@ -884,16 +841,29 @@ xhr.onload = function(e) {
     var mie_bin_quality_flag = flattenObservationArray(ds.mie_bin_quality_flag);
     var geoid_separation =proxyFlattenObservationArraySE(ds.geoid_separation, ds.mie_altitude);
 
+
+    var rayleigh_HLOS_wind_speed = flattenObservationArray(ds.rayleigh_HLOS_wind_speed);
+    var rayleigh_altitude = flattenObservationArraySE(ds.rayleigh_altitude);
+    var rayleigh_bin_quality_flag = flattenObservationArray(ds.rayleigh_bin_quality_flag);
+
+
     data = {
       mie_datetime_start: time[0],
       mie_datetime_end: time[1],
       latitude_of_DEM_intersection_start: latitude_of_DEM_intersection[1],
       latitude_of_DEM_intersection_end: latitude_of_DEM_intersection[0],
-      mie_wind_velocity: mie_HLOS_wind_speed,
+      mie_HLOS_wind_speed: mie_HLOS_wind_speed,
       mie_quality_flag_data: mie_bin_quality_flag,
       mie_altitude_top: mie_altitude[0],
       mie_altitude_bottom: mie_altitude[1],
-      geoid_separation: geoid_separation[0]
+      geoid_separation: geoid_separation[0],
+      rayleigh_HLOS_wind_speed: rayleigh_HLOS_wind_speed,
+      rayleigh_altitude: rayleigh_altitude,
+      rayleigh_bin_quality_flag: rayleigh_bin_quality_flag,
+      rayleigh_altitude_top: rayleigh_altitude[0],
+      rayleigh_altitude_bottom: rayleigh_altitude[1],
+      rayleigh_datetime_start: time[0],
+      rayleigh_datetime_end: time[1],
     };
 
     graph.loadData(data);
