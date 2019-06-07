@@ -16,16 +16,79 @@ var renderSettings_mie = {
 
 };
 
-var renderSettings_mie2 = {
+/*parameterMatrix: {
+        'height': [
+            'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'mie_altitude_top', 'mie_altitude_bottom'
+        ],
+        'latitude': [
+            'mie_latitude', 'rayleigh_latitude'
+        ],
+        'longitude': [
+           'mie_longitude', 'rayleigh_longitude'
+        ]
+    },
+    filterRelation: [
+        [
+            'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
+            'mie_datetime_start', 'mie_datetime_end', 'mie_startlat',
+            'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
+            'mie_geo_height', 'mie_wind_velocity', 'mie_observation_type'
+        ],
+        [
+            'rayleigh_latitude', 'rayleigh_longitude', 'rayleigh_altitude',
+            'rayleigh_dem_altitude', 'rayleigh_datetime_start',
+            'rayleigh_datetime_stop', 'rayleigh_startlat', 'rayleigh_endlat',
+            'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'height',
+            'rayleigh_geo_height', 'rayleigh_wind_velocity'
+        ]
+    ],*/
+
+var renderSettingsAeolus = {
     xAxis: 'mie_datetime',
-    yAxis: [['mie_altitude']],
-    y2Axis: [[]],
+    yAxis: [['mie_altitude'], ['mie_altitude']],
+    y2Axis: [[], []],
+    groups: ['mie', 'mie'],
     combinedParameters: {
+        rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
+        rayleigh_altitude: ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
         mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
     },
-    colorAxis: [['mie_wind_velocity']],
-    colorAxis2: [[]]
+    colorAxis: [['mie_wind_velocity'], ['mie_quality_flag_data']],
+    colorAxis2: [[], []],
+    renderGroups: {
+        mie: {
+            parameters: [
+                'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
+                'mie_datetime_start', 'mie_datetime_end', 'mie_startlat',
+                'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
+                'mie_geo_height', 'mie_wind_velocity', 'mie_observation_type'
+            ],
+        },
+        rayleigh: {
+            parameters: [
+                'rayleigh_latitude', 'rayleigh_longitude', 'rayleigh_altitude',
+                'rayleigh_dem_altitude', 'rayleigh_datetime_start',
+                'rayleigh_datetime_stop', 'rayleigh_startlat', 'rayleigh_endlat',
+                'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'height',
+                'rayleigh_geo_height', 'rayleigh_wind_velocity'
+            ]
+        }
+    },
+    sharedParameters: {
+        'altitude': [
+            'rayleigh_altitude', 'mie_altitude'
+        ],
+        'latitude': [
+            'mie_latitude', 'rayleigh_latitude'
+        ],
+        'longitude': [
+           'mie_longitude', 'rayleigh_longitude'
+        ],
+        'time': [
+            'rayleigh_datetime', 'mie_datetime'
+        ]
+    }
 };
 
 var renderSettings_ray = {
@@ -560,7 +623,7 @@ var data;
 var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: dataSettings,
-    renderSettings: renderSettings_mie2,
+    renderSettings: renderSettingsAeolus,
     /*dataSettings: testbed14DS,
     renderSettings: testbed14RS,*/
     filterManager: filterManager,

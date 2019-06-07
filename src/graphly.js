@@ -17,6 +17,17 @@
 * @property {Object} [dataIdentifier] Contains key "parameter" with identifier 
 *       string of paramter used to separate data into groups and key 
 *       "identifiers" with array of strings with possible values in data array.
+* @property {Object} [renderGroups] When using complex data with different sizes
+*       that still should be visualized together (in different plots) it is
+*       possible to use renderGroups object. The key is used as identifier
+*       and can be selected from a drop down for each plot. Only the parameters
+*       defined in the group will be used and accessible in the plot
+* @property {Object} [sharedParameters] When using renderGroups it is necessary
+*       to define the common axis, the key is used as parameter name as value an 
+*       array of all parameters from different groups that represent the same
+*       axis can be defined.
+* @property {Array.String} [groups] When using renderGoups array (same size as yAxis)
+*       defines which group is used on each of the plots.
 * @property {Array.String} [additionalXTicks] Array with parameter ids for 
 *        additional labels that should be used for the x axis
 * @property {Array.String} [additionalYTicks] Array with parameter ids for 
@@ -178,8 +189,6 @@ class graphly extends EventEmitter {
     *        extent for color range parameters
     * @param {Object} [options.filterManager] Instanced filtermanager object to
     *        connect to.
-    * @param {Object} [options.connectedGraph] Instanced graphly object to sync
-    *        x axis to.
     * @param {boolean} [options.enableFit=true] Enable/disable fitting
     *        functionality.
     * @param {boolean} [options.logX=false] Use logarithmic scale for x axis.
@@ -290,6 +299,15 @@ class graphly extends EventEmitter {
 
         this.renderSettings.availableParameters = defaultFor(
             this.renderSettings.availableParameters, false
+        );
+        this.renderSettings.renderGroups = defaultFor(
+            this.renderSettings.renderGroups, false
+        );
+        this.renderSettings.sharedParameters = defaultFor(
+            this.renderSettings.sharedParameters, false
+        );
+        this.renderSettings.groups = defaultFor(
+            this.renderSettings.groups, false
         );
 
         this.yAxisLabel = [];
@@ -417,7 +435,6 @@ class graphly extends EventEmitter {
         }
         this.filters = {};
         this.filterManager = defaultFor(options.filterManager, false);
-        this.connectedGraph = defaultFor(options.connectedGraph, false);
         this.autoColorExtent = defaultFor(options.autoColorExtent, false);
         this.enableFit = defaultFor(options.enableFit, true);
         this.fixedXDomain = undefined;
@@ -435,7 +452,7 @@ class graphly extends EventEmitter {
         );
 
 
-        // TODO: FOr now if using multiaxis we disable fit functionality
+        // TODO: For now if using multiaxis we disable fit functionality
         // need to look into how to render fit curve over multiple plots
         if(this.multiYAxis){
             this.enableFit = false;
@@ -956,14 +973,6 @@ class graphly extends EventEmitter {
                 }
             });
         }
-
-        // Check for change in connected graph axis selection if there is a
-        // change reload graph to reset its ranges and position
-        if (this.connectedGraph){
-            this.connectedGraph.on('axisChange', ()=>{
-                this.loadData(this.data);
-            });
-        }
     }
 
     startTiming(processId){
@@ -1064,18 +1073,6 @@ class graphly extends EventEmitter {
         this.dataSettings = defaultFor(settings, {});
     }
 
-    /**
-    * Connect x axis of a scond graph to update when x axis of first graph is updated.
-    * @param {Object} graph graphly instance.
-    */
-    connectGraph(graph){
-        this.connectedGraph = graph;
-        if (this.connectedGraph){
-            this.connectedGraph.on('axisChange', ()=>{
-                this.loadData(this.data);
-            });
-        }
-    }
 
     /**
     * Save current plot as rendering opening save dialog for download.
