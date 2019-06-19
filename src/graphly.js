@@ -1714,6 +1714,15 @@ class graphly extends EventEmitter {
                         ignoreKey = true;
                     }
                 }
+
+                // Check for renderGroups
+                if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                    let rGroup = this.renderSettings.groups[yPos];
+                    if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(key) === -1){
+                        ignoreKey = true;
+                    }
+                }
+
                 // Check if key is available in data first
                 if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
 
@@ -1752,6 +1761,15 @@ class graphly extends EventEmitter {
                         includePar = false;
                     }
                 }
+
+                // Check for renderGroups
+                if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                    let rGroup = this.renderSettings.groups[yPos];
+                    if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(comKey) === -1){
+                        includePar = false;
+                    }
+                }
+
                 if(includePar){
                     yChoices.push({value: comKey, label: comKey});
                     y2Choices.push({value: comKey, label: comKey});
@@ -3078,18 +3096,45 @@ class graphly extends EventEmitter {
         // "Flatten selections"
         let xSelection = [];
 
-        if(rs.combinedParameters.hasOwnProperty(rs.xAxis)){
-            xSelection = [].concat.apply([], rs.combinedParameters[rs.xAxis]);
-        } else {
+        if(this.renderSettings.renderGroups !== false && 
+            this.renderSettings.groups!== false && 
+            this.renderSettings.sharedParameters !== false){
+
             xSelection.push(this.renderSettings.xAxis);
-        }
 
-        if(this.fixedXDomain !== undefined){
-            xExtent = this.fixedXDomain;
+            if(this.fixedXDomain !== undefined){
+                xExtent = this.fixedXDomain;
+            } else {
+                let sharedPars = this.renderSettings.sharedParameters[xSelection];
+                let rs = this.renderSettings;
+                // Check for group parameters inside the shared parameters
+                for (var i = 0; i < sharedPars.length; i++) {
+                    if(rs.combinedParameters.hasOwnProperty(sharedPars[i])){
+                        xSelection = [].concat.apply(
+                            [], rs.combinedParameters[sharedPars[i]]
+                        );
+                    } else {
+                        xSelection.push(sharedPars[i]);
+                    }
+                }
+                xExtent = this.calculateExtent(xSelection);
+            }
+
         } else {
-            xExtent = this.calculateExtent(xSelection);
+            if(rs.combinedParameters.hasOwnProperty(rs.xAxis)){
+                xSelection = [].concat.apply([], rs.combinedParameters[rs.xAxis]);
+            } else {
+                xSelection.push(this.renderSettings.xAxis);
+            }
+
+            if(this.fixedXDomain !== undefined){
+                xExtent = this.fixedXDomain;
+            } else {
+                xExtent = this.calculateExtent(xSelection);
+            }
         }
 
+        
 
 
         let xScaleType;
@@ -3210,6 +3255,8 @@ class graphly extends EventEmitter {
             .domain([0,1])
             .range([this.height, 0]);
 
+        d3.selectAll('.groupSelect').remove();
+
         for (let yPos = 0; yPos < multiLength; yPos++) {
 
             // Add group selection drop down and functionality
@@ -3252,16 +3299,16 @@ class graphly extends EventEmitter {
 
 
             for (var h = 0; h < currYAxis.length; h++) {
-                if(rs.combinedParameters.hasOwnProperty(rs.yAxis[h])){
-                    ySelection = [].concat.apply([], rs.combinedParameters[rs.yAxis[h]]);
+                if(rs.combinedParameters.hasOwnProperty(currYAxis[h])){
+                    ySelection = [].concat.apply([], rs.combinedParameters[currYAxis[h]]);
                 } else {
                     ySelection.push(currYAxis[h]);
                 }
             }
 
             for (var i = 0; i < currY2Axis.length; i++) {
-                if(rs.combinedParameters.hasOwnProperty(rs.y2Axis[i])){
-                    y2Selection = [].concat.apply([], rs.combinedParameters[rs.y2Axis[i]]);
+                if(rs.combinedParameters.hasOwnProperty(currY2Axis[i])){
+                    y2Selection = [].concat.apply([], rs.combinedParameters[currY2Axis[i]]);
                 } else {
                     y2Selection.push(currY2Axis[i]);
                 }
@@ -6167,6 +6214,23 @@ class graphly extends EventEmitter {
                     parPos, data, inactiveData, updateReferenceCanvas){
 
         this.startTiming('renderParameter:'+idY);
+
+
+        // Check if groups are being used and if a shared parameter is used as 
+        // x axis
+        let rS = this.renderSettings; 
+        if(rS.renderGroups !== false && rS.groups!== false && 
+            rS.sharedParameters !== false){
+
+            let currGroup = rS.renderGroups[rS.groups[plotY]];
+            let sharedPars = rS.sharedParameters[idX];
+
+            for (var i = 0; i < sharedPars.length; i++) {
+                if(currGroup.parameters.indexOf(sharedPars[i])!==-1){
+                    idX = sharedPars[i];
+                }
+            }
+        }
 
         let combPars = this.renderSettings.combinedParameters;
 

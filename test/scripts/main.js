@@ -16,40 +16,14 @@ var renderSettings_mie = {
 
 };
 
-/*parameterMatrix: {
-        'height': [
-            'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'mie_altitude_top', 'mie_altitude_bottom'
-        ],
-        'latitude': [
-            'mie_latitude', 'rayleigh_latitude'
-        ],
-        'longitude': [
-           'mie_longitude', 'rayleigh_longitude'
-        ]
-    },
-    filterRelation: [
-        [
-            'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
-            'mie_datetime_start', 'mie_datetime_end', 'mie_startlat',
-            'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
-            'mie_geo_height', 'mie_HLOS_wind_speed', 'mie_observation_type'
-        ],
-        [
-            'rayleigh_latitude', 'rayleigh_longitude', 'rayleigh_altitude',
-            'rayleigh_dem_altitude', 'rayleigh_datetime_start',
-            'rayleigh_datetime_stop', 'rayleigh_startlat', 'rayleigh_endlat',
-            'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'height',
-            'rayleigh_geo_height', 'rayleigh_wind_velocity'
-        ]
-    ],*/
 
 var renderSettingsAeolus = {
-    xAxis: 'mie_datetime',
+    xAxis: 'datetime',
     yAxis: [['mie_altitude'], ['rayleigh_altitude']],
     y2Axis: [[], []],
     groups: ['mie', 'rayleigh'],
     combinedParameters: {
-        rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_stop'],
+        rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_end'],
         rayleigh_altitude: ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
         mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
         mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
@@ -59,19 +33,28 @@ var renderSettingsAeolus = {
     renderGroups: {
         mie: {
             parameters: [
-                'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
-                'mie_datetime_start', 'mie_datetime_end', 'mie_startlat',
-                'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
-                'mie_geo_height', 'mie_HLOS_wind_speed', 'mie_observation_type'
+                'mie_datetime',
+                'mie_altitude',
+                'mie_datetime_start',
+                'mie_datetime_end',
+                'mie_HLOS_wind_speed',
+                'mie_quality_flag_data',
+                'mie_altitude_top',
+                'mie_altitude_bottom',
+                'geoid_separation'
             ],
         },
         rayleigh: {
             parameters: [
-                'rayleigh_latitude', 'rayleigh_longitude', 'rayleigh_altitude',
-                'rayleigh_dem_altitude', 'rayleigh_datetime_start',
-                'rayleigh_datetime_stop', 'rayleigh_startlat', 'rayleigh_endlat',
-                'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'height',
-                'rayleigh_geo_height', 'rayleigh_wind_velocity', 'rayleigh_HLOS_wind_speed'
+                'rayleigh_datetime',
+                'rayleigh_altitude',
+                'rayleigh_HLOS_wind_speed',
+                'rayleigh_bin_quality_flag',
+                'rayleigh_altitude_top',
+                'rayleigh_altitude_bottom',
+                'rayleigh_datetime_start',
+                'rayleigh_datetime_end',
+                'geoid_separation'
             ]
         }
     },
@@ -85,11 +68,12 @@ var renderSettingsAeolus = {
         'longitude': [
            'mie_longitude', 'rayleigh_longitude'
         ],
-        'time': [
+        'datetime': [
             'rayleigh_datetime', 'mie_datetime'
         ]
     }
 };
+
 
 var renderSettings_ray = {
     xAxis: 'rayleigh_datetime',
@@ -341,6 +325,10 @@ var otherds = {
 
 };
 
+/*'latitude_of_DEM_intersection_start',
+'latitude_of_DEM_intersection_end',
+'geoid_separation',*/
+
 
 var filterSettings = {
     parameterMatrix: {
@@ -356,18 +344,20 @@ var filterSettings = {
     },
     filterRelation: [
         [
-            'mie_latitude', 'mie_longitude', 'mie_altitude', 'mie_dem_altitude',
-            'mie_datetime_start', 'mie_datetime_end', 'mie_startlat',
-            'mie_endlat','mie_altitude_top', 'mie_altitude_bottom', 'height',
-            'mie_geo_height', 'mie_HLOS_wind_speed', 'mie_observation_type',
-            'mie_quality_flag_data'
+            'mie_datetime_start',
+            'mie_datetime_end',
+            'mie_HLOS_wind_speed',
+            'mie_quality_flag_data',
+            'mie_altitude_top',
+            'mie_altitude_bottom'
         ],
         [
-            'rayleigh_latitude', 'rayleigh_longitude', 'rayleigh_altitude',
-            'rayleigh_dem_altitude', 'rayleigh_datetime_start',
-            'rayleigh_datetime_stop', 'rayleigh_startlat', 'rayleigh_endlat',
-            'rayleigh_altitude_top', 'rayleigh_altitude_bottom', 'height',
-            'rayleigh_geo_height', 'rayleigh_HLOS_wind_speed'
+            'rayleigh_HLOS_wind_speed',
+            'rayleigh_bin_quality_flag',
+            'rayleigh_altitude_top',
+            'rayleigh_altitude_bottom',
+            'rayleigh_datetime_start',
+            'rayleigh_datetime_end'
         ]
     ],
     dataSettings: otherds,
@@ -858,7 +848,6 @@ xhr.onload = function(e) {
       mie_altitude_bottom: mie_altitude[1],
       geoid_separation: geoid_separation[0],
       rayleigh_HLOS_wind_speed: rayleigh_HLOS_wind_speed,
-      rayleigh_altitude: rayleigh_altitude,
       rayleigh_bin_quality_flag: rayleigh_bin_quality_flag,
       rayleigh_altitude_top: rayleigh_altitude[0],
       rayleigh_altitude_bottom: rayleigh_altitude[1],
