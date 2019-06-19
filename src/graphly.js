@@ -2264,6 +2264,12 @@ class graphly extends EventEmitter {
                         this.renderSettings.colorAxis.push([]);
                         this.renderSettings.colorAxis2.push([]);
                         this.renderSettings.additionalYTicks.push([]);
+                        if(this.renderSettings.hasOwnProperty('renderGroups') && 
+                            this.renderSettings.hasOwnProperty('groups')){
+                                this.renderSettings.groups.push(
+                                    Object.keys(this.renderSettings.renderGroups)[0]
+                                );
+                            }
                         this.emit('axisChange');
                         this.loadData(this.data);
                     });
@@ -2391,6 +2397,11 @@ class graphly extends EventEmitter {
                         renSett.colorAxis.splice(index, 1);
                         renSett.colorAxis2.splice(index, 1);
 
+                        if(renSett.hasOwnProperty('renderGroups') && 
+                            renSett.hasOwnProperty('groups')){
+                            renSett.groups.splice(index, 1);
+                        }
+
                         let addYT = this.renderSettings.additionalYTicks; 
                         addYT.splice(index,1);
                         // Recalculate subaxis margin
@@ -2435,6 +2446,13 @@ class graphly extends EventEmitter {
                             rS.colorAxis[index-1] = currColAx;
                             rS.colorAxis2[index-1] = currColAx2;
 
+                            if(rS.hasOwnProperty('renderGroups') && 
+                            rS.hasOwnProperty('groups')){
+                                let currGroup = rS.groups[index];
+                                rS.groups[index] = rS.groups[index-1];
+                                rS.groups[index-1] = currGroup;
+                            }
+
                             this.emit('axisChange');
                             this.loadData(this.data);
                         });
@@ -2474,6 +2492,13 @@ class graphly extends EventEmitter {
                             rS.additionalYTicks[index+1] = curraddYTicks;
                             rS.colorAxis[index+1] = currColAx;
                             rS.colorAxis2[index+1] = currColAx2;
+
+                            if(rS.hasOwnProperty('renderGroups') && 
+                            rS.hasOwnProperty('groups')){
+                                let currGroup = rS.groups[index];
+                                rS.groups[index] = rS.groups[index+1];
+                                rS.groups[index+1] = currGroup;
+                            }
 
                             this.emit('axisChange');
                             this.loadData(this.data);
@@ -4912,10 +4937,14 @@ class graphly extends EventEmitter {
             } else {
                 // Check if we have a time variable
                 if(this.timeScales.indexOf(yGroup[0])!==-1){
-                    valY = new Date(
-                        data[yGroup[0]][j].getTime() +
-                        (data[yGroup[1]][j].getTime() - data[yGroup[0]][j].getTime())/2
-                    );
+                    if( isNaN(data[yGroup[0]][j]) || isNaN(data[yGroup[1]][j]) ){
+                        valY = NaN;
+                    } else {
+                        valY = new Date(
+                            data[yGroup[0]][j].getTime() +
+                            (data[yGroup[1]][j].getTime() - data[yGroup[0]][j].getTime())/2
+                        );
+                    }
                 } else {
                     valY = data[yGroup[0]][j] +
                          (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
@@ -4982,13 +5011,19 @@ class graphly extends EventEmitter {
             } else {
                 // Check if we have a time variable
                 if(this.timeScales.indexOf(xGroup[0])!==-1){
-                    valX = new Date(
-                        data[xGroup[0]][j].getTime() +
-                        (
-                            data[xGroup[1]][j].getTime()-
-                            data[xGroup[0]][j].getTime()
-                        )/2
-                    );
+                    if( isNaN(data[xGroup[0]][j]) || isNaN(data[xGroup[1]][j]) ){
+                        valX = NaN;
+                    } else {
+                        valX = new Date(
+                            data[xGroup[0]][j].getTime() +
+                            (
+                                data[xGroup[1]][j].getTime()-
+                                data[xGroup[0]][j].getTime()
+                            )/2
+                        );
+                    }
+
+                   
                 } else {
                     valX = data[xGroup[0]][j] +
                          (data[xGroup[1]][j] - data[xGroup[0]][j])/2;
