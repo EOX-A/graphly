@@ -3288,8 +3288,9 @@ class graphly extends EventEmitter {
             if(this.renderSettings.renderGroups !== false && 
                 this.renderSettings.groups!== false){
 
-                let groups = Object.keys(this.renderSettings.renderGroups);
+                let selectionGroups = Object.keys(this.renderSettings.renderGroups);
                 let currG = this.renderSettings.groups[yPos];
+                var that = this;
 
                 let select = this.el
                     .append('select')
@@ -3297,11 +3298,77 @@ class graphly extends EventEmitter {
                         .style('top', Math.round(yPos*heighChunk)+'px')
                         .style('left', Math.round(this.width/2)+'px')
                         .on('change', function(){
-                            console.log(groups[this.selectedIndex]);
+                            // Go through current configuration and try to 
+                            // adapt all parameters to the other group selected
+                            // if not all is available try to check defaults
+                            let newGroup = selectionGroups[this.selectedIndex];
+                            let newGroupPars = that.renderSettings.renderGroups[newGroup].parameters;
+                            let prevGroup = that.renderSettings.groups[yPos];
+                            //let prevGroupPars = that.renderSettings.renderGroups[prevGroup].parameters;
+                            let currYAxis = that.renderSettings.yAxis[yPos];
+                            let currY2Axis = that.renderSettings.y2Axis[yPos];
+                            let currColAxis = that.renderSettings.colorAxis[yPos];
+                            let currCol2Axis = that.renderSettings.colorAxis2[yPos];
+
+                            let newYAxis = [];
+                            let newY2Axis = [];
+                            let newColAxis = [];
+                            let newCol2Axis = [];
+
+                            for (var i = 0; i < currYAxis.length; i++) {
+                                // Try to find equvalent parameter
+                                let tmpPar = currYAxis[i].replace(prevGroup, newGroup);
+                                if(newGroupPars.indexOf(tmpPar)!==-1){
+                                    newYAxis.push(tmpPar);
+                                    // Check for corresponding color
+                                    let tmpCol = currColAxis[i].replace(prevGroup, newGroup);
+                                    if(newGroupPars.indexOf(tmpCol)!==-1){
+                                        newColAxis.push(tmpCol)
+                                    } else {
+                                        // If no colorscale equivalent found set to null
+                                        newColAxis.push(null);
+                                    }
+                                } else {
+                                    // TODO: Should we try to find an alternative here?
+                                }
+                            }
+
+                            for (var i = 0; i < currY2Axis.length; i++) {
+                                // Try to find equvalent parameter
+                                let tmpPar = currY2Axis[i].replace(prevGroup, newGroup);
+                                if(newGroupPars.indexOf(tmpPar)!==-1){
+                                    newY2Axis.push(tmpPar);
+                                    // Check for corresponding color
+                                    let tmpCol = currCol2Axis[i].replace(prevGroup, newGroup);
+                                    if(newGroupPars.indexOf(tmpCol)!==-1){
+                                        newCol2Axis.push(tmpCol)
+                                    } else {
+                                        // If no colorscale equivalent found set to null
+                                        newCol2Axis.push(null);
+                                    }
+                                } else {
+                                    // TODO: Should we try to find an alternative here?
+                                }
+                            }
+
+                            that.renderSettings.groups[yPos] = newGroup;
+                            // Check if any of the parameters could be converted
+                            // if not look for defaults
+                            if(newYAxis.length>0 || newY2Axis.length>0){
+                                that.renderSettings.yAxis[yPos] = newYAxis;
+                                 that.renderSettings.colorAxis[yPos] = newColAxis;
+                                 that.renderSettings.y2Axis[yPos] = newY2Axis;
+                                 that.renderSettings.colorAxis2[yPos] = newCol2Axis;
+                            } else {
+                                // TODO: Set some defaults
+                            }
+                            that.emit('axisChange');
+                            that.loadData(that.data);
+
                         });
 
                 select.selectAll('option')
-                    .data(groups).enter()
+                    .data(selectionGroups).enter()
                     .append('option')
                         .text((d) => { return d; })
                         .property('selected', (d) => { return d===currG; });
