@@ -59,17 +59,14 @@ var renderSettingsAeolus = {
         }
     },
     sharedParameters: {
+        'datetime': [
+            'rayleigh_datetime', 'mie_datetime'
+        ],
         'altitude': [
             'rayleigh_altitude', 'mie_altitude'
         ],
-        'latitude': [
-            'mie_latitude', 'rayleigh_latitude'
-        ],
-        'longitude': [
-           'mie_longitude', 'rayleigh_longitude'
-        ],
-        'datetime': [
-            'rayleigh_datetime', 'mie_datetime'
+        'geoid_separation': [
+            'geoid_separation'
         ]
     }
 };
