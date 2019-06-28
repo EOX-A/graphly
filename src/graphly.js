@@ -726,6 +726,14 @@ class graphly extends EventEmitter {
 
                 let mouseX = d3.event.offsetX; 
                 let mouseY = d3.event.offsetY;
+
+                // TODO: Not sure if this is the best approach to retrieve
+                // with which of the plots we are interacting
+                // Calculate y plot value
+                let plotAmount = this.renderSettings.yAxis.length;
+                let plotHeight = this.height / plotAmount;
+                let plotY = Math.floor(mouseY/plotHeight);
+
                 // Pick the colour from the mouse position. 
                 let gl = self.referenceContext;
                 let pixels = new Uint8Array(4);
@@ -814,19 +822,20 @@ class graphly extends EventEmitter {
                         nodeId.hasOwnProperty('index')){
 
                         let keysSorted = Object.keys(self.currentData).sort();
-
-                        /*for (var i = 0; i < keysSorted.length; i++) {
-                            let key = keysSorted[i];
-                            let val = self.currentData[key][nodeId.index];
-                            if (val instanceof Date){
-                                val = val.toISOString();
-                            }
-                            this.tooltip.append('div')
-                                .text(key+': '+val)
-                        }*/
+                        // Check for groups and remove 
                         let tabledata = [];
                         let uomAvailable = false;
                         for (var i = 0; i < keysSorted.length; i++) {
+                            // check for rendergroups for possible parameters 
+                            // that need to be ignored
+                             // Check for renderGroups
+                            if(this.renderSettings.renderGroups && 
+                                this.renderSettings.groups){
+                                let rGroup = this.renderSettings.groups[plotY];
+                                if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(keysSorted[i]) === -1){
+                                    continue;
+                                }
+                            }
                             let key = keysSorted[i];
                             let val = self.currentData[key][nodeId.index];
                             if (val instanceof Date){
@@ -1651,6 +1660,16 @@ class graphly extends EventEmitter {
                     ignoreKey = true;
                 }
             }
+
+            // Check for renderGroups
+            if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                // only important for first plot
+                let rGroup = this.renderSettings.groups[0];
+                if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(key) === -1){
+                    ignoreKey = true;
+                }
+            }
+
             // Check if key is available in data first
             if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
                 xChoices.push({value: key, label: key});
@@ -1673,16 +1692,56 @@ class graphly extends EventEmitter {
         // parameter to the choices
         let comPars =  this.renderSettings.combinedParameters;
         for (let comKey in comPars){
+
             let includePar = true;
             for (let par=0; par<comPars[comKey].length; par++){
                 if(!this.data.hasOwnProperty(comPars[comKey][par])){
                     includePar = false;
                 }
             }
+
+            // Check for renderGroups
+            if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                // only important for first plot
+                let rGroup = this.renderSettings.groups[0];
+
+                for (let par=0; par<comPars[comKey].length; par++){
+                    if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(comPars[comKey][par]) === -1){
+                        includePar = false;
+                    }
+                }
+            }
+
             if(includePar){
                 xChoices.push({value: comKey, label: comKey});
                 if(this.renderSettings.xAxis === comKey){
                     xChoices[xChoices.length-1].selected = true;
+                }
+            }
+        }
+
+        // Check for renderGroups and shared parameters
+        if(this.renderSettings.renderGroups && this.renderSettings.sharedParameters){
+            // For single plot allow normal choices selection based on current group
+            // but limit the selection to current group parameters
+            if(this.renderSettings.yAxis.length === 1){
+                // Currently selected one is the corresponding shared one part
+                // of the group
+                if(this.renderSettings.sharedParameters.hasOwnProperty(this.renderSettings.xAxis)){
+                    let sharPars = this.renderSettings.sharedParameters[this.renderSettings.xAxis];
+                    for (var i = 0; i < xChoices.length; i++) {
+                        if(sharPars.indexOf(xChoices[i].value)!==-1){
+                            xChoices[i].selected = true;
+                        }
+                    }
+                }
+            } else if(this.renderSettings.yAxis.length > 1){
+                xChoices = [];
+                for (var key in this.renderSettings.sharedParameters){
+                    xChoices.push({value: key, label: key});
+                    if(this.renderSettings.xAxis === key){
+                        xChoices[xChoices.length-1].selected = true;
+                    }
                 }
             }
         }
@@ -2264,12 +2323,30 @@ class graphly extends EventEmitter {
                         this.renderSettings.colorAxis.push([]);
                         this.renderSettings.colorAxis2.push([]);
                         this.renderSettings.additionalYTicks.push([]);
+
                         if(this.renderSettings.hasOwnProperty('renderGroups') && 
                             this.renderSettings.hasOwnProperty('groups')){
-                                this.renderSettings.groups.push(
-                                    Object.keys(this.renderSettings.renderGroups)[0]
-                                );
+
+                            this.renderSettings.groups.push(
+                                Object.keys(this.renderSettings.renderGroups)[0]
+                            );
+                            // If going from one plot to two, check for shared
+                            // x axis parameter
+                            if(this.renderSettings.yAxis.length === 2){
+                                let shPars = this.renderSettings.sharedParameters;
+                                let convAvailable = false;
+                                for (var shK in shPars){
+                                    if(shPars[shK].indexOf(this.renderSettings.xAxis) !== -1){
+                                        this.renderSettings.xAxis = shK;
+                                        convAvailable = true;
+                                    }
+                                }
+                                if(!convAvailable){
+                                    this.renderSettings.xAxis = Object.keys(shPars)[0];
+                                }
                             }
+                        }
+
                         this.emit('axisChange');
                         this.loadData(this.data);
                     });
@@ -2397,11 +2474,6 @@ class graphly extends EventEmitter {
                         renSett.colorAxis.splice(index, 1);
                         renSett.colorAxis2.splice(index, 1);
 
-                        if(renSett.hasOwnProperty('renderGroups') && 
-                            renSett.hasOwnProperty('groups')){
-                            renSett.groups.splice(index, 1);
-                        }
-
                         let addYT = this.renderSettings.additionalYTicks; 
                         addYT.splice(index,1);
                         // Recalculate subaxis margin
@@ -2410,6 +2482,29 @@ class graphly extends EventEmitter {
                             maxL = Math.max(maxL, addYT[i].length);
                         }
                         this.subAxisMarginY = 80*maxL;
+
+                        if(renSett.hasOwnProperty('renderGroups') && 
+                            renSett.hasOwnProperty('groups')){
+
+                            renSett.groups.splice(index, 1);
+                            // If going from two plots to one, check for shared
+                            // x axis parameter
+                            if(renSett.yAxis.length === 1){
+                                if(renSett.sharedParameters.hasOwnProperty(renSett.xAxis)){
+                                    // Find matchin parameter for current group
+                                    let currShared = renSett.sharedParameters[renSett.xAxis];
+                                    // eg datetime: 2 pars
+                                    let currGroup = renSett.groups[0];
+                                    // currgroup mie
+                                    for (let i = 0; i < currShared.length; i++) {
+                                        if(renSett.renderGroups[currGroup]
+                                            .parameters.indexOf(currShared[i]) !== -1){
+                                            this.renderSettings.xAxis = currShared[i];
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         this.emit('axisChange');
                         this.loadData(this.data);
@@ -2600,6 +2695,9 @@ class graphly extends EventEmitter {
                     });
             }
         }
+
+        // Cleanup
+        this.el.selectAll('.rangeEdit').remove();
         
         // range edit forms 
         this.el.append('input')
@@ -3123,7 +3221,8 @@ class graphly extends EventEmitter {
 
         if(this.renderSettings.renderGroups !== false && 
             this.renderSettings.groups!== false && 
-            this.renderSettings.sharedParameters !== false){
+            this.renderSettings.sharedParameters !== false && 
+            this.renderSettings.sharedParameters.hasOwnProperty(this.renderSettings.xAxis)){
 
             xSelection.push(this.renderSettings.xAxis);
 
@@ -5753,6 +5852,15 @@ class graphly extends EventEmitter {
                     ignoreKey = true;
                 }
             }
+
+            // Check for renderGroups
+            if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                let rGroup = this.renderSettings.groups[yPos];
+                if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(key) === -1){
+                    ignoreKey = true;
+                }
+            }
+
             if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
                 selectionChoices.push({value: key, label: key});
                 if(colAxis[yPos][parPos] === key){
@@ -6325,11 +6433,13 @@ class graphly extends EventEmitter {
             rS.sharedParameters !== false){
 
             let currGroup = rS.renderGroups[rS.groups[plotY]];
-            let sharedPars = rS.sharedParameters[idX];
+            if(rS.sharedParameters.hasOwnProperty(idX)){
+                let sharedPars = rS.sharedParameters[idX];
 
-            for (var i = 0; i < sharedPars.length; i++) {
-                if(currGroup.parameters.indexOf(sharedPars[i])!==-1){
-                    idX = sharedPars[i];
+                for (var i = 0; i < sharedPars.length; i++) {
+                    if(currGroup.parameters.indexOf(sharedPars[i])!==-1){
+                        idX = sharedPars[i];
+                    }
                 }
             }
         }
