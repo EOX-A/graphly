@@ -4572,8 +4572,13 @@ class graphly extends EventEmitter {
         this.el.select('#newPlotLink')
             .style('left', (this.width/2)+this.margin.left+40+'px');
 
-
         let heighChunk = this.height/this.yScale.length;
+
+        // Update rendergroups selections if available
+        d3.selectAll('.groupSelect')
+            .style('top', (d,i)=>{return Math.round(i*heighChunk)+'px'})
+            .style('left', Math.round(this.width/2)+'px');
+
 
         for (let yPos = 0; yPos < this.yScale.length; yPos++) {
 
@@ -6167,6 +6172,7 @@ class graphly extends EventEmitter {
                         // Go through data settings and find currently available ones
                         let ds = this.dataSettings;
                         let selectionChoices = [];
+
                         for (let key in ds) {
                             // Check if key is part of a combined parameter
                             let ignoreKey = false;
@@ -6176,10 +6182,21 @@ class graphly extends EventEmitter {
                                     ignoreKey = true;
                                 }
                             }
+
+                            // Check for rendergroups for parameters we need to 
+                            // ignore
+                            if(this.renderSettings.renderGroups && 
+                                this.renderSettings.groups){
+                                let rGroup = this.renderSettings.groups[yPos];
+                                if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(key) === -1){
+                                    ignoreKey = true;
+                                }
+                            }
                             if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
                                 selectionChoices.push(key);
                             }
                         }
+
                         // Select first option
                         if(typeof colorAxis[yPos][parPos]!=='undefined'){
                             colorAxis[yPos][parPos] = selectionChoices[0];
