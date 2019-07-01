@@ -2448,6 +2448,9 @@ class graphly extends EventEmitter {
             .attr('width', this.width)
             .attr('height', currHeight);
 
+        // Remove previous cog icons
+        this.el.selectAll('.cogIcon').remove();
+
 
         for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
@@ -2951,7 +2954,6 @@ class graphly extends EventEmitter {
         }
         // Do some cleanup
         this.el.selectAll('.parameterInfo').remove();
-        this.el.selectAll('.cogIcon').remove();
 
         this.initAxis();
 
@@ -6319,8 +6321,24 @@ class graphly extends EventEmitter {
             // Check if parameter is combined for x and y axis
             let combined = false;
             let combPars = this.renderSettings.combinedParameters;
+            let idX = this.renderSettings.xAxis;
 
-            if(combPars.hasOwnProperty(this.renderSettings.xAxis)){
+            // Check also for sharedParameters
+            let rS = this.renderSettings; 
+            if(rS.renderGroups !== false && rS.groups!== false && 
+                rS.sharedParameters !== false){
+                let currGroup = rS.renderGroups[rS.groups[yPos]];
+                if(rS.sharedParameters.hasOwnProperty(idX)){
+                    let sharedPars = rS.sharedParameters[idX];
+                    for (let i = 0; i < sharedPars.length; i++) {
+                        if(currGroup.parameters.indexOf(sharedPars[i])!==-1){
+                            idX = sharedPars[i];
+                        }
+                    }
+                }
+            }
+
+            if(combPars.hasOwnProperty(idX)){
                 if(combPars.hasOwnProperty(id)){
                     combined = true;
                 }
