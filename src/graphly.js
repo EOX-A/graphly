@@ -6648,9 +6648,12 @@ class graphly extends EventEmitter {
             this.batchDrawer.getContext().SCISSOR_TEST
         );
 
-        this.batchDrawerReference.getContext().enable(
-            this.batchDrawerReference.getContext().SCISSOR_TEST
-        );
+        if(this.batchDrawerReference){
+            this.batchDrawerReference.getContext().enable(
+                this.batchDrawerReference.getContext().SCISSOR_TEST
+            );
+        }
+
 
         let amountOfPlots = this.renderSettings.yAxis.length;
         let blockSize = (
@@ -6670,9 +6673,11 @@ class graphly extends EventEmitter {
             0, axisOffset, this.width, blockSize
         );
 
-        this.batchDrawerReference.getContext().scissor(
-            0, axisOffset, this.width, blockSize
-        );
+        if(this.batchDrawerReference){
+            this.batchDrawerReference.getContext().scissor(
+                0, axisOffset, this.width, blockSize
+            );
+        }
 
     }
 
@@ -6764,14 +6769,16 @@ class graphly extends EventEmitter {
                 this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
                 this.endTiming('batchDrawerReference:draw');
+
+                this.batchDrawerReference.getContext().disable(
+                    this.batchDrawerReference.getContext().SCISSOR_TEST
+                );
             }
             // turn off the scissor test so you can render like normal again.
             this.batchDrawer.getContext().disable(
                 this.batchDrawer.getContext().SCISSOR_TEST
             );
-            this.batchDrawerReference.getContext().disable(
-                this.batchDrawerReference.getContext().SCISSOR_TEST
-            );
+            
         }
         // Save preview image of rendering of second y axis 
         // without data from first y axis
@@ -6820,15 +6827,16 @@ class graphly extends EventEmitter {
                 this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
                 this.endTiming('batchDrawerReference:draw');
+
+                this.batchDrawerReference.getContext().disable(
+                    this.batchDrawerReference.getContext().SCISSOR_TEST
+                );
             }
             // turn off the scissor test so you can render like normal again.
             this.batchDrawer.getContext().disable(
                 this.batchDrawer.getContext().SCISSOR_TEST
             );
-            this.batchDrawerReference.getContext().disable(
-                this.batchDrawerReference.getContext().SCISSOR_TEST
-            );
-
+            
         }
         this.updatePreviewImage('previewImageL');
 
@@ -6868,15 +6876,16 @@ class graphly extends EventEmitter {
                     this.startTiming('batchDrawerReference:draw');
                     this.batchDrawerReference.draw();
                     this.endTiming('batchDrawerReference:draw');
+                    this.batchDrawerReference.getContext().disable(
+                        this.batchDrawerReference.getContext().SCISSOR_TEST
+                    );
                 }
 
                 // turn off the scissor test so you can render like normal again.
                 this.batchDrawer.getContext().disable(
                     this.batchDrawer.getContext().SCISSOR_TEST
                 );
-                this.batchDrawerReference.getContext().disable(
-                    this.batchDrawerReference.getContext().SCISSOR_TEST
-                );
+                
             }
         }
 
