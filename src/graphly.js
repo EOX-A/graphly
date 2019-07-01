@@ -451,14 +451,6 @@ class graphly extends EventEmitter {
             ]
         );
 
-
-        // TODO: For now if using multiaxis we disable fit functionality
-        // need to look into how to render fit curve over multiple plots
-        if(this.multiYAxis){
-            this.enableFit = false;
-        }
-
-
         function customColorAxisTickFormat(value){
             if(value  instanceof Date){
                 tickFormat = u.getCustomUTCTimeTickFormat()(value);
@@ -3417,7 +3409,7 @@ class graphly extends EventEmitter {
                             for (var i = 0; i < currYAxis.length; i++) {
                                 // Try to find equvalent parameter
                                 let tmpPar = currYAxis[i].replace(prevGroup, newGroup);
-                                if(newGroupPars.indexOf(tmpPar)!==-1){
+                                if(newGroupPars.indexOf(tmpPar)!==-1 && currColAxis[i] !== null){
                                     newYAxis.push(tmpPar);
                                     // Check for corresponding color
                                     let tmpCol = currColAxis[i].replace(prevGroup, newGroup);
@@ -4240,7 +4232,8 @@ class graphly extends EventEmitter {
     }
 
 
-    renderRegression(data, reg, yScale, color, thickness) {
+    renderRegression(data, plotY, reg, yScale, color, thickness) {
+        yScale = yScale[plotY];
         let result;
         let c = defaultFor(color, [0.1, 0.4, 0.9]);
         if(c.length === 3){
@@ -4257,6 +4250,8 @@ class graphly extends EventEmitter {
             ];
         }
 
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
+
         switch(reg.type){
             case 'linear': {
                 result = regression('linear', data);
@@ -4270,6 +4265,7 @@ class graphly extends EventEmitter {
 
                 xPoints = xPoints.map(this.xScale);
                 yPoints = yPoints.map(yScale);
+                yPoints = yPoints.map((p)=>{return p+axisOffset;});
 
                 this.batchDrawer.addLine(
                     xPoints[1], yPoints[1],
@@ -4312,8 +4308,8 @@ class graphly extends EventEmitter {
                         px1 = this.xScale(new Date(Math.ceil(x1)));
                         px2 = this.xScale(new Date(Math.ceil(x2)));
                     }
-                    py1 = yScale(y1);
-                    py2 = yScale(y2);
+                    py1 = yScale(y1) + axisOffset;
+                    py2 = yScale(y2) + axisOffset;
 
                     this.batchDrawer.addLine(
                         px1, py1,
@@ -4328,17 +4324,23 @@ class graphly extends EventEmitter {
         if(typeof reg.type !== 'undefined'){
             // render regression label
             let regrString = '';
-            for (var rPos = result.equation.length - 1; rPos >= 0; rPos--) {
-                regrString += result.equation[rPos].toPrecision(4);
-                if(rPos>1){
-                    regrString += 'x<sup>'+rPos+'</sup>';
-                } else if (rPos === 1){
-                    regrString += 'x';
-                }
-                if(rPos>0){
-                    regrString += ' + ';
+            if(reg.type === 'linear'){
+                regrString = result.equation[0].toPrecision(4)+'x + '+
+                             result.equation[1].toPrecision(4);
+            } else {
+                for (let rPos = result.equation.length - 1; rPos >= 0; rPos--) {
+                    regrString += result.equation[rPos].toPrecision(4);
+                    if(rPos>1){
+                        regrString += 'x<sup>'+rPos+'</sup>';
+                    } else if (rPos === 1){
+                        regrString += 'x';
+                    }
+                    if(rPos>0){
+                        regrString += ' + ';
+                    }
                 }
             }
+            
             regrString += '  (r<sup>2</sup>: '+ (result.r2).toPrecision(4)+')';
 
             this.el.select('#regressionInfo')
@@ -4349,7 +4351,7 @@ class graphly extends EventEmitter {
         }
     }
 
-    createRegression(data, parPos, yAxRen, yScale, inactive) {
+    createRegression(data, parPos, plotY, yAxRen, yScale, inactive) {
 
         let xAxRen = this.renderSettings.xAxis;
         let resultData;
@@ -4402,9 +4404,9 @@ class graphly extends EventEmitter {
                 }
 
                 if(!inactive){
-                    this.renderRegression(resultData, reg, yScale, rC);
+                    this.renderRegression(resultData, plotY, reg, yScale, rC);
                 }else{
-                    this.renderRegression(resultData, reg, yScale, [0.2,0.2,0.2,0.4]);
+                    this.renderRegression(resultData, plotY, reg, yScale, [0.2,0.2,0.2,0.4]);
                 }
             }
             
@@ -4433,15 +4435,15 @@ class graphly extends EventEmitter {
                     if(this.dataSettings.hasOwnProperty(yAxRen) &&
                        this.dataSettings[yAxRen].hasOwnProperty('color')){
                         this.renderRegression(
-                            resultData, reg, yScale,
+                            resultData, plotY, reg, yScale,
                             this.dataSettings[yAxRen].color
                         );
                 }else{
-                    this.renderRegression(resultData, reg, yScale);
+                    this.renderRegression(resultData, plotY, reg, yScale);
                 }
                     
                 }else{
-                    this.renderRegression(resultData, reg, yScale, [0.2,0.2,0.2,0.4]);
+                    this.renderRegression(resultData, plotY, reg, yScale, [0.2,0.2,0.2,0.4]);
                 }
             }
         }
@@ -5635,8 +5637,8 @@ class graphly extends EventEmitter {
         this.el.select('#regressionInfo').remove();
         this.el.append('div')
             .attr('id', 'regressionInfo')
-            .style('bottom', (this.margin.bottom+this.subAxisMarginX)+'px')
-            .style('left', (this.width/2)+'px');
+            .style('bottom', (this.margin.bottom+this.subAxisMarginX+40)+'px')
+            .style('left', ((this.width/2)-200+this.margin.left)+'px');
 
         
 
@@ -5657,8 +5659,8 @@ class graphly extends EventEmitter {
 
     updateInfoBoxes(){
         this.el.select('#regressionInfo')
-            .style('bottom', (this.margin.bottom+this.subAxisMarginX)+'px')
-            .style('left', (this.width/2)+'px');
+            .style('bottom', (this.margin.bottom+this.subAxisMarginX+40)+'px')
+            .style('left', ((this.width/2)-200+this.margin.left)+'px');
 
         let currHeight = this.height / this.yScale.length;
         for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
@@ -6500,11 +6502,12 @@ class graphly extends EventEmitter {
                 // Check if any regression type is selected for parameter
                 if(this.enableFit){
                     this.createRegression(
-                        data, parPos, yAxisSet[parPos], currYScale[parPos]
+                        data, parPos, plotY, yAxisSet[parPos], currYScale
                     );
                     if(inactiveData[yAxisSet[parPos]].length>0){
                         this.createRegression(
-                            this.data, parPos, yAxisSet[parPos], currYScale[parPos], true
+                            this.data, parPos, plotY, yAxisSet[parPos],
+                            currYScale, true
                         );
                     }
                 }

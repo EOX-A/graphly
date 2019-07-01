@@ -219,6 +219,7 @@ input[type=text] {
     padding-right: 10px;
     position: absolute;
     text-align: center;
+    width: 400px;
     z-index: 5;
 }
 
