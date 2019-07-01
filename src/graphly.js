@@ -1184,16 +1184,21 @@ class graphly extends EventEmitter {
         }
 
 
+        // Go through the parameter labels and check if they are visible or not
+        let parsInf = this.el.selectAll('.parameterInfo');
+        this.el.selectAll('.svgInfoContainer').each(function(d,i){
 
-        if(this.displayParameterLabel){
-            this.el.selectAll('.svgInfoContainer').each(function(){
-                if(d3.select(this).selectAll('text').empty()){
-                    d3.select(this).style('visibility', 'hidden');
+            if(d3.select(this).selectAll('text').empty()){
+                d3.select(this).style('visibility', 'hidden');
+            } else {
+                if(parsInf[0].length>i){
+                    d3.select(this).style('visibility', d3.select(parsInf[0][i]).style('visibility'));
                 } else {
                     d3.select(this).style('visibility', 'visible');
                 }
-            });
-        }
+            }
+        });
+
 
         // Set interactive blue to black for labels
         this.svg.selectAll('.axisLabel').attr('fill', 'black');
@@ -2591,6 +2596,35 @@ class graphly extends EventEmitter {
                             this.loadData(this.data);
                         });
                 }
+
+                // Add settings button to display/hide parameter information
+                if(!this.displayParameterLabel) {
+                    if(this.el.select('#cogIcon'+plotY).empty()){
+                        this.el.append('div')
+                            .attr('id', ('cogIcon'+plotY))
+                            .attr('class', 'cogIcon')
+                            .style('left', (this.margin.left+this.subAxisMarginY)+'px')
+                            .style('top', (offsetY+this.margin.top)+'px')
+                            .on('click', ()=>{
+                                let info = this.el.select(('#parameterInfo'+plotY));
+                                if(info.style('visibility') == 'visible'){
+                                    info.style('visibility', 'hidden');
+                                    this.el.select(('#parameterSettings'+plotY))
+                                        .style('display', 'none');
+                                    this.displayParameterLabel = false;
+                                }else{
+                                    info.style('visibility', 'visible');
+                                    this.displayParameterLabel = true;
+                                }
+                            })
+                            .on('mouseover', function(){
+                                d3.select(this).style('background-size', '45px 45px');
+                            })
+                            .on('mouseout', function(){
+                                d3.select(this).style('background-size', '41px 41px');
+                            });
+                    }
+                }
             }
 
             this.svg.append('g')
@@ -2660,33 +2694,7 @@ class graphly extends EventEmitter {
         this.createInfoBoxes();
         this.createParameterInfo();
 
-        // Add settings button to display/hide parameter information
-        if(!this.displayParameterLabel) {
-            if(this.el.select('#cogIcon').empty()){
-                this.el.append('div')
-                    .attr('id', 'cogIcon')
-                    .style('left', (this.margin.left+this.subAxisMarginY)+'px')
-                    .style('top', '10px')
-                    .on('click', ()=>{
-                        let info = this.el.select('#parameterInfo');
-                        if(info.style('visibility') == 'visible'){
-                            info.style('visibility', 'hidden');
-                            this.el.select('#parameterSettings')
-                                .style('display', 'none');
-                            this.displayParameterLabel = false;
-                        }else{
-                            info.style('visibility', 'visible');
-                            this.displayParameterLabel = true;
-                        }
-                    })
-                    .on('mouseover', function(){
-                        d3.select(this).style('background-size', '45px 45px');
-                    })
-                    .on('mouseout', function(){
-                        d3.select(this).style('background-size', '41px 41px');
-                    });
-            }
-        }
+        
 
         // Cleanup
         this.el.selectAll('.rangeEdit').remove();
@@ -2943,9 +2951,9 @@ class graphly extends EventEmitter {
         }
         // Do some cleanup
         this.el.selectAll('.parameterInfo').remove();
-        
-        this.initAxis();
+        this.el.selectAll('.cogIcon').remove();
 
+        this.initAxis();
 
         // Make sure all elements have correct size after possible changes 
         // because of difference in data and changes in size since initialization
