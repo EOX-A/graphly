@@ -4591,6 +4591,8 @@ class graphly extends EventEmitter {
             .style('top', (d,i)=>{return (Math.round(i*heighChunk)+this.margin.top-10)+'px'})
             .style('left', Math.round(this.width/2)+'px');
 
+         d3.selectAll('.cogIcon')
+            .style('top', (d,i)=>{return (Math.round(i*heighChunk)+this.margin.top)+'px'});
 
         for (let yPos = 0; yPos < this.yScale.length; yPos++) {
 
