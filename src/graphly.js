@@ -3386,7 +3386,7 @@ class graphly extends EventEmitter {
                 let select = this.el
                     .append('select')
                         .attr('class','groupSelect')
-                        .style('top', Math.round(yPos*heighChunk)+'px')
+                        .style('top', Math.round((yPos*heighChunk)+this.margin.top-10)+'px')
                         .style('left', Math.round(this.width/2)+'px')
                         .on('change', function(){
                             // Go through current configuration and try to 
@@ -4578,7 +4578,7 @@ class graphly extends EventEmitter {
 
         // Update rendergroups selections if available
         d3.selectAll('.groupSelect')
-            .style('top', (d,i)=>{return Math.round(i*heighChunk)+'px'})
+            .style('top', (d,i)=>{return (Math.round(i*heighChunk)+this.margin.top-10)+'px'})
             .style('left', Math.round(this.width/2)+'px');
 
 
