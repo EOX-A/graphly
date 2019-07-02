@@ -1647,8 +1647,7 @@ class graphly extends EventEmitter {
 
 
         // Go through data settings and find currently available ones
-        let ds = this.dataSettings;
-        for (let key in ds) {
+        for (let key in this.data) {
             // Check if key is part of a combined parameter
             let ignoreKey = false;
             let comKey = null;
@@ -1760,8 +1759,7 @@ class graphly extends EventEmitter {
             let ySubChoices = [];
 
             // Go through data settings and find currently available ones
-            let ds = this.dataSettings;
-            for (let key in ds) {
+            for (let key in this.data) {
                 // Check if key is part of a combined parameter
                 let ignoreKey = false;
                 let comKey = null;
@@ -3193,6 +3191,26 @@ class graphly extends EventEmitter {
         return axisformat;
     }
 
+    findClosestParameterMatch(currentParamenter, newGroupParameters){
+        let decPar = currentParamenter.split('_');
+        let selected = false;
+        let maxMatches = 0;
+        for(let par=0; par<newGroupParameters.length; par++){
+            let matches = 0;
+            let decgp = newGroupParameters[par].split('_');
+            for (let i = 0; i < decgp.length; i++) {
+                if(decPar.indexOf(decgp[i]) !== -1){
+                    matches++;
+                }
+            }
+            if(matches>maxMatches){
+                maxMatches = matches;
+                selected = newGroupParameters[par];
+            }
+        }
+        return selected;
+    }
+
     initAxis(){
 
         function getScale(isTime){
@@ -3402,8 +3420,9 @@ class graphly extends EventEmitter {
                             // Go through current configuration and try to 
                             // adapt all parameters to the other group selected
                             // if not all is available try to check defaults
-                            let newGroup = selectionGroups[this.selectedIndex];
-                            let newGroupPars = that.renderSettings.renderGroups[newGroup].parameters;
+                            let groupKey = selectionGroups[this.selectedIndex];
+                            let newGroup =  that.renderSettings.renderGroups[groupKey];
+                            let newGroupPars = newGroup.parameters;
                             let prevGroup = that.renderSettings.groups[yPos];
                             //let prevGroupPars = that.renderSettings.renderGroups[prevGroup].parameters;
                             let currYAxis = that.renderSettings.yAxis[yPos];
@@ -3417,30 +3436,59 @@ class graphly extends EventEmitter {
                             let newCol2Axis = [];
 
                             for (var i = 0; i < currYAxis.length; i++) {
+
                                 // Try to find equvalent parameter
-                                let tmpPar = currYAxis[i].replace(prevGroup, newGroup);
-                                if(newGroupPars.indexOf(tmpPar)!==-1 && currColAxis[i] !== null){
+                                let tmpPar = currYAxis[i].replace(prevGroup, groupKey);
+                                if(newGroupPars.indexOf(tmpPar)!==-1){
                                     newYAxis.push(tmpPar);
+                                } else {
+                                    // If not found check for defaults
+                                    if(newGroup.hasOwnProperty('defaults') && 
+                                       newGroup.defaults.hasOwnProperty('yAxis')){
+                                        newYAxis.push(newGroup.defaults.yAxis);
+                                    } else {
+                                        // If now default try to find closest match
+                                        let selected = that.findClosestParameterMatch(
+                                            currYAxis[i], newGroupPars
+                                        );
+                                        if(selected){
+                                            newYAxis.push(selected);
+                                        }
+                                    }
+                                }
+
+                                if(currColAxis[i] !== null){
                                     // Check for corresponding color
-                                    let tmpCol = currColAxis[i].replace(prevGroup, newGroup);
+                                    let tmpCol = currColAxis[i].replace(prevGroup, groupKey);
                                     if(newGroupPars.indexOf(tmpCol)!==-1){
                                         newColAxis.push(tmpCol)
                                     } else {
-                                        // If no colorscale equivalent found set to null
-                                        newColAxis.push(null);
+                                        // If not found check for defaults
+                                        if(newGroup.hasOwnProperty('defaults') && 
+                                           newGroup.defaults.hasOwnProperty('yAxis')){
+                                            newYAxis.push(newGroup.defaults.colorAxis);
+                                        } else {
+                                            // Search for closest match
+                                            let selected = that.findClosestParameterMatch(
+                                                currColAxis[i], newGroupPars
+                                            );
+                                            if(selected){
+                                                newYAxis.push(selected);
+                                            } else {
+                                                newColAxis.push(null);
+                                            }
+                                        }
                                     }
-                                } else {
-                                    // TODO: Should we try to find an alternative here?
                                 }
                             }
 
                             for (var i = 0; i < currY2Axis.length; i++) {
                                 // Try to find equvalent parameter
-                                let tmpPar = currY2Axis[i].replace(prevGroup, newGroup);
+                                let tmpPar = currY2Axis[i].replace(prevGroup, groupKey);
                                 if(newGroupPars.indexOf(tmpPar)!==-1){
                                     newY2Axis.push(tmpPar);
                                     // Check for corresponding color
-                                    let tmpCol = currCol2Axis[i].replace(prevGroup, newGroup);
+                                    let tmpCol = currCol2Axis[i].replace(prevGroup, groupKey);
                                     if(newGroupPars.indexOf(tmpCol)!==-1){
                                         newCol2Axis.push(tmpCol)
                                     } else {
@@ -3448,20 +3496,23 @@ class graphly extends EventEmitter {
                                         newCol2Axis.push(null);
                                     }
                                 } else {
-                                    // TODO: Should we try to find an alternative here?
+                                    // TODO
                                 }
                             }
 
-                            that.renderSettings.groups[yPos] = newGroup;
+                            that.renderSettings.groups[yPos] = groupKey;
                             // Check if any of the parameters could be converted
                             // if not look for defaults
                             if(newYAxis.length>0 || newY2Axis.length>0){
                                 that.renderSettings.yAxis[yPos] = newYAxis;
-                                 that.renderSettings.colorAxis[yPos] = newColAxis;
-                                 that.renderSettings.y2Axis[yPos] = newY2Axis;
-                                 that.renderSettings.colorAxis2[yPos] = newCol2Axis;
+                                that.renderSettings.colorAxis[yPos] = newColAxis;
+                                that.renderSettings.y2Axis[yPos] = newY2Axis;
+                                that.renderSettings.colorAxis2[yPos] = newCol2Axis;
                             } else {
-                                // TODO: Set some defaults
+                                that.renderSettings.yAxis[yPos] = [];
+                                that.renderSettings.colorAxis[yPos] = [];
+                                that.renderSettings.y2Axis[yPos] = [];
+                                that.renderSettings.colorAxis2[yPos] = [];
                             }
                             that.emit('axisChange');
                             that.loadData(that.data);
