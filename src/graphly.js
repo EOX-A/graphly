@@ -6234,7 +6234,7 @@ class graphly extends EventEmitter {
                 .attr('type', 'checkbox')
                 .property('checked', active)
                 .on('change', ()=>{
-                    if(this.select("#colorscaleCB").property("checked")){
+                    if(this.el.select("#colorscaleCB").property("checked")){
                         // Go through data settings and find currently available ones
                         let ds = this.dataSettings;
                         let selectionChoices = [];
