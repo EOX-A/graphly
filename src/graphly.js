@@ -3466,14 +3466,14 @@ class graphly extends EventEmitter {
                                         // If not found check for defaults
                                         if(newGroup.hasOwnProperty('defaults') && 
                                            newGroup.defaults.hasOwnProperty('yAxis')){
-                                            newYAxis.push(newGroup.defaults.colorAxis);
+                                            newColAxis.push(newGroup.defaults.colorAxis);
                                         } else {
                                             // Search for closest match
                                             let selected = that.findClosestParameterMatch(
                                                 currColAxis[i], newGroupPars
                                             );
                                             if(selected){
-                                                newYAxis.push(selected);
+                                                newColAxis.push(selected);
                                             } else {
                                                 newColAxis.push(null);
                                             }
