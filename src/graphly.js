@@ -2612,10 +2612,8 @@ class graphly extends EventEmitter {
                                     info.style('visibility', 'hidden');
                                     this.el.select(('#parameterSettings'+plotY))
                                         .style('display', 'none');
-                                    this.displayParameterLabel = false;
                                 }else{
                                     info.style('visibility', 'visible');
-                                    this.displayParameterLabel = true;
                                 }
                             })
                             .on('mouseover', function(){
@@ -2625,6 +2623,9 @@ class graphly extends EventEmitter {
                                 d3.select(this).style('background-size', '41px 41px');
                             });
                     }
+                } else {
+                    let info = this.el.select(('#parameterInfo'+plotY));
+                    info.style('visibility', 'visible');
                 }
             }
 
