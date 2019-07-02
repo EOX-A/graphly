@@ -1205,7 +1205,7 @@ class graphly extends EventEmitter {
         this.svg.selectAll('.axisLabel').attr('font-weight', 'normal');
         this.svg.selectAll('.axisLabel').attr('text-decoration', 'none');
         // Check if one of the labels says Add parameter ...
-        d3.selectAll('.axisLabel').filter(function(){ 
+        this.el.selectAll('.axisLabel').filter(function(){ 
             return d3.select(this).text() == 'Add parameter ...'
         })
         .attr('fill', 'none');
@@ -4638,11 +4638,11 @@ class graphly extends EventEmitter {
         let heighChunk = this.height/this.yScale.length;
 
         // Update rendergroups selections if available
-        d3.selectAll('.groupSelect')
+        this.el.selectAll('.groupSelect')
             .style('top', (d,i)=>{return (Math.round(i*heighChunk)+this.margin.top-10)+'px'})
             .style('left', Math.round(this.width/2)+'px');
 
-         d3.selectAll('.cogIcon')
+        this.el.selectAll('.cogIcon')
             .style('top', (d,i)=>{return (Math.round(i*heighChunk)+this.margin.top)+'px'});
 
         for (let yPos = 0; yPos < this.yScale.length; yPos++) {
@@ -4659,7 +4659,7 @@ class graphly extends EventEmitter {
                 }
             }
 
-            d3.select('#renderingContainer'+yPos)
+            this.el.select('#renderingContainer'+yPos)
                 .attr('fill', 'none')
                 .attr(
                     'transform',
@@ -4676,7 +4676,7 @@ class graphly extends EventEmitter {
             }
         }
 
-        d3.select(this.nsId+'clipbox').select('rect')
+        this.el.select(this.nsId+'clipbox').select('rect')
             .attr('height', heighChunk-this.separation)
             .attr('width', this.width);
 
@@ -5738,7 +5738,7 @@ class graphly extends EventEmitter {
                     }
                 });
 
-            d3.select('#svgInfoContainer'+yPos)
+            this.el.select('#svgInfoContainer'+yPos)
                 .attr('transform', ()=>{
                     let xOffset = (
                         this.width - this.margin.right - 260
@@ -5835,7 +5835,7 @@ class graphly extends EventEmitter {
 
         for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
-            d3.select('#svgInfoContainer'+yPos).remove();
+            this.el.select('#svgInfoContainer'+yPos).remove();
             // Add rendering representation to svg
             let infoGroup = this.svg.append('g')
                 .attr('id', 'svgInfoContainer'+yPos)
@@ -6233,7 +6233,7 @@ class graphly extends EventEmitter {
                 .attr('type', 'checkbox')
                 .property('checked', active)
                 .on('change', ()=>{
-                    if(d3.select("#colorscaleCB").property("checked")){
+                    if(this.select("#colorscaleCB").property("checked")){
                         // Go through data settings and find currently available ones
                         let ds = this.dataSettings;
                         let selectionChoices = [];
