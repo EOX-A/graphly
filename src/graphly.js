@@ -2319,8 +2319,8 @@ class graphly extends EventEmitter {
                         this.renderSettings.colorAxis2.push([]);
                         this.renderSettings.additionalYTicks.push([]);
 
-                        if(this.renderSettings.hasOwnProperty('renderGroups') && 
-                            this.renderSettings.hasOwnProperty('groups')){
+                        if(this.renderSettings.renderGroups && 
+                            this.renderSettings.groups){
 
                             this.renderSettings.groups.push(
                                 Object.keys(this.renderSettings.renderGroups)[0]
@@ -2481,8 +2481,7 @@ class graphly extends EventEmitter {
                         }
                         this.subAxisMarginY = 80*maxL;
 
-                        if(renSett.hasOwnProperty('renderGroups') && 
-                            renSett.hasOwnProperty('groups')){
+                        if(renSett.renderGroups && renSett.groups){
 
                             renSett.groups.splice(index, 1);
                             // If going from two plots to one, check for shared
@@ -2539,8 +2538,7 @@ class graphly extends EventEmitter {
                             rS.colorAxis[index-1] = currColAx;
                             rS.colorAxis2[index-1] = currColAx2;
 
-                            if(rS.hasOwnProperty('renderGroups') && 
-                            rS.hasOwnProperty('groups')){
+                            if(rS.renderGroups && rS.groups){
                                 let currGroup = rS.groups[index];
                                 rS.groups[index] = rS.groups[index-1];
                                 rS.groups[index-1] = currGroup;
@@ -2551,7 +2549,7 @@ class graphly extends EventEmitter {
                         });
                 }
 
-                // Add move dwon arrow 
+                // Add move down arrow 
                 if(plotY<this.renderSettings.yAxis.length-1){
                     let addoff = 45;
                     if(plotY === 0){
@@ -2586,8 +2584,7 @@ class graphly extends EventEmitter {
                             rS.colorAxis[index+1] = currColAx;
                             rS.colorAxis2[index+1] = currColAx2;
 
-                            if(rS.hasOwnProperty('renderGroups') && 
-                            rS.hasOwnProperty('groups')){
+                            if(rS.renderGroups && rS.groups){
                                 let currGroup = rS.groups[index];
                                 rS.groups[index] = rS.groups[index+1];
                                 rS.groups[index+1] = currGroup;
@@ -2597,36 +2594,36 @@ class graphly extends EventEmitter {
                             this.loadData(this.data);
                         });
                 }
+            }
 
-                // Add settings button to display/hide parameter information
-                if(!this.displayParameterLabel) {
-                    if(this.el.select('#cogIcon'+plotY).empty()){
-                        this.el.append('div')
-                            .attr('id', ('cogIcon'+plotY))
-                            .attr('class', 'cogIcon')
-                            .style('left', (this.margin.left+this.subAxisMarginY)+'px')
-                            .style('top', (offsetY+this.margin.top)+'px')
-                            .on('click', ()=>{
-                                let info = this.el.select(('#parameterInfo'+plotY));
-                                if(info.style('visibility') == 'visible'){
-                                    info.style('visibility', 'hidden');
-                                    this.el.select(('#parameterSettings'+plotY))
-                                        .style('display', 'none');
-                                }else{
-                                    info.style('visibility', 'visible');
-                                }
-                            })
-                            .on('mouseover', function(){
-                                d3.select(this).style('background-size', '45px 45px');
-                            })
-                            .on('mouseout', function(){
-                                d3.select(this).style('background-size', '41px 41px');
-                            });
-                    }
-                } else {
-                    let info = this.el.select(('#parameterInfo'+plotY));
-                    info.style('visibility', 'visible');
+             // Add settings button to display/hide parameter information
+            if(!this.displayParameterLabel) {
+                if(this.el.select('#cogIcon'+plotY).empty()){
+                    this.el.append('div')
+                        .attr('id', ('cogIcon'+plotY))
+                        .attr('class', 'cogIcon')
+                        .style('left', (this.margin.left+this.subAxisMarginY)+'px')
+                        .style('top', (offsetY+this.margin.top)+'px')
+                        .on('click', ()=>{
+                            let info = this.el.select(('#parameterInfo'+plotY));
+                            if(info.style('visibility') == 'visible'){
+                                info.style('visibility', 'hidden');
+                                this.el.select(('#parameterSettings'+plotY))
+                                    .style('display', 'none');
+                            }else{
+                                info.style('visibility', 'visible');
+                            }
+                        })
+                        .on('mouseover', function(){
+                            d3.select(this).style('background-size', '45px 45px');
+                        })
+                        .on('mouseout', function(){
+                            d3.select(this).style('background-size', '41px 41px');
+                        });
                 }
+            } else {
+                let info = this.el.select(('#parameterInfo'+plotY));
+                info.style('visibility', 'visible');
             }
 
             this.svg.append('g')
