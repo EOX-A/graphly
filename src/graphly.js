@@ -3381,7 +3381,7 @@ class graphly extends EventEmitter {
             .domain([0,1])
             .range([this.height, 0]);
 
-        d3.selectAll('.groupSelect').remove();
+        this.el.selectAll('.groupSelect').remove();
 
         for (let yPos = 0; yPos < multiLength; yPos++) {
 
