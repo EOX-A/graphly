@@ -38,6 +38,8 @@
 *        with keys for each possible identifier and an array with parameter 
 *        identifiers as stringslist of can be provided so that only those
 *        are shown as parameter labels that allow configuration
+* @property {boolean} [reversedYAxis] Option to revert y axis extent 
+*        (high values on bottom, low values on top)
 */
 
 /**
@@ -379,6 +381,10 @@ class graphly extends EventEmitter {
 
         this.renderSettings.combinedParameters = defaultFor(
             this.renderSettings.combinedParameters, {}
+        );
+
+        this.renderSettings.reversedYAxis = defaultFor(
+            this.renderSettings.reversedYAxis, false
         );
 
         this.renderSettings.y2Axis = defaultFor(
@@ -1116,9 +1122,15 @@ class graphly extends EventEmitter {
             let currHeight = this.height/this.yScale.length;
 
             for (let yPos = 0; yPos < this.yScale.length; yPos++) {
-                this.yScale[yPos].range([
-                    Math.floor((currHeight-this.separation)*this.resFactor), 0
-                ]);
+                if(this.renderSettings.reversedYAxis){
+                    this.yScale[yPos].range([
+                        0, Math.floor((currHeight-this.separation)*this.resFactor)
+                    ]);
+                } else  {
+                    this.yScale[yPos].range([
+                        Math.floor((currHeight-this.separation)*this.resFactor), 0
+                    ]);
+                }
             }
 
             for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
@@ -3011,7 +3023,8 @@ class graphly extends EventEmitter {
         let currExt, resExt; 
         for (var i = selection.length - 1; i >= 0; i--) {
             // Check if null value has been defined
-            if(this.dataSettings[selection[i]].hasOwnProperty('nullValue')){
+            if(this.dataSettings.hasOwnProperty(selection[i]) &&
+               this.dataSettings[selection[i]].hasOwnProperty('nullValue')){
                 let nV = this.dataSettings[selection[i]].nullValue;
                 // If parameter has nullvalue defined ignore it 
                 // when calculating extent
@@ -3654,10 +3667,14 @@ class graphly extends EventEmitter {
                         .range([heighChunk-this.separation, 0])
                 );
             }else{
+                let scaleRange = [heighChunk-this.separation, 0];
+                if(this.renderSettings.reversedYAxis){
+                    scaleRange = [0, heighChunk-this.separation];
+                }
                 this.yScale.push(
                     yScaleType
                         .domain(yExtent)
-                        .range([heighChunk-this.separation, 0])
+                        .range(scaleRange)
                 );
             }
 
@@ -4662,7 +4679,11 @@ class graphly extends EventEmitter {
 
         for (let yPos = 0; yPos < this.yScale.length; yPos++) {
 
-            this.yScale[yPos].range([heighChunk-this.separation, 0]);
+            let scaleRange = [heighChunk-this.separation, 0];
+            if(this.renderSettings.reversedYAxis){
+                scaleRange = [0, heighChunk-this.separation];
+            }
+            this.yScale[yPos].range(scaleRange);
             this.yAxis[yPos].innerTickSize(-this.width);
             
             if(this.renderSettings.yAxis[yPos].length > 0){
