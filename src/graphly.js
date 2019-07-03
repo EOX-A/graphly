@@ -4460,6 +4460,9 @@ class graphly extends EventEmitter {
 
                 var filteredX = data[xAxRen].filter(filterFunc.bind(this));
                 var filteredY = data[yAxRen].filter(filterFunc.bind(this));
+                // remove possible filtered out values
+                filteredX = filteredX.filter((d)=>{return !Number.isNaN(d);});
+                filteredY = filteredY.filter((d)=>{return !Number.isNaN(d);});
 
                 if(this.xTimeScale){
 
@@ -4490,18 +4493,19 @@ class graphly extends EventEmitter {
             };
 
             if(typeof reg.type !== 'undefined'){
+                // remove possible filtered out values
+                let xdata = data[xAxRen].filter((d)=>{return !Number.isNaN(d);});
+                let ydata = data[yAxRen].filter((d)=>{return !Number.isNaN(d);});
                 // TODO: Check for size mismatch?
                 if(this.xTimeScale){
-                    resultData = data[xAxRen]
+                    resultData = xdata
                         .map(function(d){return d.getTime();})
-                        .zip(
-                            data[yAxRen]
-                        );
+                        .zip(ydata);
                 }else{
-                    resultData = data[xAxRen].zip(
-                        data[yAxRen]
-                    );
+                    
+                    resultData = xdata.zip(ydata);
                 }
+
                 if(!inactive){
                     // Check for predefined color
                     if(this.dataSettings.hasOwnProperty(yAxRen) &&
