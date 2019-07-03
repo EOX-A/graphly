@@ -878,14 +878,27 @@ class graphly extends EventEmitter {
                             .text(function (d) { return d.value; });
 
 
-                        // Check to see if data has set some position aliases
-                        if(self.renderSettings.hasOwnProperty('positionAlias')){
-                            let posAlias = self.renderSettings.positionAlias;
-                            var lat, lon, alt;
-                            var cmobPar = self.renderSettings.combinedParameters;
+                        // Check to see if a global positionAlias is defined
+                        // or a group based position alias is defined
+                        let posAlias;
+                        let rS = self.renderSettings;
+                        if(rS.hasOwnProperty('positionAlias')){
+                            posAlias =  rS.positionAlias;
+                        }
 
-                            if(cmobPar.hasOwnProperty(posAlias.latitude)){
-                                var key = cmobPar[posAlias.latitude];
+                        if(rS.renderGroups !== false && rS.groups !== false){
+                            let groupKey = rS.groups[plotY];
+                            if(rS.renderGroups[groupKey].hasOwnProperty('positionAlias')){
+                                posAlias = rS.renderGroups[groupKey].positionAlias;
+                            }
+                        }
+                        // Check to see if data has set some position aliases
+                        if(posAlias){
+                            let lat, lon, alt;
+                            let combPar = self.renderSettings.combinedParameters;
+
+                            if(combPar.hasOwnProperty(posAlias.latitude)){
+                                let key = combPar[posAlias.latitude];
                                 if(self.currentData.hasOwnProperty(key[0]) && 
                                    self.currentData.hasOwnProperty(key[1]) ){
                                     lat = [
@@ -900,8 +913,8 @@ class graphly extends EventEmitter {
                                 }
                             }
 
-                            if(cmobPar.hasOwnProperty(posAlias.longitude)){
-                                var key = cmobPar[posAlias.longitude];
+                            if(combPar.hasOwnProperty(posAlias.longitude)){
+                                let key = combPar[posAlias.longitude];
                                 if(self.currentData.hasOwnProperty(key[0]) && 
                                    self.currentData.hasOwnProperty(key[1]) ){
                                     lon = [
@@ -916,8 +929,8 @@ class graphly extends EventEmitter {
                                 }
                             }
 
-                            if(cmobPar.hasOwnProperty(posAlias.altitude)){
-                                var key = cmobPar[posAlias.altitude];
+                            if(combPar.hasOwnProperty(posAlias.altitude)){
+                                let key = combPar[posAlias.altitude];
                                 if(self.currentData.hasOwnProperty(key[0]) && 
                                    self.currentData.hasOwnProperty(key[1]) ){
                                     alt = [
@@ -3242,12 +3255,10 @@ class graphly extends EventEmitter {
             this.renderSettings.sharedParameters !== false && 
             this.renderSettings.sharedParameters.hasOwnProperty(this.renderSettings.xAxis)){
 
-            xSelection.push(this.renderSettings.xAxis);
-
             if(this.fixedXDomain !== undefined){
                 xExtent = this.fixedXDomain;
             } else {
-                let sharedPars = this.renderSettings.sharedParameters[xSelection];
+                let sharedPars = this.renderSettings.sharedParameters[this.renderSettings.xAxis];
                 let rs = this.renderSettings;
                 // Check for group parameters inside the shared parameters
                 for (var i = 0; i < sharedPars.length; i++) {
@@ -3477,6 +3488,8 @@ class graphly extends EventEmitter {
                                             }
                                         }
                                     }
+                                } else {
+                                    newColAxis.push(null);
                                 }
                             }
 
@@ -5046,13 +5059,6 @@ class graphly extends EventEmitter {
             lp = data[yAxis].length;
         }
 
-        // Check if parameter part of left or right y Scale
-        /*let rightYaxis = false;
-        if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
-            yScale = this.y2Scale;
-            rightYaxis = true;
-        }*/
-
         // Identify how colors are applied to the points
         let singleSettings = true;
         let colorObj;
@@ -5077,8 +5083,6 @@ class graphly extends EventEmitter {
                 dotsize[identifiers[i]] *= this.resFactor;
             }
         }
-
-        
 
         let constAlpha = this.defaultAlpha;
 
