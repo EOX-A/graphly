@@ -457,6 +457,7 @@ class graphly extends EventEmitter {
               'blackbody', 'earth', 'electric', 'magma', 'plasma'
             ]
         );
+        this.discreteColorScales = {};
 
         function customColorAxisTickFormat(value){
             if(value  instanceof Date){
@@ -2064,115 +2065,166 @@ class graphly extends EventEmitter {
 
     createColorScale(id, index, yPos){
 
-        let ds = this.dataSettings[id];
-        let dataRange = [0,1];
-
-        if(ds.hasOwnProperty('extent')){
-            dataRange = ds.extent;
-        }
-
         let innerHeight = (this.height/this.renderSettings.yAxis.length)-this.separation;
         let yOffset = (innerHeight+this.separation) * yPos;
         let width = 100;
-
-
-        // Ther are some situations where the object is not initialized 
+        // Ther are some situations where the object is not initialiezed 
         // completely and size can be 0 or negative, this should prevent this
         if(innerHeight<=0){
             innerHeight = 100;
         }
 
-        let colorAxisScale = d3.scale.linear();
-
-        if(this.checkTimeScale(id)){
-            colorAxisScale = d3.time.scale.utc();
-        }
-
-        colorAxisScale.domain(dataRange);
-        colorAxisScale.range([innerHeight, 0]);
-
-        let colorAxis = d3.svg.axis()
-            .orient("right")
-            .tickSize(5)
-            .scale(colorAxisScale);
-
-        colorAxis.tickFormat(this.colorAxisTickFormat);
-
         let csOffset = this.margin.right/2 + this.marginY2Offset + width/2 + width*index;
-        
+
         let g = this.el.select('svg').select('g').append("g")
             .attr('id', ('colorscale_'+id))
             .attr("class", "color axis")
             .style('pointer-events', 'all')
             .attr('transform', 
                 'translate(' + (this.width+csOffset) + ','+yOffset+')'
-            )
-            .call(colorAxis);
+            );
 
-        // Check if parameter has specific colorscale configured
-        let cs = 'viridis';
-        let cA = this.dataSettings[id];
-        if (cA && cA.hasOwnProperty('colorscale')){
-            cs = cA.colorscale;
-        }
+        // Check to see if we create a discrete or linear colorscale
+        if(this.dataSettings[id].hasOwnProperty('csDiscrete') && this.dataSettings[id].csDiscrete ){
+            // Check if colors are already calculated
+            let dCS = this.discreteColorScales[id];
+            if(this.discreteColorScales.hasOwnProperty(id)) {
+                let csIds = Object.keys(dCS); 
+                let minValue = d3.min(csIds.map(Number));
+                let topOffset = 35;
 
-        // If current cs not equal to the set in the plotter update cs
-        if(cs !== this.plotter.name){
-            this.plotter.setColorScale(cs);
-        }
-        let image = this.plotter.getColorScaleImage().toDataURL("image/jpg");
+                if(csIds.length>0) {
 
-        g.append("image")
-            .attr("class", "colorscaleimage")
-            .attr("width",  innerHeight)
-            .attr("height", 20)
-            .attr("transform", "translate(" + (-25) + " ,"+(innerHeight)+") rotate(270)")
-            .attr("preserveAspectRatio", "none")
-            .attr("xlink:href", image);
+                    for(let co=0;co<csIds.length; co++){
+                        g.append('text')
+                            .text(Number(csIds[co])-minValue)
+                            .style('font-size', '0.9em')
+                            .attr('transform', 'translate('+
+                                (-44+(Math.floor(co*11/innerHeight))*32) +','
+                                 + ( (co*11%innerHeight)+topOffset ) + ')'
+                            );
+                        g.append('rect')
+                            .attr('fill', '#'+ CP.RGB2HEX(
+                                    dCS[csIds[co]].map(function(c){
+                                        return Math.round(c*255);
+                                    })
+                                )
+                            )
+                            .attr('width', '10px')
+                            .attr('height', '10px')
+                            .attr('transform', 'translate('+
+                                (-55+(Math.floor(co*11/innerHeight))*32) +','
+                                 + ( (co*11%innerHeight)-9+topOffset ) + ')'
+                            );
+                    }
+                }
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate(' + (0) + ' ,'+(-2)+')')
+                    .text(id);
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate(' + (0) + ' ,'+(12)+')')
+                    .attr('font-size', '0.9em')
+                    .text('measurement offset:');
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate(' + (0) + ' ,'+(25)+')')
+                    .attr('font-size', '0.9em')
+                    .text(minValue);
+            }
 
-        let label = id;
+        } else {
 
-        if(this.dataSettings.hasOwnProperty(id) && 
-           this.dataSettings[id].hasOwnProperty('uom') && 
-           this.dataSettings[id].uom !== null){
-            label += ' ['+this.dataSettings[id].uom+'] ';
-        }
+            let ds = this.dataSettings[id];
+            let dataRange = [0,1];
 
-        g.append('text')
-            .attr('text-anchor', 'middle')
-            .attr('transform', 'translate(' + 60 + ' ,'+(innerHeight/2)+') rotate(270)')
-            .text(label);
+            if(ds.hasOwnProperty('extent')){
+                dataRange = ds.extent;
+            }
 
-        let csZoomEvent = ()=>{
-            delete this.colorCache[id];
+            let colorAxisScale = d3.scale.linear();
+
+            if(this.checkTimeScale(id)){
+                colorAxisScale = d3.time.scale.utc();
+            }
+
+            colorAxisScale.domain(dataRange);
+            colorAxisScale.range([innerHeight, 0]);
+
+            let colorAxis = d3.svg.axis()
+                .orient("right")
+                .tickSize(5)
+                .scale(colorAxisScale);
+
+            colorAxis.tickFormat(this.colorAxisTickFormat);
+            
             g.call(colorAxis);
-            this.dataSettings[id].extent = colorAxisScale.domain();
-            this.renderData(false);
-        };
 
-        let csZoom = d3.behavior.zoom()
-          .y(colorAxisScale)
-          .on('zoom', csZoomEvent);
+            // Check if parameter has specific colorscale configured
+            let cs = 'viridis';
+            let cA = this.dataSettings[id];
+            if (cA && cA.hasOwnProperty('colorscale')){
+                cs = cA.colorscale;
+            }
 
-        g.call(csZoom).on('dblclick.zoom', null);
+            // If current cs not equal to the set in the plotter update cs
+            if(cs !== this.plotter.name){
+                this.plotter.setColorScale(cs);
+            }
+            let image = this.plotter.getColorScaleImage().toDataURL("image/jpg");
 
-        if(!this.checkTimeScale(id)){
+            g.append("image")
+                .attr("class", "colorscaleimage")
+                .attr("width",  innerHeight)
+                .attr("height", 20)
+                .attr("transform", "translate(" + (-25) + " ,"+(innerHeight)+") rotate(270)")
+                .attr("preserveAspectRatio", "none")
+                .attr("xlink:href", image);
+
+            let label = id;
+
+            if(this.dataSettings.hasOwnProperty(id) && 
+               this.dataSettings[id].hasOwnProperty('uom') && 
+               this.dataSettings[id].uom !== null){
+                label += ' ['+this.dataSettings[id].uom+'] ';
+            }
+
             g.append('text')
-                .attr('class', 'modifyColorscaleIcon')
-                .text('✐')
-                .style('font-size', '1.7em')
-                .attr('transform', 'translate(-' + 45 + ' ,' + 0 + ') rotate(' + 90 + ')')
-                .on('click', function (){
-                    let evtx = d3.event.layerX;
-                    let evty = d3.event.layerY; 
-                    this.positionAxisForms(colorAxis, id, g, evtx, evty);
-                }.bind(this))
+                .attr('text-anchor', 'middle')
+                .attr('transform', 'translate(' + 60 + ' ,'+(innerHeight/2)+') rotate(270)')
+                .text(label);
+
+            let csZoomEvent = ()=>{
+                delete this.colorCache[id];
+                g.call(colorAxis);
+                this.dataSettings[id].extent = colorAxisScale.domain();
+                this.renderData(false);
+            };
+
+            let csZoom = d3.behavior.zoom()
+              .y(colorAxisScale)
+              .on('zoom', csZoomEvent);
+
+            g.call(csZoom).on('dblclick.zoom', null);
+
+            if(!this.checkTimeScale(id)){
+                g.append('text')
+                    .attr('class', 'modifyColorscaleIcon')
+                    .text('✐')
+                    .style('font-size', '1.7em')
+                    .attr('transform', 'translate(-' + 45 + ' ,' + 0 + ') rotate(' + 90 + ')')
+                    .on('click', function (){
+                        let evtx = d3.event.layerX;
+                        let evty = d3.event.layerY; 
+                        this.positionAxisForms(colorAxis, id, g, evtx, evty);
+                    }.bind(this))
+            }
         }
-        
     }
     
     positionAxisForms(colorAxis, id, g, evtx, evty){
-    // takes care of positioning and defining functions of axis edit forms
+        // takes care of positioning and defining functions of axis edit forms
         // to pre-fill forms
         let extent = this.dataSettings[id].extent;
         // offset of form from the click event position
@@ -2936,9 +2988,38 @@ class graphly extends EventEmitter {
 
         this.recalculateBufferSize();
 
+        function onlyUnique(value, index, self) { 
+            return self.indexOf(value) === index;
+        }
+
+        // Cleanup of previous generated data
+        for (let k in this.discreteColorScales){
+            delete this.discreteColorScales[k];
+        }
+
         // Check for special formatting of data
         let ds = this.dataSettings;
         for (let key in ds) {
+
+            // Check if we need to precalculate discrete colorscale
+            if(ds.hasOwnProperty(key) && 
+               ds[key].hasOwnProperty('csDiscrete') &&
+               ds[key].csDiscrete) {
+                if(!this.discreteColorScales.hasOwnProperty(key) && 
+                    this.data.hasOwnProperty(key)){
+                    // Generate discrete colorscale as object key value
+                    let dsC = {};
+
+                    var uniqueValues = this.data[key].filter(onlyUnique);
+                    for(let c=0;c<uniqueValues.length;c++){
+                        var col = u.getdiscreteColor();
+                        dsC[uniqueValues[c]] = [
+                            col[0]/255, col[1]/255, col[2]/255, 1.0
+                        ];
+                    }
+                    this.discreteColorScales[key] = dsC;
+                }
+            }
             
             if (ds[key].hasOwnProperty('scaleFormat')){
                 if (ds[key].scaleFormat === 'time'){
@@ -4886,6 +4967,8 @@ class graphly extends EventEmitter {
 
         let currColCache = null;
         let colCacheAvailable = false;
+        let discreteColorScale = false;
+        let discreteCSOffset = 0;
 
         yScale = yScale[plotY];
 
@@ -4934,6 +5017,9 @@ class graphly extends EventEmitter {
             if(cA && cA.hasOwnProperty('extent')){
                 this.plotter.setDomain(cA.extent);
             }
+            if (cA && cA.hasOwnProperty('csDiscrete')){
+                discreteColorScale = cA.csDiscrete;
+            }
             // If current cs not equal to the set in the plotter update cs
             if(cs !== this.plotter.name){
                 this.plotter.setColorScale(cs);
@@ -4944,6 +5030,15 @@ class graphly extends EventEmitter {
                 currColCache = this.colorCache[cAxis];
             } else {
                 this.colorCache[cAxis] = [];
+            }
+
+            if(discreteColorScale && this.colorCache[cAxis].length===0){
+                this.colorCache[cAxis] = this.discreteColorScales[cAxis];
+                colCacheAvailable = true;
+                currColCache = this.colorCache[cAxis];
+                discreteCSOffset = d3.min(data[cAxis]);
+            } else if(discreteColorScale){
+                discreteCSOffset = d3.min(data[cAxis]);
             }
         }
 
@@ -5046,7 +5141,11 @@ class graphly extends EventEmitter {
             let rC;
             if(cAxis !== null){
                 if(colCacheAvailable){
-                    rC = currColCache[i];
+                    if(discreteColorScale){
+                        rC = currColCache[data[cAxis][i]];
+                    } else {
+                        rC = currColCache[i];
+                    }
                 } else {
                     rC = this.plotter.getColor(data[cAxis][i])
                         .map(function(c){return c/255;});
