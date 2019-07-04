@@ -481,7 +481,11 @@ input[type=text] {
     margin-top: -3px;
 }
 
-.modifyColorscaleIcon:hover, #rangeEditCancel:hover, #rangeEditConfirm{
+.modifyAxisIcon{
+    pointer-events: all;
+}
+
+.modifyAxisIcon:hover, #rangeEditCancel:hover, #rangeEditConfirm{
     cursor: pointer;
 }
 
