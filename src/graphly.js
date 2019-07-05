@@ -3374,7 +3374,7 @@ class graphly extends EventEmitter {
 
         this.svg.selectAll('*').remove();
 
-        d3.selectAll('.parameterInfo').remove();
+        this.el.selectAll('.parameterInfo').remove();
 
         let xExtent;
         let rs = this.renderSettings;
