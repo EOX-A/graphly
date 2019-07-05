@@ -6184,6 +6184,21 @@ class graphly extends EventEmitter {
                 that.el.select('#colorParamSelection').property('value');
             delete that.colorCache[colAxis[yPos][parPos]];
             colAxis[yPos][parPos] = selectValue;
+            // Check if parameter already has a colorscale configured
+            if(that.dataSettings.hasOwnProperty(selectValue)){
+                let obj = that.dataSettings[selectValue];
+                if(obj.hasOwnProperty('colorscale')){
+                    that.el.select('#colorScaleSelection')
+                        .selectAll('option[value="'+obj.colorscale+'"]').property(
+                            'selected', true
+                        );
+                } else {
+                    that.el.select('#colorScaleSelection')
+                        .selectAll('option[value="viridis"]').property(
+                            'selected', true
+                        );
+                }
+            }
             that.addApply();
         }
 
@@ -6204,7 +6219,7 @@ class graphly extends EventEmitter {
             return plotty.colorscales.hasOwnProperty(cs);
         });
 
-
+        let selectionAvailable = false;
         labelColorScaleSelect.selectAll('option')
             .data(this.colorscales).enter()
             .append('option')
@@ -6214,7 +6229,12 @@ class graphly extends EventEmitter {
                     let csId = colAxis[yPos][parPos];
                     let obj = this.dataSettings[csId];
                     if(obj && obj.hasOwnProperty('colorscale')){
-                        return d === this.dataSettings[csId].colorscale;
+                        if( d === this.dataSettings[csId].colorscale){
+                            selectionAvailable = true;
+                            return true;
+                        } else {
+                            return false;
+                        }
                     } else {
                         return false;
                     }
@@ -6222,7 +6242,7 @@ class graphly extends EventEmitter {
 
         // Check if any colorscale has been selected, if not set viridis
         // to default
-        if(labelColorScaleSelect.selectAll('option[selected]').empty()){
+        if(!selectionAvailable){
             labelColorScaleSelect.selectAll('option[value="viridis"]').property(
                 'selected', true
             );
@@ -6286,17 +6306,36 @@ class graphly extends EventEmitter {
                 that.addApply();
             });
 
-        // Check if parameter is combined for x and y axis
-        let combined = false;
+        // Check if parameter and xaxis is combined
+        let xcombined = false;
+        let ycombined = false;
         let combPars = this.renderSettings.combinedParameters;
+        let sharedPars = this.renderSettings.sharedParameters;
+        let xAxis = this.renderSettings.xAxis;
 
-        if(combPars.hasOwnProperty(this.renderSettings.xAxis)){
-            if(combPars.hasOwnProperty(id)){
-                combined = true;
+        if(combPars.hasOwnProperty(xAxis)){
+            xcombined = true;
+        } else if(sharedPars){
+            if(sharedPars.hasOwnProperty(xAxis)){
+                // Shared parameters should be equivalent, so lets just look 
+                // at the first
+                if(combPars.hasOwnProperty(sharedPars[xAxis][0])){
+                    xcombined = true;
+                }
             }
         }
 
-        if(!combined){
+        if(combPars.hasOwnProperty(id)){
+            ycombined = true;
+        } else if(sharedPars){
+            if(sharedPars.hasOwnProperty(id)){
+                if(combPars.hasOwnProperty(sharedPars[id][0])){
+                    xcombined = true;
+                }
+            }
+        }
+
+        if(!(xcombined && ycombined)){
             parSetEl
                 .append('label')
                 .attr('for', 'symbolSelect')
@@ -6513,8 +6552,7 @@ class graphly extends EventEmitter {
 
         }
 
-        if(combined) {
-            this.addApply();
+        if(xcombined && ycombined) {
             return;
         }
 
