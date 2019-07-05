@@ -17,6 +17,108 @@ var renderSettings_mie = {
 };
 
 
+var renderSettingsL2A = {
+    xAxis: 'time',
+    yAxis: [['mie_altitude'], ['rayleigh_altitude']],
+    y2Axis: [[], []],
+    groups: ['MCA', 'SCA'],
+    reversedYAxis: true,
+    combinedParameters: {
+        mie_altitude: ['mie_altitude_obs_top', 'mie_altitude_obs_bottom'],
+        MCA_time: ['MCA_time_obs_start', 'MCA_time_obs_stop'],
+        rayleigh_altitude: ['rayleigh_altitude_obs_top', 'rayleigh_altitude_obs_bottom'],
+        SCA_time: ['SCA_time_obs_start', 'SCA_time_obs_stop'],
+        bins: ['ICA_bins_start', 'ICA_bins_end'],
+        ICA_time: ['ICA_time_obs_start', 'ICA_time_obs_stop']
+    },
+    colorAxis: [['MCA_extinction'], ['SCA_extinction']],
+    colorAxis2: [[], []],
+    renderGroups: {
+        MCA: {
+            parameters: [
+                'mie_altitude', 
+                'mie_altitude_obs_top', 
+                'mie_altitude_obs_bottom',
+                'MCA_time_obs_start',
+                'MCA_time_obs_stop',
+                'L1B_start_time_obs',
+                'L1B_centroid_time_obs',
+                'MCA_time',
+                'longitude_of_DEM_intersection_obs',
+                'latitude_of_DEM_intersection_obs',
+                'altitude_of_DEM_intersection_obs',
+                'geoid_separation_obs',
+                'L1B_num_of_meas_per_obs',
+                'MCA_clim_BER',
+                'MCA_extinction',
+                'MCA_LOD',
+                'albedo_off_nadir'
+            ],
+        },
+        SCA: {
+            parameters: [
+                'rayleigh_altitude',
+                'rayleigh_altitude_obs_top',
+                'rayleigh_altitude_obs_bottom',
+                'SCA_time_obs_start',
+                'SCA_time_obs_stop',
+                'SCA_time',
+                'SCA_QC_flag',
+                'SCA_extinction_variance',
+                'SCA_backscatter_variance',
+                'SCA_LOD_variance',
+                'SCA_extinction',
+                'SCA_backscatter',
+                'SCA_LOD',
+                'SCA_SR',
+            ]
+        },
+        /*SCA_middle_bin: {
+            parameters: [
+                'SCA_middle_bin_altitude_obs',
+                'SCA_middle_bin_extinction_variance',
+                'SCA_middle_bin_backscatter_variance',
+                'SCA_middle_bin_LOD_variance',
+                'SCA_middle_bin_BER_variance',
+                'SCA_middle_bin_extinction',
+                'SCA_middle_bin_backscatter',
+                'SCA_middle_bin_LOD',
+                'SCA_middle_bin_BER'
+
+            ]
+        },*/
+        ICA: {
+            parameters: [
+                'bins',
+                'ICA_bins_start',
+                'ICA_bins_end',
+                'ICA_time_obs_start',
+                'ICA_time_obs_stop',
+                'ICA_time',
+                'ICA_QC_flag',
+                'ICA_filling_case',
+                'ICA_extinction',
+                'ICA_backscatter',
+                'ICA_LOD'
+            ],
+            defaults: {
+                yAxis: 'bins',
+                xAxis: 'ICA_time',
+                colorAxis: 'ICA_backscatter'
+            }
+        }
+    },
+    sharedParameters: {
+        'time': [
+            'MCA_time', 'SCA_time', 'ICA_time'
+        ]
+    },
+    additionalXTicks: [],
+    additionalYTicks: [],
+    availableParameters: false
+};
+
+
 var renderSettingsAeolus = {
     xAxis: 'datetime',
     yAxis: [['mie_altitude'], ['rayleigh_altitude']],
@@ -386,6 +488,7 @@ var filterSettings = {
         'Measurement_Error_Mie_Response',
         'Reference_Pulse_Response',
         'Reference_Pulse_Error_Mie_Response',
+        'albedo_off_nadir',
         /*'Num_Valid_Measurements',
         'Num_Measurements_Usable',
         'Num_Reference_Pulses_Usable',
@@ -445,12 +548,135 @@ var renderSettings = {
 
 var dataSettings = {
 
+                'SCA_extinction': {
+                uom: '10-6 * m^-1',
+                colorscale: 'plasma',
+                extent: [-20, 20]
+            },
+            'SCA_extinction_variance': {
+                uom: 'm^-2',
+                nullValue: -1
+            },
+            'SCA_backscatter': {
+                uom: '10-6 * m^-1* sr^-1',
+                colorscale: 'plasma',
+                extent: [-20, 20]
+            },
+            'SCA_backscatter_variance': {
+                uom: 'm^-2*sr^-2',
+                nullValue: -1
+            },
+            'SCA_LOD_variance': {
+                nullValue: -1
+            },
+            'SCA_time_obs':{
+                scaleFormat: 'time',
+                timeFormat: 'MJD2000_S'
+            },
+            'SCA_time_obs_start':{
+                scaleFormat: 'time',
+                timeFormat: 'MJD2000_S'
+            },
+            'SCA_time_obs_stop':{
+                scaleFormat: 'time',
+                timeFormat: 'MJD2000_S'
+            },
+            'mie_altitude_obs':{
+
+                uom: 'm'
+            },
+            'rayleigh_altitude_obs':{
+
+                uom: 'm'
+            },
+            'longitude_of_DEM_intersection_obs':{
+                uom: 'deg'
+            },
+            'latitude_of_DEM_intersection_obs':{
+                uom: 'deg'
+            },
+            'altitude_of_DEM_intersection_obs':{
+                uom: 'm'
+            },
+
+            'MCA_extinction': {
+                uom: '10-6 * m^-1',
+                colorscale: 'viridis',
+                extent: [-20, 20]
+            },
+            'MCA_backscatter': {
+                uom: '10-6 * m^-1* sr^-1',
+                colorscale: 'viridis',
+                extent: [-20, 20]
+            },
+            'MCA_time_obs_start': {
+                scaleFormat: 'time',
+                timeFormat: 'MJD2000_S'
+            },
+            'MCA_time_obs_stop': {
+                scaleFormat: 'time',
+                timeFormat: 'MJD2000_S'
+            },
+            'ICA_time_obs_start': {
+                scaleFormat: 'time',
+                timeFormat: 'MJD2000_S'
+            },
+            'ICA_time_obs_stop': {
+                scaleFormat: 'time',
+                timeFormat: 'MJD2000_S'
+            },
+            'ICA_extinction':{
+                nullValue: -1000000
+            },
+            'ICA_backscatter':{
+                nullValue: -1000000
+            },
+
+            // L2A Group
+            'group_backscatter_variance':{
+                uom: 'm^-2*sr^-2',
+                nullValue: -1
+            },
+            'group_extinction_variance':{
+                uom: 'm^-2',
+                nullValue: -1
+            },
+            'group_extinction':{
+                uom: '10-6 * m^-1',
+                nullValue: -1
+            },
+            'group_backscatter':{
+                uom: '10-6 * m^-1* sr^-1',
+                nullValue: -1
+            },
+            'group_LOD_variance':{
+                uom: null,
+                nullValue: -1
+            },
+            'group_LOD':{
+                uom: null,
+                //nullValue: 1.7e+38
+            },
+            'group_SR':{
+                uom: null,
+                //nullValue: 1.7e+38
+            },
+
    
     mie_datetime_start: {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
     mie_datetime_end: {
+        scaleFormat: 'time',
+        timeFormat: 'MJD2000_S'
+    },
+
+    rayleigh_datetime_start: {
+        scaleFormat: 'time',
+        timeFormat: 'MJD2000_S'
+    },
+    rayleigh_datetime_end: {
         scaleFormat: 'time',
         timeFormat: 'MJD2000_S'
     },
@@ -567,7 +793,7 @@ var data;
 var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: dataSettings,
-    renderSettings: renderSettingsAeolus,
+    renderSettings: renderSettingsL2A,
     /*dataSettings: testbed14DS,
     renderSettings: testbed14RS,*/
     filterManager: filterManager,
@@ -576,7 +802,7 @@ var graph = new graphly.graphly({
     //enableFit: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false
-    //displayParameterLabel: false,
+    displayParameterLabel: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false,
     //autoColorExtent: true
@@ -588,6 +814,7 @@ var graph = new graphly.graphly({
     enableSubYAxis: 'Timestamp',
     colorscales: ['jet', 'viridis', 'pakito', 'plasma'],
     //showFilteredData: false
+    margin: {top: 50, left: 90, bottom: 50, right: 30}
 });
 
 filterManager.setRenderNode('#filters');
@@ -655,7 +882,7 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/aeolus_L1.mp', true);
+xhr.open('GET', 'data/l2a.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
 //xhr.open('GET', 'data/swarmupload.mp', true);
 
@@ -816,7 +1043,7 @@ xhr.onload = function(e) {
 
     graph.loadData(data);*/
 
-    var ds = data.ALD_U_N_1B[0];
+    /*var ds = data.ALD_U_N_1B[0];
 
     var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
     var mie_HLOS_wind_speed = flattenObservationArray(ds.mie_HLOS_wind_speed);
@@ -852,7 +1079,148 @@ xhr.onload = function(e) {
       rayleigh_datetime_end: time[1],
     };
 
-    graph.loadData(data);
+    graph.loadData(data);*/
+
+
+    //L2A
+    data = data['ALD_U_N_2A'];
+    //data = data[]
+    var keys = Object.keys(data);
+    var ds = data;
+    var resData = {};
+    for (var k = 0; k < keys.length; k++) {
+            var subK = Object.keys(ds[keys[k]]);
+            for (var l = 0; l < subK.length; l++) {
+              var curArr = ds[keys[k]][subK[l]];
+              if( Array.isArray(curArr[0]) ){
+                if(subK[l].includes('altitude')){
+                  // Create bottom and top arrays
+                  var tmpArrBottom = [];
+                  var tmpArrTop = [];
+                  for (var i = 0; i < curArr.length; i++) {
+                    for (var j = 0; j < 24; j++) {
+                      tmpArrBottom.push(curArr[i][j]);
+                      tmpArrTop.push(curArr[i][j+1]);
+                    }
+                  }
+                  resData[subK[l]+'_bottom'] = tmpArrBottom;
+                  resData[subK[l]+'_top'] = tmpArrTop;
+                } else {
+                  resData[subK[l]] = [].concat.apply([], ds[keys[k]][subK[l]]);
+                }
+              }else{
+                if(subK[l].indexOf('ICA_bins')===-1){
+                  var tmpArr = [];
+                  for (var i = 0; i < curArr.length; i++) {
+                    for (var j = 0; j < 24; j++) {
+                      tmpArr.push(curArr[i]);
+                    }
+                  }
+                  resData[subK[l]+'_orig'] = curArr;
+                  resData[subK[l]] = tmpArr;
+                } else {
+                  resData[subK[l]] = curArr;
+                }
+                
+              }
+            }
+          }
+
+          // Check if data is actually available
+          if((resData.hasOwnProperty('SCA_time_obs') && resData['SCA_time_obs'].length > 0) && 
+             (resData.hasOwnProperty('MCA_time_obs') && resData['MCA_time_obs'].length > 0) && 
+             (resData.hasOwnProperty('ICA_time_obs') && resData['ICA_time_obs'].length > 0)) {
+
+
+            // Create new start and stop time to allow rendering
+            resData['SCA_time_obs_start'] = resData['SCA_time_obs'].slice();
+            resData['SCA_time_obs_stop'] = resData['SCA_time_obs'].slice(24, resData['SCA_time_obs'].length);
+            resData['MCA_time_obs_start'] = resData['MCA_time_obs'].slice();
+            resData['MCA_time_obs_stop'] = resData['MCA_time_obs'].slice(24, resData['MCA_time_obs'].length);
+            resData['ICA_time_obs_start'] = resData['ICA_time_obs'].slice();
+            resData['ICA_time_obs_stop'] = resData['ICA_time_obs'].slice(24, resData['ICA_time_obs'].length);
+
+            resData['SCA_time_obs_orig_start'] = resData['SCA_time_obs_orig'].slice();
+            resData['SCA_time_obs_orig_stop'] = resData['SCA_time_obs_orig'].slice(1, resData['SCA_time_obs_orig'].length);
+            resData['MCA_time_obs_orig_start'] = resData['MCA_time_obs_orig'].slice();
+            resData['MCA_time_obs_orig_stop'] = resData['MCA_time_obs_orig'].slice(1, resData['MCA_time_obs_orig'].length);
+            resData['ICA_time_obs_orig_start'] = resData['ICA_time_obs_orig'].slice();
+            resData['ICA_time_obs_orig_stop'] = resData['ICA_time_obs_orig'].slice(1, resData['ICA_time_obs_orig'].length);
+            // Add element with additional 12ms as it should be the default
+            // time interval between observations
+            // TODO: make sure this is acceptable! As there seems to be some 
+            // minor deviations at start and end of observations
+            var lastValSCA =  resData['SCA_time_obs_orig'].slice(-1)[0]+12;
+            var lastValMCA =  resData['MCA_time_obs_orig'].slice(-1)[0]+12;
+            var lastValICA =  resData['MCA_time_obs_orig'].slice(-1)[0]+12;
+            for (var i = 0; i < 24; i++) {
+              resData['SCA_time_obs_stop'].push(lastValSCA);
+              resData['MCA_time_obs_stop'].push(lastValMCA);
+              resData['ICA_time_obs_stop'].push(lastValICA);
+            }
+            resData['SCA_time_obs_orig_stop'].push(lastValSCA);
+            resData['MCA_time_obs_orig_stop'].push(lastValMCA);
+            resData['ICA_time_obs_orig_stop'].push(lastValICA);
+
+            var lonStep = 15;
+            var latStep = 15;
+
+
+            var jumpPos = [];
+            var signCross = [];
+            for (var i = 1; i < resData.latitude_of_DEM_intersection_obs_orig.length; i++) {
+              var latdiff = Math.abs(
+                resData.latitude_of_DEM_intersection_obs_orig[i-1]-
+                resData.latitude_of_DEM_intersection_obs_orig[i]
+              );
+              var londiff = Math.abs(
+                resData.longitude_of_DEM_intersection_obs_orig[i-1]-
+                resData.longitude_of_DEM_intersection_obs_orig[i]
+              ); 
+              // TODO: slicing not working correctly for L2a
+              if (latdiff >= latStep) {
+                signCross.push(latdiff>160);
+                jumpPos.push(i);
+              }else if (londiff >= lonStep) {
+                signCross.push(londiff>340);
+                jumpPos.push(i);
+              }
+            }
+
+            var jumpPos2 = [];
+            var signCross2 = [];
+            for (var i = 1; i < resData.latitude_of_DEM_intersection_obs.length; i++) {
+              var latdiff = Math.abs(
+                resData.latitude_of_DEM_intersection_obs[i-1]-
+                resData.latitude_of_DEM_intersection_obs[i]
+              );
+              var londiff = Math.abs(
+                resData.longitude_of_DEM_intersection_obs[i-1]-
+                resData.longitude_of_DEM_intersection_obs[i]
+              ); 
+
+              if (latdiff >= latStep) {
+                signCross2.push(latdiff>160);
+                jumpPos2.push(i);
+              }else if (londiff >= lonStep) {
+                signCross2.push(londiff>340);
+                jumpPos2.push(i);
+              }
+            }
+
+            // Remove elements where there is a jump
+            for (var j = 0; j < jumpPos2.length; j++) {
+              if(!signCross2[j]){
+                for (var key in resData){
+                  resData[key].splice(jumpPos2[j]-24,24);
+                }
+              }
+            }
+            resData.jumps = jumpPos;
+            resData.signCross = signCross;
+          }
+          data = resData;
+          graph.loadData(data);
 
 
 
