@@ -324,6 +324,9 @@ class graphly extends EventEmitter {
             this.logY2.push(false);
         }
 
+        this.colorAxisTickFormat = defaultFor(options.colorAxisTickFormat, 'g');
+        this.defaultAxisTickFormat = defaultFor(options.defaultAxisTickFormat, 'g');
+
         // Check if sub axis option set if not initialize with empty array
         if(this.enableSubXAxis){
             this.renderSettings.additionalXTicks = defaultFor(
@@ -458,21 +461,6 @@ class graphly extends EventEmitter {
             ]
         );
         this.discreteColorScales = {};
-
-        function customColorAxisTickFormat(value){
-            if(value  instanceof Date){
-                tickFormat = u.getCustomUTCTimeTickFormat()(value);
-            } else {
-                var tickFormat = parseFloat(value.toFixed(11));
-            }
-            return tickFormat;
-        }
-
-        if(options.hasOwnProperty('colorAxisTickFormat')){
-            this.colorAxisTickFormat = d3.format(options.colorAxisTickFormat);
-        } else {
-            this.colorAxisTickFormat = customColorAxisTickFormat;
-        }
 
         if(this.filterManager){
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
@@ -2157,7 +2145,15 @@ class graphly extends EventEmitter {
                 .tickSize(5)
                 .scale(colorAxisScale);
 
-            colorAxis.tickFormat(this.colorAxisTickFormat);
+            let csformat;
+            if(this.colorAxisTickFormat === 'customSc'){
+                csformat = u.customScientificTickFormat;
+            } else if(this.colorAxisTickFormat === 'customExp'){
+                csformat = u.customExponentTickFormat;
+            } else {
+                csformat = d3.format(this.filterAxisTickFormat);
+            }
+            colorAxis.tickFormat(csformat);
             
             g.call(colorAxis);
 
@@ -3267,7 +3263,14 @@ class graphly extends EventEmitter {
 
     getAxisFormat(parameter, enableSubAxis, additionalTicks){
 
-        let tickformat = d3.format('g');
+        let tickformat;
+        if(this.defaultAxisTickFormat === 'customSc'){
+            tickformat = u.customScientificTickFormat;
+        } else if(this.defaultAxisTickFormat === 'customExp'){
+            tickformat = u.customExponentTickFormat;
+        } else {
+            tickformat = d3.format(this.defaultAxisTickFormat);
+        }
         let axisformat = tickformat;
 
         if(this.dataSettings.hasOwnProperty(parameter) && 
@@ -3319,7 +3322,7 @@ class graphly extends EventEmitter {
                     return d;
                 };
             }
-        } else if(enableSubAxis){
+        } else if(enableSubAxis && (enableSubAxis === parameter)){
             axisformat = this.customSubtickFormat.bind(
                 this, this.data[parameter], additionalTicks
             );

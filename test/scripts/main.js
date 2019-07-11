@@ -22,7 +22,7 @@ var renderSettingsL2A = {
     yAxis: [['mie_altitude'], ['rayleigh_altitude']],
     y2Axis: [[], []],
     groups: ['MCA', 'SCA'],
-    reversedYAxis: true,
+    //reversedYAxis: true,
     combinedParameters: {
         mie_altitude: ['mie_altitude_obs_top', 'mie_altitude_obs_bottom'],
         MCA_time: ['MCA_time_obs_start', 'MCA_time_obs_stop'],
@@ -814,7 +814,10 @@ var graph = new graphly.graphly({
     enableSubYAxis: 'Timestamp',
     colorscales: ['jet', 'viridis', 'pakito', 'plasma'],
     //showFilteredData: false
-    margin: {top: 50, left: 90, bottom: 50, right: 30}
+    margin: {top: 50, left: 90, bottom: 50, right: 30},
+    colorAxisTickFormat: 'customExp',
+    defaultAxisTickFormat: 'customExp'
+
 });
 
 filterManager.setRenderNode('#filters');

@@ -33,6 +33,14 @@ Array.prototype.pushArray = function() {
     }
 };
 
+String.prototype.allReplace = function(obj) {
+    var retStr = this;
+    for (var x in obj) {
+        retStr = retStr.replace(new RegExp(x, 'g'), obj[x]);
+    }
+    return retStr;
+};
+
 
 export function addSymbol(el, symbol, color, center, stroke, size , className){
 
@@ -232,7 +240,7 @@ export function customExponentTickFormat(d) {
     if(typeof d !== 'string'){
         d = d.toFixed(14);
     }
-    if( (d>0.001 && d<9999) || (d<-0.001 && d>-9999) || d == 0.0){
+    if( (d>0.0001 && d<99999) || (d<-0.0001 && d>-99999) || d == 0.0){
         return gFormat(d);
     } else {
         return sFormat(d).allReplace({
@@ -266,7 +274,7 @@ export function customScientificTickFormat(d) {
     var gFormat = d3.format('g');
     var sFormat = d3.format('s');
     d = d.toFixed(11);
-    if( (d>0.001 && d<9999) || (d<-0.001 && d>-9999) ){
+    if( (d>0.0001 && d<99999) || (d<-0.0001 && d>-99999) ){
         return gFormat(d);
     } else {
         return sFormat(d).allReplace({
