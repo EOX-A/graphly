@@ -353,7 +353,7 @@ class graphly extends EventEmitter {
 
         this.margin = defaultFor(
             options.margin,
-            {top: 10, left: 90, bottom: 50, right: 30}
+            {top: 10, left: 90, bottom: 50, right: 40}
         );
 
         this.subAxisMarginX = 0;
@@ -1404,12 +1404,12 @@ class graphly extends EventEmitter {
 
         if(orientation === 'left'){
             labelText.attr('transform', 
-                'translate('+ -(this.margin.left/2+10) +','+
+                'translate('+ -(this.margin.left/2+20) +','+
                 currHeightCenter+')rotate(-90)'
             )
         }else if(orientation === 'right'){
             labelText.attr('transform', 
-                'translate('+ (this.width+this.marginY2Offset+20) +','+
+                'translate('+ (this.width+this.marginY2Offset+30) +','+
                 currHeightCenter+')rotate(-90)'
             )
         }
@@ -2188,7 +2188,7 @@ class graphly extends EventEmitter {
 
             g.append('text')
                 .attr('text-anchor', 'middle')
-                .attr('transform', 'translate(' + 60 + ' ,'+(innerHeight/2)+') rotate(270)')
+                .attr('transform', 'translate(' + 66 + ' ,'+(innerHeight/2)+') rotate(270)')
                 .text(label);
 
             let csZoomEvent = ()=>{
@@ -3705,7 +3705,7 @@ class graphly extends EventEmitter {
             let y2Selection = [];
 
 
-            for (var h = 0; h < currYAxis.length; h++) {
+            for (let h = 0; h < currYAxis.length; h++) {
                 if(rs.combinedParameters.hasOwnProperty(currYAxis[h])){
                     ySelection = [].concat.apply([], rs.combinedParameters[currYAxis[h]]);
                 } else {
@@ -3713,7 +3713,7 @@ class graphly extends EventEmitter {
                 }
             }
 
-            for (var i = 0; i < currY2Axis.length; i++) {
+            for (let i = 0; i < currY2Axis.length; i++) {
                 if(rs.combinedParameters.hasOwnProperty(currY2Axis[i])){
                     y2Selection = [].concat.apply([], rs.combinedParameters[currY2Axis[i]]);
                 } else {
