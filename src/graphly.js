@@ -496,7 +496,7 @@ class graphly extends EventEmitter {
             .attr('id', 'renderCanvas')
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
-            .style('opacity', 0.1)
+            .style('opacity', 1.0)
             //.style('display', 'none')
             //.style('pointer-events', 'none')
             .style('position', 'absolute')
@@ -528,7 +528,7 @@ class graphly extends EventEmitter {
                 .attr('width', this.width - 1)
                 .attr('height', this.height - 1)
                 .style('position', 'absolute')
-                //.style('display', 'none')
+                .style('display', 'none')
                 .style(
                     'transform',
                     'translate(' + (this.margin.left+this.subAxisMarginY + 1) +
