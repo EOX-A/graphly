@@ -1042,7 +1042,7 @@ class graphly extends EventEmitter {
         }
         this.filters = filters;
         this.applyDataFilters();
-        this.renderData();
+        this.renderData(true);
     }
 
     destroy(){
