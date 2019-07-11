@@ -496,7 +496,8 @@ class graphly extends EventEmitter {
             .attr('id', 'renderCanvas')
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
-            .style('opacity', 1.0)
+            .style('opacity', 0.1)
+            //.style('display', 'none')
             //.style('pointer-events', 'none')
             .style('position', 'absolute')
             .style('z-index', 2)
@@ -527,7 +528,7 @@ class graphly extends EventEmitter {
                 .attr('width', this.width - 1)
                 .attr('height', this.height - 1)
                 .style('position', 'absolute')
-                .style('display', 'none')
+                //.style('display', 'none')
                 .style(
                     'transform',
                     'translate(' + (this.margin.left+this.subAxisMarginY + 1) +
@@ -3628,7 +3629,7 @@ class graphly extends EventEmitter {
         // maybe there is a better way of doing this instead of resetting it
         if(!this.zoomActivity){
             this.zoom_update();
-            this.renderData();
+            this.renderData(true);
         }
     }
 
@@ -6281,6 +6282,16 @@ class graphly extends EventEmitter {
             0, axisOffset, this.width, blockSize
         );
 
+        if(!this.fixedSize && this.batchDrawerReference){
+
+            this.batchDrawerReference.getContext().enable(
+                this.batchDrawerReference.getContext().SCISSOR_TEST
+            );
+            this.batchDrawerReference.getContext().scissor(
+                0, axisOffset, this.width, blockSize
+            );
+        }
+
     }
 
 
@@ -6376,6 +6387,22 @@ class graphly extends EventEmitter {
             this.batchDrawer.getContext().disable(
                 this.batchDrawer.getContext().SCISSOR_TEST
             );
+
+            if(!this.fixedSize && updateReferenceCanvas){
+                this.startTiming('batchDrawerReference:draw');
+                this.batchDrawerReference.draw();
+                this.endTiming('batchDrawerReference:draw');
+
+                this.batchDrawerReference.getContext().disable(
+                    this.batchDrawerReference.getContext().SCISSOR_TEST
+                );
+            }
+
+            if(!this.fixedSize && this.batchDrawerReference){
+                this.batchDrawerReference.getContext().disable(
+                    this.batchDrawerReference.getContext().SCISSOR_TEST
+                );
+            }
         }
         // Save preview image of rendering of second y axis 
         // without data from first y axis
@@ -6424,6 +6451,10 @@ class graphly extends EventEmitter {
                 this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
                 this.endTiming('batchDrawerReference:draw');
+
+                this.batchDrawerReference.getContext().disable(
+                    this.batchDrawerReference.getContext().SCISSOR_TEST
+                );
             }
             // turn off the scissor test so you can render like normal again.
             this.batchDrawer.getContext().disable(
@@ -6469,6 +6500,10 @@ class graphly extends EventEmitter {
                     this.startTiming('batchDrawerReference:draw');
                     this.batchDrawerReference.draw();
                     this.endTiming('batchDrawerReference:draw');
+
+                    this.batchDrawerReference.getContext().disable(
+                        this.batchDrawerReference.getContext().SCISSOR_TEST
+                    );
                 }
 
                 // turn off the scissor test so you can render like normal again.
