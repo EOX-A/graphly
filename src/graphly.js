@@ -4145,7 +4145,7 @@ class graphly extends EventEmitter {
         // maybe there is a better way of doing this instead of resetting it
         if(!this.zoomActivity){
             this.zoom_update();
-            this.renderData();
+            this.renderData(true);
         }
     }
 
