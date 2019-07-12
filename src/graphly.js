@@ -6201,6 +6201,8 @@ class graphly extends EventEmitter {
             }
         }
 
+        selectionChoices = selectionChoices.sort((a, b) => a.value.localeCompare(b.value));
+
         labelColorParamSelect.selectAll('option')
             .data(selectionChoices).enter()
             .append('option')
