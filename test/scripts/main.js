@@ -548,6 +548,11 @@ var renderSettings = {
 
 var dataSettings = {
 
+            'L1B_start_time_obs': {
+                scaleFormat: 'time',
+                timeFormat: 'MJD2000_S'
+            },
+
                 'SCA_extinction': {
                 uom: '10-6 * m^-1',
                 colorscale: 'plasma',
@@ -810,11 +815,11 @@ var graph = new graphly.graphly({
     //fixedWidth: 2000
     multiYAxis: true,
     debug: false,
-    enableSubXAxis: 'Timestamp',
-    enableSubYAxis: 'Timestamp',
+    enableSubXAxis: false,
+    enableSubYAxis: ['mie_altitude','rayleigh_altitude'],
     colorscales: ['jet', 'viridis', 'pakito', 'plasma'],
     //showFilteredData: false
-    margin: {top: 50, left: 90, bottom: 50, right: 30},
+    margin: {top: 50, left: 90, bottom: 50, right: 40},
     colorAxisTickFormat: 'customExp',
     defaultAxisTickFormat: 'customExp'
 

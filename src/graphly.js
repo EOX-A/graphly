@@ -15,7 +15,7 @@
 *        null if any of the selected parameters for y or y2 axis should not
 *        use a colorscale representation. 
 * @property {Object} [dataIdentifier] Contains key "parameter" with identifier 
-*       string of paramter used to separate data into groups and key 
+*       string of parameter used to separate data into groups and key 
 *       "identifiers" with array of strings with possible values in data array.
 * @property {Object} [renderGroups] When using complex data with different sizes
 *       that still should be visualized together (in different plots) it is
@@ -1575,35 +1575,54 @@ class graphly extends EventEmitter {
 
         },false);
 
+        let enableSA = false;
+        let yS = this.renderSettings.yAxis[yPos];
+        if(this.enableSubYAxis !== false){
+            if(this.enableSubYAxis.indexOf(yS[0])!==-1){
+                enableSA = true;
+            }
+        }
 
-        if(this.enableSubYAxis && orientation === 'left'){
-            if( (typeof this.enableSubXAxis !== 'string') || 
-                (
-                    this.renderSettings.yAxis[yPos].length === 1 &&
-                    this.renderSettings.yAxis[yPos][0] === this.enableSubYAxis
-                ) ){
+        if(enableSA && orientation === 'left'){
 
-                con.append('div')
-                    .style('margin-top', '20px')
-                    .text('Secondary ticks');
-                    
-                let selCh = con.append('select')
-                    .attr('id', 'subYChoices'+yPos)
-                    .attr('multiple', true);
-
+            con.append('div')
+                .style('margin-top', '20px')
+                .text('Secondary ticks');
                 
-                let subYParameters = new Choices(
-                    selCh.node(), {
-                        choices: ySubChoices,
-                        removeItemButton: true,
-                        placeholderValue: ' select ...',
-                        itemSelectText: '',
-                    }
-                );
+            let selCh = con.append('select')
+                .attr('id', 'subYChoices'+yPos)
+                .attr('multiple', true);
 
-                subYParameters.passedElement.addEventListener('addItem', function(event) {
-                    let addYT = that.renderSettings.additionalYTicks;
-                    addYT[yPos].push(event.detail.value);
+            
+            let subYParameters = new Choices(
+                selCh.node(), {
+                    choices: ySubChoices,
+                    removeItemButton: true,
+                    placeholderValue: ' select ...',
+                    itemSelectText: '',
+                }
+            );
+
+            subYParameters.passedElement.addEventListener('addItem', function(event) {
+                let addYT = that.renderSettings.additionalYTicks;
+                addYT[yPos].push(event.detail.value);
+                let maxL = 0;
+                for(let i=0;i<addYT.length;i++){
+                    maxL = Math.max(maxL, addYT[i].length);
+                }
+                that.subAxisMarginY = 80*maxL;
+                that.initAxis();
+                that.resize();
+                //that.renderData();
+                that.createAxisLabels();
+                that.emit('axisChange');
+            }, false);
+
+            subYParameters.passedElement.addEventListener('removeItem', function(event) {
+                let addYT = that.renderSettings.additionalYTicks;
+                let index = addYT[yPos].indexOf(event.detail.value);
+                if(index!==-1){
+                    addYT[yPos].splice(index, 1);
                     let maxL = 0;
                     for(let i=0;i<addYT.length;i++){
                         maxL = Math.max(maxL, addYT[i].length);
@@ -1614,27 +1633,8 @@ class graphly extends EventEmitter {
                     //that.renderData();
                     that.createAxisLabels();
                     that.emit('axisChange');
-                }, false);
-
-                subYParameters.passedElement.addEventListener('removeItem', function(event) {
-                    let addYT = that.renderSettings.additionalYTicks;
-                    let index = addYT[yPos].indexOf(event.detail.value);
-                    if(index!==-1){
-                        addYT[yPos].splice(index, 1);
-                        let maxL = 0;
-                        for(let i=0;i<addYT.length;i++){
-                            maxL = Math.max(maxL, addYT[i].length);
-                        }
-                        that.subAxisMarginY = 80*maxL;
-                        that.initAxis();
-                        that.resize();
-                        //that.renderData();
-                        that.createAxisLabels();
-                        that.emit('axisChange');
-                    }
-                },false);
-            }
-            
+                }
+            },false);
         }
 
 
@@ -3323,12 +3323,29 @@ class graphly extends EventEmitter {
                 };
             }
         } else if(enableSubAxis && (enableSubAxis === parameter)){
+            // Find out if parameter is shared or combined parameter
+            let rS = this.renderSettings;
+            let usedPar = parameter;
+
+            if(rS.renderGroups !== false && 
+               rS.groups!== false && 
+               rS.sharedParameters !== false && 
+               rS.sharedParameters.hasOwnProperty(parameter)){
+                let pars = rS.sharedParameters[parameter]
+                // Take first item of shared par
+                usedPar = pars[0];
+            }
+
+            // See if either shared or not shared parameter is from a group
+            if(rS.combinedParameters.hasOwnProperty(usedPar)){
+                usedPar = rS.combinedParameters[usedPar][0];
+            }
+
             axisformat = this.customSubtickFormat.bind(
-                this, this.data[parameter], additionalTicks
+                this, this.data[usedPar], additionalTicks
             );
         } else if(this.checkTimeScale(parameter)){
             axisformat = u.getCustomUTCTimeTickFormat();
-            //this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
         } else {
             axisformat = (d)=>{
                 return tickformat(d.toFixed(11));
@@ -3854,9 +3871,19 @@ class graphly extends EventEmitter {
 
             // Check if axis is using periodic parameter (only one parameter)
             let yS = this.renderSettings.yAxis[yPos];
-           
+
+            let enableSA = false;
+            let parameter;
+            if(this.enableSubYAxis !== false){
+                if(this.enableSubYAxis.indexOf(yS[0])!==-1){
+                    enableSA = true;
+                    parameter = this.enableSubYAxis[
+                        this.enableSubYAxis.indexOf(yS[0])
+                    ];
+                }
+            }
             let yAxisformat = this.getAxisFormat(
-                yS[0], this.enableSubYAxis,
+                yS[0], parameter,
                 this.renderSettings.additionalYTicks[yPos]
             );
             this.yAxis[yPos].tickFormat(yAxisformat);
@@ -3931,9 +3958,12 @@ class graphly extends EventEmitter {
                     .outerTickSize(0)
                     .orient('right')
             );
-            if(this.y2TimeScale){
-                this.y2Axis[yPos].tickFormat(u.getCustomUTCTimeTickFormat());
-            }
+
+            let y2S = this.renderSettings.y2Axis[yPos];
+            let y2Axisformat = this.getAxisFormat(
+                y2S[0], false, false
+            );
+            this.y2Axis[yPos].tickFormat(y2Axisformat);
 
             if(currY2Axis.length > 0){
                 let currSvgy2Axis = this.svg.append('g')
@@ -4183,14 +4213,14 @@ class graphly extends EventEmitter {
                 if(yAx){
                     d3.select(yAx).selectAll('.tick:nth-of-type(2)')
                         .append('text')
-                        .attr('dy', '-60px')
+                        .attr('dy', '-53px')
                         .attr('dx', '-60px')
                         .attr("transform", "rotate(-90)")
                         .attr('class', 'start-date')
                         .text(function(d){return dateFormat(d);});
                     d3.select(yAx).selectAll('.tick:nth-last-of-type(2)')
                         .append('text')
-                        .attr('dy', '-60px')
+                        .attr('dy', '-53px')
                         .attr('dx', '-60px')
                         .attr("transform", "rotate(-90) translate(-55,0)")
                         .attr('class', 'end-date')
