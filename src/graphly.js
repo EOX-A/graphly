@@ -3923,33 +3923,30 @@ class graphly extends EventEmitter {
             if(this.renderSettings.hasOwnProperty('additionalYTicks')){
                 let addYTicks = this.renderSettings.additionalYTicks[yPos];
                 if(typeof addYTicks !== 'undefined'){
+                    let currAddYAxisSVG = [];
                     for (let i = 0; i < addYTicks.length; i++) {
 
-                        this.additionalYAxis.push(
-                            d3.svg.axis()
+                        let currAxis = d3.svg.axis()
                                 .scale(this.yScale[yPos])
                                 .outerTickSize(5)
                                 .orient('left')
-                                .tickFormat(()=>{return '';})
-                        );
-                    }
-                }
-            }
+                                .tickFormat(()=>{return '';});
 
-            if(this.enableSubYAxis){
-                let currAddYAxisSVG = [];
-                for (let i = 0; i < this.renderSettings.additionalYTicks[yPos].length; i++) {
-                    currAddYAxisSVG.push(
+                        this.additionalYAxis.push(currAxis);
+
+                        currAddYAxisSVG.push(
                         this.svg.append('g')
                             .attr('class', 'y_add subaxis')
                             .attr(
                                 'transform', 'translate(-'+((i*80)+80)+ ','+yPos*heighChunk+')'
                             )
-                            .call(this.additionalYAxis[yPos])
-                    );
+                            .call(currAxis)
+                        );
+                    }
+                    this.addYAxisSvg.push(currAddYAxisSVG);
                 }
-                this.addYAxisSvg.push(currAddYAxisSVG);
             }
+
 
             this.y2Axis.push(
                 d3.svg.axis()
