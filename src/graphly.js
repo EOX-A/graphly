@@ -3923,6 +3923,7 @@ class graphly extends EventEmitter {
             if(this.renderSettings.hasOwnProperty('additionalYTicks')){
                 let addYTicks = this.renderSettings.additionalYTicks[yPos];
                 if(typeof addYTicks !== 'undefined'){
+                    let currAddYAxis = [];
                     let currAddYAxisSVG = [];
                     for (let i = 0; i < addYTicks.length; i++) {
 
@@ -3932,7 +3933,7 @@ class graphly extends EventEmitter {
                                 .orient('left')
                                 .tickFormat(()=>{return '';});
 
-                        this.additionalYAxis.push(currAxis);
+                        currAddYAxis.push(currAxis);
 
                         currAddYAxisSVG.push(
                         this.svg.append('g')
@@ -3943,6 +3944,7 @@ class graphly extends EventEmitter {
                             .call(currAxis)
                         );
                     }
+                    this.additionalYAxis.push(currAddYAxis);
                     this.addYAxisSvg.push(currAddYAxisSVG);
                 }
             }
@@ -4352,7 +4354,7 @@ class graphly extends EventEmitter {
 
         for (let i = 0; i < this.addYAxisSvg.length; i++) {
             for (let j = 0; j < this.addYAxisSvg[i].length; j++) {
-                this.addYAxisSvg[i][j].call(this.additionalYAxis[i]);
+                this.addYAxisSvg[i][j].call(this.additionalYAxis[i][j]);
             }
         }
 
@@ -4769,6 +4771,43 @@ class graphly extends EventEmitter {
     */
     resize(debounce){
 
+        this.resize_update();
+        //this.createColorScales();
+        this.createAxisLabels();
+
+        // Hide/show parameter info depending on if they have parameters
+        this.el.selectAll('.parameterInfo').each(function(){
+            if(d3.select(this).node().childNodes.length === 0){
+                d3.select(this).style('display', 'none');
+            } else {
+                d3.select(this).style('display', 'block')
+            }
+        });
+
+        this.batchDrawer.updateCanvasSize(this.width, this.height);
+        this.batchDrawerReference.updateCanvasSize(this.width, this.height);
+        this.renderData();
+        this.zoom_update();
+
+        // Update size of labels
+        d3.selectAll('.axisLabel').attr('font-size', this.defaultLabelSize+'px');
+        d3.selectAll('.svgaxisLabel').attr('font-size', this.defaultLabelSize+'px');
+        d3.selectAll('.labelitem').style('font-size', this.defaultLabelSize+'px');
+    }
+
+
+    resize_update() {
+
+        // Check if subyaxis count has changed and offset respectively
+        if(this.enableSubYAxis) {
+            let addYT = this.renderSettings.additionalYTicks;
+            let maxL = 0;
+            for(let i=0; i<addYT.length; i++){
+                maxL = Math.max(maxL, addYT[i].length);
+            }
+            this.subAxisMarginY = 80*maxL;
+        }
+
         // Clear possible canvas styles
         this.renderCanvas.style('width', null);
         this.renderCanvas.style('height', null);
@@ -4808,33 +4847,6 @@ class graphly extends EventEmitter {
             'translate(' + (this.margin.left+this.subAxisMarginY + 1.0) +
             'px' + ',' + (this.margin.top + 1.0) + 'px' + ')'
         );
-
-        this.resize_update();
-        //this.createColorScales();
-        this.createAxisLabels();
-
-        // Hide/show parameter info depending on if they have parameters
-        this.el.selectAll('.parameterInfo').each(function(){
-            if(d3.select(this).node().childNodes.length === 0){
-                d3.select(this).style('display', 'none');
-            } else {
-                d3.select(this).style('display', 'block')
-            }
-        });
-
-        this.batchDrawer.updateCanvasSize(this.width, this.height);
-        this.batchDrawerReference.updateCanvasSize(this.width, this.height);
-        this.renderData();
-        this.zoom_update();
-
-        // Update size of labels
-        d3.selectAll('.axisLabel').attr('font-size', this.defaultLabelSize+'px');
-        d3.selectAll('.svgaxisLabel').attr('font-size', this.defaultLabelSize+'px');
-        d3.selectAll('.labelitem').style('font-size', this.defaultLabelSize+'px');
-    }
-
-
-    resize_update() {
 
         this.xScale.range([0, this.width]);
 
@@ -4910,7 +4922,7 @@ class graphly extends EventEmitter {
             for (let j = 0; j < this.addYAxisSvg[i].length; j++) {
                 this.addYAxisSvg[i][j].attr(
                     'transform', 'translate(-'+((j*80)+80)+ ','+i*heighChunk+')');
-                this.addYAxisSvg[i][j].call(this.additionalYAxis[i]);
+                this.addYAxisSvg[i][j].call(this.additionalYAxis[i][j]);
             }
         }
 
