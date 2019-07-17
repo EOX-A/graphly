@@ -6044,8 +6044,15 @@ class graphly extends EventEmitter {
             inactiveData[p] = [];
         }
 
-        for (let f in this.filters){
-            let currFilter = this.filters[f];
+        var filters = Object.assign(
+            {},
+            this.filterManager.filters,
+            this.filterManager.boolFilters,
+            this.filterManager.maskFilters
+        );
+
+        for (let f in filters){
+            let currFilter = filters[f];
             let currentDataset = data[f];
 
             // Check if parameter is actually in current data

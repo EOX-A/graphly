@@ -134,6 +134,9 @@ input[type=text] {
     background-position: 1px -1px;
     height: 15px;
     width: 15px;
+    right: 9px;
+    top: -2px;
+    position: absolute;
 }
 
 

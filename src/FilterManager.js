@@ -248,16 +248,6 @@ class FilterManager extends EventEmitter {
 
         var maskLength = mP.values.length;
 
-        var enabled = [];
-        if(mP.hasOwnProperty('enabled')){
-            enabled = mP.enabled;
-        } else {
-            for (let vs=0; vs<mP.values.length; vs++){
-                enabled.push(false);
-            }
-            this.maskParameter[d].enabled = enabled;
-        }
-
         var conversionFunction = function(value){
             var boolArray = [];
             var result = Math.abs(value).toString(2);
@@ -268,6 +258,37 @@ class FilterManager extends EventEmitter {
                 boolArray.push(result[i] === '1');
             }
             return boolArray;
+        }
+
+        var enabled = [];
+        if(mP.hasOwnProperty('enabled')){
+            enabled = mP.enabled;
+
+            // There are preconfigured settings, lets create filters based on them
+            for (var en=0; en<enabled.length; en++){
+                if(mP.hasOwnProperty('selection')){
+                    var bits = mP.selection;
+                    var enabledArr = enabled;
+                    this.maskFilters[d] = (val)=>{
+                        var boolVals = conversionFunction(val);
+                        var maskApplies = true;
+                        for(let en=0; en<enabledArr.length; en++){
+                            if(enabledArr[en]){
+                                if(bits[en] !== boolVals[en]){
+                                    maskApplies = false;
+                                }
+                            }
+                        }
+                        return maskApplies;
+                    };
+                }
+            }
+            
+        } else {
+            for (let vs=0; vs<mP.values.length; vs++){
+                enabled.push(false);
+            }
+            this.maskParameter[d].enabled = enabled;
         }
 
         var selection = [];
@@ -397,13 +418,6 @@ class FilterManager extends EventEmitter {
         if(this.brushes.hasOwnProperty(d)){
             div.append('div')
                 .attr('class', 'eraserIcon editButton')
-                .style('right', ()=>{
-                    if(this.showCloseButtons){
-                        return '9px';
-                    } else {
-                        return '0px';
-                    }
-                })
                 .on('click', ()=>{
                     this.y[d].brush.clear();
                     this._brushEnd();
