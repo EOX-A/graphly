@@ -218,15 +218,7 @@ class FilterManager extends EventEmitter {
 
         var height = 252;
         var width = 120;
-        var bins = 28;
-
         var mP = this.maskParameter[d];
-        var enabled = mP.hasOwnProperty('selection');
-        var selection = 0;
-        if(enabled){
-           selection = mP.selection;
-        }
-
         var that = this;
 
         var div = this.el.append('div')
@@ -234,35 +226,6 @@ class FilterManager extends EventEmitter {
                 .style('float', 'left')
                 .style('width', width+'px')
                 .style('height', height+'px');
-
-        div.append('div')
-            .attr('class', function(){
-                if (!that.maskParameter[d].hasOwnProperty('selection')){
-                    return 'editButton add';
-                }else{
-                    return 'editButton remove';
-                }
-            })
-            .style('line-height', '10px')
-            .on('click', function(){
-                if(!that.maskParameter[d].hasOwnProperty('selection')){
-                    // TODO: Decide on default value
-                    /*var mask = '';
-                    for (var i = 0; i < that.maskParameter[d].values.length; i++) {
-                        mask+='1';
-                    }
-                    that.maskParameter[d].selection = parseInt(mask, 2);*/
-                    that.maskParameter[d].selection = 0;
-                    that.maskFilters[d] = (val)=>{
-                        return (val === 0);
-                    };
-                }else{
-                    delete that.maskFilters[d];
-                    delete that.maskParameter[d].selection;
-                }
-                that._filtersChanged();
-
-            });
 
         var label = d;
         if(this.dataSettings.hasOwnProperty(d) && 
@@ -283,35 +246,82 @@ class FilterManager extends EventEmitter {
             .style('width', height-20+'px')
             .html(label);
 
-        var onInputClick = function(evt){
-            
-            var inputArray = d3.select(this.parentNode.parentElement)
-                .selectAll('input')[0];
+        var maskLength = mP.values.length;
 
-            var bits = '';
-            for (var i = 0; i < inputArray.length; i++) {
-                bits += Number(d3.select(inputArray[i]).property('checked'));
+        var enabled = [];
+        if(mP.hasOwnProperty('enabled')){
+            enabled = mP.enabled;
+        } else {
+            for (let vs=0; vs<mP.values.length; vs++){
+                enabled.push(false);
             }
+            this.maskParameter[d].enabled = enabled;
+        }
 
-            var filterMask = parseInt(bits, 2);
-            that.maskParameter[d].selection = filterMask;
-            that.maskFilters[d] = (val)=>{
-                return (val === filterMask);
-            };
-            that._filtersChanged();
-        };
+        var conversionFunction = function(value){
+            var boolArray = [];
+            var result = Math.abs(value).toString(2);
+            while(result.length < maskLength) {
+                result = "0" + result;
+            }
+            for (var i=0; i<result.length; i++) {
+                boolArray.push(result[i] === '1');
+            }
+            return boolArray;
+        }
 
-        var maskLength = mP.values.length-1;
+        var selection = [];
+        if(mP.hasOwnProperty('selection')){
+            selection = mP.selection;
+        } else {
+            for (let vs=0; vs<mP.values.length; vs++){
+                selection.push(false);
+            }
+            this.maskParameter[d].selection = selection;
+        }
 
-        div.selectAll("input")
+        var subdivs = div.selectAll("input")
             .data(mP.values)
             .enter()
-            .append('label')
+            .append('div');
+
+        subdivs.append('div')
+            .attr('class', function(d,i){
+                if (!enabled[i]){
+                    return 'editButton add';
+                }else{
+                    return 'editButton remove';
+                }
+            })
+            .attr('title','Enable filtering for this flag')
+            .style('line-height', '10px')
+            .style('display', 'inline')
+            .on('click', function(dat,i){
+                that.maskParameter[d].enabled[i] = !enabled[i];
+                var bits = that.maskParameter[d].selection;
+                var enabledArr = that.maskParameter[d].enabled;
+                that.maskFilters[d] = (val)=>{
+                    var boolVals = conversionFunction(val);
+                    var maskApplies = true;
+                    for(let en=0; en<enabledArr.length; en++){
+                        if(enabledArr[en]){
+                            if(bits[en] !== boolVals[en]){
+                                maskApplies = false;
+                            }
+                        }
+                    }
+                    return maskApplies;
+                };
+                that._filtersChanged();
+            });
+
+        subdivs.append('label')
                 .attr('for',function(d,i){ return d[0]; })
                 .attr('title',function(d,i){ return d[1]; })
-                .style('color', function(d){
+                .style('display', 'inline')
+                .style('color', function(d,i){
                     var color = '#000';
-                    if(!enabled){
+                    if(!enabled[i]){
                         color = '#aaa';
                     }
                     return color;
@@ -319,15 +329,33 @@ class FilterManager extends EventEmitter {
                 .text(function(d) { return d[0]; })
             .append("input")
                 .property("checked", function(d,i){
-                    return (selection & (0b1 << maskLength-i))>0;
+                    return selection[i];
                 })
-                .property('disabled', function(d){
-                    return !enabled;
+                .property('disabled', function(d,i){
+                    return !enabled[i];
                 })
+                .attr('title','Checked equals 1, unchecked equals 0')
                 .attr("class", "maskinput")
                 .attr("type", "checkbox")
-                .attr("id", function(d,i) { return d[0]; })
-                .on('click',onInputClick);
+                .attr("id", function(d) { return d[0]; })
+                .on('click', function(dat, i){
+                    selection[i] = !selection[i];
+                    var bits = that.maskParameter[d].selection;
+                    var enabled = that.maskParameter[d].enabled;
+                    that.maskFilters[d] = (val)=>{
+                        var boolVals = conversionFunction(val);
+                        var maskApplies = true;
+                        for(let en=0; en<enabled.length; en++){
+                            if(enabled[en]){
+                                if(bits[en] !== boolVals[en]){
+                                    maskApplies = false;
+                                }
+                            }
+                        }
+                        return maskApplies;
+                    };
+                    that._filtersChanged();
+                });
 
     }
 

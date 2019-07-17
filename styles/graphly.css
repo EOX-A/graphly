@@ -183,32 +183,6 @@ input[type=text] {
 }
 
 
-.editButton{
-    border-color: #555;
-    border-radius: 2px;
-    border-style: solid;
-    border-width: 1px;
-    cursor: pointer;
-    height: 11px;
-    margin-right: 5px;
-    position: absolute;
-    right: 1px;
-    text-align: center;
-    width: 11px;
-    z-index: 5;
-}
-
-.editButton.add:before {
-    content: "+";
-    line-height: 12px;
-}
-
-
-.editButton.remove:before {
-    content: "–";
-}
-
-
 .axisLabel{
     cursor: pointer;
     pointer-events: all;
@@ -391,15 +365,43 @@ input[type=text] {
 .maskinput{
     float: left!important;
     position:relative;
+    margin-left: 0px;
 }
 
 .filterContainer label{
+    top: -2px;
     display:inline-block;
     font-size: 0.8em;
-    left: 30px;
     position:relative;
     vertical-align:middle;
     width: 120px;
+}
+
+
+.editButton{
+    margin-top: 3px;
+    margin-left: 23px;
+    border-color: #555;
+    border-radius: 2px;
+    border-style: solid;
+    border-width: 1px;
+    cursor: pointer;
+    height: 10px;
+    margin-right: 5px;
+    float: left;
+    text-align: center;
+    width: 10px;
+    z-index: 5;
+}
+
+.editButton.add:before {
+    content: "+";
+    line-height: 11px;
+}
+
+
+.editButton.remove:before {
+    content: "–";
 }
 
 
