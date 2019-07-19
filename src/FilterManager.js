@@ -767,6 +767,11 @@ class FilterManager extends EventEmitter {
         }
     }
 
+    _initFilters(){
+        // TODO: We need a way to easily prefill "preset" filters when data
+        //       is loaded
+    }
+
 
     _renderFilters() {
 
@@ -900,6 +905,7 @@ class FilterManager extends EventEmitter {
     loadData(data){
         this.data = data;
         this._initData();
+        this._initFilters();
         this._renderFilters();
     }
 

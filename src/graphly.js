@@ -3121,7 +3121,7 @@ class graphly extends EventEmitter {
                          this.marginCSOffset- this.subAxisMarginY;
             this.height = this.dim.height - this.margin.top - 
                           this.margin.bottom - this.subAxisMarginX;
-            this.resize_update();
+            this.resize_update(false);
             this.createColorScales();
             this.createAxisLabels();
 
@@ -4771,8 +4771,8 @@ class graphly extends EventEmitter {
     */
     resize(debounce){
 
-        this.resize_update();
-        //this.createColorScales();
+        this.resize_update(debounce);
+        this.createColorScales();
         this.createAxisLabels();
 
         // Hide/show parameter info depending on if they have parameters
@@ -4786,7 +4786,6 @@ class graphly extends EventEmitter {
 
         this.batchDrawer.updateCanvasSize(this.width, this.height);
         this.batchDrawerReference.updateCanvasSize(this.width, this.height);
-        this.renderData();
         this.zoom_update();
 
         // Update size of labels
@@ -4796,7 +4795,7 @@ class graphly extends EventEmitter {
     }
 
 
-    resize_update() {
+    resize_update(debounce) {
 
         // Check if subyaxis count has changed and offset respectively
         if(this.enableSubYAxis) {
