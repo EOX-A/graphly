@@ -6033,13 +6033,57 @@ class graphly extends EventEmitter {
             .style('display', 'none');
     }
 
+    checkAxisParameter(par, axis){
+        for (let i = axis.length - 1; i >= 0; i--) {
+            for (var j = axis[i].length - 1; j >= 0; j--) {
+                 if(axis[i][j] === par){
+                    return true;
+                 }
+             }
+        }
+        return false;
+    }
+
+    checkParameterUsed(par){
+
+        if(this.checkAxisParameter(par, this.renderSettings.xAxis)){
+            return true;
+        }
+        if(this.checkAxisParameter(par, this.renderSettings.yAxis)){
+            return true;
+        }
+        if(this.checkAxisParameter(par, this.renderSettings.y2Axis)){
+            return true;
+        }
+        if(this.checkAxisParameter(par, this.renderSettings.colorAxis)){
+            return true;
+        }
+        if(this.checkAxisParameter(par, this.renderSettings.colorAxis2)){
+            return true;
+        }
+
+        if(this.filterManager && this.filterManager.hasOwnProperty('visibleFilters')){
+            if(this.filterManager.visibleFilters.indexOf(par) !== -1){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     applyDataFilters(){
+
+        this.startTiming('applyDataFilters');
 
         let data = {};
         let inactiveData = {};
 
         for(let p in this.data){
-            data[p] = this.data[p];
+            if(Array.isArray(this.data[p])){
+                data[p] = this.data[p].slice(0);
+            } else {
+                data[p] = this.data[p];
+            }
             inactiveData[p] = [];
         }
 
@@ -6051,23 +6095,31 @@ class graphly extends EventEmitter {
         );
 
         for (let f in filters){
-            let currFilter = filters[f];
-            let currentDataset = data[f];
 
+            let currFilter = filters[f];
             // Check if parameter is actually in current data
             if(!data.hasOwnProperty(f)){
                 continue;
             }
+            let currentDataset = data[f].slice(0);
+
+            let applicableFilterList = [];
 
             for (let p in data){
 
                 let applicableFilter = true;
+                let indepFilter = true;
 
                 if(this.filterManager.filterSettings.hasOwnProperty('filterRelation')){
                     applicableFilter = false;
                     let filterRel = this.filterManager.filterSettings.filterRelation;
                     let insideGroup = false;
+
                     for (let i = 0; i < filterRel.length; i++) {
+                        // If filter parameter not in any group it applies for all
+                        if(filterRel[i].indexOf(f)!==-1){
+                            indepFilter = false;
+                        }
                         // Check if both parameters are in the same group
                         if( (filterRel[i].indexOf(p)!==-1) && 
                             (filterRel[i].indexOf(f)!==-1)){
@@ -6080,12 +6132,52 @@ class graphly extends EventEmitter {
                         }
                     }
                     if(!insideGroup){
+                        //applicableFilter = true;
+                    }
+                    if(indepFilter){
                         applicableFilter = true;
                     }
                 }
-                
+
+                // Performance improvement filter only parameter that are shown
+                // in either one of the axis, as color axis or as filter in the
+                // filter manager
+                /*if(applicableFilter && !indepFilter){
+                    applicableFilter = !this.checkParameterUsed(p);
+                }*/
+
                 if(applicableFilter){
-                    let tmpArray = data[p];
+                    applicableFilterList.push(p);
+
+                    /*let tmpArray = data[p];
+                    let dataTmpArray = [];
+                    for (let i=0; i<data[p].length; i++) {
+                        if(currFilter(currentDataset[i])){
+                            dataTmpArray.push(data[p][i]);
+                        } else {
+                            dataTmpArray.push(NaN);
+                        }
+                    }
+                    data[p] = dataTmpArray;
+
+                    inactiveData[p].pushArray(
+                        tmpArray.filter((e,i)=>{
+                            return !currFilter(currentDataset[i]);
+                        })
+                    );*/
+
+
+                    /*let tmpArray = data[p];
+                    data[p] = data[p].filter((e,i)=>{
+                        return currFilter(currentDataset[i]);
+                    });
+                    inactiveData[p].pushArray(
+                        tmpArray.filter((e,i)=>{
+                            return !currFilter(currentDataset[i]);
+                        })
+                    );*/
+
+                    /*let tmpArray = data[p];
                     data[p] = data[p].map((rec, i)=>{
                         if(currFilter(currentDataset[i])){
                             return rec;
@@ -6097,13 +6189,30 @@ class graphly extends EventEmitter {
                         tmpArray.filter((e,i)=>{
                             return !currFilter(currentDataset[i]);
                         })
-                    );
+                    );*/
+
+                    /*let tmpArray = data[p];
+                    inactiveData[p].pushArray(
+                        tmpArray.filter((e,i)=>{
+                            return !currFilter(currentDataset[i]);
+                        })
+                    );*/
                 }
             }
+
+            for (let i=0; i<currentDataset.length; i++) {
+                if(!currFilter(currentDataset[i])){
+                    for(let af=0; af<applicableFilterList.length; af++){
+                        data[applicableFilterList[af]][i] = NaN;
+                    }
+                }
+            }
+
         }
 
         this.currentData = data;
         this.currentInactiveData = inactiveData;
+        this.endTiming('applyDataFilters');
     }
 
     createParameterInfo(){
