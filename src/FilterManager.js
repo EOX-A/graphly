@@ -68,7 +68,9 @@ class FilterManager extends EventEmitter {
         this.el = d3.select(params.el);
         this.filterSettings = params.filterSettings;
         this.visibleFilters = this.filterSettings.visibleFilters;
-        this.boolParameter = defaultFor(this.filterSettings.boolParameter, []);
+        this.boolParameter = defaultFor(this.filterSettings.boolParameter, {
+            parameters: [], enabled: []
+        });
         this.choiceParameter = defaultFor(this.filterSettings.choiceParameter, []);
         this.maskParameter = defaultFor(this.filterSettings.maskParameter, []);
         this.data = defaultFor(params.data, {});
@@ -168,7 +170,7 @@ class FilterManager extends EventEmitter {
             // Check if min and max extent is the same, if yes pad it with 1/4
             // the size, same min and max create display issues in scales.
             // Only do this if it is not a flag filter
-            if(this.boolParameter.indexOf(d) === -1 &&
+            if(this.boolParameter.parameters.indexOf(d) === -1 &&
                this.extents[d][0]===this.extents[d][1]){
                 var offset = this.extents[d][0]/4;
                 if(offset===0){
@@ -314,7 +316,7 @@ class FilterManager extends EventEmitter {
                     return 'editButton remove';
                 }
             })
-            .attr('title','Enable filtering for this flag')
+            .attr('title','Enable filtering for this bit')
             .style('line-height', '10px')
             .style('display', 'inline')
             .on('click', function(dat,i){
@@ -671,14 +673,20 @@ class FilterManager extends EventEmitter {
                 .style('width', width+'px')
                 .style('height', height+'px');
 
-        for (var i = 0; i < this.boolParameter.length; i++) {
-            var d = this.boolParameter[i];
+        for (var i = 0; i < this.boolParameter.parameters.length; i++) {
+            var d = this.boolParameter.parameters[i];
             // If parameter is actually available in the dataset render it
             if(this.data.hasOwnProperty(d)){
 
+                let parEnabled =  this.boolParameter.enabled[i];
+                if(parEnabled){
+                    this.boolFilters[d] = (val)=>{
+                        return !!val === true;
+                    };
+                }
                 if(!this.boolFilStat.hasOwnProperty(d)){
                     this.boolFilStat[d] = {
-                        enabled: false,
+                        enabled: parEnabled,
                         checked: true
                     };
                 }
@@ -698,6 +706,7 @@ class FilterManager extends EventEmitter {
                                 return 'editButton remove';
                             }
                         })
+                        .attr('title','Enable filtering for this flag')
                         .style('line-height', '10px')
                         .on('click', function(){
                             var id = d3.select(this.parentNode)
@@ -733,6 +742,7 @@ class FilterManager extends EventEmitter {
 
                 var input = container.append("input")
                         .property('checked', that.boolFilStat[d].checked)
+                        .attr('title','Checked equals true, unchecked false')
                         .attr("type", "checkbox")
                         .attr("id", d);
 
@@ -861,7 +871,7 @@ class FilterManager extends EventEmitter {
         
         this.visibleFilters.forEach(d=>{
             if(this.data.hasOwnProperty(d) && 
-               this.boolParameter.indexOf(d) === -1 &&
+               this.boolParameter.parameters.indexOf(d) === -1 &&
                choiceKeys.indexOf(d) === -1){
                 if(this.maskParameter.hasOwnProperty(d)){
                     this._createMaskFilterElement(d, data);
