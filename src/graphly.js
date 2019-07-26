@@ -5017,7 +5017,7 @@ class graphly extends EventEmitter {
                 .attr(
                     'transform',
                     'translate(' + -(this.margin.left+this.subAxisMarginY) + 
-                    ',' + ((heighChunk+20)*yPos)+20 + ')'
+                    ',' + ((heighChunk*yPos)+20) + ')'
                 )
                 .attr('pointer-events', 'all');
 
@@ -5027,7 +5027,7 @@ class graphly extends EventEmitter {
                 .attr(
                     'transform',
                     'translate(' + this.width + 
-                    ',' + ((heighChunk+20)*yPos)+20 + ')'
+                    ',' + ((heighChunk*yPos)+20) + ')'
                 )
                 .attr('pointer-events', 'all');
         }
