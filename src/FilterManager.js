@@ -229,6 +229,19 @@ class FilterManager extends EventEmitter {
                 .style('width', width+'px')
                 .style('height', height+'px');
 
+        div.append('div')
+            .attr('class', 'labelClose cross')
+            .on('click', ()=>{
+                /**
+                * When close buttons are shown event is fired with 
+                * parameter identifier when close button is clicked.
+                *
+                * @event module:graphly.FilterManager#removeFilter
+                * @property {String} id - Provides identifier of parameter
+                */
+                this.emit('removeFilter', d);
+            });
+
         var label = d;
         if(this.dataSettings.hasOwnProperty(d) && 
             this.dataSettings[d].hasOwnProperty('uom') && 
@@ -382,6 +395,113 @@ class FilterManager extends EventEmitter {
 
     }
 
+    _createAxisForms(brush, evtx, evty){
+
+        // If brush has extent use it
+        let extent;
+        if(brush.extent()){
+            extent = brush.extent();
+        } else {
+            extent = [0,1];
+        }
+        // offset of form from the click event position
+        let formYOffset = 100;
+        let formXOffset = 2;
+
+        // Cleanup
+        d3.selectAll('.rangeEdit').remove();
+
+         // range edit forms 
+        this.el.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditMax')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditMin')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditCancel')
+            .attr('type', 'button')
+            .attr('value', '✕');
+        this.el.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditConfirm')
+            .attr('type', 'button')
+            .attr('value', '✔');
+
+
+        d3.selectAll('.rangeEdit')
+            .classed('hidden', false);
+
+        d3.select('#rangeEditMax')
+            .property('value', extent[1])
+            .style('top', (evty+formYOffset) + 'px')
+            .style('left', evtx + 'px')
+            .node()
+            .focus();
+        d3.select('#rangeEditMax')
+            .node()
+            .select();
+
+        let formMaxPos = d3.select('#rangeEditMax').node().getBoundingClientRect();
+
+        d3.select('#rangeEditMin')
+            .property('value', extent[0])
+            .style('top', evty + formYOffset + formMaxPos.height + 5 + 'px')
+            .style('left', evtx + formXOffset + 'px')
+
+        let formMinPos = d3.select('#rangeEditMin').node().getBoundingClientRect();
+        var that = this;
+
+        d3.selectAll('#rangeEditMax, #rangeEditMin')
+            .on('keypress', function(){
+                // confirm forms on enter
+                if(d3.event.keyCode === 13){
+                    let min = Number(d3.select('#rangeEditMin').property('value'));
+                    let max = Number(d3.select('#rangeEditMax').property('value'));
+                    //checks for invalid values
+                    if (!isNaN(min) && !isNaN(max)){
+                    // if user reversed order, fix it
+                        let newDataDomain = (min < max) ? [min, max] : [max, min];
+                        brush.extent(newDataDomain);
+                        d3.selectAll('.rangeEdit').remove();
+                        that._brushEnd()();
+                    }
+                }
+            }.bind(this))
+
+        d3.select('#rangeEditConfirm')
+            .style('top', evty + formYOffset + formMaxPos.height + 5 +'px')
+            .style('left', evtx + formXOffset + formMinPos.width + 'px')
+            .on('click', function(){
+                if(d3.event.keyCode === 13){
+                    let min = Number(d3.select('#rangeEditMin').property('value'));
+                    let max = Number(d3.select('#rangeEditMax').property('value'));
+                    //checks for invalid values
+                    if (!isNaN(min) && !isNaN(max)){
+                    // if user reversed order, fix it
+                        let newDataDomain = (min < max) ? [min, max] : [max, min];
+                        brush.extent(newDataDomain);
+                        d3.selectAll('.rangeEdit').remove();
+                        that._brushEnd()();
+                    }
+                }
+            }.bind(this));
+
+
+        d3.select('#rangeEditCancel')
+            .style('top', evty +  formYOffset + 'px')
+            .style('left', evtx + formXOffset + formMaxPos.width + 'px')
+            .on('click', function(){
+                d3.selectAll('.rangeEdit')
+                    .classed('hidden', true);
+                });
+    }
+
     _createFilterElement(d, data) {
 
         var height = 252;
@@ -426,6 +546,16 @@ class FilterManager extends EventEmitter {
                     }
                 );
         }
+
+        div.append('div')
+            .attr('class', 'pencilIcon editButton')
+            .on('click', function (){
+                let evtx = d3.event.pageX;
+                let evty = d3.event.layerY; 
+                this._createAxisForms(
+                    this.y[d].brush, evtx, evty
+                );
+            }.bind(this))
 
         div.append('div')
             .attr('class', 'parameterLabel')
@@ -673,6 +803,20 @@ class FilterManager extends EventEmitter {
                 .style('width', width+'px')
                 .style('height', height+'px');
 
+        div.append('div')
+            .attr('class', 'labelClose cross')
+            .on('click', ()=>{
+                /**
+                * When close buttons are shown event is fired with 
+                * parameter identifier when close button is clicked.
+                *
+                * @event module:graphly.FilterManager#removeFilter
+                * @property {String} id - Provides identifier of parameter
+                */
+                this.emit('removeFilter', d);
+            });
+
+
         for (var i = 0; i < this.boolParameter.parameters.length; i++) {
             var d = this.boolParameter.parameters[i];
             // If parameter is actually available in the dataset render it
@@ -770,9 +914,9 @@ class FilterManager extends EventEmitter {
             this._createChoiceFilterElements(div);
         }
 
-        // If element is empty because the provided parameters are not in the 
-        // current dataset, remove the div
-        if(div.selectAll('*')[0].length === 0){
+        // If element is empty (except for cross) because the provided parameters
+        // are not in the current dataset, remove the div
+        if(div.selectAll('*')[0].length === 1){
             div.remove();
         }
     }

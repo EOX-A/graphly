@@ -129,16 +129,6 @@ input[type=text] {
     z-index: 20;
 }
 
-.eraserIcon{
-    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAALCAMAAACecocUAAAARVBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADc6ur3AAAAFnRSTlMAAgMKCxUbHjM0XWFim6CmtbnDxd7xXSXl0gAAAEZJREFUCFs9x0kCgCAMBMEOirvigvz/qSYRnct0ga0XP9tSjvBn+WBZMXsqhHG9KzouiS8myODQJLUOS+LeEDZPRcrn4PUAJlkEj+JsHDEAAAAASUVORK5CYII=");
-    background-position: 1px -1px;
-    height: 15px;
-    width: 15px;
-    right: 9px;
-    top: -2px;
-    position: absolute;
-}
-
 
 .filterContainer{
     box-shadow: 3px 3px 2px #ccc;
@@ -442,6 +432,30 @@ input[type=text] {
     right: 3px;
     top: 3px;
     z-index: 1;
+}
+
+.pencilIcon{
+    position: absolute;
+    right: 9px;
+    top: -2px;
+    z-index: 1;
+    transform: rotate(-180deg);
+}
+
+.pencilIcon:before{
+    content: "\2710 ";
+    position: absolute;
+    left: 0px;
+    top: -2px;
+    font-size: 13px;
+}
+
+.eraserIcon{
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAALCAMAAACecocUAAAARVBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADc6ur3AAAAFnRSTlMAAgMKCxUbHjM0XWFim6CmtbnDxd7xXSXl0gAAAEZJREFUCFs9x0kCgCAMBMEOirvigvz/qSYRnct0ga0XP9tSjvBn+WBZMXsqhHG9KzouiS8myODQJLUOS+LeEDZPRcrn4PUAJlkEj+JsHDEAAAAASUVORK5CYII=");
+    background-position: 1px -1px;
+    right: 23px;
+    top: -2px;
+    position: absolute;
 }
 
 #ySettings .choices{
