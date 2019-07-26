@@ -5854,6 +5854,7 @@ class graphly extends EventEmitter {
                     this.createParameterInfo();
                     this.resize(false);
                     this.emit('axisChange');
+                    this.renderData();
                 });
         }
     }
