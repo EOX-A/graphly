@@ -405,29 +405,31 @@ class FilterManager extends EventEmitter {
             extent = [0,1];
         }
         // offset of form from the click event position
-        let formYOffset = 100;
+        let formYOffset = 20;
         let formXOffset = 2;
 
         // Cleanup
         d3.selectAll('.rangeEdit').remove();
 
+        let bod = d3.select('body');
+
          // range edit forms 
-        this.el.append('input')
+        bod.append('input')
             .attr('class', 'rangeEdit')
             .attr('id', 'rangeEditMax')
             .attr('type', 'text')
             .attr('size', 7);
-        this.el.append('input')
+        bod.append('input')
             .attr('class', 'rangeEdit')
             .attr('id', 'rangeEditMin')
             .attr('type', 'text')
             .attr('size', 7);
-        this.el.append('input')
+        bod.append('input')
             .attr('class', 'rangeEdit')
             .attr('id', 'rangeEditCancel')
             .attr('type', 'button')
             .attr('value', '✕');
-        this.el.append('input')
+        bod.append('input')
             .attr('class', 'rangeEdit')
             .attr('id', 'rangeEditConfirm')
             .attr('type', 'button')
@@ -469,7 +471,7 @@ class FilterManager extends EventEmitter {
                         let newDataDomain = (min < max) ? [min, max] : [max, min];
                         brush.extent(newDataDomain);
                         d3.selectAll('.rangeEdit').remove();
-                        that._brushEnd()();
+                        that._brushEnd();
                     }
                 }
             }.bind(this))
@@ -487,7 +489,7 @@ class FilterManager extends EventEmitter {
                         let newDataDomain = (min < max) ? [min, max] : [max, min];
                         brush.extent(newDataDomain);
                         d3.selectAll('.rangeEdit').remove();
-                        that._brushEnd()();
+                        that._brushEnd();
                     }
                 }
             }.bind(this));
@@ -551,7 +553,7 @@ class FilterManager extends EventEmitter {
             .attr('class', 'pencilIcon editButton')
             .on('click', function (){
                 let evtx = d3.event.pageX;
-                let evty = d3.event.layerY; 
+                let evty = d3.event.pageY; 
                 this._createAxisForms(
                     this.y[d].brush, evtx, evty
                 );
