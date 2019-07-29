@@ -2308,7 +2308,7 @@ class graphly extends EventEmitter {
                 });
     }
 
-    addColorscale(id, colors, ranges){
+    addColorScale(id, colors, ranges){
         plotty.addColorScale(id, colors, ranges);
         this.colorscales.push(id);
     }
