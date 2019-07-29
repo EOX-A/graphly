@@ -1521,8 +1521,7 @@ class graphly extends EventEmitter {
 
             that.recalculateBufferSize();
             that.initAxis();
-            that.resize(false);
-            //that.renderData();
+            that.renderData();
 
             // Recheck if parameter info should be shown now
             that.el.selectAll('.parameterInfo').each(function(){
@@ -1559,7 +1558,7 @@ class graphly extends EventEmitter {
                 }
 
                 that.initAxis();
-                that.resize(false);
+                that.renderData();
                 that.createAxisLabels();
                 that.emit('axisChange');
             }
@@ -1610,8 +1609,7 @@ class graphly extends EventEmitter {
                 }
                 that.subAxisMarginY = 80*maxL;
                 that.initAxis();
-                that.resize();
-                //that.renderData();
+                that.renderData();
                 that.createAxisLabels();
                 that.emit('axisChange');
             }, false);
@@ -1627,8 +1625,7 @@ class graphly extends EventEmitter {
                     }
                     that.subAxisMarginY = 80*maxL;
                     that.initAxis();
-                    that.resize();
-                    //that.renderData();
+                    that.renderData();
                     that.createAxisLabels();
                     that.emit('axisChange');
                 }
@@ -2393,7 +2390,7 @@ class graphly extends EventEmitter {
 
         let rec = this.svg.append('rect')
             .attr('id', 'zoomXBox')
-            .attr('width', this.width)
+            .attr('width', this.width-20)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
             .style('visibility', 'hidden')
@@ -2761,7 +2758,7 @@ class graphly extends EventEmitter {
                 .attr(
                     'transform',
                     'translate(' + -(this.margin.left+this.subAxisMarginY) + 
-                    ',' + offsetY+20 + ')'
+                    ',' + ((heighChunk*plotY)+20) + ')'
                 )
                 .style('visibility', 'hidden')
                 .attr('pointer-events', 'all');
@@ -2777,9 +2774,10 @@ class graphly extends EventEmitter {
                 .attr('class', 'zoomY2Box')
                 .attr('width', this.margin.right + this.marginY2Offset)
                 .attr('height', currHeight-20 )
-                .attr('transform', 'translate(' + (
-                    this.width
-                    ) + ',' + offsetY+20 + ')'
+                .attr(
+                    'transform',
+                    'translate(' + this.width + 
+                    ',' + ((heighChunk*plotY)+20) + ')'
                 )
                 .style('visibility', 'hidden')
                 .attr('pointer-events', 'all');
@@ -5006,7 +5004,7 @@ class graphly extends EventEmitter {
             );
 
         this.el.select('#zoomXBox')
-            .attr('width', this.width)
+            .attr('width', this.width-20)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
@@ -5035,10 +5033,6 @@ class graphly extends EventEmitter {
                 .attr('pointer-events', 'all');
         }
 
-        this.el.select('#zoomXBox')
-            .attr('width', this.width)
-            .attr('height', (this.margin.bottom+this.subAxisMarginX))
-            .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
         this.el.selectAll('.rectangleOutline').each(function(d,i){
             d3.select(this)
