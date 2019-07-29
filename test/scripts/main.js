@@ -170,7 +170,11 @@ var renderSettingsAeolus = {
         'geoid_separation': [
             'geoid_separation'
         ]
-    }
+    },
+    additionalXTicks: [],
+    additionalYTicks: [],
+    availableParameters: false
+
 };
 
 
@@ -448,7 +452,8 @@ var filterSettings = {
             'mie_HLOS_wind_speed',
             'mie_quality_flag_data',
             'mie_altitude_top',
-            'mie_altitude_bottom'
+            'mie_altitude_bottom',
+            'mie_bin_quality_flag'
         ],
         [
             'rayleigh_HLOS_wind_speed',
@@ -498,16 +503,101 @@ var filterSettings = {
         'Num_Corrupt_Measurement_Bins',
         'Num_Corrupt_Reference_Pulses',
         'Num_Mie_Core_Algo_Fails_Measurements',
-        //'Num_Ground_Echo_Not_Detected_Measurements'
+        //'Num_Ground_Echo_Not_Detected_Measurements',
+        'mie_bin_quality_flag',
+        'rayleigh_bin_quality_flag'
 
 
     ],
-    boolParameter: [
-        'Mie_Valid', 'Rayleigh_Valid',
-        'Frequency_Valid', 'Measurement_Response_Valid','Reference_Pulse_Response_Valid'
-    ],
+    boolParameter: {
+        parameters: [
+            'Mie_Valid', 'Rayleigh_Valid',
+            'Frequency_Valid', 'Measurement_Response_Valid',
+            'Reference_Pulse_Response_Valid'
+        ],
+        enabled: [
+            true, false,
+            false, false,
+            false
+        ]
+    },
     maskParameter: {
-
+        'mie_bin_quality_flag': {
+                  values: [
+                      ['Bit 1', 'Overall validity. Data invalid 1, otherwise 0'],
+                      ['Bit 2', 'Set to 1 if signal-to-noise below SNR_Threshold, default 0'],
+                      ['Bit 3', 'Data saturation found 1, otherwise 0'],
+                      ['Bit 4', 'Data spike found 1, otherwise 0'],
+                      ['Bit 5', 'Reference pulse invalid 1, otherwise 0'],
+                      ['Bit 6', 'Source packet invalid 1, otherwise 0'],
+                      ['Bit 7', 'Number of corresponding valid pulses is below Meas_Cavity_Lock_Status_Thresh 1, otherwise 0'],
+                      ['Bit 8', 'Spacecraft attitude not on target 1, otherwise 0'],
+                      ['Bit 9', 'Peak not found 1, otherwise 0'],
+                      ['Bit 10','Set to 1 if the absolute wind velocity above Wind_Velocity_Threshold, default 0 '],
+                      ['Bit 11','Set to 1 if polynomial fit of error responses was used but no valid root of the polynomial was found, otherwise 0'],
+                      ['Bit 12','Bin was detected as ground bin, otherwise 0. '],
+                      ['Bit 13','Spare, set to 0'],
+                      ['Bit 14','Spare, set to 0'],
+                      ['Bit 15','Spare, set to 0'],
+                      ['Bit 16','Spare, set to 0']
+                  ],
+                   enabled: [
+                      true,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false
+                  ]
+              },
+              'rayleigh_bin_quality_flag': {
+                  values: [
+                      ['Bit 1', 'Overall validity. Data invalid 1, otherwise 0 '],
+                      ['Bit 2', 'Set to 1 if signal-to-noise below SNR_Threshold, default 0 '],
+                      ['Bit 3', 'Data saturation found 1, otherwise 0 '],
+                      ['Bit 4', 'Data spike found 1, otherwise 0 '],
+                      ['Bit 5', 'Reference pulse invalid 1, otherwise 0 '],
+                      ['Bit 6', 'Source packet invalid 1, otherwise 0 '],
+                      ['Bit 7', 'Number of corresponding valid pulses is below Meas_Cavity_Lock_Status_Thresh 1, otherwise 0 '],
+                      ['Bit 8', 'Spacecraft attitude not on target 1, otherwise 0 '],
+                      ['Bit 9', 'Rayleigh response not found 1, otherwise 0'],
+                      ['Bit 10','Set to 1 if the absolute wind velocity above Wind_Velocity_Threshold, default 0 '],
+                      ['Bit 11','Set to 1 if polynomial fit of error responses was used but no valid root of the polynomial was found, otherwise 0. '],
+                      ['Bit 12','Bin was detected as ground bin, otherwise 0. '],
+                      ['Bit 13','Spare, set to 0'],
+                      ['Bit 14','Spare, set to 0'],
+                      ['Bit 15','Spare, set to 0'],
+                      ['Bit 16','Spare, set to 0']
+                  ],
+                  enabled: [
+                      true,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false,
+                      false
+                  ]
+              },
     },
     choiceParameter: {
         'mie_observation_type': {
@@ -547,6 +637,11 @@ var renderSettings = {
 };
 
 var dataSettings = {
+
+            'datetime': {
+                scaleFormat: 'time',
+                timeFormat: 'MJD2000_S'
+            },
 
             'L1B_start_time_obs': {
                 scaleFormat: 'time',
@@ -798,7 +893,7 @@ var data;
 var graph = new graphly.graphly({
     el: '#graph',
     dataSettings: dataSettings,
-    renderSettings: renderSettingsL2A,
+    renderSettings: renderSettingsAeolus,
     /*dataSettings: testbed14DS,
     renderSettings: testbed14RS,*/
     filterManager: filterManager,
@@ -814,9 +909,9 @@ var graph = new graphly.graphly({
     //fixedSize: true,
     //fixedWidth: 2000
     multiYAxis: true,
-    debug: false,
+    debug: true,
     enableSubXAxis: false,
-    enableSubYAxis: ['mie_altitude','rayleigh_altitude'],
+    enableSubYAxis: false,
     colorscales: ['jet', 'viridis', 'pakito', 'plasma'],
     //showFilteredData: false
     margin: {top: 50, left: 90, bottom: 50, right: 40},
@@ -890,7 +985,7 @@ var usesecond = false;
 
 var xhr = new XMLHttpRequest();
 
-xhr.open('GET', 'data/l2a.mp', true);
+xhr.open('GET', 'data/aeolus_L1.mp', true);
 //xhr.open('GET', 'data/testbed14.mp', true);
 //xhr.open('GET', 'data/swarmupload.mp', true);
 
@@ -1051,7 +1146,7 @@ xhr.onload = function(e) {
 
     graph.loadData(data);*/
 
-    /*var ds = data.ALD_U_N_1B[0];
+    var ds = data.ALD_U_N_1B[0];
 
     var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
     var mie_HLOS_wind_speed = flattenObservationArray(ds.mie_HLOS_wind_speed);
@@ -1075,24 +1170,28 @@ xhr.onload = function(e) {
       latitude_of_DEM_intersection_start: latitude_of_DEM_intersection[1],
       latitude_of_DEM_intersection_end: latitude_of_DEM_intersection[0],
       mie_HLOS_wind_speed: mie_HLOS_wind_speed,
-      mie_quality_flag_data: mie_bin_quality_flag,
+      mie_bin_quality_flag: mie_bin_quality_flag,
       mie_altitude_top: mie_altitude[0],
       mie_altitude_bottom: mie_altitude[1],
       geoid_separation: geoid_separation[0],
       rayleigh_HLOS_wind_speed: rayleigh_HLOS_wind_speed,
       rayleigh_bin_quality_flag: rayleigh_bin_quality_flag,
-      rayleigh_altitude_top: rayleigh_altitude[0],
-      rayleigh_altitude_bottom: rayleigh_altitude[1],
-      rayleigh_datetime_start: time[0],
-      rayleigh_datetime_end: time[1],
+      rayleigh_altitude_top: rayleigh_altitude[0].slice(0),
+      rayleigh_altitude_bottom: rayleigh_altitude[1].slice(0),
+      rayleigh_datetime_start: time[0].slice(0),
+      rayleigh_datetime_end: time[1].slice(0),
     };
 
-    graph.loadData(data);*/
+    filterManager.initManager();
+    filterManager.loadData(data);
+    filterManager._renderFilters();
+    filterManager._renderFilters();
+
+    graph.loadData(data);
 
 
     //L2A
-    data = data['ALD_U_N_2A'];
-    //data = data[]
+    /*data = data['ALD_U_N_2A'];
     var keys = Object.keys(data);
     var ds = data;
     var resData = {};
@@ -1228,18 +1327,9 @@ xhr.onload = function(e) {
             resData.signCross = signCross;
           }
           data = resData;
-          graph.loadData(data);
+          graph.loadData(data);*/
 
 
-
-    filterManager.initManager();
-    //graph.loadData(data);
-    // graph2.loadData(data);
-    /*if(usesecond){
-        graph2.loadData(data);
-    }*/
-
-    filterManager.loadData(data);
 };
 
 //filterManager.setRenderNode('#filters');

@@ -485,8 +485,6 @@ class graphly extends EventEmitter {
 
         let self = this;
 
-        //plotty.addColorScale('divergent1', ['#2f3895', '#ffffff', '#a70125'], [0, 0.41, 1]);
-
         this.plotter = new plotty.plot({
             canvas: document.createElement('canvas'),
             domain: [0,1]
@@ -2308,6 +2306,11 @@ class graphly extends EventEmitter {
                 d3.selectAll('.rangeEdit')
                     .classed('hidden', true);
                 });
+    }
+
+    addColorscale(id, colors, ranges){
+        plotty.addColorScale(id, colors, ranges);
+        this.colorscales.push(id);
     }
 
     updateAxis (axis, g, zoom, parameterid) {
