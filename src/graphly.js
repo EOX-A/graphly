@@ -3,10 +3,16 @@
 /**
 * @typedef {Object} RenderSettings
 * @property {String} xAxis Parameter id to be rendered on x axis.
+* @property {String} [xAxisLabel] Label to be used for x axis instead of 
+*         generated label based on selected parameter. 
 * @property {Array.String} yAxis Array of parameter id strings of parameters
 *         to be rendered on y axis (left). 
+* @property {Array.String} [yAxisLabel] Array of labels to be used instead of
+*         generated label based on selected parameters. 
 * @property {Array.String} y2Axis Array of parameter id strings of parameters
 *        to be rendered on second y axis (right).
+* @property {Array.String} [y2AxisLabel] Array of labels to be used instead of 
+*         generated label based on selected parameters. 
 * @property {Object} combinedParameters
 * @property {Array.String} colorAxis Array of parameter
 *        id strings of parameters to be rendered used for third dimension
@@ -223,9 +229,6 @@ class graphly extends EventEmitter {
         // Passed options
         this.el = d3.select(options.el);
         this.nsId = options.el;
-        this.yAxisLabel = null;
-        this.y2AxisLabel = null;
-        this.xAxisLabel = null;
         this.colorCache = {};
         this.defaultAlpha = defaultFor(options.defaultAlpha, 1.0);
         this.ignoreParameters = defaultFor(options.ignoreParameters, []);
@@ -313,16 +316,28 @@ class graphly extends EventEmitter {
             this.renderSettings.groups, false
         );
 
-        this.yAxisLabel = [];
-        this.y2AxisLabel = [];
-        this.logY = [];
-        this.logY2 = [];
-        for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
-            this.yAxisLabel.push(null);
-            this.y2AxisLabel.push(null);
-            this.logY.push(false);
-            this.logY2.push(false);
+        this.yAxisLabel = defaultFor(this.renderSettings.yAxisLabel, null);
+        this.y2AxisLabel = defaultFor(this.renderSettings.y2AxisLabel, null);
+        this.xAxisLabel = defaultFor(this.renderSettings.xAxisLabel, null);
+
+        let fillArray = (arr, val)=>{
+            for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
+                arr.push(val);
+            }
         }
+        if(this.yAxisLabel === null){
+            this.yAxisLabel = [];
+            fillArray(this.yAxisLabel, null);
+        }
+        if(this.y2AxisLabel === null){
+            this.y2AxisLabel = [];
+            fillArray(this.y2AxisLabel, null);
+        }
+        
+        this.logY = [];
+        fillArray(this.logY, false);
+        this.logY2 = [];
+        fillArray(this.logY2, false);
 
         // Check if sub axis option set if not initialize with empty array
         if(this.enableSubXAxis){
@@ -1458,6 +1473,7 @@ class graphly extends EventEmitter {
             .on('input', function(){
                 labelText.text(this.value);
                 yAxisLabel[yPos] = this.value;
+                that.emit('axisChange');
             });
 
         con.append('label')
@@ -1952,6 +1968,7 @@ class graphly extends EventEmitter {
             .on('input', function(){
                 that.el.select('.xAxisLabel.axisLabel').text(this.value);
                 that.xAxisLabel = this.value;
+                that.emit('axisChange');
             });
         con.append('label')
             .attr('for', 'xAxisCustomLabel')
@@ -6302,7 +6319,11 @@ class graphly extends EventEmitter {
             .attr('type', 'text')
             .attr('value', dataSettings.displayName)
             .on('input', function(){
-                dataSettings.displayName = this.value;
+                if(this.value === ''){
+                    delete dataSettings.displayName;
+                } else {
+                    dataSettings.displayName = this.value;
+                }
                 that.addApply();
             });
 
