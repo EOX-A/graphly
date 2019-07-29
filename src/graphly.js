@@ -6289,6 +6289,8 @@ class graphly extends EventEmitter {
             return plotty.colorscales.hasOwnProperty(cs);
         });
 
+        this.colorscales.sort();
+
         let selectionAvailable = false;
         labelColorScaleSelect.selectAll('option')
             .data(this.colorscales).enter()
