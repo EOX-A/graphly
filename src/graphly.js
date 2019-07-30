@@ -5220,7 +5220,21 @@ class graphly extends EventEmitter {
 
             // Manipulate value if we have a periodic parameter
             let valY = data[yGroup[0]][i];
-            let valY2 = data[yGroup[1]][i]
+            let valY2 = data[yGroup[1]][i];
+            let valX = data[xGroup[0]][i];
+            let valX2 = data[xGroup[1]][i];
+
+            // Skip "empty" values
+            if(Number.isNaN(valY) || Number.isNaN(valY2) ||
+                Number.isNaN(valX) || Number.isNaN(valX2)){
+                if(cAxis !== null){
+                    if(!colCacheAvailable){
+                        this.colorCache[cAxis].push(null);
+                    }
+                }
+                continue;
+            }
+
             if(yperiodic){
                 let shiftpos = Math.abs(parseInt(yMax/yperiod));
                 let shiftneg = Math.abs(parseInt(yMin/yperiod));
@@ -5251,8 +5265,8 @@ class graphly extends EventEmitter {
                 }
             }
 
-            let x1 = (this.xScale(data[xGroup[0]][i]));
-            let x2 = (this.xScale(data[xGroup[1]][i]));
+            let x1 = (this.xScale(valX));
+            let x2 = (this.xScale(valX2));
 
             let y1 = yScale(valY);
             y1+=axisOffset;
@@ -6111,20 +6125,15 @@ class graphly extends EventEmitter {
 
                 if(applicableFilter){
                     applicableFilterList.push(p);
-
-                    if(Array.isArray(this.data[p])){
-                        inactiveData[p].pushArray(
-                            this.data[p].filter((e,i)=>{
-                                return !currFilter(currentDataset[i]);
-                            })
-                        );
-                    } 
                 }
             }
 
             for (let i=0; i<currentDataset.length; i++) {
                 if(!currFilter(currentDataset[i])){
                     for(let af=0; af<applicableFilterList.length; af++){
+                        inactiveData[applicableFilterList[af]].push(
+                            this.data[applicableFilterList[af]][i]
+                        );
                         data[applicableFilterList[af]][i] = NaN;
                     }
                 }
