@@ -1146,7 +1146,7 @@ xhr.onload = function(e) {
 
     graph.loadData(data);*/
 
-    var ds = data.ALD_U_N_1B[0];
+    var ds = data.ALD_U_N_1B.observation_data;
 
     var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
     var mie_HLOS_wind_speed = flattenObservationArray(ds.mie_HLOS_wind_speed);
