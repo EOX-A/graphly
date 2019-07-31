@@ -480,17 +480,15 @@ class FilterManager extends EventEmitter {
             .style('top', evty + formYOffset + formMaxPos.height + 5 +'px')
             .style('left', evtx + formXOffset + formMinPos.width + 'px')
             .on('click', function(){
-                if(d3.event.keyCode === 13){
-                    let min = Number(d3.select('#rangeEditMin').property('value'));
-                    let max = Number(d3.select('#rangeEditMax').property('value'));
-                    //checks for invalid values
-                    if (!isNaN(min) && !isNaN(max)){
-                    // if user reversed order, fix it
-                        let newDataDomain = (min < max) ? [min, max] : [max, min];
-                        brush.extent(newDataDomain);
-                        d3.selectAll('.rangeEdit').remove();
-                        that._brushEnd();
-                    }
+                let min = Number(d3.select('#rangeEditMin').property('value'));
+                let max = Number(d3.select('#rangeEditMax').property('value'));
+                //checks for invalid values
+                if (!isNaN(min) && !isNaN(max)){
+                // if user reversed order, fix it
+                    let newDataDomain = (min < max) ? [min, max] : [max, min];
+                    brush.extent(newDataDomain);
+                    d3.selectAll('.rangeEdit').remove();
+                    that._brushEnd();
                 }
             }.bind(this));
 
