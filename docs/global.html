@@ -734,6 +734,39 @@
 
         <tr>
             
+                <td class="name"><code>xAxisLabel</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Label to be used for x axis instead of 
+        generated label based on selected parameter.</td>
+        </tr>
+
+    
+
+        <tr>
+            
                 <td class="name"><code>yAxis</code></td>
             
 
@@ -765,6 +798,39 @@
 
         <tr>
             
+                <td class="name"><code>yAxisLabel</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array.String</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Array of labels to be used instead of
+        generated label based on selected parameters.</td>
+        </tr>
+
+    
+
+        <tr>
+            
                 <td class="name"><code>y2Axis</code></td>
             
 
@@ -790,6 +856,39 @@
 
             <td class="description last">Array of parameter id strings of parameters
        to be rendered on second y axis (right).</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>y2AxisLabel</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array.String</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Array of labels to be used instead of 
+        generated label based on selected parameters.</td>
         </tr>
 
     
@@ -887,8 +986,112 @@
             
 
             <td class="description last">Contains key "parameter" with identifier 
-      string of paramter used to separate data into groups and key 
+      string of parameter used to separate data into groups and key 
       "identifiers" with array of strings with possible values in data array.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>renderGroups</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">When using complex data with different sizes
+      that still should be visualized together (in different plots) it is
+      possible to use renderGroups object. The key is used as identifier
+      and can be selected from a drop down for each plot. Only the parameters
+      defined in the group will be used and accessible in the plot</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>sharedParameters</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">When using renderGroups it is necessary
+      to define the common axis, the key is used as parameter name as value an 
+      array of all parameters from different groups that represent the same
+      axis can be defined.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>groups</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array.String</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">When using renderGoups array (same size as yAxis)
+      defines which group is used on each of the plots.</td>
         </tr>
 
     
@@ -988,6 +1191,74 @@
 
             <td class="description last">Array with parameter ids for 
        additional labels that should be used for the second y axis</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>availableParameters</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">When using dataIdentifier an object
+       with keys for each possible identifier and an array with parameter 
+       identifiers as stringslist of can be provided so that only those
+       are shown as parameter labels that allow configuration</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>reversedYAxis</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Option to revert y axis extent 
+       (high values on bottom, low values on top)</td>
         </tr>
 
     
@@ -1575,6 +1846,43 @@
         </tr>
 
     
+
+        <tr>
+            
+                <td class="name"><code>filterExtent</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last">Minimum and Maximum value to be used in
+          filter visualization</td>
+        </tr>
+
+    
     </tbody>
 </table>
 </dl>
@@ -1740,7 +2048,7 @@
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a>
 	
-		on 2018-12-04T11:24:35+01:00
+		on 2019-08-05T16:33:13+02:00
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

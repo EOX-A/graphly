@@ -260,8 +260,8 @@
                 </td>
             
 
-            <td class="description last">Configuration options for what
-       should be rendered.</td>
+            <td class="description last">Configuration options for
+       what should be rendered.</td>
         </tr>
 
     
@@ -676,45 +676,6 @@
 
         <tr>
             
-                <td class="name"><code>connectedGraph</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-                <td class="default">
-                
-                </td>
-            
-
-            <td class="description last">Instanced graphly object to sync
-       x axis to.</td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>enableFit</code></td>
             
 
@@ -910,7 +871,7 @@
             
 
             <td class="description last">d3 format string to use 
-             as default tick format.</td>
+       as default tick format.</td>
         </tr>
 
     
@@ -1031,8 +992,9 @@
                 </td>
             
 
-            <td class="description last">Enable selection option for x axis
-       subticks</td>
+            <td class="description last">Enable selection option
+       for x axis subticks, can also be a String if only enabled for one
+       parameter.</td>
         </tr>
 
     
@@ -1072,8 +1034,130 @@
                 </td>
             
 
-            <td class="description last">Enable selection option for x axis
-       subticks</td>
+            <td class="description last">Enable selection option
+       for x axis subticks, can also be a String if only enabled for one
+       parameter.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>labelAllignment</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    'right'
+                
+                </td>
+            
+
+            <td class="description last">allignment for label box</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>colorscales</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last">Array of strings with colorscale 
+       identifiers that should be provided for selection, default list
+       includes colorscales from plotty</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>showFilteredData</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    true
+                
+                </td>
+            
+
+            <td class="description last">Option to show greyed out
+       data points when filtering</td>
         </tr>
 
     
@@ -1364,134 +1448,6 @@
             
 
             <td class="description last">See dataSettings description of graphly constructor.</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="connectGraph"><span class="type-signature"></span>connectGraph(graph)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        Connect x axis of a scond graph to update when x axis of first graph is updated.
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>graph</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">graphly instance.</td>
         </tr>
 
     
@@ -2850,7 +2806,7 @@ axis settings.
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a>
 	
-		on 2018-12-04T11:24:35+01:00
+		on 2019-08-05T16:33:13+02:00
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

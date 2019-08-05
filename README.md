@@ -26,25 +26,37 @@ http://eox-a.github.io/graphly/
 Usage
 -----
 
-Just include script to site and add a canvas element where you want to render the data.
+Just include script to site and add a div element where you want to render the data.
+You can also use the filtermanager with it by providing another div where the filters
+panel should be managed.
+The d3 dependency is not included in the build, so you will also need to include it.
 ```html
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
     <script src="dist/graphly.min.js"></script>
 </head>
 <body>
     <div id="graph"></div>
+    <div id="filters"></div>
 </body>
 ```
 
 and render using predefined settings:
 ```javascript
+var filterManager = new FilterManager({
+    el:'#filters',
+    filterSettings: {
+        visibleFilters: ['parameter1', 'parameter2']
+    },
+});
 var graph = new graphly.graphly({
     el: '#graph',
     renderSettings: {
         xAxis: 'parameter1',
         yAxis: ['parameter2', 'parameter3'],
         y2Axis: ['parameter4']
-    }
+    },
+    filterManager: filterManager
 });
 
 graph.loadData({

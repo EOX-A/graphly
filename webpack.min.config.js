@@ -14,11 +14,7 @@ module.exports = {
         libraryTarget: 'window',
     },
     externals: {
-        // TODO: Do not include dependencies in release?
         "d3": "d3",
-        "papaparse": "papaparse",
-        "plotty": "plotty",
-        "msgpack": "msgpack-lite"
     },
     plugins: [
         //new webpack.optimize.UglifyJsPlugin()

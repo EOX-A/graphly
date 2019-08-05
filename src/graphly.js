@@ -121,10 +121,7 @@ import * as u from './utils';
 
 let regression = require('regression');
 let d3 = require('d3');
-//global.d3 = d3;
-let msgpack = require('msgpack-lite');
 let plotty = require('plotty');
-let Papa = require('papaparse');
 
 require('c-p');
 
@@ -137,7 +134,6 @@ let canvg = require('./vendor/canvg.js');
 
 global.FilterManager = FilterManager;
 global.plotty = plotty;
-global.msgpack = msgpack;
 
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
@@ -2841,39 +2837,6 @@ class graphly extends EventEmitter {
             .attr('value', '✔');
     }
 
-    
-    /**
-    * Load data from csv file.
-    * @param {String} url Path/url to csv file
-    */
-    loadCSV(csv){
-        let self = this;
-        // Parse local CSV file
-        Papa.parse(csv, {
-            download: true,
-            header: true,
-            dynamicTyping: true,
-            complete: function(results) {
-                let data = {};
-                for (let i = 0; i < results.data.length; i++) {
-                    let d = results.data[i];
-                    for (let prop in d) {
-                        if (data.hasOwnProperty(prop)){
-                            data[prop].push(d[prop]);
-                        }else{
-                            data[prop] = [d[prop]];
-                        }
-                    }
-                }
-                self.loadData(data);
-                // TODO: not sure if this is the best way to do things
-                // should the data be parsed externaly?
-                if(self.filterManager){
-                    self.filterManager.loadData(data);
-                }
-            }
-        });
-    }
 
     updateBuffers(drawer, amount){
         drawer.maxLines = amount;
