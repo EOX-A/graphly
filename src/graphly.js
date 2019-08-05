@@ -3698,6 +3698,31 @@ class graphly extends EventEmitter {
                                 }
                             }
 
+                            // Check also x axis when we only have one plot
+                            let newxPar;
+                            if(that.renderSettings.yAxis.length === 1){
+                                let xaxPar = that.renderSettings.xAxis;
+                                // Try to find equvalent parameter
+                                let tmpPar = xaxPar.replace(prevGroup, groupKey);
+                                if(newGroupPars.indexOf(tmpPar)!==-1){
+                                    newxPar = tmpPar;
+                                } else {
+                                    // If not found check for defaults
+                                    if(newGroup.hasOwnProperty('defaults') && 
+                                       newGroup.defaults.hasOwnProperty('xAxis')){
+                                        newxPar = newGroup.defaults.xAxis;
+                                    } else {
+                                        // If now default try to find closest match
+                                        let selected = that.findClosestParameterMatch(
+                                            xaxPar, newGroupPars
+                                        );
+                                        if(selected){
+                                            newxPar = selected;
+                                        }
+                                    }
+                                }
+                            }
+
                             that.renderSettings.groups[yPos] = groupKey;
                             // Check if any of the parameters could be converted
                             // if not look for defaults
@@ -3706,6 +3731,9 @@ class graphly extends EventEmitter {
                                 that.renderSettings.colorAxis[yPos] = newColAxis;
                                 that.renderSettings.y2Axis[yPos] = newY2Axis;
                                 that.renderSettings.colorAxis2[yPos] = newCol2Axis;
+                                if(typeof newxPar !== 'undefined'){
+                                    that.renderSettings.xAxis = newxPar;
+                                }
                             } else {
                                 that.renderSettings.yAxis[yPos] = [];
                                 that.renderSettings.colorAxis[yPos] = [];
