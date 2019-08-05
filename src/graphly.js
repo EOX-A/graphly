@@ -2281,7 +2281,7 @@ class graphly extends EventEmitter {
             .classed('hidden', false);
 
         d3.select('#rangeEditMax')
-            .property('value', extent[1])
+            .property('value', extent[1].toFixed(4))
             .style('top', evty + formYOffset  + 'px')
             .style('left', evtx + formXOffset + 'px')
             .node()
@@ -2293,7 +2293,7 @@ class graphly extends EventEmitter {
         let formMaxPos = d3.select('#rangeEditMax').node().getBoundingClientRect();
 
         d3.select('#rangeEditMin')
-            .property('value', extent[0])
+            .property('value', extent[0].toFixed(4))
             .style('top', evty + formYOffset + formMaxPos.height + 5 + 'px')
             .style('left', evtx + formXOffset + 'px')
 

@@ -31,7 +31,7 @@
 */
 
 
-require('./utils.js');
+const utils = require('./utils.js');
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
@@ -440,7 +440,7 @@ class FilterManager extends EventEmitter {
             .classed('hidden', false);
 
         d3.select('#rangeEditMax')
-            .property('value', filterExtent[1])
+            .property('value', filterExtent[1].toFixed(4))
             .style('top', (evty+formYOffset) + 'px')
             .style('left', evtx + 'px')
             .node()
@@ -452,7 +452,7 @@ class FilterManager extends EventEmitter {
         let formMaxPos = d3.select('#rangeEditMax').node().getBoundingClientRect();
 
         d3.select('#rangeEditMin')
-            .property('value', filterExtent[0])
+            .property('value', filterExtent[0].toFixed(4))
             .style('top', evty + formYOffset + formMaxPos.height + 5 + 'px')
             .style('left', evtx + formXOffset + 'px')
 
@@ -472,6 +472,13 @@ class FilterManager extends EventEmitter {
                         let newDataDomain = (min < max) ? [min, max] : [max, min];
                         d3.selectAll('.rangeEdit').remove();
                         that.extents[parameter] = newDataDomain;
+                        if(that.dataSettings.hasOwnProperty(parameter)){
+                            that.dataSettings[parameter].filterExtent = newDataDomain;
+                        } else {
+                            that.dataSettings[parameter] = {
+                                'filterExtent': newDataDomain
+                            }
+                        }
                         that._renderFilters();
                         that.emit('parameterChange');
                     }
@@ -490,6 +497,13 @@ class FilterManager extends EventEmitter {
                         let newDataDomain = (min < max) ? [min, max] : [max, min];
                         d3.selectAll('.rangeEdit').remove();
                         that.extents[parameter] = newDataDomain;
+                        if(that.dataSettings.hasOwnProperty(parameter)){
+                            that.dataSettings[parameter].filterExtent = newDataDomain;
+                        } else {
+                            that.dataSettings[parameter] = {
+                                'filterExtent': newDataDomain
+                            }
+                        }
                         that._renderFilters();
                         that.emit('parameterChange');
                 }
@@ -595,7 +609,7 @@ class FilterManager extends EventEmitter {
                 let brush_top = d3.select(this).selectAll('.resize.n');
                 let brush_bottom = d3.select(this).selectAll('.resize.s');
                 let extent = d3.event.target.extent()
-                let format = d3.format('.02f');
+                let format = utils.customExponentTickFormat;
 
                 brush_top.select('text').remove();
                 brush_bottom.select('text').remove();
@@ -606,7 +620,7 @@ class FilterManager extends EventEmitter {
                    .attr('fill', 'white')
                    .attr('height', '16');
                 let toptext = brush_top.append('text')
-                   .text(format(extent[1]))
+                   .text(format(Number(extent[1].toFixed(3))))
                 let width = toptext.node().getBBox().width+4;
                 toprect.attr('width', width).style('transform', 'translate('+(-width/2)+'px,-26px)');
                 toptext.style('transform', 'translate('+(-width/2+3)+'px,-14px)');
@@ -615,7 +629,7 @@ class FilterManager extends EventEmitter {
                    .attr('fill', 'white')
                    .attr('height', '16');
                 let bottext = brush_bottom.append('text')
-                   .text(format(extent[0]));
+                   .text(format(Number(extent[0].toFixed(3))));
                 width = bottext.node().getBBox().width+4;
                 botrect.attr('width', width).style('transform', 'translate('+(-width/2)+'px,10px)');
                 bottext.style('transform', 'translate('+(-width/2+3)+'px,22px)');
@@ -956,7 +970,7 @@ class FilterManager extends EventEmitter {
         );
         for (var f in currentFilters){
             var filter = currentFilters[f];
-            // Check if data actually has filter paramter
+            // Check if data actually has filter parameter
             if(!data.hasOwnProperty(f)){
                 continue;
             }
