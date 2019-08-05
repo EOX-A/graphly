@@ -77,6 +77,8 @@
 *           as period and -180 as offset. Default offset value is 0.
 * @property {Number} [nullValue] Value to be interpreted as null, used for 
 *           colorscale extent calculation.
+* @property {Array} [filterExtent] Minimum and Maximum value to be used in
+*           filter visualization
 */
 
 /**

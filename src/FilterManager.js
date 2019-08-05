@@ -132,8 +132,8 @@ class FilterManager extends EventEmitter {
         this.extents = {};
         for (var d in this.data){
             if(this.dataSettings.hasOwnProperty(d) &&
-                this.dataSettings[d].hasOwnProperty('extent')){
-                this.extents[d] = this.dataSettings[d].extent;
+                this.dataSettings[d].hasOwnProperty('filterExtent')){
+                this.extents[d] = this.dataSettings[d].filterExtent;
             }else{
                 let domain;
                 if(this.dataSettings.hasOwnProperty(d) &&
@@ -395,14 +395,14 @@ class FilterManager extends EventEmitter {
 
     }
 
-    _createAxisForms(brush, evtx, evty){
+    _createAxisForms(parameter, brush, evtx, evty){
 
         // If brush has extent use it
-        let extent;
-        if(brush.extent()){
-            extent = brush.extent();
+        let filterExtent;
+        if(this.extents.hasOwnProperty(parameter)){
+            filterExtent = this.extents[parameter];
         } else {
-            extent = [0,1];
+            filterExtent = this.y[parameter].domain();
         }
         // offset of form from the click event position
         let formYOffset = 20;
@@ -440,7 +440,7 @@ class FilterManager extends EventEmitter {
             .classed('hidden', false);
 
         d3.select('#rangeEditMax')
-            .property('value', extent[1])
+            .property('value', filterExtent[1])
             .style('top', (evty+formYOffset) + 'px')
             .style('left', evtx + 'px')
             .node()
@@ -452,7 +452,7 @@ class FilterManager extends EventEmitter {
         let formMaxPos = d3.select('#rangeEditMax').node().getBoundingClientRect();
 
         d3.select('#rangeEditMin')
-            .property('value', extent[0])
+            .property('value', filterExtent[0])
             .style('top', evty + formYOffset + formMaxPos.height + 5 + 'px')
             .style('left', evtx + formXOffset + 'px')
 
@@ -465,13 +465,15 @@ class FilterManager extends EventEmitter {
                 if(d3.event.keyCode === 13){
                     let min = Number(d3.select('#rangeEditMin').property('value'));
                     let max = Number(d3.select('#rangeEditMax').property('value'));
+
                     //checks for invalid values
                     if (!isNaN(min) && !isNaN(max)){
-                    // if user reversed order, fix it
+                        // if user reversed order, fix it
                         let newDataDomain = (min < max) ? [min, max] : [max, min];
-                        brush.extent(newDataDomain);
                         d3.selectAll('.rangeEdit').remove();
-                        that._brushEnd();
+                        that.extents[parameter] = newDataDomain;
+                        that._renderFilters();
+                        that.emit('parameterChange');
                     }
                 }
             }.bind(this))
@@ -484,11 +486,12 @@ class FilterManager extends EventEmitter {
                 let max = Number(d3.select('#rangeEditMax').property('value'));
                 //checks for invalid values
                 if (!isNaN(min) && !isNaN(max)){
-                // if user reversed order, fix it
-                    let newDataDomain = (min < max) ? [min, max] : [max, min];
-                    brush.extent(newDataDomain);
-                    d3.selectAll('.rangeEdit').remove();
-                    that._brushEnd();
+                        // if user reversed order, fix it
+                        let newDataDomain = (min < max) ? [min, max] : [max, min];
+                        d3.selectAll('.rangeEdit').remove();
+                        that.extents[parameter] = newDataDomain;
+                        that._renderFilters();
+                        that.emit('parameterChange');
                 }
             }.bind(this));
 
@@ -553,7 +556,7 @@ class FilterManager extends EventEmitter {
                 let evtx = d3.event.pageX;
                 let evty = d3.event.pageY; 
                 this._createAxisForms(
-                    this.y[d].brush, evtx, evty
+                    d, this.y[d].brush, evtx, evty
                 );
             }.bind(this))
 
@@ -627,7 +630,7 @@ class FilterManager extends EventEmitter {
 
         this.hist_data[d] = d3.layout.histogram()
             .bins(tickArray)
-            (data[d]);
+            (data[d].filter((val)=>{return extents[d][0]<val && extents[d][1]>val;}));
 
 
         this.x_hist[d] = d3.scale.linear()
