@@ -958,6 +958,7 @@ class FilterManager extends EventEmitter {
         this.hist_data = {};
         this.x_hist = {};
         this.axis = d3.svg.axis().orient("left");
+        this.axis.tickFormat(utils.customExponentTickFormat);
         
         var data = {};
 
