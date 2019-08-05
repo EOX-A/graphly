@@ -67,6 +67,9 @@ class FilterManager extends EventEmitter {
 
         this.el = d3.select(params.el);
         this.filterSettings = params.filterSettings;
+        this.filterSettings.parameterMatrix = defaultFor(
+            this.filterSettings.parameterMatrix, {}
+        );
         this.visibleFilters = this.filterSettings.visibleFilters;
         this.boolParameter = defaultFor(this.filterSettings.boolParameter, {
             parameters: [], enabled: []
