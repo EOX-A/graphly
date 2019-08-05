@@ -31,7 +31,7 @@
 */
 
 
-require('./utils.js');
+const utils = require('./utils.js');
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
 
@@ -58,6 +58,8 @@ class FilterManager extends EventEmitter {
     *        as labels.
     * @param options.filterSettings {FilterSettings} Optional additional Filter 
     *        Settings.
+    * @param options.ignoreParameters {array} Optional array with parameter ids
+    *        to be ignored
     */
 
     constructor(params) {
@@ -66,13 +68,16 @@ class FilterManager extends EventEmitter {
         this.el = d3.select(params.el);
         this.filterSettings = params.filterSettings;
         this.visibleFilters = this.filterSettings.visibleFilters;
-        this.boolParameter = defaultFor(this.filterSettings.boolParameter, []);
+        this.boolParameter = defaultFor(this.filterSettings.boolParameter, {
+            parameters: [], enabled: []
+        });
         this.choiceParameter = defaultFor(this.filterSettings.choiceParameter, []);
         this.maskParameter = defaultFor(this.filterSettings.maskParameter, []);
         this.data = defaultFor(params.data, {});
         this.dataSettings = defaultFor(this.filterSettings.dataSettings, {});
         this.showCloseButtons = defaultFor(params.showCloseButtons, false);
         this.replaceUnderlines = defaultFor(params.replaceUnderlines, false);
+        this.ignoreParameters = defaultFor(params.ignoreParameters, []);
         
         this.initManager();
         this.extents = {};
@@ -127,8 +132,8 @@ class FilterManager extends EventEmitter {
         this.extents = {};
         for (var d in this.data){
             if(this.dataSettings.hasOwnProperty(d) &&
-                this.dataSettings[d].hasOwnProperty('extent')){
-                this.extents[d] = this.dataSettings[d].extent;
+                this.dataSettings[d].hasOwnProperty('filterExtent')){
+                this.extents[d] = this.dataSettings[d].filterExtent;
             }else{
                 let domain;
                 if(this.dataSettings.hasOwnProperty(d) &&
@@ -165,7 +170,7 @@ class FilterManager extends EventEmitter {
             // Check if min and max extent is the same, if yes pad it with 1/4
             // the size, same min and max create display issues in scales.
             // Only do this if it is not a flag filter
-            if(this.boolParameter.indexOf(d) === -1 &&
+            if(this.boolParameter.parameters.indexOf(d) === -1 &&
                this.extents[d][0]===this.extents[d][1]){
                 var offset = this.extents[d][0]/4;
                 if(offset===0){
@@ -215,15 +220,7 @@ class FilterManager extends EventEmitter {
 
         var height = 252;
         var width = 120;
-        var bins = 28;
-
         var mP = this.maskParameter[d];
-        var enabled = mP.hasOwnProperty('selection');
-        var selection = 0;
-        if(enabled){
-           selection = mP.selection;
-        }
-
         var that = this;
 
         var div = this.el.append('div')
@@ -233,32 +230,16 @@ class FilterManager extends EventEmitter {
                 .style('height', height+'px');
 
         div.append('div')
-            .attr('class', function(){
-                if (!that.maskParameter[d].hasOwnProperty('selection')){
-                    return 'editButton add';
-                }else{
-                    return 'editButton remove';
-                }
-            })
-            .style('line-height', '10px')
-            .on('click', function(){
-                if(!that.maskParameter[d].hasOwnProperty('selection')){
-                    // TODO: Decide on default value
-                    /*var mask = '';
-                    for (var i = 0; i < that.maskParameter[d].values.length; i++) {
-                        mask+='1';
-                    }
-                    that.maskParameter[d].selection = parseInt(mask, 2);*/
-                    that.maskParameter[d].selection = 0;
-                    that.maskFilters[d] = (val)=>{
-                        return (val === 0);
-                    };
-                }else{
-                    delete that.maskFilters[d];
-                    delete that.maskParameter[d].selection;
-                }
-                that._filtersChanged();
-
+            .attr('class', 'labelClose cross')
+            .on('click', ()=>{
+                /**
+                * When close buttons are shown event is fired with 
+                * parameter identifier when close button is clicked.
+                *
+                * @event module:graphly.FilterManager#removeFilter
+                * @property {String} id - Provides identifier of parameter
+                */
+                this.emit('removeFilter', d);
             });
 
         var label = d;
@@ -280,35 +261,103 @@ class FilterManager extends EventEmitter {
             .style('width', height-20+'px')
             .html(label);
 
-        var onInputClick = function(evt){
-            
-            var inputArray = d3.select(this.parentNode.parentElement)
-                .selectAll('input')[0];
+        var maskLength = mP.values.length;
 
-            var bits = '';
-            for (var i = 0; i < inputArray.length; i++) {
-                bits += Number(d3.select(inputArray[i]).property('checked'));
+        var conversionFunction = function(value){
+            var boolArray = [];
+            var result = Math.abs(value).toString(2);
+            while(result.length < maskLength) {
+                result = "0" + result;
             }
+            for (var i=0; i<result.length; i++) {
+                boolArray.push(result[i] === '1');
+            }
+            return boolArray;
+        }
 
-            var filterMask = parseInt(bits, 2);
-            that.maskParameter[d].selection = filterMask;
-            that.maskFilters[d] = (val)=>{
-                return (val === filterMask);
-            };
-            that._filtersChanged();
-        };
+        var enabled = [];
+        if(mP.hasOwnProperty('enabled')){
+            enabled = mP.enabled;
 
-        var maskLength = mP.values.length-1;
+            // There are preconfigured settings, lets create filters based on them
+            for (var en=0; en<enabled.length; en++){
+                if(mP.hasOwnProperty('selection')){
+                    var bits = mP.selection;
+                    var enabledArr = enabled;
+                    this.maskFilters[d] = (val)=>{
+                        var boolVals = conversionFunction(val);
+                        var maskApplies = true;
+                        for(let en=0; en<enabledArr.length; en++){
+                            if(enabledArr[en]){
+                                if(bits[en] !== boolVals[en]){
+                                    maskApplies = false;
+                                }
+                            }
+                        }
+                        return maskApplies;
+                    };
+                }
+            }
+            
+        } else {
+            for (let vs=0; vs<mP.values.length; vs++){
+                enabled.push(false);
+            }
+            this.maskParameter[d].enabled = enabled;
+        }
 
-        div.selectAll("input")
+        var selection = [];
+        if(mP.hasOwnProperty('selection')){
+            selection = mP.selection;
+        } else {
+            for (let vs=0; vs<mP.values.length; vs++){
+                selection.push(false);
+            }
+            this.maskParameter[d].selection = selection;
+        }
+
+        var subdivs = div.selectAll("input")
             .data(mP.values)
             .enter()
-            .append('label')
+            .append('div');
+
+        subdivs.append('div')
+            .attr('class', function(d,i){
+                if (!enabled[i]){
+                    return 'editButton add';
+                }else{
+                    return 'editButton remove';
+                }
+            })
+            .attr('title','Enable filtering for this bit')
+            .style('line-height', '10px')
+            .style('display', 'inline')
+            .on('click', function(dat,i){
+                that.maskParameter[d].enabled[i] = !enabled[i];
+                var bits = that.maskParameter[d].selection;
+                var enabledArr = that.maskParameter[d].enabled;
+                that.maskFilters[d] = (val)=>{
+                    var boolVals = conversionFunction(val);
+                    var maskApplies = true;
+                    for(let en=0; en<enabledArr.length; en++){
+                        if(enabledArr[en]){
+                            if(bits[en] !== boolVals[en]){
+                                maskApplies = false;
+                            }
+                        }
+                    }
+                    return maskApplies;
+                };
+                that._filtersChanged();
+            });
+
+        subdivs.append('label')
                 .attr('for',function(d,i){ return d[0]; })
                 .attr('title',function(d,i){ return d[1]; })
-                .style('color', function(d){
+                .style('display', 'inline')
+                .style('color', function(d,i){
                     var color = '#000';
-                    if(!enabled){
+                    if(!enabled[i]){
                         color = '#aaa';
                     }
                     return color;
@@ -316,16 +365,158 @@ class FilterManager extends EventEmitter {
                 .text(function(d) { return d[0]; })
             .append("input")
                 .property("checked", function(d,i){
-                    return (selection & (0b1 << maskLength-i))>0;
+                    return selection[i];
                 })
-                .property('disabled', function(d){
-                    return !enabled;
+                .property('disabled', function(d,i){
+                    return !enabled[i];
                 })
+                .attr('title','Checked equals 1, unchecked equals 0')
                 .attr("class", "maskinput")
                 .attr("type", "checkbox")
-                .attr("id", function(d,i) { return d[0]; })
-                .on('click',onInputClick);
+                .attr("id", function(d) { return d[0]; })
+                .on('click', function(dat, i){
+                    selection[i] = !selection[i];
+                    var bits = that.maskParameter[d].selection;
+                    var enabled = that.maskParameter[d].enabled;
+                    that.maskFilters[d] = (val)=>{
+                        var boolVals = conversionFunction(val);
+                        var maskApplies = true;
+                        for(let en=0; en<enabled.length; en++){
+                            if(enabled[en]){
+                                if(bits[en] !== boolVals[en]){
+                                    maskApplies = false;
+                                }
+                            }
+                        }
+                        return maskApplies;
+                    };
+                    that._filtersChanged();
+                });
 
+    }
+
+    _createAxisForms(parameter, brush, evtx, evty){
+
+        // If brush has extent use it
+        let filterExtent;
+        if(this.extents.hasOwnProperty(parameter)){
+            filterExtent = this.extents[parameter];
+        } else {
+            filterExtent = this.y[parameter].domain();
+        }
+        // offset of form from the click event position
+        let formYOffset = 20;
+        let formXOffset = 2;
+
+        // Cleanup
+        d3.selectAll('.rangeEdit').remove();
+
+        let bod = d3.select('body');
+
+         // range edit forms 
+        bod.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditMax')
+            .attr('type', 'text')
+            .attr('size', 7);
+        bod.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditMin')
+            .attr('type', 'text')
+            .attr('size', 7);
+        bod.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditCancel')
+            .attr('type', 'button')
+            .attr('value', '✕');
+        bod.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditConfirm')
+            .attr('type', 'button')
+            .attr('value', '✔');
+
+
+        d3.selectAll('.rangeEdit')
+            .classed('hidden', false);
+
+        d3.select('#rangeEditMax')
+            .property('value', filterExtent[1].toFixed(4))
+            .style('top', (evty+formYOffset) + 'px')
+            .style('left', evtx + 'px')
+            .node()
+            .focus();
+        d3.select('#rangeEditMax')
+            .node()
+            .select();
+
+        let formMaxPos = d3.select('#rangeEditMax').node().getBoundingClientRect();
+
+        d3.select('#rangeEditMin')
+            .property('value', filterExtent[0].toFixed(4))
+            .style('top', evty + formYOffset + formMaxPos.height + 5 + 'px')
+            .style('left', evtx + formXOffset + 'px')
+
+        let formMinPos = d3.select('#rangeEditMin').node().getBoundingClientRect();
+        var that = this;
+
+        d3.selectAll('#rangeEditMax, #rangeEditMin')
+            .on('keypress', function(){
+                // confirm forms on enter
+                if(d3.event.keyCode === 13){
+                    let min = Number(d3.select('#rangeEditMin').property('value'));
+                    let max = Number(d3.select('#rangeEditMax').property('value'));
+
+                    //checks for invalid values
+                    if (!isNaN(min) && !isNaN(max)){
+                        // if user reversed order, fix it
+                        let newDataDomain = (min < max) ? [min, max] : [max, min];
+                        d3.selectAll('.rangeEdit').remove();
+                        that.extents[parameter] = newDataDomain;
+                        if(that.dataSettings.hasOwnProperty(parameter)){
+                            that.dataSettings[parameter].filterExtent = newDataDomain;
+                        } else {
+                            that.dataSettings[parameter] = {
+                                'filterExtent': newDataDomain
+                            }
+                        }
+                        that._renderFilters();
+                        that.emit('parameterChange');
+                    }
+                }
+            }.bind(this))
+
+        d3.select('#rangeEditConfirm')
+            .style('top', evty + formYOffset + formMaxPos.height + 5 +'px')
+            .style('left', evtx + formXOffset + formMinPos.width + 'px')
+            .on('click', function(){
+                let min = Number(d3.select('#rangeEditMin').property('value'));
+                let max = Number(d3.select('#rangeEditMax').property('value'));
+                //checks for invalid values
+                if (!isNaN(min) && !isNaN(max)){
+                        // if user reversed order, fix it
+                        let newDataDomain = (min < max) ? [min, max] : [max, min];
+                        d3.selectAll('.rangeEdit').remove();
+                        that.extents[parameter] = newDataDomain;
+                        if(that.dataSettings.hasOwnProperty(parameter)){
+                            that.dataSettings[parameter].filterExtent = newDataDomain;
+                        } else {
+                            that.dataSettings[parameter] = {
+                                'filterExtent': newDataDomain
+                            }
+                        }
+                        that._renderFilters();
+                        that.emit('parameterChange');
+                }
+            }.bind(this));
+
+
+        d3.select('#rangeEditCancel')
+            .style('top', evty +  formYOffset + 'px')
+            .style('left', evtx + formXOffset + formMaxPos.width + 'px')
+            .on('click', function(){
+                d3.selectAll('.rangeEdit')
+                    .classed('hidden', true);
+                });
     }
 
     _createFilterElement(d, data) {
@@ -366,19 +557,22 @@ class FilterManager extends EventEmitter {
         if(this.brushes.hasOwnProperty(d)){
             div.append('div')
                 .attr('class', 'eraserIcon editButton')
-                .style('right', ()=>{
-                    if(this.showCloseButtons){
-                        return '9px';
-                    } else {
-                        return '0px';
-                    }
-                })
                 .on('click', ()=>{
                     this.y[d].brush.clear();
                     this._brushEnd();
                     }
                 );
         }
+
+        div.append('div')
+            .attr('class', 'pencilIcon editButton')
+            .on('click', function (){
+                let evtx = d3.event.pageX;
+                let evty = d3.event.pageY; 
+                this._createAxisForms(
+                    d, this.y[d].brush, evtx, evty
+                );
+            }.bind(this))
 
         div.append('div')
             .attr('class', 'parameterLabel')
@@ -415,7 +609,7 @@ class FilterManager extends EventEmitter {
                 let brush_top = d3.select(this).selectAll('.resize.n');
                 let brush_bottom = d3.select(this).selectAll('.resize.s');
                 let extent = d3.event.target.extent()
-                let format = d3.format('.02f');
+                let format = utils.customExponentTickFormat;
 
                 brush_top.select('text').remove();
                 brush_bottom.select('text').remove();
@@ -426,7 +620,7 @@ class FilterManager extends EventEmitter {
                    .attr('fill', 'white')
                    .attr('height', '16');
                 let toptext = brush_top.append('text')
-                   .text(format(extent[1]))
+                   .text(format(Number(extent[1].toFixed(3))))
                 let width = toptext.node().getBBox().width+4;
                 toprect.attr('width', width).style('transform', 'translate('+(-width/2)+'px,-26px)');
                 toptext.style('transform', 'translate('+(-width/2+3)+'px,-14px)');
@@ -435,7 +629,7 @@ class FilterManager extends EventEmitter {
                    .attr('fill', 'white')
                    .attr('height', '16');
                 let bottext = brush_bottom.append('text')
-                   .text(format(extent[0]));
+                   .text(format(Number(extent[0].toFixed(3))));
                 width = bottext.node().getBBox().width+4;
                 botrect.attr('width', width).style('transform', 'translate('+(-width/2)+'px,10px)');
                 bottext.style('transform', 'translate('+(-width/2+3)+'px,22px)');
@@ -450,7 +644,7 @@ class FilterManager extends EventEmitter {
 
         this.hist_data[d] = d3.layout.histogram()
             .bins(tickArray)
-            (data[d]);
+            (data[d].filter((val)=>{return extents[d][0]<val && extents[d][1]>val;}));
 
 
         this.x_hist[d] = d3.scale.linear()
@@ -626,14 +820,34 @@ class FilterManager extends EventEmitter {
                 .style('width', width+'px')
                 .style('height', height+'px');
 
-        for (var i = 0; i < this.boolParameter.length; i++) {
-            var d = this.boolParameter[i];
+        div.append('div')
+            .attr('class', 'labelClose cross')
+            .on('click', ()=>{
+                /**
+                * When close buttons are shown event is fired with 
+                * parameter identifier when close button is clicked.
+                *
+                * @event module:graphly.FilterManager#removeFilter
+                * @property {String} id - Provides identifier of parameter
+                */
+                this.emit('removeFilter', d);
+            });
+
+
+        for (var i = 0; i < this.boolParameter.parameters.length; i++) {
+            var d = this.boolParameter.parameters[i];
             // If parameter is actually available in the dataset render it
             if(this.data.hasOwnProperty(d)){
 
+                let parEnabled =  this.boolParameter.enabled[i];
+                if(parEnabled){
+                    this.boolFilters[d] = (val)=>{
+                        return !!val === true;
+                    };
+                }
                 if(!this.boolFilStat.hasOwnProperty(d)){
                     this.boolFilStat[d] = {
-                        enabled: false,
+                        enabled: parEnabled,
                         checked: true
                     };
                 }
@@ -653,6 +867,7 @@ class FilterManager extends EventEmitter {
                                 return 'editButton remove';
                             }
                         })
+                        .attr('title','Enable filtering for this flag')
                         .style('line-height', '10px')
                         .on('click', function(){
                             var id = d3.select(this.parentNode)
@@ -688,6 +903,7 @@ class FilterManager extends EventEmitter {
 
                 var input = container.append("input")
                         .property('checked', that.boolFilStat[d].checked)
+                        .attr('title','Checked equals true, unchecked false')
                         .attr("type", "checkbox")
                         .attr("id", d);
 
@@ -715,11 +931,16 @@ class FilterManager extends EventEmitter {
             this._createChoiceFilterElements(div);
         }
 
-        // If element is empty because the provided parameters are not in the 
-        // current dataset, remove the div
-        if(div.selectAll('*')[0].length === 0){
+        // If element is empty (except for cross) because the provided parameters
+        // are not in the current dataset, remove the div
+        if(div.selectAll('*')[0].length === 1){
             div.remove();
         }
+    }
+
+    _initFilters(){
+        // TODO: We need a way to easily prefill "preset" filters when data
+        //       is loaded
     }
 
 
@@ -737,6 +958,7 @@ class FilterManager extends EventEmitter {
         this.hist_data = {};
         this.x_hist = {};
         this.axis = d3.svg.axis().orient("left");
+        this.axis.tickFormat(utils.customExponentTickFormat);
         
         var data = {};
 
@@ -749,7 +971,7 @@ class FilterManager extends EventEmitter {
         );
         for (var f in currentFilters){
             var filter = currentFilters[f];
-            // Check if data actually has filter paramter
+            // Check if data actually has filter parameter
             if(!data.hasOwnProperty(f)){
                 continue;
             }
@@ -784,6 +1006,10 @@ class FilterManager extends EventEmitter {
                     applicableFilter = false;
                 }
 
+                if(this.ignoreParameters.indexOf(p) !== -1){
+                    applicableFilter = false;
+                }
+
                 if(applicableFilter){
                     data[p] = data[p].filter((e,i)=>{
                         return filter(currentDataset[i]);
@@ -807,7 +1033,7 @@ class FilterManager extends EventEmitter {
         
         this.visibleFilters.forEach(d=>{
             if(this.data.hasOwnProperty(d) && 
-               this.boolParameter.indexOf(d) === -1 &&
+               this.boolParameter.parameters.indexOf(d) === -1 &&
                choiceKeys.indexOf(d) === -1){
                 if(this.maskParameter.hasOwnProperty(d)){
                     this._createMaskFilterElement(d, data);
@@ -851,6 +1077,7 @@ class FilterManager extends EventEmitter {
     loadData(data){
         this.data = data;
         this._initData();
+        this._initFilters();
         this._renderFilters();
     }
 

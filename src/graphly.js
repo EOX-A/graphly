@@ -3,10 +3,16 @@
 /**
 * @typedef {Object} RenderSettings
 * @property {String} xAxis Parameter id to be rendered on x axis.
+* @property {String} [xAxisLabel] Label to be used for x axis instead of 
+*         generated label based on selected parameter. 
 * @property {Array.String} yAxis Array of parameter id strings of parameters
 *         to be rendered on y axis (left). 
+* @property {Array.String} [yAxisLabel] Array of labels to be used instead of
+*         generated label based on selected parameters. 
 * @property {Array.String} y2Axis Array of parameter id strings of parameters
-*        to be rendered on second y axis (right). 
+*        to be rendered on second y axis (right).
+* @property {Array.String} [y2AxisLabel] Array of labels to be used instead of 
+*         generated label based on selected parameters.
 * @property {Object} combinedParameters
 * @property {Array.String} colorAxis Array of parameter
 *        id strings of parameters to be rendered used for third dimension
@@ -15,14 +21,31 @@
 *        null if any of the selected parameters for y or y2 axis should not
 *        use a colorscale representation. 
 * @property {Object} [dataIdentifier] Contains key "parameter" with identifier 
-*       string of paramter used to separate data into groups and key 
+*       string of parameter used to separate data into groups and key 
 *       "identifiers" with array of strings with possible values in data array.
+* @property {Object} [renderGroups] When using complex data with different sizes
+*       that still should be visualized together (in different plots) it is
+*       possible to use renderGroups object. The key is used as identifier
+*       and can be selected from a drop down for each plot. Only the parameters
+*       defined in the group will be used and accessible in the plot
+* @property {Object} [sharedParameters] When using renderGroups it is necessary
+*       to define the common axis, the key is used as parameter name as value an 
+*       array of all parameters from different groups that represent the same
+*       axis can be defined.
+* @property {Array.String} [groups] When using renderGoups array (same size as yAxis)
+*       defines which group is used on each of the plots.
 * @property {Array.String} [additionalXTicks] Array with parameter ids for 
 *        additional labels that should be used for the x axis
 * @property {Array.String} [additionalYTicks] Array with parameter ids for 
 *        additional labels that should be used for the y axis
 * @property {Array.String} [additionalY2Ticks] Array with parameter ids for 
 *        additional labels that should be used for the second y axis
+* @property {Object} [availableParameters] When using dataIdentifier an object
+*        with keys for each possible identifier and an array with parameter 
+*        identifiers as stringslist of can be provided so that only those
+*        are shown as parameter labels that allow configuration
+* @property {boolean} [reversedYAxis] Option to revert y axis extent 
+*        (high values on bottom, low values on top)
 */
 
 /**
@@ -54,6 +77,8 @@
 *           as period and -180 as offset. Default offset value is 0.
 * @property {Number} [nullValue] Value to be interpreted as null, used for 
 *           colorscale extent calculation.
+* @property {Array} [filterExtent] Minimum and Maximum value to be used in
+*           filter visualization
 */
 
 /**
@@ -98,7 +123,6 @@ let regression = require('regression');
 let d3 = require('d3');
 //global.d3 = d3;
 let msgpack = require('msgpack-lite');
-global.msgpack = msgpack;
 let plotty = require('plotty');
 let Papa = require('papaparse');
 
@@ -112,6 +136,8 @@ let FilterManager = require('./FilterManager.js');
 let canvg = require('./vendor/canvg.js');
 
 global.FilterManager = FilterManager;
+global.plotty = plotty;
+global.msgpack = msgpack;
 
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
@@ -147,8 +173,8 @@ class graphly extends EventEmitter {
     * @constructor
     * @param {Object} options Parameters to configure the plot.
     * @param {String} options.el Required d3 selector identifier for container
-    * @param {RenderSettings} options.renderSettings Configuration options for what
-    *        should be rendered.
+    * @param {RenderSettings} options.renderSettings Configuration options for
+    *        what should be rendered.
     * @param {DataSettings} options.dataSettings Additional information to 
     *        set parameter specific rules.
     * @param {boolean} [options.debounceActive=true] Setting to determine if 
@@ -173,23 +199,31 @@ class graphly extends EventEmitter {
     *        extent for color range parameters
     * @param {Object} [options.filterManager] Instanced filtermanager object to
     *        connect to.
-    * @param {Object} [options.connectedGraph] Instanced graphly object to sync
-    *        x axis to.
     * @param {boolean} [options.enableFit=true] Enable/disable fitting
     *        functionality.
     * @param {boolean} [options.logX=false] Use logarithmic scale for x axis.
     * @param {boolean} [options.logY=false] Use logarithmic scale for left y axis.
     * @param {boolean} [options.logY2=false] Use logarithmic scale for right y axis.
     * @param {String} [options.colorAxisTickFormat='g'] d3 format string to use 
-             as default tick format.
+    *        as default tick format.
     * @param {Number} [options.defaultAlpha=0.9] Alpha value used as default
     *        when rendering.
     * @param {boolean} [options.debug=false] Show debug messages
-    * @param {boolean} [options.enableSubXAxis=false] Enable selection option for x axis
-    *        subticks
-    * @param {boolean} [options.enableSubYAxis=false] Enable selection option for x axis
-    *        subticks
+    * @param {boolean} [options.enableSubXAxis=false] Enable selection option
+    *        for x axis subticks, can also be a String if only enabled for one
+    *        parameter.
+    * @param {boolean} [options.enableSubYAxis=false] Enable selection option
+    *        for x axis subticks, can also be a String if only enabled for one
+    *        parameter.
+    * @property {boolean} [multiYAxis=false] Adds controls for managing 
+    *        multiple y axis with single x axis,
     *
+    * @param {String} [options.labelAllignment='right'] allignment for label box
+    * @param {Array} [options.colorscales] Array of strings with colorscale 
+    *        identifiers that should be provided for selection, default list
+    *        includes colorscales from plotty
+    * @param {boolean} [options.showFilteredData=true] Option to show greyed out
+    *        data points when filtering
     */
     constructor(options) {
         super();
@@ -197,9 +231,6 @@ class graphly extends EventEmitter {
         // Passed options
         this.el = d3.select(options.el);
         this.nsId = options.el;
-        this.yAxisLabel = null;
-        this.y2AxisLabel = null;
-        this.xAxisLabel = null;
         this.colorCache = {};
         this.defaultAlpha = defaultFor(options.defaultAlpha, 1.0);
         this.ignoreParameters = defaultFor(options.ignoreParameters, []);
@@ -207,14 +238,24 @@ class graphly extends EventEmitter {
         this.debug = defaultFor(options.debug, false);
         this.enableSubXAxis = defaultFor(options.enableSubXAxis, false);
         this.enableSubYAxis = defaultFor(options.enableSubYAxis, false);
+        this.multiYAxis = defaultFor(options.multiYAxis, false);
+        this.labelAllignment = defaultFor(options.labelAllignment, 'right');
+        this.zoomActivity = false;
+        this.activeArrows = false;
+
+        // Separation of plots in multiplot functionality
+        this.separation = 25;
 
         // Set default font-size main element
         this.el.style('font-size', '0.8em');
 
 
-        this.el.append('canvas')
+        let IRcanvas = this.el.append('canvas')
             .attr('id', 'imagerenderer')
             .style('display', 'none');
+
+        this.IRc = IRcanvas.node();
+        this.IRctx = this.IRc.getContext('2d');
 
         // We need to container to be relative to make sure all otherabsolute
         // parameters inside are relative to parent
@@ -236,23 +277,100 @@ class graphly extends EventEmitter {
         this.dataSettings = defaultFor(options.dataSettings, {});
         this.setRenderSettings(options.renderSettings);
 
+        this.logX = defaultFor(options.logX, false);
+        this.logY = defaultFor(options.logY, false);
+        this.logY2 = defaultFor(options.logY2, false);
+
+        this.defaultTickSize = 12;
+        this.defaultLabelSize = 12;
+
+        if(!this.multiYAxis){
+            // Manage configuration as it would be a 1 element multi plot
+            // this should bring together both functionalities
+            this.renderSettings.yAxis = [this.renderSettings.yAxis];
+            if(this.renderSettings.y2Axis){
+                this.renderSettings.y2Axis = [this.renderSettings.y2Axis];
+            } else {
+                this.renderSettings.y2Axis = [[]];
+            }
+            if(this.renderSettings.colorAxis){
+                this.renderSettings.colorAxis = [this.renderSettings.colorAxis];
+            } else {
+                this.renderSettings.colorAxis = [[]];
+            }
+            if(this.renderSettings.colorAxis2){
+                this.renderSettings.colorAxis2 = [this.renderSettings.colorAxis2];
+            } else {
+                this.renderSettings.colorAxis2 = [[]];
+            }
+        }
+
+        this.renderSettings.availableParameters = defaultFor(
+            this.renderSettings.availableParameters, false
+        );
+        this.renderSettings.renderGroups = defaultFor(
+            this.renderSettings.renderGroups, false
+        );
+        this.renderSettings.sharedParameters = defaultFor(
+            this.renderSettings.sharedParameters, false
+        );
+        this.renderSettings.groups = defaultFor(
+            this.renderSettings.groups, false
+        );
+
+        this.yAxisLabel = defaultFor(this.renderSettings.yAxisLabel, null);
+        this.y2AxisLabel = [];          this.y2AxisLabel = defaultFor(this.renderSettings.y2AxisLabel, null);
+        this.xAxisLabel = defaultFor(this.renderSettings.xAxisLabel, null);
+
+         let fillArray = (arr, val)=>{
+            for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
+                arr.push(val);
+            }
+        }
+        if(this.yAxisLabel === null){
+            this.yAxisLabel = [];
+            fillArray(this.yAxisLabel, null);
+        }
+        if(this.y2AxisLabel === null){
+            this.y2AxisLabel = [];
+            fillArray(this.y2AxisLabel, null);
+        }
+
+        this.logY = [];
+        fillArray(this.logY, false);
+        this.logY2 = [];
+        fillArray(this.logY2, false);
+
+        this.colorAxisTickFormat = defaultFor(options.colorAxisTickFormat, 'g');
+        this.defaultAxisTickFormat = defaultFor(options.defaultAxisTickFormat, 'g');
+
         // Check if sub axis option set if not initialize with empty array
         if(this.enableSubXAxis){
             this.renderSettings.additionalXTicks = defaultFor(
                 this.renderSettings.additionalXTicks, []
             );
         }
+        this.renderSettings.additionalYTicks = defaultFor(
+            this.renderSettings.additionalYTicks, []
+        );
+
         if(this.enableSubYAxis){
-            this.renderSettings.additionalYTicks = defaultFor(
-                this.renderSettings.additionalYTicks, []
-            );
+            if(this.multiYAxis){
+                for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
+                    this.renderSettings.additionalYTicks.push([]);
+                }
+            }
+        } else {
+            this.renderSettings.additionalYTicks = [
+                this.renderSettings.additionalYTicks
+            ];
         }
 
         this.timeScales = [];
 
         this.margin = defaultFor(
             options.margin,
-            {top: 10, left: 90, bottom: 50, right: 30}
+            {top: 10, left: 90, bottom: 50, right: 40}
         );
 
         this.subAxisMarginX = 0;
@@ -260,22 +378,34 @@ class graphly extends EventEmitter {
         this.marginY2Offset = 0;
         this.marginCSOffset = 0;
 
+
         if(this.renderSettings.hasOwnProperty('y2Axis') && 
-           this.renderSettings.y2Axis.length>0){
+           this.getMaxArrayLenght(this.renderSettings.y2Axis)>0){
             this.marginY2Offset = 40;
         }
 
+
         // Calculate necessary additional offset if sub ticks have been selected
-        if(this.renderSettings.hasOwnProperty('additionalXTicks')) {
+        if(this.enableSubXAxis) {
             this.subAxisMarginX = 40*this.renderSettings.additionalXTicks.length;
         }
-        if(this.renderSettings.hasOwnProperty('additionalYTicks')) {
-            this.subAxisMarginY = 80*this.renderSettings.additionalYTicks.length;
+
+        if(this.enableSubYAxis) {
+            let addYT = this.renderSettings.additionalYTicks;
+            let maxL = 0;
+            for(let i=0; i<addYT.length; i++){
+                maxL = Math.max(maxL, addYT[i].length);
+            }
+            this.subAxisMarginY = 80*maxL;
         }
 
 
         this.renderSettings.combinedParameters = defaultFor(
             this.renderSettings.combinedParameters, {}
+        );
+
+        this.renderSettings.reversedYAxis = defaultFor(
+            this.renderSettings.reversedYAxis, false
         );
 
         this.renderSettings.y2Axis = defaultFor(
@@ -295,14 +425,19 @@ class graphly extends EventEmitter {
             options.displayAlphaOptions, true
         );
 
+        this.colorscaleOptionLabel = defaultFor(
+            options.colorscaleOptionLabel,
+            'Apply colorscale'
+        );
+
+        this.showFilteredData = defaultFor(
+            options.showFilteredData,
+            true
+        );
+
         // If there are colorscales to be rendered we need to apply additional
         // margin to the right reducing the total width
-        let csAmount = 0;
-        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
-            if(this.renderSettings.colorAxis[i] !== null){
-                csAmount++;
-            }
-        }
+        let csAmount = this.getMaxCSAmount();
         this.marginCSOffset += csAmount*100;
 
         this.width = this.dim.width - this.margin.left - 
@@ -327,26 +462,34 @@ class graphly extends EventEmitter {
         }
         this.filters = {};
         this.filterManager = defaultFor(options.filterManager, false);
-        this.connectedGraph = defaultFor(options.connectedGraph, false);
         this.autoColorExtent = defaultFor(options.autoColorExtent, false);
         this.enableFit = defaultFor(options.enableFit, true);
         this.fixedXDomain = undefined;
         this.mouseDown = false;
         this.prevMousePos = null;
 
-        this.logX = defaultFor(options.logX, false);
-        this.logY = defaultFor(options.logY, false);
-        this.logY2 = defaultFor(options.logY2, false);
-
-        this.colorAxisTickFormat = defaultFor(options.colorAxisTickFormat, 'g');
+        this.colorscales = defaultFor(
+            options.colorscales,
+            [
+              'viridis', 'inferno', 'rainbow', 'jet', 'hsv', 'hot', 'cool', 'spring',
+              'summer', 'autumn', 'winter', 'bone', 'copper', 'greys', 'yignbu',
+              'greens', 'yiorrd', 'bluered', 'rdbu', 'picnic', 'portland',
+              'blackbody', 'earth', 'electric', 'magma', 'plasma'
+            ]
+        );
+        this.discreteColorScales = {};
 
         if(this.filterManager){
             this.filterManager.on('filterChange', this.onFilterChange.bind(this));
         }
 
+        let timeDelay = 600;
+        if(this.debounceActive){
+            timeDelay = 200;
+        }
         this.debounceZoom = debounce(function(){
             this.onZoom();
-        }, 350);
+        }, timeDelay);
 
        this.debounceResize = debounce(function(){
             this.onResize();
@@ -358,8 +501,6 @@ class graphly extends EventEmitter {
         
 
         let self = this;
-
-        //plotty.addColorScale('divergent1', ['#2f3895', '#ffffff', '#a70125'], [0, 0.41, 1]);
 
         this.plotter = new plotty.plot({
             canvas: document.createElement('canvas'),
@@ -376,8 +517,7 @@ class graphly extends EventEmitter {
             .attr('width', this.width - 1)
             .attr('height', this.height - 1)
             .style('opacity', 1.0)
-            //.style('background-color', 'yellow')
-            //.style('display', 'none')
+            //.style('pointer-events', 'none')
             .style('position', 'absolute')
             .style('z-index', 2)
             .style(
@@ -459,8 +599,7 @@ class graphly extends EventEmitter {
                 'transform',
                 'translate(' + (this.margin.left+this.subAxisMarginY+1) + ',' +
                 (this.margin.top+1) + ')'
-            )
-            .style('clip-path','url('+this.nsId+'clipbox)');
+            );
 
         // Make sure we hide the tooltip as soon as we get out of the canvas
         // else it can kind of "stick" when moving the mouse fast
@@ -487,6 +626,18 @@ class graphly extends EventEmitter {
             });
 
             this.renderCanvas.on('mousemove', function() {
+
+                let heighChunk = self.height/self.renderSettings.yAxis.length;
+                let modifier = Math.floor(
+                    d3.event.offsetY / heighChunk
+                );
+                // Adapt zoom center depending on which plot he mouse is positioned
+                if(typeof self.xyzoomCombined !== 'undefined'){
+                    self.xyzoomCombined.center([
+                        d3.event.offsetX,
+                        d3.event.offsetY-(heighChunk*modifier)
+                    ]);
+                }
 
                 // If mouse is being pressed don't pick anything
                 if(self.mouseDown){
@@ -578,6 +729,14 @@ class graphly extends EventEmitter {
 
                 let mouseX = d3.event.offsetX; 
                 let mouseY = d3.event.offsetY;
+
+                // TODO: Not sure if this is the best approach to retrieve
+                // with which of the plots we are interacting
+                // Calculate y plot value
+                let plotAmount = this.renderSettings.yAxis.length;
+                let plotHeight = this.height / plotAmount;
+                let plotY = Math.floor(mouseY/plotHeight);
+
                 // Pick the colour from the mouse position. 
                 let gl = self.referenceContext;
                 let pixels = new Uint8Array(4);
@@ -655,6 +814,7 @@ class graphly extends EventEmitter {
                     // Add close button
                     this.tooltip.append('div')
                         .attr('class', 'labelClose cross')
+                        .style('margin-right', '10px')
                         .on('click', ()=>{
                             this.topSvg.selectAll('*').remove();
                             this.tooltip.style('display', 'none');
@@ -665,19 +825,20 @@ class graphly extends EventEmitter {
                         nodeId.hasOwnProperty('index')){
 
                         let keysSorted = Object.keys(self.currentData).sort();
-
-                        /*for (var i = 0; i < keysSorted.length; i++) {
-                            let key = keysSorted[i];
-                            let val = self.currentData[key][nodeId.index];
-                            if (val instanceof Date){
-                                val = val.toISOString();
-                            }
-                            this.tooltip.append('div')
-                                .text(key+': '+val)
-                        }*/
+                        // Check for groups and remove 
                         let tabledata = [];
                         let uomAvailable = false;
                         for (var i = 0; i < keysSorted.length; i++) {
+                            // check for rendergroups for possible parameters 
+                            // that need to be ignored
+                             // Check for renderGroups
+                            if(this.renderSettings.renderGroups && 
+                                this.renderSettings.groups){
+                                let rGroup = this.renderSettings.groups[plotY];
+                                if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(keysSorted[i]) === -1){
+                                    continue;
+                                }
+                            }
                             let key = keysSorted[i];
                             let val = self.currentData[key][nodeId.index];
                             if (val instanceof Date){
@@ -728,14 +889,27 @@ class graphly extends EventEmitter {
                             .text(function (d) { return d.value; });
 
 
-                        // Check to see if data has set some position aliases
-                        if(self.renderSettings.hasOwnProperty('positionAlias')){
-                            let posAlias = self.renderSettings.positionAlias;
-                            var lat, lon, alt;
-                            var cmobPar = self.renderSettings.combinedParameters;
+                        // Check to see if a global positionAlias is defined
+                        // or a group based position alias is defined
+                        let posAlias;
+                        let rS = self.renderSettings;
+                        if(rS.hasOwnProperty('positionAlias')){
+                            posAlias =  rS.positionAlias;
+                        }
 
-                            if(cmobPar.hasOwnProperty(posAlias.latitude)){
-                                var key = cmobPar[posAlias.latitude];
+                        if(rS.renderGroups !== false && rS.groups !== false){
+                            let groupKey = rS.groups[plotY];
+                            if(rS.renderGroups[groupKey].hasOwnProperty('positionAlias')){
+                                posAlias = rS.renderGroups[groupKey].positionAlias;
+                            }
+                        }
+                        // Check to see if data has set some position aliases
+                        if(posAlias){
+                            let lat, lon, alt;
+                            let combPar = self.renderSettings.combinedParameters;
+
+                            if(combPar.hasOwnProperty(posAlias.latitude)){
+                                let key = combPar[posAlias.latitude];
                                 if(self.currentData.hasOwnProperty(key[0]) && 
                                    self.currentData.hasOwnProperty(key[1]) ){
                                     lat = [
@@ -750,8 +924,8 @@ class graphly extends EventEmitter {
                                 }
                             }
 
-                            if(cmobPar.hasOwnProperty(posAlias.longitude)){
-                                var key = cmobPar[posAlias.longitude];
+                            if(combPar.hasOwnProperty(posAlias.longitude)){
+                                let key = combPar[posAlias.longitude];
                                 if(self.currentData.hasOwnProperty(key[0]) && 
                                    self.currentData.hasOwnProperty(key[1]) ){
                                     lon = [
@@ -766,8 +940,8 @@ class graphly extends EventEmitter {
                                 }
                             }
 
-                            if(cmobPar.hasOwnProperty(posAlias.altitude)){
-                                var key = cmobPar[posAlias.altitude];
+                            if(combPar.hasOwnProperty(posAlias.altitude)){
+                                let key = combPar[posAlias.altitude];
                                 if(self.currentData.hasOwnProperty(key[0]) && 
                                    self.currentData.hasOwnProperty(key[1]) ){
                                     alt = [
@@ -824,14 +998,6 @@ class graphly extends EventEmitter {
                 }
             });
         }
-
-        // Check for change in connected graph axis selection if there is a
-        // change reload graph to reset its ranges and position
-        if (this.connectedGraph){
-            this.connectedGraph.on('axisChange', ()=>{
-                this.loadData(this.data);
-            });
-        }
     }
 
     startTiming(processId){
@@ -879,7 +1045,7 @@ class graphly extends EventEmitter {
         }
         this.filters = filters;
         this.applyDataFilters();
-        this.renderData();
+        this.renderData(true);
     }
 
     destroy(){
@@ -932,18 +1098,6 @@ class graphly extends EventEmitter {
         this.dataSettings = defaultFor(settings, {});
     }
 
-    /**
-    * Connect x axis of a scond graph to update when x axis of first graph is updated.
-    * @param {Object} graph graphly instance.
-    */
-    connectGraph(graph){
-        this.connectedGraph = graph;
-        if (this.connectedGraph){
-            this.connectedGraph.on('axisChange', ()=>{
-                this.loadData(this.data);
-            });
-        }
-    }
 
     /**
     * Save current plot as rendering opening save dialog for download.
@@ -969,76 +1123,119 @@ class graphly extends EventEmitter {
             this.batchDrawer.clear();
 
             this.xScale.range([0, Math.floor(this.width*this.resFactor)]);
-            this.yScale.range([Math.floor(this.height*this.resFactor), 0]);
-            this.y2Scale.range([Math.floor(this.height*this.resFactor), 0]);
+
+            let currHeight = this.height/this.yScale.length;
+
+            for (let yPos = 0; yPos < this.yScale.length; yPos++) {
+                if(this.renderSettings.reversedYAxis){
+                    this.yScale[yPos].range([
+                        0, Math.floor((currHeight-this.separation)*this.resFactor)
+                    ]);
+                } else  {
+                    this.yScale[yPos].range([
+                        Math.floor((currHeight-this.separation)*this.resFactor), 0
+                    ]);
+                }
+            }
+
+            for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
+                this.y2Scale[yPos].range([
+                    Math.floor((currHeight-this.separation)*this.resFactor), 0
+                ]);
+            }
 
             let xAxRen = this.renderSettings.xAxis;
+            
             let yAxRen = this.renderSettings.yAxis;
             let y2AxRen = this.renderSettings.y2Axis;
 
-            let idX = xAxRen;
+            // Hide axis edit buttons
+            this.svg.selectAll('.modifyAxisIcon').style('display', 'none');
 
 
-            for (let parPos=0; parPos<y2AxRen.length; parPos++){
-
-                let idY2 = y2AxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[
-                    this.renderSettings.yAxis.length + parPos
-                ];
-                
-                this.renderParameter(
-                    idX, idY2, idCS, this.renderSettings.y2Axis,
-                    parPos, this.currentData, this.currentInactiveData, false
-                );
+            // Draw y2 first so it is on bottom
+            for (let plotY = 0; plotY < y2AxRen.length; plotY++) {
+                for (let parPos=0; parPos<y2AxRen[plotY].length; parPos++){
+                    if(typeof y2AxRen[plotY][parPos] !== 'undefined'){
+                        this.renderParameter(
+                            false, xAxRen,
+                            this.renderSettings.y2Axis[plotY][parPos],
+                            this.renderSettings.colorAxis2[plotY][parPos],
+                            plotY, y2AxRen, this.y2Scale,
+                            parPos, this.currentData, this.currentInactiveData,
+                            false
+                        );
+                    }
+                }
             }
 
-            for (let parPos=0; parPos<yAxRen.length; parPos++){
+            for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
-                let idY = yAxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[parPos];
-
-                this.renderParameter(
-                    idX, idY, idCS, this.renderSettings.yAxis,
-                    parPos, this.currentData, this.currentInactiveData, false
-                );
+                for (let parPos=0; parPos<yAxRen[plotY].length; parPos++){
+                    if(typeof yAxRen[plotY][parPos] !== 'undefined'){
+                        this.renderParameter(
+                            true, xAxRen,
+                            this.renderSettings.yAxis[plotY][parPos],
+                            this.renderSettings.colorAxis[plotY][parPos],
+                            plotY,
+                            yAxRen, this.yScale,
+                            parPos, this.currentData, this.currentInactiveData,
+                            false
+                        );
+                    }
+                }
             }
 
             this.batchDrawer.draw();
+
         }
 
         // We need to first render the canvas if the debounce active is false
         if(!this.debounceActive || this.resFactor !== 1){
 
-            //TODO: output image not generated correctly when debounce is active
+            // Render all to first previewimage
             this.renderCanvas.style('opacity','1');
-            let prevImg = this.el.select('#previewImage');
+            let prevImg = this.el.select('#previewImageR0');
+
+            prevImg
+                .attr('width',  this.width)
+                .attr('height', this.height);
+
+            this.el.select('#renderingContainer0').style('clip-path',null);
 
             let img = this.renderCanvas.node().toDataURL();
-            if(!prevImg.empty()){
-                prevImg.attr('xlink:href', img)
-                    .attr('transform', 'translate(0,0)scale(1)')
-                    .style('display', 'none');
+            
+            prevImg.attr('xlink:href', img)
+                .attr('transform', 'translate(0,0)scale(1)');
+            
+            prevImg.style('display', 'block');
+        } else {
+            this.svg.selectAll('.previewImage').style('display', 'block');
+        }
+
+
+        // Go through the parameter labels and check if they are visible or not
+        let parsInf = this.el.selectAll('.parameterInfo');
+        this.el.selectAll('.svgInfoContainer').each(function(d,i){
+
+            if(d3.select(this).selectAll('text').empty()){
+                d3.select(this).style('visibility', 'hidden');
+            } else {
+                if(parsInf[0].length>i){
+                    d3.select(this).style('visibility', d3.select(parsInf[0][i]).style('visibility'));
+                } else {
+                    d3.select(this).style('visibility', 'visible');
+                }
             }
-        }
+        });
 
-        this.svg.select('#previewImage').style('display', 'block');
-        // Only show second preview image if not scaling up as we need to
-        // rerender everything when doing so
-        if(this.resFactor === 1){
-            this.svg.select('#previewImage2').style('display', 'block');
-        }
-
-        if(this.displayParameterLabel && 
-            !this.el.select('#parameterInfo').selectAll('*').empty()){
-            this.svg.select('#svgInfoContainer').style('visibility', 'visible');
-        }
 
         // Set interactive blue to black for labels
         this.svg.selectAll('.axisLabel').attr('fill', 'black');
         this.svg.selectAll('.axisLabel').attr('font-weight', 'normal');
         this.svg.selectAll('.axisLabel').attr('text-decoration', 'none');
         // Check if one of the labels says Add parameter ...
-        d3.selectAll('.axisLabel').filter(function(){ 
+        this.el.selectAll('.axisLabel').filter(function(){ 
             return d3.select(this).text() == 'Add parameter ...'
         })
         .attr('fill', 'none');
@@ -1079,8 +1276,8 @@ class graphly extends EventEmitter {
             .attr('shape-rendering', 'crispEdges');
 
         // Set fontsize for text explicitly
-        this.svg.selectAll('text')
-            .attr('font-size', '12px');
+        /*this.svg.selectAll('text')
+            .attr('font-size', '12px');*/
 
         // TODO: We introduce a short timeout here because it seems for some
         // reason the rendered image is not ready when not using the debounce
@@ -1088,7 +1285,7 @@ class graphly extends EventEmitter {
         // when debugging the svg_html shows the correct image, but the 
         // redering is empty
         if(!this.debounceActive || this.resFactor !== 1){
-            setTimeout(this.createOutputFile.bind(this), 10);
+            setTimeout(this.createOutputFile.bind(this), 1000);
         } else {
             this.createOutputFile();
         }
@@ -1113,16 +1310,13 @@ class graphly extends EventEmitter {
             this.el.select('#imagerenderer').attr('width', renderWidth);
             this.el.select('#imagerenderer').attr('height', renderHeight);
 
-            var c = this.el.select('#imagerenderer').node();
-            var ctx = c.getContext('2d');
-
             // Clear possible previous renderings
-            ctx.clearRect(0, 0, c.width, c.height);
+            this.IRctx.clearRect(0, 0, this.IRc.width, this.IRc.height);
             
             // If format is jpeg we need to "remove" transparent pixels as they 
             // are turned black
             if(this.outFormat === 'jpeg'){
-                var imgData=ctx.getImageData(0,0,c.width,c.height);
+                var imgData=this.IRctx.getImageData(0,0,this.IRc.width,this.IRc.height);
                 var data=imgData.data;
                 for(var i=0;i<data.length;i+=4){
                     if(data[i+3]<255){
@@ -1132,10 +1326,10 @@ class graphly extends EventEmitter {
                         data[i+3] = 255 - data[i+3];
                     }
                 }
-                ctx.putImageData(imgData,0,0);
+                this.IRctx.putImageData(imgData,0,0);
             }
 
-            ctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
+            this.IRctx.drawSvg(svg_html, 0, 0, renderWidth, renderHeight);
 
 
             // Set interactive blue to black for labels
@@ -1143,14 +1337,20 @@ class graphly extends EventEmitter {
             this.svg.selectAll('.axisLabel').attr('font-weight', 'bold');
 
             let outformat = 'image/'+ this.outFormat;
-            c.toBlob((blob)=> {
+            this.IRc.toBlob((blob)=> {
                 FileSaver.saveAs(blob, this.fileSaveString);
             }, outformat ,1);
         }
 
-        this.svg.select('#previewImage').style('display', 'none');
-        this.svg.select('#previewImage2').style('display', 'none');
-        this.svg.select('#svgInfoContainer').style('visibility', 'hidden');
+
+        this.svg.selectAll('.previewImage').style('display', 'none');
+        this.svg.selectAll('.svgInfoContainer').style('visibility', 'hidden');
+        // Hide axis edit buttons
+        this.svg.selectAll('.modifyAxisIcon').style('display', 'block');
+
+        // Set first render container as it was before
+        this.el.select('#renderingContainer0')
+            .style('clip-path','url('+this.nsId+'clipbox)');
 
         this.resFactor = 1;
         this.resize();
@@ -1169,130 +1369,33 @@ class graphly extends EventEmitter {
         })
     }
 
-    createAxisLabels(){
 
-         let yChoices = [];
-         let y2Choices = [];
-         let xChoices = [];
-         let xSubChoices = [];
-         let ySubChoices = [];
+    creatAxisLabelElement(
+        elId, basename, choices, ySubChoices, currAxis, yAxisLabel,
+        yPos, orientation, currHeightCenter ){
 
-         let xHidden, yHidden, y2Hidden;
+        let elHidden;
+        let settObj = this.el.select('#'+elId);
 
-         if(!this.el.select('#xSettings').empty()){
-            xHidden = (this.el.select('#xSettings').style('display') == 'block' ) ? 
+        if(!settObj.empty()){
+            elHidden = (settObj.style('display') == 'block' ) ? 
                 false : true;
         }else{
-            xHidden = true;
+            elHidden = true;
         }
+        settObj.remove();
 
-        if(!this.el.select('#ySettings').empty()){
-            yHidden = (this.el.select('#ySettings').style('display') == 'block' ) ? 
-                false : true; 
-        }else{
-            yHidden = true;
-        }
-
-        if(!this.el.select('#y2Settings').empty()){
-            y2Hidden = (this.el.select('#y2Settings').style('display') == 'block' ) ? 
-                false : true; 
-        }else{
-            y2Hidden = true;
-        }
-
-        // Go through data settings and find currently available ones
-        let ds = this.dataSettings;
-        for (let key in ds) {
-            // Check if key is part of a combined parameter
-            let ignoreKey = false;
-            let comKey = null;
-            for (comKey in this.renderSettings.combinedParameters){
-                if(this.renderSettings.combinedParameters[comKey].indexOf(key) !== -1){
-                    ignoreKey = true;
-                }
-            }
-            // Check if key is available in data first
-            if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
-
-                yChoices.push({value: key, label: key});
-                y2Choices.push({value: key, label: key});
-                xChoices.push({value: key, label: key});
-
-                if(this.renderSettings.yAxis.indexOf(key)!==-1){
-                    yChoices[yChoices.length-1].selected = true;
-                    y2Choices.pop();
-                }
-                if(this.renderSettings.y2Axis.indexOf(key)!==-1){
-                    y2Choices[y2Choices.length-1].selected = true;
-                    yChoices.pop();
-                }
-                if(this.renderSettings.xAxis === key){
-                    xChoices[xChoices.length-1].selected = true;
-                }
-            } 
-
-            if (this.data.hasOwnProperty(key)){
-
-                xSubChoices.push({value: key, label: key});
-                ySubChoices.push({value: key, label: key});
-
-                if(this.renderSettings.hasOwnProperty('additionalXTicks') &&
-                   this.renderSettings.additionalXTicks.indexOf(key)!==-1){
-                    xSubChoices[xSubChoices.length-1].selected = true;
-                }
-                if(this.renderSettings.hasOwnProperty('additionalYTicks') &&
-                   this.renderSettings.additionalYTicks.indexOf(key)!==-1){
-                    ySubChoices[ySubChoices.length-1].selected = true;
-                }
-            }
-        }
-
-        // Go through combined parameters and see if corresponding parameters
-        // are available in the current dataset, if they are add the combined
-        // parameter to the choices
-        let comPars =  this.renderSettings.combinedParameters;
-        for (let comKey in comPars){
-            let includePar = true;
-            for (let par=0; par<comPars[comKey].length; par++){
-                if(!this.data.hasOwnProperty(comPars[comKey][par])){
-                    includePar = false;
-                }
-            }
-            if(includePar){
-                yChoices.push({value: comKey, label: comKey});
-                y2Choices.push({value: comKey, label: comKey});
-                xChoices.push({value: comKey, label: comKey});
-
-                if(this.renderSettings.yAxis.indexOf(comKey)!==-1){
-                    yChoices[yChoices.length-1].selected = true;
-                    y2Choices.pop();
-                }
-                // Add selected attribute also to y2 axis selections
-                if(this.renderSettings.y2Axis.indexOf(comKey)!==-1){
-                    y2Choices[y2Choices.length-1].selected = true;
-                    yChoices.pop();
-                }
-                if(this.renderSettings.xAxis === comKey){
-                    xChoices[xChoices.length-1].selected = true;
-                }
-            }
-        }
-
-        this.el.selectAll('.axisLabel').on('click',null);
-        this.el.selectAll('.axisLabel').remove();
-        this.el.selectAll('.subAxisLabel').remove();
-
-        let uniqY = this.renderSettings.yAxis;
+        let uniq = currAxis;
 
         let listText = [];
         // Add uom info to unique elements
-        for (var i = 0; i < uniqY.length; i++) {
-            if(this.dataSettings.hasOwnProperty(uniqY[i]) && 
-               this.dataSettings[uniqY[i]].hasOwnProperty('uom') &&
-               this.dataSettings[uniqY[i]].uom !== null){
-                listText.push(uniqY[i]+' ['+this.dataSettings[uniqY[i]].uom+'] ');
+        for (var i = 0; i < uniq.length; i++) {
+            if(this.dataSettings.hasOwnProperty(uniq[i]) && 
+               this.dataSettings[uniq[i]].hasOwnProperty('uom') &&
+               this.dataSettings[uniq[i]].uom !== null){
+                listText.push(uniq[i]+' ['+this.dataSettings[uniq[i]].uom+'] ');
             }else{
-                listText.push(uniqY[i]);
+                listText.push(uniq[i]);
             }
         }
 
@@ -1300,61 +1403,72 @@ class graphly extends EventEmitter {
             // No items selected, add "filler text"
             listText.push('Add parameter ...');
         }
-        if(this.yAxisLabel){
-            listText = [this.yAxisLabel];
+
+        if(yAxisLabel[yPos]){
+            listText = [yAxisLabel[yPos]];
         }
         
-        let labelytext = this.svg.append('text')
-            .attr('class', 'yAxisLabel axisLabel')
+        let labelText = this.svg.append('text')
+            .attr('class', basename+' axisLabel')
             .attr('text-anchor', 'middle')
-            .attr('transform', 
-                'translate('+ -(this.margin.left/2+10) +','+
-                (this.height/2)+')rotate(-90)'
-            )
             .attr('fill', '#007bff')
             .attr('stroke', 'none')
             .attr('font-weight', 'bold')
             .attr('text-decoration', 'none')
             .text(listText.join(', '));
 
-        this.addTextMouseover(labelytext);
+        if(orientation === 'left'){
+            labelText.attr('transform', 
+                'translate('+ -(this.margin.left/2+20) +','+
+                currHeightCenter+')rotate(-90)'
+            )
+        }else if(orientation === 'right'){
+            labelText.attr('transform', 
+                'translate('+ (this.width+this.marginY2Offset+30) +','+
+                currHeightCenter+')rotate(-90)'
+            )
+        }
 
-        this.el.select('#ySettings').remove();
+        this.addTextMouseover(labelText);
 
-        this.el.append('div')
-            .attr('id', 'ySettings')
+        let setDiv = this.el.append('div')
+            .attr('id', elId)
+            .attr('class', basename+'Panel')
             .style('display', function(){
-                return yHidden ? 'none' : 'block';
+                return elHidden ? 'none' : 'block';
             })
-            .style('top', this.height/2+'px')
-            .style('left', this.margin.left+this.subAxisMarginY+15+'px')
-            .append('select')
-                .attr('id', 'yScaleChoices');
+            .style('top', currHeightCenter+'px')
+            .style(orientation, this.margin.left+this.subAxisMarginY+15+'px');
 
-        this.el.select('#ySettings').append('div')
+        let scaleChoices = setDiv.append('select')
+                .attr('id', basename+'ScaleChoices'+yPos);
+
+        setDiv.append('div')
             .attr('class', 'labelClose cross')
             .on('click', ()=>{
-                this.el.select('#ySettings').style('display', 'none');
+                setDiv.style('display', 'none');
             });
 
-        let con = this.el.select('#ySettings').append('div')
+        let con = setDiv.append('div')
             .attr('class', 'axisOption');
+
         let that = this;
 
         con.append('input')
-            .attr('id', 'yAxisCustomLabel')
+            .attr('id', basename+'CustomLabel'+yPos)
             .attr('type', 'text')
             .property('value', listText.join(', '))
             .on('input', function(){
-                that.el.select('.yAxisLabel.axisLabel').text(this.value);
-                that.yAxisLabel = this.value;
+                labelText.text(this.value);
+                yAxisLabel[yPos] = this.value;
+                that.emit('axisChange');
             });
 
         con.append('label')
-            .attr('for', 'yAxisCustomLabel')
+            .attr('for', basename+'CustomLabel'+yPos)
             .text('Label');
 
-        con = this.el.select('#ySettings').append('div')
+        con = setDiv.append('div')
             .attr('class', 'axisOption');
 
         if(!this.yTimeScale){
@@ -1362,10 +1476,20 @@ class graphly extends EventEmitter {
                 .attr('id', 'logYoption')
                 .attr('type', 'checkbox')
                 .property('checked', 
-                    defaultFor(that.logY, false)
+                    function(){
+                        if(orientation==='left'){
+                            return defaultFor(that.logY[yPos], false)
+                        } else if (orientation === 'right'){
+                            return defaultFor(that.logY2[yPos], false)
+                        }
+                    }
                 )
                 .on('change', function(){
-                    that.logY = !that.logY;
+                    if(orientation==='left'){
+                        that.logY[yPos] = !that.logY[yPos];
+                    } else if (orientation === 'right'){
+                        that.logY2[yPos] = !that.logY2[yPos];
+                    }
                     that.initAxis();
                     that.renderData();
                 });
@@ -1376,62 +1500,54 @@ class graphly extends EventEmitter {
         }
 
 
-        this.el.select('#yScaleChoices').attr('multiple', true);
+        scaleChoices.attr('multiple', true);
 
-        this.el.select('.yAxisLabel.axisLabel').on('click', ()=>{
-            if(this.el.select('#ySettings').style('display') === 'block'){
-                this.el.select('#ySettings').style('display', 'none');
+        var toggleView = function(divEl){
+            if(divEl.style('display') === 'block'){
+                divEl.style('display', 'none');
             }else{
-                this.el.select('#ySettings').style('display', 'block');
+                divEl.style('display', 'block');
             }
-        });
+        };
 
-        let ySettingParameters = new Choices(this.el.select('#yScaleChoices').node(), {
-          choices: yChoices,
+        labelText.on('click', toggleView.bind(null, setDiv));
+
+        let settingParameters = new Choices(scaleChoices.node(), {
+          choices: choices,
           removeItemButton: true,
           placeholderValue: ' select ...',
           itemSelectText: '',
         });
 
-        ySettingParameters.passedElement.addEventListener('addItem', function(event) {
-            that.yAxisLabel = null;
+        
+
+        settingParameters.passedElement.addEventListener('addItem', function(event) {
+
+            yAxisLabel[yPos] = null;
             let renSett = that.renderSettings;
-            // Check if the yAxis is currently showing a time parameter and the
-            // new parameter is not, then we remove the previous time parameter
-            if(that.yTimeScale){
-               renSett.yAxis.pop();
-               renSett.yAxis.push(event.detail.value);
-               renSett.colorAxis[that.renderSettings.yAxis.length-1] = null;
-            } else {
-                // If newly added parameter is a time scale we remove also the
-                // previous parameters from the y scale
-                if(that.checkTimeScale(event.detail.value)){
-                    let y2ColScale = renSett.colorAxis.slice(
-                        renSett.yAxis.length-1, renSett.colorAxis.length);
-                    if(y2ColScale.length > 0){
-                        renSett.colorAxis = [null].concat(y2ColScale);
-                    }else {
-                        renSett.colorAxis = [null];
-                    }
-                    renSett.yAxis = [event.detail.value];
-                } else {
-                    renSett.yAxis.push(event.detail.value);
-                    // If y2 axis has parameters we need to add the coloraxis element
-                    // taking them into account as color axis is shared
-                    if(renSett.y2Axis.length > 0){
-                        renSett.colorAxis.splice(
-                            renSett.yAxis.length-1, 0, null
-                        );
-                    } else {
-                        renSett.colorAxis.push(null);
-                    }
-                }
+            let curryAxArr = renSett.yAxis;
+
+            if(orientation === 'left'){
+                renSett.colorAxis[yPos].push(null);
+            } else if(orientation === 'right'){
+                curryAxArr = renSett.y2Axis;
+                renSett.colorAxis2[yPos].push(null);
             }
-            
+
+            curryAxArr[yPos].push(event.detail.value);
+            // TODO: Check for adding of time parameter
+
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
-            that.createAxisLabels();
+
+            // Recheck if parameter info should be shown now
+            that.el.selectAll('.parameterInfo').each(function(){
+                if(d3.select(this).node().childNodes.length > 0){
+                    d3.select(this).style('display', 'block');
+                }
+            });
+
             /**
             * Event is fired When modifying a parameter for any of the 
             * axis settings.
@@ -1439,35 +1555,62 @@ class graphly extends EventEmitter {
             */
             that.emit('axisChange');
         },false);
-        ySettingParameters.passedElement.addEventListener('removeItem', function(event) {
-            that.yAxisLabel = null;
-            let index = that.renderSettings.yAxis.indexOf(event.detail.value);
+
+
+        settingParameters.passedElement.addEventListener('removeItem', function(event) {
+
+            yAxisLabel[yPos] = null;
+
+            let renSett = that.renderSettings;
+            let index = currAxis.indexOf(event.detail.value);
+
             // TODO: Should it happen that the removed item is not in the list?
             // Do we need to handle this case? 
             if(index!==-1){
-                that.renderSettings.yAxis.splice(index, 1);
-                that.renderSettings.colorAxis.splice(index, 1);
+
+                currAxis.splice(index, 1);
+                if(orientation === 'left'){
+                    renSett.colorAxis[yPos].splice(index,1);
+                } else if(orientation === 'right'){
+                    renSett.colorAxis2[yPos].splice(index,1);
+                }
+
                 that.initAxis();
                 that.renderData();
                 that.createAxisLabels();
                 that.emit('axisChange');
             }
+
+            // Recheck if parameter info should be hidden 
+            that.el.selectAll('.parameterInfo').each(function(){
+                if(d3.select(this).node().childNodes.length === 0){
+                    d3.select(this).style('display', 'none');
+                }
+            });
+
         },false);
 
-        if(this.enableSubYAxis){
-            
+        let enableSA = false;
+        let yS = this.renderSettings.yAxis[yPos];
+        if(this.enableSubYAxis !== false){
+            if(this.enableSubYAxis.indexOf(yS[0])!==-1){
+                enableSA = true;
+            }
+        }
+
+        if(enableSA && orientation === 'left'){
+
             con.append('div')
                 .style('margin-top', '20px')
                 .text('Secondary ticks');
                 
-            con.append('select')
-                .attr('id', 'subYChoices');
+            let selCh = con.append('select')
+                .attr('id', 'subYChoices'+yPos)
+                .attr('multiple', true);
 
-
-            this.el.select('#subYChoices').attr('multiple', true);
             
             let subYParameters = new Choices(
-                this.el.select('#subYChoices').node(), {
+                selCh.node(), {
                     choices: ySubChoices,
                     removeItemButton: true,
                     placeholderValue: ' select ...',
@@ -1476,22 +1619,30 @@ class graphly extends EventEmitter {
             );
 
             subYParameters.passedElement.addEventListener('addItem', function(event) {
-                that.renderSettings.additionalYTicks.push(event.detail.value);
-                that.subAxisMarginY = 80*that.renderSettings.additionalYTicks.length;
+                let addYT = that.renderSettings.additionalYTicks;
+                addYT[yPos].push(event.detail.value);
+                let maxL = 0;
+                for(let i=0;i<addYT.length;i++){
+                    maxL = Math.max(maxL, addYT[i].length);
+                }
+                that.subAxisMarginY = 80*maxL;
                 that.initAxis();
-                that.resize();
                 that.renderData();
                 that.createAxisLabels();
                 that.emit('axisChange');
             }, false);
 
             subYParameters.passedElement.addEventListener('removeItem', function(event) {
-                let index = that.renderSettings.additionalYTicks.indexOf(event.detail.value);
+                let addYT = that.renderSettings.additionalYTicks;
+                let index = addYT[yPos].indexOf(event.detail.value);
                 if(index!==-1){
-                    that.renderSettings.additionalYTicks.splice(index, 1);
-                    that.subAxisMarginY = 80*that.renderSettings.additionalYTicks.length;
+                    addYT[yPos].splice(index, 1);
+                    let maxL = 0;
+                    for(let i=0;i<addYT.length;i++){
+                        maxL = Math.max(maxL, addYT[i].length);
+                    }
+                    that.subAxisMarginY = 80*maxL;
                     that.initAxis();
-                    that.resize();
                     that.renderData();
                     that.createAxisLabels();
                     that.emit('axisChange');
@@ -1500,169 +1651,233 @@ class graphly extends EventEmitter {
         }
 
 
-        // Create labels for y2 axis
+    }
 
-        let uniqY2 = this.renderSettings.y2Axis;
-        listText = [];
-        // Add uom info to unique elements
-        for (let i = 0; i < uniqY2.length; i++) {
-            if(this.dataSettings.hasOwnProperty(uniqY2[i]) && 
-               this.dataSettings[uniqY2[i]].hasOwnProperty('uom') &&
-               this.dataSettings[uniqY2[i]].uom !== null){
-                listText.push(uniqY2[i]+' ['+this.dataSettings[uniqY2[i]].uom+'] ');
-            }else{
-                listText.push(uniqY2[i]);
-            }
+    createAxisLabels(){
+
+        // Create x axis label
+        let xHidden;
+        if(!this.el.select('#xSettings').empty()){
+            xHidden = (this.el.select('#xSettings').style('display') == 'block' ) ? 
+                false : true;
+        }else{
+            xHidden = true;
         }
-        let addMar = this.margin.right + this.marginY2Offset - 10;
-        if(listText.length === 0){
-            // No items selected, add "filler text"
-            listText.push('Add parameter ...');
-            addMar = 20;
-        }
-        if(this.y2AxisLabel){
-            listText = [this.y2AxisLabel];
-        }
+
+        let xChoices = [];
+        let xSubChoices = [];
         
-        let labely2text = this.svg.append('text')
-            .attr('class', 'y2AxisLabel axisLabel')
-            .attr('text-anchor', 'middle')
-            .attr('transform', 
-                'translate('+ (this.width+addMar) +','+
-                (this.height/2)+')rotate(-90)'
-            )
-            .attr('fill', '#007bff')
-            .attr('stroke', 'none')
-            .attr('font-weight', 'bold')
-            .attr('text-decoration', 'none')
-            .text(listText.join(', '));
 
-        this.addTextMouseover(labely2text);
+        // Do some cleanup
+        this.el.selectAll('.axisLabel').on('click',null);
+        this.el.selectAll('.axisLabel').remove();
+        this.el.selectAll('.subAxisLabel').remove();
 
-        this.el.select('#y2Settings').remove();
 
-        this.el.append('div')
-            .attr('id', 'y2Settings')
-            .style('display', function(){
-                return y2Hidden ? 'none' : 'block';
-            })
-            .style('top', this.height/2+'px')
-            .style('left', (this.width-165)+'px')
-            .append('select')
-                .attr('id', 'y2ScaleChoices');
+        // Go through data settings and find currently available ones
+        for (let key in this.data) {
+            // Check if key is part of a combined parameter
+            let ignoreKey = false;
+            let comKey = null;
+            for (comKey in this.renderSettings.combinedParameters){
+                if(this.renderSettings.combinedParameters[comKey].indexOf(key) !== -1){
+                    ignoreKey = true;
+                }
+            }
 
-        this.el.select('#y2Settings').append('div')
-            .attr('class', 'labelClose cross')
-            .on('click', ()=>{
-                this.el.select('#y2Settings').style('display', 'none');
-            });
+            // Check for renderGroups
+            if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                // only important for first plot
+                let rGroup = this.renderSettings.groups[0];
+                if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(key) === -1){
+                    ignoreKey = true;
+                }
+            }
 
-        con = this.el.select('#y2Settings').append('div')
-            .attr('class', 'axisOption');
-        con.append('input')
-            .attr('id', 'y2AxisCustomLabel')
-            .attr('type', 'text')
-            .property('value', listText.join(', '))
-            .on('input', function(){
-                that.el.select('.y2AxisLabel.axisLabel').text(this.value);
-                that.y2AxisLabel = this.value;
-            });
-        con.append('label')
-            .attr('for', 'y2AxisCustomLabel')
-            .text('Label');
+            // Check if key is available in data first
+            if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
+                xChoices.push({value: key, label: key});
+                if(this.renderSettings.xAxis === key){
+                    xChoices[xChoices.length-1].selected = true;
+                }
+            } 
 
-        con = this.el.select('#y2Settings').append('div')
-            .attr('class', 'axisOption');
-
-        if(!this.y2TimeScale){
-            con.append('input')
-                .attr('id', 'logY2option')
-                .attr('type', 'checkbox')
-                .property('checked', 
-                    defaultFor(that.logY2, false)
-                )
-                .on('change', function(){
-                    that.logY2 = !that.logY2;
-                    that.initAxis();
-                    that.renderData();
-                });
-
-            con.append('label')
-                .attr('for', 'logY2option')
-                .text('Logarithmic scale (base-10) ');
+            if (this.data.hasOwnProperty(key)){
+                xSubChoices.push({value: key, label: key});
+                if(this.enableSubXAxis &&
+                   this.renderSettings.additionalXTicks.indexOf(key)!==-1){
+                    xSubChoices[xSubChoices.length-1].selected = true;
+                }
+            }
         }
 
-        this.el.select('#y2ScaleChoices').attr('multiple', true);
+        // Go through combined parameters and see if corresponding parameters
+        // are available in the current dataset, if they are add the combined
+        // parameter to the choices
+        let comPars =  this.renderSettings.combinedParameters;
+        for (let comKey in comPars){
 
-        this.el.select('.y2AxisLabel.axisLabel').on('click', ()=>{
-            if(this.el.select('#y2Settings').style('display') === 'block'){
-                this.el.select('#y2Settings').style('display', 'none');
-            }else{
-                this.el.select('#y2Settings').style('display', 'block');
+            let includePar = true;
+            for (let par=0; par<comPars[comKey].length; par++){
+                if(!this.data.hasOwnProperty(comPars[comKey][par])){
+                    includePar = false;
+                }
             }
-        });
 
-        let y2SettingParameters = new Choices(this.el.select('#y2ScaleChoices').node(), {
-          choices: y2Choices,
-          removeItemButton: true,
-          placeholderValue: ' select ...',
-          itemSelectText: '',
-        });
+            // Check for renderGroups
+            if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                // only important for first plot
+                let rGroup = this.renderSettings.groups[0];
 
-        y2SettingParameters.passedElement.addEventListener('addItem', function(event) {
-            let renSett = that.renderSettings;
-            that.y2AxisLabel = null;
-            // Check if the y2Axis is currently showing a time parameter and the
-            // new parameter is not, then we remove the previous time parameter
-            if(that.y2TimeScale){
-               renSett.y2Axis.pop();
-               renSett.y2Axis.push(event.detail.value);
-               renSett.colorAxis[renSett.y2Axis.length-1] = null;
-            } else {
-                // If newly added parameter is a time scale we remove also the
-                // previous parameters from the y scale
-                if(that.checkTimeScale(event.detail.value)){
-                    for (var i = renSett.y2Axis.length - 1; i >= 0; i--) {
-                        renSett.y2Axis.pop();
-                        renSett.colorAxis.pop();
+                for (let par=0; par<comPars[comKey].length; par++){
+                    if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(comPars[comKey][par]) === -1){
+                        includePar = false;
                     }
-                    renSett.y2Axis.push(event.detail.value);
-                    renSett.colorAxis.push(null);
-                } else {
-                    renSett.y2Axis.push(event.detail.value);
-                    renSett.colorAxis.push(null);
                 }
             }
 
-            that.recalculateBufferSize();
-            that.initAxis();
-            that.renderData();
-            that.createAxisLabels();
-            that.emit('axisChange');
-            // One item was added and none where before, we resize the right margin
-            if(that.renderSettings.y2Axis.length === 1){
-                that.resize();
-            }
-        },false);
-        y2SettingParameters.passedElement.addEventListener('removeItem', function(event) {
-            that.y2AxisLabel = null;
-            let index = that.renderSettings.y2Axis.indexOf(event.detail.value);
-            // TODO: Should it happen that the removed item is not in the list?
-            // Do we need to handle this case? 
-            if(index!==-1){
-                that.renderSettings.y2Axis.splice(index, 1);
-                that.renderSettings.colorAxis.splice((index+that.renderSettings.yAxis.length), 1);
-                that.initAxis();
-                that.renderData();
-                that.createAxisLabels();
-                that.emit('axisChange');
-                // No items in y2 axis we resize the right margin
-                if(that.renderSettings.y2Axis.length === 0){
-                    that.resize();
+            if(includePar){
+                xChoices.push({value: comKey, label: comKey});
+                if(this.renderSettings.xAxis === comKey){
+                    xChoices[xChoices.length-1].selected = true;
                 }
             }
-        },false);
+        }
 
+        // Check for renderGroups and shared parameters
+        if(this.renderSettings.renderGroups && this.renderSettings.sharedParameters){
+            // For single plot allow normal choices selection based on current group
+            // but limit the selection to current group parameters
+            if(this.renderSettings.yAxis.length === 1){
+                // Currently selected one is the corresponding shared one part
+                // of the group
+                if(this.renderSettings.sharedParameters.hasOwnProperty(this.renderSettings.xAxis)){
+                    let sharPars = this.renderSettings.sharedParameters[this.renderSettings.xAxis];
+                    for (var i = 0; i < xChoices.length; i++) {
+                        if(sharPars.indexOf(xChoices[i].value)!==-1){
+                            xChoices[i].selected = true;
+                        }
+                    }
+                }
+            } else if(this.renderSettings.yAxis.length > 1){
+                xChoices = [];
+                for (var key in this.renderSettings.sharedParameters){
+                    xChoices.push({value: key, label: key});
+                    if(this.renderSettings.xAxis === key){
+                        xChoices[xChoices.length-1].selected = true;
+                    }
+                }
+            }
+        }
+
+        let multiLength = this.renderSettings.yAxis.length;
+
+        for (let yPos=0; yPos<multiLength; yPos++){
+
+            let heighChunk = this.height/multiLength;
+            let offsetY = yPos*heighChunk;
+            let currHeightCenter = ((heighChunk - this.separation)/2) + offsetY;
+
+            let currYAxis = this.renderSettings.yAxis[yPos];
+            let currY2Axis = defaultFor(this.renderSettings.y2Axis[yPos], []);
+
+             // Check for available parameter options
+            let yChoices = [];
+            let y2Choices = [];
+            let ySubChoices = [];
+
+            // Go through data settings and find currently available ones
+            for (let key in this.data) {
+                // Check if key is part of a combined parameter
+                let ignoreKey = false;
+                let comKey = null;
+                for (comKey in this.renderSettings.combinedParameters){
+                    if(this.renderSettings.combinedParameters[comKey].indexOf(key) !== -1){
+                        ignoreKey = true;
+                    }
+                }
+
+                // Check for renderGroups
+                if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                    let rGroup = this.renderSettings.groups[yPos];
+                    if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(key) === -1){
+                        ignoreKey = true;
+                    }
+                }
+
+                // Check if key is available in data first
+                if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
+
+                    yChoices.push({value: key, label: key});
+                    y2Choices.push({value: key, label: key});
+
+                    if(currYAxis.indexOf(key)!==-1){
+                        yChoices[yChoices.length-1].selected = true;
+                        y2Choices.pop();
+                    }
+                    if(currY2Axis.indexOf(key)!==-1){
+                        y2Choices[y2Choices.length-1].selected = true;
+                        yChoices.pop();
+                    }
+                } 
+
+                if (this.data.hasOwnProperty(key)){
+
+                    ySubChoices.push({value: key, label: key});
+
+                    if(this.enableSubYAxis &&
+                       this.renderSettings.additionalYTicks[yPos].indexOf(key)!==-1){
+                        ySubChoices[ySubChoices.length-1].selected = true;
+                    }
+                }
+            }
+
+            // Go through combined parameters and see if corresponding parameters
+            // are available in the current dataset, if they are add the combined
+            // parameter to the choices
+            let comPars =  this.renderSettings.combinedParameters;
+            for (let comKey in comPars){
+                let includePar = true;
+                for (let par=0; par<comPars[comKey].length; par++){
+                    if(!this.data.hasOwnProperty(comPars[comKey][par])){
+                        includePar = false;
+                    }
+                }
+
+                // Check for renderGroups
+                if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                    let rGroup = this.renderSettings.groups[yPos];
+                    if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(comKey) === -1){
+                        includePar = false;
+                    }
+                }
+
+                if(includePar){
+                    yChoices.push({value: comKey, label: comKey});
+                    y2Choices.push({value: comKey, label: comKey});
+
+                    if(currYAxis.indexOf(comKey)!==-1){
+                        yChoices[yChoices.length-1].selected = true;
+                        y2Choices.pop();
+                    }
+                    // Add selected attribute also to y2 axis selections
+                    if(currY2Axis.indexOf(comKey)!==-1){
+                        y2Choices[y2Choices.length-1].selected = true;
+                        yChoices.pop();
+                    }
+                }
+            }
+
+            this.creatAxisLabelElement(
+                ('ySettings'+yPos), 'yAxis', yChoices, ySubChoices, currYAxis,
+                this.yAxisLabel, yPos, 'left', currHeightCenter
+            );
+
+            this.creatAxisLabelElement(
+                ('y2Settings'+yPos), 'y2Axis', y2Choices, ySubChoices, currY2Axis,
+                this.y2AxisLabel, yPos, 'right', currHeightCenter
+            );
+        }
 
         let xLabel = this.renderSettings.xAxis;
         if(this.dataSettings.hasOwnProperty(xLabel) && 
@@ -1728,7 +1943,8 @@ class graphly extends EventEmitter {
           itemSelectText: '',
         });
 
-        con = this.el.select('#xSettings').append('div')
+        let that = this;
+        let con = this.el.select('#xSettings').append('div')
             .attr('class', 'axisOption');
         con.append('input')
             .attr('id', 'xAxisCustomLabel')
@@ -1737,6 +1953,7 @@ class graphly extends EventEmitter {
             .on('input', function(){
                 that.el.select('.xAxisLabel.axisLabel').text(this.value);
                 that.xAxisLabel = this.value;
+                that.emit('axisChange');
             });
         con.append('label')
             .attr('for', 'xAxisCustomLabel')
@@ -1744,51 +1961,57 @@ class graphly extends EventEmitter {
 
 
         if(this.enableSubXAxis){
-            
-            con.append('div')
-                .style('margin-top', '20px')
-                .text('Secondary ticks');
+            if( (typeof this.enableSubXAxis !== 'string') || 
+                (this.renderSettings.xAxis === this.enableSubXAxis) ){
+
+                con.append('div')
+                    .style('margin-top', '20px')
+                    .text('Secondary ticks');
+                    
+                con.append('select')
+                    .attr('id', 'subXChoices');
+
+
+                this.el.select('#subXChoices').attr('multiple', true);
                 
-            con.append('select')
-                .attr('id', 'subXChoices');
+                let subXParameters = new Choices(
+                    this.el.select('#subXChoices').node(), {
+                        choices: xSubChoices,
+                        removeItemButton: true,
+                        placeholderValue: ' select ...',
+                        itemSelectText: '',
+                    }
+                );
 
-
-            this.el.select('#subXChoices').attr('multiple', true);
-            
-            let subXParameters = new Choices(
-                this.el.select('#subXChoices').node(), {
-                    choices: xSubChoices,
-                    removeItemButton: true,
-                    placeholderValue: ' select ...',
-                    itemSelectText: '',
-                }
-            );
-
-            subXParameters.passedElement.addEventListener('addItem', function(event) {
-                that.renderSettings.additionalXTicks.push(event.detail.value);
-                that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
-                that.initAxis();
-                that.resize();
-                that.renderData();
-                that.createAxisLabels();
-                that.emit('axisChange');
-            }, false);
-
-            subXParameters.passedElement.addEventListener('removeItem', function(event) {
-                let index = that.renderSettings.additionalXTicks.indexOf(event.detail.value);
-                if(index!==-1){
-                    that.renderSettings.additionalXTicks.splice(index, 1);
+                subXParameters.passedElement.addEventListener('addItem', function(event) {
+                    that.renderSettings.additionalXTicks.push(event.detail.value);
                     that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
                     that.initAxis();
                     that.resize();
-                    that.renderData();
+                    //that.renderData();
                     that.createAxisLabels();
                     that.emit('axisChange');
-                }
-            },false);
+                }, false);
+
+                subXParameters.passedElement.addEventListener('removeItem', function(event) {
+                    let index = that.renderSettings.additionalXTicks.indexOf(event.detail.value);
+                    if(index!==-1){
+                        that.renderSettings.additionalXTicks.splice(index, 1);
+                        that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
+                        that.initAxis();
+                        that.resize();
+                        //that.renderData();
+                        that.createAxisLabels();
+                        that.emit('axisChange');
+                    }
+                },false);
+            }
         }
 
         xSettingParameters.passedElement.addEventListener('change', function(event) {
+            //Reset subaxis parameters when changing main parameter
+            that.renderSettings.additionalXTicks = [];
+
             that.xAxisLabel = null;
             that.renderSettings.xAxis = event.detail.value;
             that.recalculateBufferSize();
@@ -1817,123 +2040,352 @@ class graphly extends EventEmitter {
         }
 
         if(this.renderSettings.hasOwnProperty('additionalYTicks')){
-            for (let i = 0; i < this.renderSettings.additionalYTicks.length; i++) {
-                this.svg.append('text')
-                    .attr('class', 'subYAxisLabel subAxisLabel')
-                    .attr('text-anchor', 'middle')
-                    .attr('transform',
-                        'translate('+ -((i*80)+this.margin.left/2+90) +','+
-                        (this.height/2)+')rotate(-90)'
-                    )
-                    .attr('stroke', 'none')
-                    .attr('text-decoration', 'none')
-                    .text(this.renderSettings.additionalYTicks[i]);
+            let aYT = this.renderSettings.additionalYTicks;
+            let heighChunk = this.height/this.renderSettings.yAxis.length;
+            for (let i = 0; i < aYT.length; i++) {
+                if(typeof aYT[i] !== 'undefined'){
+                    for(let j=0; j<aYT[i].length; j++){
+
+                        this.svg.append('text')
+                            .attr('class', 'subYAxisLabel subAxisLabel')
+                            .attr('text-anchor', 'middle')
+                            .attr('transform',
+                                'translate('+ -((j*80)+this.margin.left/2+90) +','+
+                                (heighChunk*i+heighChunk/2)+')rotate(-90)'
+                            )
+                            .attr('stroke', 'none')
+                            .attr('text-decoration', 'none')
+                            .text(aYT[i][j]);
+                    }
+                }
             }
         }
+
+        d3.selectAll('.axisLabel').attr('font-size', this.defaultLabelSize+'px');
+        d3.selectAll('.svgaxisLabel').attr('font-size', this.defaultLabelSize+'px');
     }
 
-    createColorScale(id, index){
+    createColorScale(id, index, yPos){
 
-        let ds = this.dataSettings[id];
-        let dataRange = [0,1];
-
-        if(ds.hasOwnProperty('extent')){
-            dataRange = ds.extent;
-        }
-
-        let innerHeight = this.height;
+        let innerHeight = (this.height/this.renderSettings.yAxis.length)-this.separation;
+        let yOffset = (innerHeight+this.separation) * yPos;
         let width = 100;
-
         // Ther are some situations where the object is not initialiezed 
         // completely and size can be 0 or negative, this should prevent this
         if(innerHeight<=0){
             innerHeight = 100;
         }
 
-        let colorAxisScale = d3.scale.linear();
-        colorAxisScale.domain(dataRange);
-        colorAxisScale.range([innerHeight, 0]);
+        let csOffset = this.margin.right/2 + this.marginY2Offset + width/2 + width*index;
 
-        let colorAxis = d3.svg.axis()
-            .orient("right")
-            .tickSize(5)
-            .scale(colorAxisScale);
-
-        let step = (colorAxisScale.domain()[1] - colorAxisScale.domain()[0]) / 10;
-
-        colorAxis.tickFormat(d3.format(this.colorAxisTickFormat));
-
-        let csOffset = this.margin.right + this.marginY2Offset + width/2 + width*index;
-        
         let g = this.el.select('svg').select('g').append("g")
             .attr('id', ('colorscale_'+id))
             .attr("class", "color axis")
             .style('pointer-events', 'all')
-            .attr("transform", "translate(" + (this.width+csOffset) + ",0)")
-            .call(colorAxis);
+            .attr('transform', 
+                'translate(' + (this.width+csOffset) + ','+yOffset+')'
+            );
 
-        // Check if parameter has specific colorscale configured
-        let cs = 'viridis';
-        let cA = this.dataSettings[id];
-        if (cA && cA.hasOwnProperty('colorscale')){
-            cs = cA.colorscale;
-        }
+        // Check to see if we create a discrete or linear colorscale
+        if(this.dataSettings[id].hasOwnProperty('csDiscrete') && this.dataSettings[id].csDiscrete ){
+            // Check if colors are already calculated
+            let dCS = this.discreteColorScales[id];
+            if(this.discreteColorScales.hasOwnProperty(id)) {
+                let csIds = Object.keys(dCS); 
+                let minValue = d3.min(csIds.map(Number));
+                let topOffset = 35;
 
-        // If current cs not equal to the set in the plotter update cs
-        if(cs !== this.plotter.name){
-            this.plotter.setColorScale(cs);
-        }
-        let image = this.plotter.getColorScaleImage().toDataURL("image/jpg");
+                if(csIds.length>0) {
 
-        g.append("image")
-            .attr("class", "colorscaleimage")
-            .attr("width",  innerHeight)
-            .attr("height", 20)
-            .attr("transform", "translate(" + (-25) + " ,"+(innerHeight)+") rotate(270)")
-            .attr("preserveAspectRatio", "none")
-            .attr("xlink:href", image);
+                    for(let co=0;co<csIds.length; co++){
+                        g.append('text')
+                            .text(Number(csIds[co])-minValue)
+                            .style('font-size', '0.9em')
+                            .attr('transform', 'translate('+
+                                (-44+(Math.floor(co*11/innerHeight))*32) +','
+                                 + ( (co*11%innerHeight)+topOffset ) + ')'
+                            );
+                        g.append('rect')
+                            .attr('fill', '#'+ CP.RGB2HEX(
+                                    dCS[csIds[co]].map(function(c){
+                                        return Math.round(c*255);
+                                    })
+                                )
+                            )
+                            .attr('width', '10px')
+                            .attr('height', '10px')
+                            .attr('transform', 'translate('+
+                                (-55+(Math.floor(co*11/innerHeight))*32) +','
+                                 + ( (co*11%innerHeight)-9+topOffset ) + ')'
+                            );
+                    }
+                }
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate(' + (0) + ' ,'+(-2)+')')
+                    .text(id);
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate(' + (0) + ' ,'+(12)+')')
+                    .attr('font-size', '0.9em')
+                    .text('measurement offset:');
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', 'translate(' + (0) + ' ,'+(25)+')')
+                    .attr('font-size', '0.9em')
+                    .text(minValue);
+            }
 
-        let label = id;
+        } else {
 
-        if(this.dataSettings.hasOwnProperty(id) && 
-           this.dataSettings[id].hasOwnProperty('uom') && 
-           this.dataSettings[id].uom !== null){
-            label += ' ['+this.dataSettings[id].uom+'] ';
-        }
+            let ds = this.dataSettings[id];
+            let dataRange = [0,1];
 
-        g.append('text')
-            .attr('text-anchor', 'middle')
-            .attr('transform', 'translate(' + (-35) + ' ,'+(innerHeight/2)+') rotate(270)')
-            .text(label);
+            if(ds.hasOwnProperty('extent')){
+                dataRange = ds.extent;
+            }
 
-        let csZoomEvent = ()=>{
-            delete this.colorCache[id];
+            let colorAxisScale = d3.scale.linear();
+
+            if(this.checkTimeScale(id)){
+                colorAxisScale = d3.time.scale.utc();
+            }
+
+            colorAxisScale.domain(dataRange);
+            colorAxisScale.range([innerHeight, 0]);
+
+            let colorAxis = d3.svg.axis()
+                .orient("right")
+                .tickSize(5)
+                .scale(colorAxisScale);
+
+            let csformat;
+            if(this.colorAxisTickFormat === 'customSc'){
+                csformat = u.customScientificTickFormat;
+            } else if(this.colorAxisTickFormat === 'customExp'){
+                csformat = u.customExponentTickFormat;
+            } else {
+                csformat = d3.format(this.filterAxisTickFormat);
+            }
+            colorAxis.tickFormat(csformat);
+            
             g.call(colorAxis);
-            this.dataSettings[id].extent = colorAxisScale.domain();
-            this.renderData();
-        };
 
-        let csZoom = d3.behavior.zoom()
-          .y(colorAxisScale)
-          .on('zoom', csZoomEvent);
+            // Check if parameter has specific colorscale configured
+            let cs = 'viridis';
+            let cA = this.dataSettings[id];
+            if (cA && cA.hasOwnProperty('colorscale')){
+                cs = cA.colorscale;
+            }
 
-        g.call(csZoom);
+            // If current cs not equal to the set in the plotter update cs
+            if(cs !== this.plotter.name){
+                this.plotter.setColorScale(cs);
+            }
+            let image = this.plotter.getColorScaleImage().toDataURL("image/jpg");
+
+            g.append("image")
+                .attr("class", "colorscaleimage")
+                .attr("width",  innerHeight)
+                .attr("height", 20)
+                .attr("transform", "translate(" + (-25) + " ,"+(innerHeight)+") rotate(270)")
+                .attr("preserveAspectRatio", "none")
+                .attr("xlink:href", image);
+
+            let label = id;
+
+            if(this.dataSettings.hasOwnProperty(id) && 
+               this.dataSettings[id].hasOwnProperty('uom') && 
+               this.dataSettings[id].uom !== null){
+                label += ' ['+this.dataSettings[id].uom+'] ';
+            }
+
+            g.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('transform', 'translate(' + 66 + ' ,'+(innerHeight/2)+') rotate(270)')
+                .text(label);
+
+            let csZoomEvent = ()=>{
+                delete this.colorCache[id];
+                g.call(colorAxis);
+                this.dataSettings[id].extent = colorAxisScale.domain();
+                this.renderData(false);
+            };
+
+            let csZoom = d3.behavior.zoom()
+              .y(colorAxisScale)
+              .on('zoom', csZoomEvent);
+
+            g.call(csZoom).on('dblclick.zoom', null);
+
+            if(!this.checkTimeScale(id)){
+                g.append('text')
+                    .attr('class', 'modifyAxisIcon')
+                    .text('✐')
+                    .style('font-size', '1.7em')
+                    .attr('transform', 'translate(-' + 45 + ' ,' + 0 + ') rotate(' + 90 + ')')
+                    .on('click', function (){
+                        let evtx = d3.event.layerX;
+                        let evty = d3.event.layerY; 
+                        this.createAxisForms(
+                            colorAxis, id, g, evtx, evty, csZoom, 'right'
+                        );
+                    }.bind(this))
+            }
+        }
+    }
+    
+    createAxisForms(axis, parameterid, g, evtx, evty, zoom, openposition){
+        // takes care of positioning and defining functions of axis edit forms
+        // to pre-fill forms
+        let extent = axis.scale().domain();
+        // offset of form from the click event position
+        let formYOffset = 20;
+        let formXOffset = 2;
+
+        if(openposition === 'left'){
+            formXOffset = -80;
+        }
+        if(openposition === 'middleleft'){
+            formYOffset = 0;
+            formXOffset = -100;
+        }
+
+        // Cleanup
+        d3.selectAll('.rangeEdit').remove();
+
+         // range edit forms 
+        this.el.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditMax')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditMin')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditCancel')
+            .attr('type', 'button')
+            .attr('value', '✕');
+        this.el.append('input')
+            .attr('class', 'rangeEdit')
+            .attr('id', 'rangeEditConfirm')
+            .attr('type', 'button')
+            .attr('value', '✔');
+
+
+        d3.selectAll('.rangeEdit')
+            .classed('hidden', false);
+
+        d3.select('#rangeEditMax')
+            .property('value', extent[1].toFixed(4))
+            .style('top', evty + formYOffset  + 'px')
+            .style('left', evtx + formXOffset + 'px')
+            .node()
+            .focus();
+        d3.select('#rangeEditMax')
+            .node()
+            .select();
+
+        let formMaxPos = d3.select('#rangeEditMax').node().getBoundingClientRect();
+
+        d3.select('#rangeEditMin')
+            .property('value', extent[0].toFixed(4))
+            .style('top', evty + formYOffset + formMaxPos.height + 5 + 'px')
+            .style('left', evtx + formXOffset + 'px')
+
+        let formMinPos = d3.select('#rangeEditMin').node().getBoundingClientRect();
+
+        d3.selectAll('#rangeEditMax, #rangeEditMin')
+            .on('keypress', function(){
+                // confirm forms on enter
+                if(d3.event.keyCode === 13){
+                    this.updateAxis(axis, g, zoom, parameterid);
+                }
+            }.bind(this))
+
+        d3.select('#rangeEditConfirm')
+            .style('top', evty + formYOffset + formMaxPos.height + 5 +'px')
+            .style('left', evtx + formXOffset + formMinPos.width + 'px')
+            .on('click', function(){
+                this.updateAxis(axis, g, zoom, parameterid);
+            }.bind(this));
+
+
+        d3.select('#rangeEditCancel')
+            .style('top', evty +  formYOffset + 'px')
+            .style('left', evtx + formXOffset + formMaxPos.width + 'px')
+            .on('click', function(){
+                d3.selectAll('.rangeEdit')
+                    .classed('hidden', true);
+                });
     }
 
+    addColorScale(id, colors, ranges){
+        plotty.addColorScale(id, colors, ranges);
+        this.colorscales.push(id);
+    }
+
+    updateAxis (axis, g, zoom, parameterid) {
+        let min = Number(d3.select('#rangeEditMin').property('value'));
+        let max = Number(d3.select('#rangeEditMax').property('value'));
+        //checks for invalid values
+        if (!isNaN(min) && !isNaN(max)){
+            // if user reversed order, fix it
+            let newDataDomain = (min < max) ? [min, max] : [max, min];
+
+            axis.scale().domain(newDataDomain);
+            g.call(axis);
+            zoom.y(axis.scale());
+            if(parameterid && this.colorCache.hasOwnProperty(parameterid)){
+                delete this.colorCache[parameterid];
+                this.dataSettings[parameterid].extent = axis.scale().domain();
+            }
+            this.emit('axisExtentChanged');
+            this.addTimeInformation();
+            this.breakTicks();
+            this.renderData(false);
+            this.el.selectAll('.rangeEdit').remove();
+
+       } else {
+            if (isNaN(min)){
+                d3.select('#rangeEditMin')
+                    .classed('wrongFormInput', true);
+            }
+            if (isNaN(max)){
+                d3.select('rangeEditMax')
+                    .classed('wrongFormInput', true);
+            }
+        }
+    }
+    
     createColorScales(){
 
-        let filteredCol = this.renderSettings.colorAxis.filter(
-            (c)=>{return c!==null;}
-        );
+        let colAxis = this.renderSettings.colorAxis;
+        let colAxis2 = this.renderSettings.colorAxis2;
+        
 
         this.el.selectAll('.color.axis').remove();
 
-        for (var i = 0; i < filteredCol.length; i++) {
-            this.createColorScale(filteredCol[i], i);
+        for (let plotY=0; plotY<this.renderSettings.yAxis.length; plotY++){
+
+            let csIndex = 0;
+
+            for(let pos=0; pos<colAxis[plotY].length; pos++){
+                if(colAxis[plotY][pos] !== null){
+                    this.createColorScale(colAxis[plotY][pos], csIndex++, plotY);
+                }
+            }
+
+            for(let pos=0; pos<colAxis2[plotY].length; pos++){
+                if(colAxis2[plotY][pos] !== null){
+                    this.createColorScale(colAxis2[plotY][pos], csIndex++, plotY);
+                }
+            }
         }
-
-
-
     }
 
     /**
@@ -1954,98 +2406,439 @@ class graphly extends EventEmitter {
 
 
     createHelperObjects(){
-        this.renderingContainer = this.svg.append('g')
-            .attr('id','renderingContainer')
-            .attr('fill', 'none')
-            .style('clip-path','url('+this.nsId+'clipbox)');
 
-        // Add clip path so only points in the area are shown
-        let clippath = this.svg.append('defs').append('clipPath')
-            .attr('id', (this.nsId.substring(1)+'clipbox'))
-            .append('rect')
-                .attr('fill', 'none')
-                .attr('width', this.width)
-                .attr('height', this.height);
-
-
-        this.svg.append('rect')
+        let rec = this.svg.append('rect')
             .attr('id', 'zoomXBox')
-            .attr('width', this.width)
+            .attr('width', this.width-20)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
-            .attr('fill', 'none')
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
             .style('visibility', 'hidden')
             .attr('pointer-events', 'all');
 
-        this.svg.append('rect')
-            .attr('id', 'zoomYBox')
-            .attr('width', this.margin.left)
-            .attr('height', this.height )
-            .attr(
-                'transform',
-                'translate(' + -(this.margin.left+this.subAxisMarginY) + 
-                ',' + 0 + ')'
-            )
-            .attr('fill', 'none')
-            .style('visibility', 'hidden')
-            .attr('pointer-events', 'all');
-
-        if(this.renderSettings.y2Axis.length>0){
-            this.svg.append('rect')
-                .attr('id', 'zoomY2Box')
-                .attr('width', this.margin.right + this.marginY2Offset)
-                .attr('height', this.height )
-                .attr('transform', 'translate(' + (
-                    this.width
-                    ) + ',' + 0 + ')'
-                )
-                .attr('fill', 'red')
-                .style('visibility', 'hidden')
-                .attr('pointer-events', 'all');
+        if(this.debug){
+            rec.attr('fill', 'blue')
+                .attr('opacity', 0.3)
+                .style('visibility', 'visible');
         }
 
-        // Add rectangle as 'outline' for plot
-        this.svg.append('rect')
-            .attr('id', 'rectangleOutline')
+        // Add rectangles as 'outline' for plots
+
+        if(this.multiYAxis){
+            // Add button to create new plot
+            if(d3.select('#newPlotLink').empty()){
+                this.el.append('div')
+                    .attr('id', 'newPlotLink')
+                    .style('left', (this.width/2)+this.margin.left+40+'px')
+                    .text('+ Add plot')
+                    .style('top', (this.margin.top-20)+'px')
+                    .on('click', ()=>{
+                        this.renderSettings.yAxis.push([]);
+                        this.renderSettings.y2Axis.push([]);
+                        this.renderSettings.colorAxis.push([]);
+                        this.renderSettings.colorAxis2.push([]);
+                        this.renderSettings.additionalYTicks.push([]);
+
+                        if(this.renderSettings.renderGroups && 
+                            this.renderSettings.groups){
+
+                            this.renderSettings.groups.push(
+                                Object.keys(this.renderSettings.renderGroups)[0]
+                            );
+                            // If going from one plot to two, check for shared
+                            // x axis parameter
+                            if(this.renderSettings.yAxis.length === 2){
+                                let shPars = this.renderSettings.sharedParameters;
+                                let convAvailable = false;
+                                for (var shK in shPars){
+                                    if(shPars[shK].indexOf(this.renderSettings.xAxis) !== -1){
+                                        this.renderSettings.xAxis = shK;
+                                        convAvailable = true;
+                                    }
+                                }
+                                if(!convAvailable){
+                                    this.renderSettings.xAxis = Object.keys(shPars)[0];
+                                }
+                            }
+                        }
+
+                        this.emit('axisChange');
+                        this.loadData(this.data);
+                    });
+            }
+
+            // Clear possible remove buttons
+            d3.selectAll('.removePlot').remove();
+            d3.selectAll('.arrowChangePlot').remove();
+        }
+
+        if(d3.select('#globalSettings').empty()){
+
+            let con = this.el.append('div')
+                .attr('id', 'globalSettingsContainer')
+                .style('left', (this.width/2)+this.margin.left-75+'px')
+                .style('width', '150px')
+                .style('top', (this.margin.top)+1+'px');
+
+            con.append('div')
+                .attr('class', 'labelClose cross')
+                .on('click', ()=>{
+                    d3.select('#globalSettingsContainer').style('display', 'none');
+                });
+
+            con.append('label')
+                .attr('for', 'labelFontSize')
+                .text('Label font size');
+
+            con.append('input')
+                .attr('id', 'labelFontSize')
+                .attr('type', 'text')
+                .property('value', this.defaultLabelSize)
+                .on('input', ()=>{
+                    this.defaultLabelSize = d3.event.currentTarget.value;
+                    d3.selectAll('.axisLabel').attr('font-size', this.defaultLabelSize+'px');
+                    d3.selectAll('.svgaxisLabel').attr('font-size', this.defaultLabelSize+'px');
+                    d3.selectAll('.labelitem').style('font-size', this.defaultLabelSize+'px');
+                });
+
+            con.append('label')
+                .attr('for', 'tickFontSize')
+                .text('Tick font size');
+
+            con.append('input')
+                .attr('id', 'tickFontSize')
+                .attr('type', 'text')
+                .property('value', this.defaultTickSize)
+                .on('input', ()=>{
+                    this.defaultTickSize = d3.event.currentTarget.value;
+                    this.svg.selectAll('.tick').attr('font-size', this.defaultTickSize+'px');
+                });
+
+            con.append('label')
+                .attr('for', 'showFilteredDataOption')
+                .text('Show filtered data');
+
+            con.append('input')
+                .attr('id', 'showFilteredDataOption')
+                .attr('type', 'checkbox')
+                .property('checked', this.showFilteredData)
+                .on('input', ()=>{
+                    this.showFilteredData = 
+                        d3.select("#showFilteredDataOption").property("checked");
+                    this.renderData(false);
+                });
+
+            this.el.append('div')
+                .attr('id', 'globalSettings')
+                .style('left', (this.width/2)+this.margin.left-40+'px')
+                .text('Config')
+                .style('top', (this.margin.top-20)+'px')
+                .on('click', ()=>{
+                    let vis = d3.select('#globalSettingsContainer').style('display');
+                    if (vis === 'block'){
+                         d3.select('#globalSettingsContainer').style('display', 'none');
+                    } else {
+                        d3.select('#globalSettingsContainer').style('display', 'block');
+                        d3.select('#labelFontSize').node().focus();
+                        d3.select('#labelFontSize').node().select();
+                    }
+                });
+        }
+
+
+
+
+        let multiLength = this.renderSettings.yAxis.length;
+        let heighChunk = this.height/multiLength;
+        let currHeight = heighChunk - this.separation;
+
+        // Add clip path so only points in the area are shown
+        let clippath = this.svg.append('defs').append('clipPath')
+            .attr('id', (this.nsId.substring(1)+'clipbox'))
+            .attr(
+                'transform',
+                'translate(0,0)'
+            );
+
+        clippath.append('rect')
             .attr('fill', 'none')
-            .attr('stroke', '#ccc')
-            .attr('stroke-width', 1)
-            .attr('shape-rendering', 'crispEdges')
+            .attr('y', 0)
             .attr('width', this.width)
-            .attr('height', this.height);
+            .attr('height', currHeight);
+
+        // Remove previous cog icons
+        this.el.selectAll('.cogIcon').remove();
+
+
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+
+            let offsetY = plotY*heighChunk;
+
+            if(this.multiYAxis && this.renderSettings.yAxis.length>1){
+                // Add remove button to remove plot
+                this.el.append('div')
+                    .attr('class', 'cross removePlot')
+                    .attr('data-index', plotY)
+                    .style('left', '10px')
+                    .style('top', (offsetY+this.margin.top+10)+'px')
+                    .on('click', ()=>{
+
+                        let renSett = this.renderSettings;
+                        let index = Number(d3.select(d3.event.target).attr('data-index'));
+
+                        renSett.yAxis.splice(index, 1);
+                        renSett.y2Axis.splice(index, 1);
+                        // Remove color settings from left side
+                        renSett.colorAxis.splice(index, 1);
+                        renSett.colorAxis2.splice(index, 1);
+
+                        let addYT = this.renderSettings.additionalYTicks; 
+                        addYT.splice(index,1);
+                        // Recalculate subaxis margin
+                        let maxL = 0;
+                        for(let i=0; i<addYT.length; i++){
+                            maxL = Math.max(maxL, addYT[i].length);
+                        }
+                        this.subAxisMarginY = 80*maxL;
+
+                        if(renSett.renderGroups && renSett.groups){
+
+                            renSett.groups.splice(index, 1);
+                            // If going from two plots to one, check for shared
+                            // x axis parameter
+                            if(renSett.yAxis.length === 1){
+                                if(renSett.sharedParameters.hasOwnProperty(renSett.xAxis)){
+                                    // Find matchin parameter for current group
+                                    let currShared = renSett.sharedParameters[renSett.xAxis];
+                                    // eg datetime: 2 pars
+                                    let currGroup = renSett.groups[0];
+                                    // currgroup mie
+                                    for (let i = 0; i < currShared.length; i++) {
+                                        if(renSett.renderGroups[currGroup]
+                                            .parameters.indexOf(currShared[i]) !== -1){
+                                            this.renderSettings.xAxis = currShared[i];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        this.emit('axisChange');
+                        this.loadData(this.data);
+                    });
+
+                // Add move up arrow 
+                if(plotY>0){
+                    this.el.append('div')
+                        .attr('class', 'arrowChangePlot up')
+                        .html('&#9650;')
+                        .attr('data-index', plotY)
+                        .style('left', '10px')
+                        .style('top', (offsetY+this.margin.top+20)+'px')
+                        .on('click', ()=>{
+
+                            let index = Number(d3.select(d3.event.target).attr('data-index'));
+                            let rS = this.renderSettings;
+
+                            let curryAxis = rS.yAxis[index];
+                            let curry2Axis = rS.y2Axis[index];
+                            let currColAx = rS.colorAxis[index];
+                            let currColAx2 = rS.colorAxis2[index];
+                            let curraddYTicks = rS.additionalYTicks[index];
+
+                            rS.yAxis[index] = rS.yAxis[index-1];
+                            rS.y2Axis[index] = rS.y2Axis[index-1];
+                            rS.additionalYTicks[index] = rS.additionalYTicks[index-1];
+                            rS.colorAxis[index] = rS.colorAxis[index-1];
+                            rS.colorAxis2[index] = rS.colorAxis2[index-1];
+
+                            rS.yAxis[index-1] = curryAxis;
+                            rS.y2Axis[index-1] = curry2Axis;
+                            rS.additionalYTicks[index-1] = curraddYTicks;
+                            rS.colorAxis[index-1] = currColAx;
+                            rS.colorAxis2[index-1] = currColAx2;
+
+                            if(rS.renderGroups && rS.groups){
+                                let currGroup = rS.groups[index];
+                                rS.groups[index] = rS.groups[index-1];
+                                rS.groups[index-1] = currGroup;
+                            }
+
+                            this.emit('axisChange');
+                            this.loadData(this.data);
+                        });
+                }
+
+                // Add move down arrow 
+                if(plotY<this.renderSettings.yAxis.length-1){
+                    let addoff = 45;
+                    if(plotY === 0){
+                        addoff = 20;
+                    }
+                    this.el.append('div')
+                        .attr('class', 'arrowChangePlot down')
+                        .html('&#9660;')
+                        .attr('data-index', plotY)
+                        .style('left', '10px')
+                        .style('top', (offsetY+this.margin.top+addoff)+'px')
+                        .on('click', ()=>{
+
+                            let index = Number(d3.select(d3.event.target).attr('data-index'));
+                            let rS = this.renderSettings;
+
+                            let curryAxis = rS.yAxis[index];
+                            let curry2Axis = rS.y2Axis[index];
+                            let currColAx = rS.colorAxis[index];
+                            let currColAx2 = rS.colorAxis2[index];
+                            let curraddYTicks = rS.additionalYTicks[index];
+
+                            rS.yAxis[index] = rS.yAxis[index+1];
+                            rS.y2Axis[index] = rS.y2Axis[index+1];
+                            rS.additionalYTicks[index] = rS.additionalYTicks[index+1];
+                            rS.colorAxis[index] = rS.colorAxis[index+1];
+                            rS.colorAxis2[index] = rS.colorAxis2[index+1];
+
+                            rS.yAxis[index+1] = curryAxis;
+                            rS.y2Axis[index+1] = curry2Axis;
+                            rS.additionalYTicks[index+1] = curraddYTicks;
+                            rS.colorAxis[index+1] = currColAx;
+                            rS.colorAxis2[index+1] = currColAx2;
+
+                            if(rS.renderGroups && rS.groups){
+                                let currGroup = rS.groups[index];
+                                rS.groups[index] = rS.groups[index+1];
+                                rS.groups[index+1] = currGroup;
+                            }
+
+                            this.emit('axisChange');
+                            this.loadData(this.data);
+                        });
+                }
+            }
+
+             // Add settings button to display/hide parameter information
+            if(!this.displayParameterLabel) {
+                if(this.el.select('#cogIcon'+plotY).empty()){
+                    this.el.append('div')
+                        .attr('id', ('cogIcon'+plotY))
+                        .attr('class', 'cogIcon')
+                        .style('left', (this.margin.left+this.subAxisMarginY)+'px')
+                        .style('top', (offsetY+this.margin.top)+'px')
+                        .on('click', ()=>{
+                            let info = this.el.select(('#parameterInfo'+plotY));
+                            if(info.style('visibility') == 'visible'){
+                                info.style('visibility', 'hidden');
+                                this.el.select(('#parameterSettings'+plotY))
+                                    .style('display', 'none');
+                            }else{
+                                info.style('visibility', 'visible');
+                            }
+                        })
+                        .on('mouseover', function(){
+                            d3.select(this).style('background-size', '45px 45px');
+                        })
+                        .on('mouseout', function(){
+                            d3.select(this).style('background-size', '41px 41px');
+                        });
+                }
+            } else {
+                let info = this.el.select(('#parameterInfo'+plotY));
+                info.style('visibility', 'visible');
+            }
+
+            this.svg.append('g')
+                .attr('id','renderingContainer'+plotY)
+                .attr('fill', 'none')
+                .attr(
+                    'transform',
+                    'translate(0,' + heighChunk*plotY + ')'
+                )
+                .style('clip-path','url('+this.nsId+'clipbox)');
+
+
+            this.svg.append('rect')
+                .attr('id', 'zoomXYBox'+plotY)
+                .attr('class', 'rectangleOutline zoomXYBox')
+                .attr('fill', 'none')
+                .attr('stroke', '#333')
+                .attr('stroke-width', 1)
+                .attr('shape-rendering', 'crispEdges')
+                .attr('width', this.width)
+                .attr('height', currHeight)
+                .attr(
+                    'transform',
+                    'translate(0,' + offsetY + ')'
+                );
+
+            let rec = this.svg.append('rect')
+                .attr('id', ('zoomYBox'+plotY))
+                .attr('class', 'zoomYBox')
+                .attr('width', this.margin.left)
+                .attr('height', currHeight-20 )
+                .attr(
+                    'transform',
+                    'translate(' + -(this.margin.left+this.subAxisMarginY) + 
+                    ',' + ((heighChunk*plotY)+20) + ')'
+                )
+                .style('visibility', 'hidden')
+                .attr('pointer-events', 'all');
+
+                if(this.debug){
+                    rec.attr('fill', 'red')
+                        .attr('opacity', 0.3)
+                        .style('visibility', 'visible');
+                }
+
+            rec = this.svg.append('rect')
+                .attr('id', 'zoomY2Box'+plotY)
+                .attr('class', 'zoomY2Box')
+                .attr('width', this.margin.right + this.marginY2Offset)
+                .attr('height', currHeight-20 )
+                .attr(
+                    'transform',
+                    'translate(' + this.width + 
+                    ',' + ((heighChunk*plotY)+20) + ')'
+                )
+                .style('visibility', 'hidden')
+                .attr('pointer-events', 'all');
+
+            if(this.debug){
+                rec.attr('fill', 'yellow')
+                    .attr('opacity', 0.3)
+                    .style('visibility', 'visible');
+            }
+
+        }
 
         this.createColorScales();
         this.createInfoBoxes();
         this.createParameterInfo();
 
-        // Add settings button to display/hide parameter information
-        if(!this.displayParameterLabel) {
-            if(this.el.select('#cogIcon').empty()){
-                this.el.append('div')
-                    .attr('id', 'cogIcon')
-                    .style('left', (this.margin.left+this.subAxisMarginY)+'px')
-                    .style('top', '10px')
-                    .on('click', ()=>{
-                        let info = this.el.select('#parameterInfo');
-                        if(info.style('visibility') == 'visible'){
-                            info.style('visibility', 'hidden');
-                            this.el.select('#parameterSettings')
-                                .style('display', 'none');
-                            this.displayParameterLabel = false;
-                        }else{
-                            info.style('visibility', 'visible');
-                            this.displayParameterLabel = true;
-                        }
-                    })
-                    .on('mouseover', function(){
-                        d3.select(this).style('background-size', '45px 45px');
-                    })
-                    .on('mouseout', function(){
-                        d3.select(this).style('background-size', '41px 41px');
-                    });
-            }
-        }
+        
 
+        // Cleanup
+        this.el.selectAll('.rangeEdit').remove();
+        
+        // range edit forms 
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditMax')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditMin')
+            .attr('type', 'text')
+            .attr('size', 7);
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditCancel')
+            .attr('type', 'button')
+            .attr('value', '✕');
+        this.el.append('input')
+            .attr('class', 'rangeEdit hidden')
+            .attr('id', 'rangeEditConfirm')
+            .attr('type', 'button')
+            .attr('value', '✔');
     }
 
     
@@ -2160,6 +2953,41 @@ class graphly extends EventEmitter {
         }
     }
 
+    getMaxArrayLenght(compList){
+        let maxL = 0;
+        for (let x=0; x<compList.length; x++){
+            maxL = d3.max([ compList[x].length, maxL]);
+        }
+        return maxL;
+    }
+
+    getMaxCSAmount(){
+        let csAmount = 0;
+        for (let plotY=0; plotY<this.renderSettings.yAxis.length; plotY++){
+            csAmount = d3.max([
+                this.renderSettings.colorAxis[plotY].filter(
+                    function(o) {return o !== null;}
+                ).length + 
+                this.renderSettings.colorAxis2[plotY].filter(
+                    function(o) {return o !== null;}
+                ).length,
+                csAmount
+            ]);
+        }
+        return csAmount;
+    }
+
+
+    addGroupArrows(values){
+        this.activeArrows = true;
+        this.arrowValues = values;
+    }
+
+    removeGroupArrows(){
+        this.activeArrows = false;
+        this.arrowValues = null;
+    }
+
     /**
     * Load data from data object
     * @param {Object} data Data object containing parameter identifier as keys and 
@@ -2202,9 +3030,38 @@ class graphly extends EventEmitter {
 
         this.recalculateBufferSize();
 
+        function onlyUnique(value, index, self) { 
+            return self.indexOf(value) === index;
+        }
+
+        // Cleanup of previous generated data
+        for (let k in this.discreteColorScales){
+            delete this.discreteColorScales[k];
+        }
+
         // Check for special formatting of data
         let ds = this.dataSettings;
         for (let key in ds) {
+
+            // Check if we need to precalculate discrete colorscale
+            if(ds.hasOwnProperty(key) && 
+               ds[key].hasOwnProperty('csDiscrete') &&
+               ds[key].csDiscrete) {
+                if(!this.discreteColorScales.hasOwnProperty(key) && 
+                    this.data.hasOwnProperty(key)){
+                    // Generate discrete colorscale as object key value
+                    let dsC = {};
+
+                    var uniqueValues = this.data[key].filter(onlyUnique);
+                    for(let c=0;c<uniqueValues.length;c++){
+                        var col = u.getdiscreteColor();
+                        dsC[uniqueValues[c]] = [
+                            col[0]/255, col[1]/255, col[2]/255, 1.0
+                        ];
+                    }
+                    this.discreteColorScales[key] = dsC;
+                }
+            }
             
             if (ds[key].hasOwnProperty('scaleFormat')){
                 if (ds[key].scaleFormat === 'time'){
@@ -2251,7 +3108,9 @@ class graphly extends EventEmitter {
                 }
             }
         }
-        
+        // Do some cleanup
+        this.el.selectAll('.parameterInfo').remove();
+
         this.initAxis();
 
         // Make sure all elements have correct size after possible changes 
@@ -2266,25 +3125,23 @@ class graphly extends EventEmitter {
             this.dim = this.el.node().getBoundingClientRect();
             // If there are colorscales to be rendered we need to apply additional
             // margin to the right reducing the total width
-            let csAmount = 0;
-            for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
-                if(this.renderSettings.colorAxis[i] !== null){
-                    csAmount++;
-                }
-            }
+
+            let csAmount = this.getMaxCSAmount();
+
             if(this.renderSettings.hasOwnProperty('y2Axis') && 
-               this.renderSettings.y2Axis.length>0){
+               this.getMaxArrayLenght(this.renderSettings.y2Axis)>0){
                 this.marginY2Offset = 40;
             } else {
                 this.marginY2Offset = 0;
             }
+
             this.marginCSOffset = csAmount*100;
             this.width = this.dim.width - this.margin.left - 
                          this.margin.right - this.marginY2Offset - 
                          this.marginCSOffset- this.subAxisMarginY;
             this.height = this.dim.height - this.margin.top - 
                           this.margin.bottom - this.subAxisMarginX;
-            this.resize_update();
+            this.resize_update(false);
             this.createColorScales();
             this.createAxisLabels();
 
@@ -2296,26 +3153,13 @@ class graphly extends EventEmitter {
         this.renderData();
     }
 
-    checkTimeScale(id) {
-        // See if id is from combined dataset
-        if(this.renderSettings.combinedParameters.hasOwnProperty(id)){
-            id = this.renderSettings.combinedParameters[id][0];
-        }
-        if (this.dataSettings.hasOwnProperty(id)){
-            if (this.dataSettings[id].hasOwnProperty('scaleFormat')){
-                if (this.dataSettings[id].scaleFormat === 'time'){
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     calculateExtent(selection) {
         let currExt, resExt; 
         for (var i = selection.length - 1; i >= 0; i--) {
             // Check if null value has been defined
-            if(this.dataSettings[selection[i]].hasOwnProperty('nullValue')){
+            if(this.dataSettings.hasOwnProperty(selection[i]) &&
+               this.dataSettings[selection[i]].hasOwnProperty('nullValue')){
                 let nV = this.dataSettings[selection[i]].nullValue;
                 // If parameter has nullvalue defined ignore it 
                 // when calculating extent
@@ -2329,7 +3173,13 @@ class graphly extends EventEmitter {
                     }
                 );
             } else {
-                currExt = d3.extent(this.data[selection[i]]);
+                if(this.checkTimeScale(selection[i])){
+                    currExt = d3.extent(this.data[selection[i]], (item)=>{
+                        return item.getTime();
+                    });
+                } else {
+                    currExt = d3.extent(this.data[selection[i]]);
+                }
             }
             if(resExt){
                 if(currExt[0]<resExt[0]){
@@ -2361,129 +3211,190 @@ class graphly extends EventEmitter {
         return resExt;
     }
 
-    initAxis(){
-
-        this.svg.selectAll('*').remove();
-
-        let xExtent, yExtent, y2Extent;
-
-        // "Flatten selections"
-        let xSelection = [];
-        let ySelection = [];
-        let y2Selection = [];
-        let rs = this.renderSettings;
-
-        this.renderSettings.y2Axis = defaultFor(this.renderSettings.y2Axis, []);
-
-        if(rs.combinedParameters.hasOwnProperty(rs.xAxis)){
-            xSelection = [].concat.apply([], rs.combinedParameters[rs.xAxis]);
-        } else {
-            xSelection.push(this.renderSettings.xAxis);
+    checkTimeScale(id) {
+        // See if id is from combined dataset
+        if(this.renderSettings.combinedParameters.hasOwnProperty(id)){
+            id = this.renderSettings.combinedParameters[id][0];
         }
-
-        for (var h = 0; h < this.renderSettings.yAxis.length; h++) {
-            if(rs.combinedParameters.hasOwnProperty(rs.yAxis[h])){
-                ySelection = [].concat.apply([], rs.combinedParameters[rs.yAxis[h]]);
-            } else {
-                ySelection.push(this.renderSettings.yAxis[h]);
-            }
-        }
-
-        for (var i = 0; i < this.renderSettings.y2Axis.length; i++) {
-            if(rs.combinedParameters.hasOwnProperty(rs.y2Axis[i])){
-                y2Selection = [].concat.apply([], rs.combinedParameters[rs.y2Axis[i]]);
-            } else {
-                y2Selection.push(this.renderSettings.y2Axis[i]);
-            }
-        }
-
-
-
-        if(this.fixedXDomain !== undefined){
-            xExtent = this.fixedXDomain;
-        } else {
-            xExtent = this.calculateExtent(xSelection);
-        }
-        yExtent = this.calculateExtent(ySelection);
-        y2Extent = this.calculateExtent(y2Selection);
-
-        let xRange = xExtent[1] - xExtent[0];
-        let yRange = yExtent[1] - yExtent[0];
-        let y2Range = y2Extent[1] - y2Extent[0];
-
-        let domain;
-        if(this.renderSettings.hasOwnProperty('colorAxis')){
-            let cAxis = this.renderSettings.colorAxis;
-            // Check to see if linear colorscale or ordinal colorscale (e.g. IDs)
-            if (this.dataSettings.hasOwnProperty(cAxis)){
-                let ds = this.dataSettings[cAxis];
-                if(
-                    ds.hasOwnProperty('scaleType') && 
-                    ds.scaleType === 'ordinal' &&
-                    ds.hasOwnProperty('categories') ){
-
-                    ds.colorscaleFunction = d3.scale.ordinal()
-                        .range(d3.scale.category10().range().map(u.hexToRgb))
-                        .domain(ds.categories);
+        if (this.dataSettings.hasOwnProperty(id)){
+            if (this.dataSettings[id].hasOwnProperty('scaleFormat')){
+                if (this.dataSettings[id].scaleFormat === 'time'){
+                    return true;
                 }
             }
-            for (let ca = cAxis.length - 1; ca >= 0; ca--) {
-                if(cAxis[ca]){
-                    // Check if an extent is already configured
-                    if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
-                       this.dataSettings[cAxis[ca]].hasOwnProperty('extent')){
-                        domain = this.dataSettings[cAxis[ca]].extent;
-                    }else{
-                        if(this.dataSettings.hasOwnProperty(cAxis[ca]) &&
-                           this.dataSettings[cAxis[ca]].hasOwnProperty('nullValue')){
-                            let nV = this.dataSettings[cAxis[ca]].nullValue;
-                            // If parameter has nullvalue defined ignore it 
-                            // when calculating extent
-                            domain = d3.extent(
-                                this.data[cAxis[ca]], (v)=>{
-                                    if(v !== nV){
-                                        return v;
-                                    } else {
-                                        return null;
-                                    }
-                                }
-                            );
-                        } else {
-                            domain = d3.extent(this.data[cAxis[ca]]);
-                        }
-                        if(isNaN(domain[0])){
-                            domain[0] = 0;
-                        }
-                        if(isNaN(domain[1])){
-                            domain[1] = domain[0]+1;
-                        }
-                        if(domain[0] == domain[1]){
-                            domain[0]-=1;
-                            domain[1]+=1;
-                        }
-                        if(domain[0]>domain[1]){
-                            domain = domain.reverse();
-                        }
-                        // Set current calculated extent to settings
-                        this.dataSettings[cAxis[ca]].extent = domain;
+        }
+        return false;
+    }
+
+    customSubtickFormat(currParDat, addT, d){
+        // TODO: Check if selection is group
+        //let currParDat = this.data[xSelection[0]];
+        let tickformat = d3.format('g');
+        let secParDat;
+        let addValues = [];
+        let timeScale = d instanceof Date;
+        if(timeScale){
+            addValues.push(u.getCustomUTCTimeTickFormat()(d));
+        } else {
+            // cut small decimals to solve float problems for axis labels
+            addValues.push(tickformat(d.toFixed(11)));
+        }
+        // Find corresponding value(s) for additional axis
+        for (let x = 0; x < addT.length; x++) {
+            secParDat = this.data[addT[x]];
+            let idx = -1;
+            let dataLength = currParDat.length-1;
+            for (let j = 0; j < currParDat.length; j++) {
+                if(timeScale){
+                    if(currParDat[0]-currParDat[dataLength]<=0 &&
+                        currParDat[j].getTime()>=d.getTime()){
+                        idx = j-1;
+                        break;
                     }
-                    
+                    else if(currParDat[0]-currParDat[dataLength]>0 &&
+                        currParDat[j].getTime()<=d.getTime()){
+                        idx = j;
+                        break;
+                    }
+                } else {
+                    if(currParDat[0]-currParDat[1]<=0 && 
+                       currParDat[j]>=d){
+                        idx = j-1;
+                        break;
+                    } else if(currParDat[0]-currParDat[1]>0 && 
+                       currParDat[j]<=d){
+                        idx = j;
+                        break;
+                    }
                 }
             }
+            if(idx >= 0 && idx<secParDat.length){
+                if(secParDat[idx]<100){
+                    addValues.push(secParDat[idx].toFixed(2));
+                }else{
+                    addValues.push(secParDat[idx].toFixed(0));
+                }
+            } else {
+                addValues.push(' ');
+            }
         }
+        return addValues.join('|');
+    }
 
-        // TODO: Allow multiple domains!
-        if(domain){
-            this.plotter.setDomain(domain);
+    getAxisFormat(parameter, enableSubAxis, additionalTicks){
+
+        let tickformat;
+        if(this.defaultAxisTickFormat === 'customSc'){
+            tickformat = u.customScientificTickFormat;
+        } else if(this.defaultAxisTickFormat === 'customExp'){
+            tickformat = u.customExponentTickFormat;
+        } else {
+            tickformat = d3.format(this.defaultAxisTickFormat);
         }
+        let axisformat = tickformat;
 
+        if(this.dataSettings.hasOwnProperty(parameter) && 
+           this.dataSettings[parameter].hasOwnProperty('periodic')){
+            let perSet = this.dataSettings[parameter].periodic;
+            if(perSet.hasOwnProperty('specialTicks')){
+                axisformat = (d)=>{
+                    d = tickformat(d.toFixed(11));
+                    let period = perSet.period;
+                    let tickText;
+                    let dm = Math.abs(d)%period;
+                    let sign = '+ ';
+                    if(dm<180){
+                        sign = '- ';
+                    }
+                    if(dm > 0 && dm < 90){
+                        tickText = sign+dm%90 + '↓';
+                    }  else if(dm > 90 && dm < 180){
+                        tickText = sign+(180-dm) + '↑';
+                    } else if(dm > 180 && dm < 270){
+                        tickText = sign+dm%90 + '↑';
+                    }  else if(dm > 270 && dm < 360){
+                        tickText = sign+(360-dm) + '↓';
+                    } else if(dm === 0){
+                        tickText = dm + '↓';
+                    } else if(dm === 90){
+                        tickText = sign+dm;
+                    } else if(dm === 180){
+                        tickText = dm%180 + '↑';
+                    } else {
+                        tickText = dm%180;
+                    }
+                    return tickText;
+                };
+            } else {
+                axisformat = (d)=>{
+                    let offset = defaultFor(
+                        perSet.offset, 0
+                    );
+                    let period = perSet.period;
+                    let dm = d-offset;
+                    let offsetAmount = Math.floor(dm/period);
+                    if(dm%period !== 0){
+                        d = tickformat( (d - (offsetAmount*period)).toFixed(11) );
+                    } else {
+                        d = tickformat((period+offset).toFixed(11) )+' / '+
+                            tickformat( offset.toFixed(11) );
+                    }
+                    return d;
+                };
+            }
+        } else if(enableSubAxis && (enableSubAxis === parameter)){
+            // Find out if parameter is shared or combined parameter
+            let rS = this.renderSettings;
+            let usedPar = parameter;
 
-        let xScaleType, yScaleType, y2ScaleType;
-        // TODO: how to handle multiple different scale types
-        // For now just check first object of scale
-        this.xTimeScale = this.checkTimeScale(xSelection[0]);
-        this.yTimeScale = this.checkTimeScale(ySelection[0]);
-        this.y2TimeScale = this.checkTimeScale(y2Selection[0]);
+            if(rS.renderGroups !== false && 
+               rS.groups!== false && 
+               rS.sharedParameters !== false && 
+               rS.sharedParameters.hasOwnProperty(parameter)){
+                let pars = rS.sharedParameters[parameter]
+                // Take first item of shared par
+                usedPar = pars[0];
+            }
+
+            // See if either shared or not shared parameter is from a group
+            if(rS.combinedParameters.hasOwnProperty(usedPar)){
+                usedPar = rS.combinedParameters[usedPar][0];
+            }
+
+            axisformat = this.customSubtickFormat.bind(
+                this, this.data[usedPar], additionalTicks
+            );
+        } else if(this.checkTimeScale(parameter)){
+            axisformat = u.getCustomUTCTimeTickFormat();
+        } else {
+            axisformat = (d)=>{
+                return tickformat(d.toFixed(11));
+            };
+        }
+        return axisformat;
+    }
+
+    findClosestParameterMatch(currentParamenter, newGroupParameters){
+        let decPar = currentParamenter.split('_');
+        let selected = false;
+        let maxMatches = 0;
+        for(let par=0; par<newGroupParameters.length; par++){
+            let matches = 0;
+            let decgp = newGroupParameters[par].split('_');
+            for (let i = 0; i < decgp.length; i++) {
+                if(decPar.indexOf(decgp[i]) !== -1){
+                    matches++;
+                }
+            }
+            if(matches>maxMatches){
+                maxMatches = matches;
+                selected = newGroupParameters[par];
+            }
+        }
+        return selected;
+    }
+
+    initAxis(){
 
         function getScale(isTime){
             if(isTime){
@@ -2493,28 +3404,72 @@ class graphly extends EventEmitter {
             }
         }
 
-        xScaleType = getScale(this.xTimeScale);
-        yScaleType = getScale(this.yTimeScale);
-        y2ScaleType = getScale(this.y2TimeScale);
-
         function calcExtent(extent, range, timescale, margin){
             margin = defaultFor(margin, [0.01, 0.01]);
             let returnExt = [];
-            if(timescale){
-                range = extent[1].getTime() - extent[0].getTime();
-                returnExt[0] = new Date(extent[0].getTime() - range*margin[0]);
-                returnExt[1] = new Date(extent[1].getTime() + range*margin[1]);
-            }else{
-                returnExt[0] = extent[0] - range*margin[0];
-                returnExt[1] = extent[1] + range*margin[1];
-            }
+            returnExt[0] = extent[0] - range*margin[0];
+            returnExt[1] = extent[1] + range*margin[1];
             return returnExt;
         }
 
+        this.svg.selectAll('*').remove();
+
+        this.el.selectAll('.parameterInfo').remove();
+
+        let xExtent;
+        let rs = this.renderSettings;
+
+        // "Flatten selections"
+        let xSelection = [];
+
+        if(this.renderSettings.renderGroups !== false && 
+            this.renderSettings.groups!== false && 
+            this.renderSettings.sharedParameters !== false && 
+            this.renderSettings.sharedParameters.hasOwnProperty(this.renderSettings.xAxis)){
+
+            if(this.fixedXDomain !== undefined){
+                xExtent = this.fixedXDomain;
+            } else {
+                let sharedPars = this.renderSettings.sharedParameters[this.renderSettings.xAxis];
+                let rs = this.renderSettings;
+                // Check for group parameters inside the shared parameters
+                for (var i = 0; i < sharedPars.length; i++) {
+                    if(rs.combinedParameters.hasOwnProperty(sharedPars[i])){
+                        xSelection = [].concat.apply(
+                            [], rs.combinedParameters[sharedPars[i]]
+                        );
+                    } else {
+                        xSelection.push(sharedPars[i]);
+                    }
+                }
+                xExtent = this.calculateExtent(xSelection);
+            }
+
+        } else {
+            if(rs.combinedParameters.hasOwnProperty(rs.xAxis)){
+                xSelection = [].concat.apply([], rs.combinedParameters[rs.xAxis]);
+            } else {
+                xSelection.push(this.renderSettings.xAxis);
+            }
+
+            if(this.fixedXDomain !== undefined){
+                xExtent = this.fixedXDomain;
+            } else {
+                xExtent = this.calculateExtent(xSelection);
+            }
+        }
+
+        
+
+
+        let xScaleType;
+        this.xTimeScale = this.checkTimeScale(xSelection[0]);
+        xScaleType = getScale(this.xTimeScale);
+
+        let xRange = xExtent[1] - xExtent[0];
+
         // Adapt domain so that data is not directly at border
         if(!this.fixedSize){
-            yExtent = calcExtent(yExtent, yRange, this.yTimeScale, [0.02, 0.02]);
-            y2Extent = calcExtent(y2Extent, y2Range, this.y2TimeScale, [0.02, 0.02]);
             xExtent = calcExtent(xExtent, xRange, this.xTimeScale);
         }
 
@@ -2523,82 +3478,11 @@ class graphly extends EventEmitter {
             .range([0, this.width]);
 
 
-        if(this.logY){
-            let start = yExtent[0];
-            let end = yExtent[1];
-
-            // if both positive or negative all fine else
-            if(yExtent[0]<=0 && yExtent[1]>0){
-                start = 0.005;
-            }
-            if(yExtent[0]>=0 && yExtent[1]<0){
-                start = -0.005;
-            }
-
-            this.yScale = d3.scale.log()
-                .domain([start,end])
-                .range([this.height, 0]);
-        }else{
-            this.yScale = yScaleType
-                .domain(yExtent)
-                .range([this.height, 0]);
-        }
-
-        if(this.logY2){
-            let start = y2Extent[0];
-            let end = y2Extent[1];
-
-            // if both positive or negative all fine else
-            if(y2Extent[0]<=0 && y2Extent[1]>0){
-                start = 0.005;
-            }
-            if(y2Extent[0]>=0 && y2Extent[1]<0){
-                start = -0.005;
-            }
-
-            this.y2Scale = d3.scale.log()
-                .domain([start,end])
-                .range([this.height, 0]);
-        }else{
-            this.y2Scale = y2ScaleType
-                .domain(y2Extent)
-                .range([this.height, 0]);
-        }
-
         this.xAxis = d3.svg.axis()
             .scale(this.xScale)
             .orient('bottom')
             .ticks(Math.max(this.width/120,2))
             .tickSize(-this.height);
-        if(this.xTimeScale){
-            this.xAxis.tickFormat(u.getCustomUTCTimeTickFormat());
-        }
-        // Check if axis is using periodic parameter
-        let tickformat = d3.format('g');
-        if(this.dataSettings.hasOwnProperty(xSelection) && 
-           this.dataSettings[xSelection].hasOwnProperty('periodic')){
-
-            this.xAxis.tickFormat((d,i)=>{
-                let offset = defaultFor(
-                    this.dataSettings[xSelection].periodic.offset, 0
-                );
-                let period = this.dataSettings[xSelection].periodic.period;
-
-                let dm = d-offset;
-                if(d<0){
-                    dm = d-offset;
-                }
-                let offsetAmount = Math.floor(dm/period);
-                if(dm%period !== 0){
-                    d -= offsetAmount*period;
-                    d = tickformat(d.toFixed(10));
-                } else {
-                    d = tickformat(period+offset)+' / '+tickformat(offset);
-                }
-                return d;
-            });
-        }
-
 
         // Creating additional axis for sub parameters
         this.additionalXAxis = [];
@@ -2616,155 +3500,70 @@ class graphly extends EventEmitter {
                 );
             }
         }
-        // Handling of ticks adding subtick text
-        if(this.renderSettings.hasOwnProperty('additionalXTicks')){
-            let addXT = this.renderSettings.additionalXTicks;
-            this.xAxis.tickFormat((d)=>{
-                // TODO: Check if selection is group
-                let currParDat = this.data[xSelection[0]];
-                let secParDat;
-                let addValues = [];
-                if(this.xTimeScale){
-                    addValues.push(u.getCustomUTCTimeTickFormat()(d));
-                } else {
-                    addValues.push(d);
-                }
-                // Find corresponding value(s) for additional axis
-                for (let x = 0; x < addXT.length; x++) {
-                    secParDat = this.data[addXT[x]];
-                    let idx = -1;
-                    let dataLength = currParDat.length-1;
-                    for (let j = 0; j < currParDat.length; j++) {
-                        if(this.xTimeScale){
-                            if(currParDat[0]-currParDat[dataLength]<=0 &&
-                                currParDat[j].getTime()>=d.getTime()){
-                                idx = j-1;
-                                break;
-                            }
-                            else if(currParDat[0]-currParDat[dataLength]>0 &&
-                                currParDat[j].getTime()<=d.getTime()){
-                                idx = j;
-                                break;
-                            }
-                        } else {
-                            if(currParDat[0]-currParDat[1]<=0 && 
-                               currParDat[j]>=d){
-                                idx = j-1;
-                                break;
-                            } else if(currParDat[0]-currParDat[1]>0 && 
-                               currParDat[j]<=d){
-                                idx = j;
-                                break;
-                            }
-                        }
-                    }
-                    if(idx >= 0 && idx<secParDat.length){
-                        if(secParDat[idx]<100){
-                            addValues.push(secParDat[idx].toFixed(2));
-                        }else{
-                            addValues.push(secParDat[idx].toFixed(0));
-                        }
-                    } else {
-                        addValues.push(' ');
-                    }
-                }
-                return addValues.join('|');
-            });
-        }
-        
-        this.yAxis = d3.svg.axis()
-            .scale(this.yScale)
-            .innerTickSize(-this.width)
-            .outerTickSize(0)
-            .orient('left');
-        if(this.yTimeScale){
-            this.yAxis.tickFormat(u.getCustomUTCTimeTickFormat());
-        }
 
-        // Creating additional axis for sub parameters
-        this.additionalYAxis = [];
-        if(this.renderSettings.hasOwnProperty('additionalYTicks')){
-            let addYTicks = this.renderSettings.additionalYTicks;
-            for (let i = 0; i < addYTicks.length; i++) {
+        let xS = this.renderSettings.xAxis;
 
-                this.additionalYAxis.push(
-                    d3.svg.axis()
-                        .scale(this.yScale)
-                        .outerTickSize(5)
-                        .orient('left')
-                        .tickFormat(()=>{return '';})
-                );
-            }
-        }
-        // Handling of ticks adding subtick text
-        if(this.renderSettings.hasOwnProperty('additionalYTicks')){
-            let addYT = this.renderSettings.additionalYTicks;
-            this.yAxis.tickFormat((d)=>{
-                // TODO: Check if selection is group
-                let currParDat = this.data[ySelection[0]];
-                let secParDat;
-                let addValues = [];
-                if(this.yTimeScale){
-                    addValues.push(u.getCustomUTCTimeTickFormat()(d));
-                } else {
-                    addValues.push(d);
-                }
-                // Find corresponding value(s) for additional y axis
-                for (let y = 0; y < addYT.length; y++) {
-                    secParDat = this.data[addYT[y]];
-                    let idx = 0;
-                    for (let j = 0; j < currParDat.length; j++) {
-                        if(this.yTimeScale){
-                            // Check if values are ascending/descending
-                            if(currParDat[0]-currParDat[1]<=0 &&
-                                currParDat[j].getTime()>=d.getTime()){
-                                idx = j-1;
-                                break;
-                            }
-                            else if(currParDat[0]-currParDat[1]>0 &&
-                                currParDat[j].getTime()<=d.getTime()){
-                                idx = j;
-                                break;
-                            }
-                        } else {
-                            if(currParDat[0]-currParDat[1]<=0 && 
-                               currParDat[j]>=d){
-                                idx = j-1;
-                                break;
-                            } else if(currParDat[0]-currParDat[1]>0 && 
-                               currParDat[j]<=d){
-                                idx = j;
-                                break;
-                            }
-                        }
-                    }
-                    if(idx > 0 && idx<secParDat.length){
-                        if(secParDat[idx]<100){
-                            addValues.push(secParDat[idx].toFixed(2));
-                        }else{
-                            addValues.push(secParDat[idx].toFixed(0));
-                        }
-                    } else {
-                        addValues.push(' ');
-                    }
-                }
-                return addValues.join('|');
-            });
-        }
+        let axisformat = this.getAxisFormat(
+            xS, this.enableSubXAxis, this.renderSettings.additionalXTicks
+        );
 
-        this.y2Axis = d3.svg.axis()
-            .scale(this.y2Scale)
-            .innerTickSize(this.width)
-            .outerTickSize(0)
-            .orient('right');
-        if(this.y2TimeScale){
-            this.y2Axis.tickFormat(u.getCustomUTCTimeTickFormat());
-        }
+        this.xAxis.tickFormat(axisformat);
 
         this.xAxisSvg = this.svg.append('g')
             .attr('class', 'x axis')
             .attr('transform', 'translate(0,' + this.height + ')')
             .call(this.xAxis);
+
+        if(this.renderSettings.yAxis.length>0){
+            // Add clip path so only points in the area are shown
+            let clippathseparation = this.xAxisSvg.append('defs').append('clipPath')
+                .attr("x", "0")
+                .attr("y", "0")
+                .attr('id', this.nsId.substring(1)+'clipseparation');
+
+            let heighChunk = this.height/this.renderSettings.yAxis.length;
+            for (let yy = 0; yy<this.renderSettings.yAxis.length; yy++) {
+                clippathseparation.append('rect')
+                    .attr('fill', 'none')
+                    .attr('y', 0)
+                    .attr('width', this.width)
+                    .attr('height', heighChunk-this.separation)
+                    .attr(
+                        'transform',
+                        'translate(0,-'+(this.height-(heighChunk*yy))+')'
+                    );
+            }
+            // Add rect to contain all x axis tick labels
+            clippathseparation.append('rect')
+                .attr('fill', 'none')
+                .attr('y', 0)
+                .attr('width', this.width+this.margin.right)
+                .attr('height', this.margin.bottom+10)
+                .attr(
+                    'transform',
+                    'translate(0,1)'
+                );
+        }
+
+        this.xAxisSvg.style('clip-path','url('+this.nsId+'clipseparation)');
+
+        // TODO: Allow axis scale edit for time selection
+        if(!this.checkTimeScale(this.renderSettings.xAxis)){
+            this.xAxisSvg.append('text')
+                .attr('class', 'modifyAxisIcon xaxis')
+                .text('✐')
+                .style('font-size', '1.7em')
+                .attr('transform', 'translate(' + this.width + ' ,' + 20 + ') rotate(' + 180 + ')')
+                .on('click', function (){
+                    let evtx = d3.event.layerX;
+                    let evty = d3.event.layerY; 
+                    this.createAxisForms(
+                        this.xAxis, null, this.xAxisSvg,
+                        evtx, evty, this.xzoom, 'middleleft'
+                    );
+                }.bind(this));
+        }
+
 
         this.addXAxisSvg = [];
         for (let i = 0; i < this.additionalXAxis.length; i++) {
@@ -2779,31 +3578,474 @@ class graphly extends EventEmitter {
             );
         }
 
-        if(this.renderSettings.yAxis.length > 0){
-            this.yAxisSvg = this.svg.append('g')
-                .attr('class', 'y axis')
-                .call(this.yAxis);
-        }
+        let multiLength = this.renderSettings.yAxis.length;
+        let heighChunk = this.height/multiLength;
+        
+        this.yScale = [];
+        this.yAxis = [];
+        this.yAxisSvg = [];
 
+        this.y2Scale = [];
+        this.y2Axis = [];
+        this.y2AxisSvg = [];
+
+        // Creating additional axis for sub parameters
+        this.additionalYAxis = [];
         this.addYAxisSvg = [];
-        for (let i = 0; i < this.additionalYAxis.length; i++) {
-            this.addYAxisSvg.push(
-                this.svg.append('g')
-                    .attr('class', 'y_add subaxis')
-                    .attr(
-                        'transform', 'translate(-'+((i*80)+80)+ ',0)'
-                    )
-                    .call(this.additionalYAxis[i])
-            );
-        }
 
-        if(this.renderSettings.y2Axis.length > 0){
-            this.y2AxisSvg = this.svg.append('g')
-                .attr('class', 'y2 axis')
-                .call(this.y2Axis);
+        this.yScaleCombined = d3.scale.linear()
+            .domain([0,1])
+            .range([this.height, 0]);
+
+        this.el.selectAll('.groupSelect').remove();
+
+        for (let yPos = 0; yPos < multiLength; yPos++) {
+
+            // Add group selection drop down and functionality
+            if(this.renderSettings.renderGroups !== false && 
+                this.renderSettings.groups!== false){
+
+                let selectionGroups = Object.keys(this.renderSettings.renderGroups);
+                let currG = this.renderSettings.groups[yPos];
+                var that = this;
+
+                let select = this.el
+                    .append('select')
+                        .attr('class','groupSelect')
+                        .style('top', Math.round((yPos*heighChunk)+this.margin.top-10)+'px')
+                        .style('left', Math.round(this.width/2)+'px')
+                        .on('change', function(){
+                            // Go through current configuration and try to 
+                            // adapt all parameters to the other group selected
+                            // if not all is available try to check defaults
+                            let groupKey = selectionGroups[this.selectedIndex];
+                            let newGroup =  that.renderSettings.renderGroups[groupKey];
+                            let newGroupPars = newGroup.parameters;
+                            let prevGroup = that.renderSettings.groups[yPos];
+                            //let prevGroupPars = that.renderSettings.renderGroups[prevGroup].parameters;
+                            let currYAxis = that.renderSettings.yAxis[yPos];
+                            let currY2Axis = that.renderSettings.y2Axis[yPos];
+                            let currColAxis = that.renderSettings.colorAxis[yPos];
+                            let currCol2Axis = that.renderSettings.colorAxis2[yPos];
+
+                            let newYAxis = [];
+                            let newY2Axis = [];
+                            let newColAxis = [];
+                            let newCol2Axis = [];
+
+                            for (var i = 0; i < currYAxis.length; i++) {
+
+                                // Try to find equvalent parameter
+                                let tmpPar = currYAxis[i].replace(prevGroup, groupKey);
+                                if(newGroupPars.indexOf(tmpPar)!==-1){
+                                    newYAxis.push(tmpPar);
+                                } else {
+                                    // If not found check for defaults
+                                    if(newGroup.hasOwnProperty('defaults') && 
+                                       newGroup.defaults.hasOwnProperty('yAxis')){
+                                        newYAxis.push(newGroup.defaults.yAxis);
+                                    } else {
+                                        // If now default try to find closest match
+                                        let selected = that.findClosestParameterMatch(
+                                            currYAxis[i], newGroupPars
+                                        );
+                                        if(selected){
+                                            newYAxis.push(selected);
+                                        }
+                                    }
+                                }
+
+                                if(currColAxis[i] !== null){
+                                    // Check for corresponding color
+                                    let tmpCol = currColAxis[i].replace(prevGroup, groupKey);
+                                    if(newGroupPars.indexOf(tmpCol)!==-1){
+                                        newColAxis.push(tmpCol)
+                                    } else {
+                                        // If not found check for defaults
+                                        if(newGroup.hasOwnProperty('defaults') && 
+                                           newGroup.defaults.hasOwnProperty('yAxis')){
+                                            newColAxis.push(newGroup.defaults.colorAxis);
+                                        } else {
+                                            // Search for closest match
+                                            let selected = that.findClosestParameterMatch(
+                                                currColAxis[i], newGroupPars
+                                            );
+                                            if(selected){
+                                                newColAxis.push(selected);
+                                            } else {
+                                                newColAxis.push(null);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    newColAxis.push(null);
+                                }
+                            }
+
+                            for (var i = 0; i < currY2Axis.length; i++) {
+                                // Try to find equvalent parameter
+                                let tmpPar = currY2Axis[i].replace(prevGroup, groupKey);
+                                if(newGroupPars.indexOf(tmpPar)!==-1){
+                                    newY2Axis.push(tmpPar);
+                                    // Check for corresponding color
+                                    let tmpCol = currCol2Axis[i].replace(prevGroup, groupKey);
+                                    if(newGroupPars.indexOf(tmpCol)!==-1){
+                                        newCol2Axis.push(tmpCol)
+                                    } else {
+                                        // If no colorscale equivalent found set to null
+                                        newCol2Axis.push(null);
+                                    }
+                                } else {
+                                    // TODO
+                                }
+                            }
+
+                            // Check also x axis when we only have one plot
+                            let newxPar;
+                            if(that.renderSettings.yAxis.length === 1){
+                                let xaxPar = that.renderSettings.xAxis;
+                                // Try to find equvalent parameter
+                                let tmpPar = xaxPar.replace(prevGroup, groupKey);
+                                if(newGroupPars.indexOf(tmpPar)!==-1){
+                                    newxPar = tmpPar;
+                                } else {
+                                    // If not found check for defaults
+                                    if(newGroup.hasOwnProperty('defaults') && 
+                                       newGroup.defaults.hasOwnProperty('xAxis')){
+                                        newxPar = newGroup.defaults.xAxis;
+                                    } else {
+                                        // If now default try to find closest match
+                                        let selected = that.findClosestParameterMatch(
+                                            xaxPar, newGroupPars
+                                        );
+                                        if(selected){
+                                            newxPar = selected;
+                                        }
+                                    }
+                                }
+                            }
+
+                            that.renderSettings.groups[yPos] = groupKey;
+                            // Check if any of the parameters could be converted
+                            // if not look for defaults
+                            if(newYAxis.length>0 || newY2Axis.length>0){
+                                that.renderSettings.yAxis[yPos] = newYAxis;
+                                that.renderSettings.colorAxis[yPos] = newColAxis;
+                                that.renderSettings.y2Axis[yPos] = newY2Axis;
+                                that.renderSettings.colorAxis2[yPos] = newCol2Axis;
+                                if(typeof newxPar !== 'undefined'){
+                                    that.renderSettings.xAxis = newxPar;
+                                }
+                            } else {
+                                that.renderSettings.yAxis[yPos] = [];
+                                that.renderSettings.colorAxis[yPos] = [];
+                                that.renderSettings.y2Axis[yPos] = [];
+                                that.renderSettings.colorAxis2[yPos] = [];
+                            }
+                            that.emit('axisChange');
+                            that.loadData(that.data);
+
+                        });
+
+                select.selectAll('option')
+                    .data(selectionGroups).enter()
+                    .append('option')
+                        .text((d) => { return d; })
+                        .property('selected', (d) => { return d===currG; });
+
+                /*function onchange() {
+                    selectValue = d3.select('select').property('value')
+                    d3.select('body')
+                        .append('p')
+                        .text(selectValue + ' is the last selected option.')
+                };*/
+
+            }
+
+            let currYAxis = this.renderSettings.yAxis[yPos];
+            let currY2Axis = defaultFor(this.renderSettings.y2Axis[yPos], []);
+
+            let yExtent, y2Extent;
+            let ySelection = [];
+            let y2Selection = [];
+
+
+            for (let h = 0; h < currYAxis.length; h++) {
+                if(rs.combinedParameters.hasOwnProperty(currYAxis[h])){
+                    ySelection = [].concat.apply([], rs.combinedParameters[currYAxis[h]]);
+                } else {
+                    ySelection.push(currYAxis[h]);
+                }
+            }
+
+            for (let i = 0; i < currY2Axis.length; i++) {
+                if(rs.combinedParameters.hasOwnProperty(currY2Axis[i])){
+                    y2Selection = [].concat.apply([], rs.combinedParameters[currY2Axis[i]]);
+                } else {
+                    y2Selection.push(currY2Axis[i]);
+                }
+            }
+
+
+
+            yExtent = this.calculateExtent(ySelection);
+            y2Extent = this.calculateExtent(y2Selection);
+
+            let yRange = yExtent[1] - yExtent[0];
+            let y2Range = y2Extent[1] - y2Extent[0];
+
+            let domain;
+            // TODO: Not sure if this is checking all it should be checking, 
+            // check second color axis (coloraxis2)
+            if(this.renderSettings.hasOwnProperty('colorAxis')){
+                let cAxis = this.renderSettings.colorAxis;
+                // Check to see if linear colorscale or ordinal colorscale (e.g. IDs)
+                if (this.dataSettings.hasOwnProperty(cAxis)){
+                    let ds = this.dataSettings[cAxis];
+                    if(
+                        ds.hasOwnProperty('scaleType') && 
+                        ds.scaleType === 'ordinal' &&
+                        ds.hasOwnProperty('categories') ){
+
+                        ds.colorscaleFunction = d3.scale.ordinal()
+                            .range(d3.scale.category10().range().map(u.hexToRgb))
+                            .domain(ds.categories);
+                    }
+                }
+
+                // Check if we need to update extents which have been reset because
+                // of filtering on parameter
+                for (let i = 0; i < this.renderSettings.colorAxis.length; i++) {
+                    for (let j = 0; j < this.renderSettings.colorAxis.length; j++) {
+                        this.calculateColorDomain(this.renderSettings.colorAxis[i][j]);
+                    }
+                    for (let j = 0; j < this.renderSettings.colorAxis2.length; j++) {
+                        this.calculateColorDomain(this.renderSettings.colorAxis2[i][j]);
+                    }
+                }
+            }
+
+            // TODO: Allow multiple domains!
+            if(domain){
+                this.plotter.setDomain(domain);
+            }
+
+
+            let yScaleType, y2ScaleType;
+            // TODO: how to handle multiple different scale types
+            // For now just check first object of scale
+            
+            this.yTimeScale = this.checkTimeScale(ySelection[0]);
+            this.y2TimeScale = this.checkTimeScale(y2Selection[0]);
+
+            yScaleType = getScale(this.yTimeScale);
+            y2ScaleType = getScale(this.y2TimeScale);
+
+
+            // Recalculate domain so that data is not directly at border
+            if(!this.fixedSize){
+                yExtent = calcExtent(
+                    yExtent, yRange, this.yTimeScale, [0.02, 0.02]
+                );
+                y2Extent = calcExtent(
+                    y2Extent, y2Range, this.y2TimeScale, [0.02, 0.02]
+                );
+            }
+
+
+            if(this.logY[yPos]){
+                let start = yExtent[0];
+                let end = yExtent[1];
+
+                // if both positive or negative all fine else
+                if(yExtent[0]<=0 && yExtent[1]>0){
+                    start = 0.005;
+                }
+                if(yExtent[0]>=0 && yExtent[1]<0){
+                    start = -0.005;
+                }
+
+                this.yScale.push(
+                    d3.scale.log()
+                        .domain([start,end])
+                        .range([heighChunk-this.separation, 0])
+                );
+            }else{
+                let scaleRange = [heighChunk-this.separation, 0];
+                if(this.renderSettings.reversedYAxis){
+                    scaleRange = [0, heighChunk-this.separation];
+                }
+                this.yScale.push(
+                    yScaleType
+                        .domain(yExtent)
+                        .range(scaleRange)
+                );
+            }
+
+            if(this.logY2[yPos]){
+                let start = y2Extent[0];
+                let end = y2Extent[1];
+
+                // if both positive or negative all fine else
+                if(y2Extent[0]<=0 && y2Extent[1]>0){
+                    start = 0.005;
+                }
+                if(y2Extent[0]>=0 && y2Extent[1]<0){
+                    start = -0.005;
+                }
+
+                this.y2Scale.push(
+                    d3.scale.log()
+                        .domain([start,end])
+                        .range([heighChunk-this.separation, 0])
+                );
+            }else{
+                this.y2Scale.push(
+                    y2ScaleType
+                        .domain(y2Extent)
+                        .range([heighChunk-this.separation, 0])
+                );
+            }
+
+            
+            this.yAxis.push(
+                d3.svg.axis()
+                    .scale(this.yScale[yPos])
+                    .innerTickSize(-this.width)
+                    .outerTickSize(0)
+                    .orient('left')
+            );
+
+
+            // Check if axis is using periodic parameter (only one parameter)
+            let yS = this.renderSettings.yAxis[yPos];
+
+            let enableSA = false;
+            let parameter;
+            if(this.enableSubYAxis !== false){
+                if(this.enableSubYAxis.indexOf(yS[0])!==-1){
+                    enableSA = true;
+                    parameter = this.enableSubYAxis[
+                        this.enableSubYAxis.indexOf(yS[0])
+                    ];
+                }
+            }
+            let yAxisformat = this.getAxisFormat(
+                yS[0], parameter,
+                this.renderSettings.additionalYTicks[yPos]
+            );
+            this.yAxis[yPos].tickFormat(yAxisformat);
+
+
+            if(currYAxis.length > 0){
+                let currSvgyAxis = this.svg.append('g')
+                    .attr('class', 'y axis')
+                    .attr(
+                        'transform', 'translate(0,'+yPos*heighChunk+')'
+                    )
+                    .call(this.yAxis[yPos]);
+
+                this.yAxisSvg.push(currSvgyAxis);
+
+                if(!this.checkTimeScale(this.renderSettings.yAxis[0])){
+                    currSvgyAxis.append('text')
+                        .attr('class', 'modifyAxisIcon')
+                        .text('✐')
+                        .style('font-size', '1.7em')
+                        .attr('transform', 'translate(-' + 65 + ' ,' + 0 + ') rotate(' + 90 + ')')
+                        .on('click', function (){
+                            let evtx = d3.event.layerX;
+                            let evty = d3.event.layerY; 
+                            this.createAxisForms(
+                                this.yAxis[yPos], null, currSvgyAxis,
+                                evtx, evty, this.yzoom[yPos], 'right'
+                            );
+                        }.bind(this));
+                }
+
+            } else {
+                this.yAxisSvg.push(null);
+            }
+
+            // Creating additional axis for sub parameters
+            if(this.renderSettings.hasOwnProperty('additionalYTicks')){
+                let addYTicks = this.renderSettings.additionalYTicks[yPos];
+                if(typeof addYTicks !== 'undefined'){
+                    let currAddYAxis = [];
+                    let currAddYAxisSVG = [];
+                    for (let i = 0; i < addYTicks.length; i++) {
+
+                        let currAxis = d3.svg.axis()
+                                .scale(this.yScale[yPos])
+                                .outerTickSize(5)
+                                .orient('left')
+                                .tickFormat(()=>{return '';});
+
+                        currAddYAxis.push(currAxis);
+
+                        currAddYAxisSVG.push(
+                        this.svg.append('g')
+                            .attr('class', 'y_add subaxis')
+                            .attr(
+                                'transform', 'translate(-'+((i*80)+80)+ ','+yPos*heighChunk+')'
+                            )
+                            .call(currAxis)
+                        );
+                    }
+                    this.additionalYAxis.push(currAddYAxis);
+                    this.addYAxisSvg.push(currAddYAxisSVG);
+                }
+            }
+
+
+            this.y2Axis.push(
+                d3.svg.axis()
+                    .scale(this.y2Scale[yPos])
+                    .innerTickSize(this.width)
+                    .outerTickSize(0)
+                    .orient('right')
+            );
+
+            let y2S = this.renderSettings.y2Axis[yPos];
+            let y2Axisformat = this.getAxisFormat(
+                y2S[0], false, false
+            );
+            this.y2Axis[yPos].tickFormat(y2Axisformat);
+
+            if(currY2Axis.length > 0){
+                let currSvgy2Axis = this.svg.append('g')
+                    .attr('class', 'y2 axis')
+                    .attr(
+                        'transform', 'translate(0,'+yPos*heighChunk+')'
+                    )
+                    .call(this.y2Axis[yPos]);
+
+                this.y2AxisSvg.push(currSvgy2Axis);
+
+                if(!this.checkTimeScale(this.renderSettings.y2Axis[0])){
+                    currSvgy2Axis.append('text')
+                        .attr('class', 'modifyAxisIcon y2')
+                        .text('✐')
+                        .style('font-size', '1.7em')
+                        .style('float', 'right')
+                        .attr('transform', 'translate(' + (60) + ' ,' + 0 + ') rotate(' + 180 + ')')
+                        .on('click', function (){
+                            let evtx = d3.event.layerX;
+                            let evty = d3.event.layerY; 
+                            this.createAxisForms(
+                                this.y2Axis[yPos], null, currSvgy2Axis,
+                                evtx, evty, this.y2zoom[yPos], 'left'
+                            );
+                        }.bind(this))
+                }
+            } else {
+                this.y2AxisSvg.push(null);
+            }
+
         }
 
         let maxzoomout = 0;
+        
         let xSel = this.renderSettings.xAxis;
         if(this.dataSettings.hasOwnProperty(xSel) &&
            this.dataSettings[xSel].hasOwnProperty('periodic') ){
@@ -2813,26 +4055,53 @@ class graphly extends EventEmitter {
         }
 
         // Define zoom behaviour based on parameter dependend x and y scales
-        this.xyzoom = d3.behavior.zoom()
-            .x(this.xScale)
-            .y(this.yScale)
-            .scaleExtent([maxzoomout,Infinity])
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
+
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        this.yzoom = d3.behavior.zoom()
-            .y(this.yScale)
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        this.y2zoom = d3.behavior.zoom()
-            .y(this.y2Scale)
+
+        this.yzoom = [];
+        let maxZOut = 0;
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+            let maxZOutY = 0;
+            if(this.renderSettings.yAxis[plotY].length === 1){
+                let ySel = this.renderSettings.yAxis[plotY][0];
+                if(this.dataSettings.hasOwnProperty(ySel) &&
+                   this.dataSettings[ySel].hasOwnProperty('periodic') ){
+                    let period = this.dataSettings[ySel].periodic.period;
+                    let xd = this.yScale[plotY].domain();
+                    maxZOutY = Math.abs(xd[1]-xd[0])/period;
+                    maxZOut = d3.max([maxZOutY, maxZOut]);
+                }
+            }
+            this.yzoom.push(
+                d3.behavior.zoom()
+                    .y(this.yScale[plotY])
+                    .scaleExtent([maxZOutY,Infinity])
+                    .on('zoom', this.previewZoom.bind(this,plotY))
+                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
+        }
+        maxZOut = d3.max([maxzoomout, maxZOut]);
+        this.xyzoomCombined = d3.behavior.zoom()
+            .x(this.xScale)
+            .y(this.yScaleCombined)
+            .scaleExtent([maxZOut,Infinity])
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
+        this.y2zoom = [];
+
+        for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+            this.y2zoom.push(
+                d3.behavior.zoom()
+                    .y(this.y2Scale[plotY])
+                    .on('zoom', this.previewZoom.bind(this,plotY))
+                    .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
+        }
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
@@ -2845,15 +4114,19 @@ class graphly extends EventEmitter {
         this.addTimeInformation();
         this.breakTicks();
 
-
-        this.renderCanvas.call(this.xyzoom);
+        var that = this;
         this.el.select('#zoomXBox').call(this.xzoom);
-        this.el.select('#zoomYBox').call(this.yzoom);
-        this.el.select('#zoomY2Box').call(this.y2zoom);
+        this.el.selectAll('.zoomYBox').each(function(d, i){
+            d3.select(this).call(that.yzoom[i]);
+        });
+        this.el.selectAll('.zoomY2Box').each(function(d, i){
+            d3.select(this).call(that.y2zoom[i]);
+        });
+
+        this.renderCanvas.call(this.xyzoomCombined.bind(this));
 
         this.createAxisLabels();
     }
-
 
     zoom_update() {
 
@@ -2866,41 +4139,94 @@ class graphly extends EventEmitter {
             maxzoomout = Math.abs(xd[1]-xd[0])/period;
         }
 
-        this.xyzoom = d3.behavior.zoom()
-            .x(this.xScale)
-            .y(this.yScale)
-            .scaleExtent([maxzoomout,Infinity])
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
         this.xzoom = d3.behavior.zoom()
             .x(this.xScale)
             .scaleExtent([maxzoomout,Infinity])
             .on('zoom', this.previewZoom.bind(this))
             .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        this.yzoom = d3.behavior.zoom()
-            .y(this.yScale)
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
-        this.y2zoom = d3.behavior.zoom()
-            .y(this.y2Scale)
-            .on('zoom', this.previewZoom.bind(this))
-            .on('zoomend', this.debounceEndZoomEvent.bind(this));
 
-        this.renderCanvas.call(this.xyzoom);
+        this.yzoom = [];
+        let maxZOut = 0;
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+            let maxZOutY = 0;
+            if(this.renderSettings.yAxis[plotY].length === 1){
+                let ySel = this.renderSettings.yAxis[plotY][0];
+                if(this.dataSettings.hasOwnProperty(ySel) &&
+                   this.dataSettings[ySel].hasOwnProperty('periodic') ){
+                    let period = this.dataSettings[ySel].periodic.period;
+                    let xd = this.yScale[plotY].domain();
+                    maxZOutY = Math.abs(xd[1]-xd[0])/period;
+                    maxZOut = d3.max([maxZOutY, maxZOut]);
+                }
+            }
+            if(this.renderSettings.yAxis[plotY].length>0){
+                this.yzoom.push(
+                    d3.behavior.zoom()
+                        .y(this.yScale[plotY])
+                        .scaleExtent([maxZOutY,Infinity])
+                        .on('zoom', this.previewZoom.bind(this,plotY))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                );
+            } else {
+                this.yzoom.push(false);
+            }
+        }
+        maxZOut = d3.max([maxzoomout, maxZOut]);
+
+        // Preserve previous center if it was already set
+        let prevCenter = this.xyzoomCombined.center();
+
+        this.xyzoomCombined = d3.behavior.zoom()
+                .x(this.xScale)
+                .y(this.yScaleCombined)
+                .scaleExtent([maxZOut,Infinity])
+                .on('zoom', this.previewZoom.bind(this))
+                .on('zoomend', this.debounceEndZoomEvent.bind(this));
+
+        if(prevCenter){
+            this.xyzoomCombined.center(prevCenter);
+        }
+
+        this.y2zoom = [];
+
+        for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+            if(this.renderSettings.y2Axis[plotY].length>0){
+                this.y2zoom.push(
+                    d3.behavior.zoom()
+                        .y(this.y2Scale[plotY])
+                        .on('zoom', this.previewZoom.bind(this,plotY))
+                        .on('zoomend', this.debounceEndZoomEvent.bind(this))
+                    );
+            } else {
+                this.y2zoom.push(false);
+            }
+        }
+
+        var that = this;
         this.el.select('#zoomXBox').call(this.xzoom);
-        this.el.select('#zoomYBox').call(this.yzoom);
-        this.el.select('#zoomY2Box').call(this.y2zoom);
+        this.el.selectAll('.zoomYBox').each(function(d, i){
+            if(that.yzoom[i]){
+                d3.select(this).call(that.yzoom[i]);
+            }
+        });
+        this.el.selectAll('.zoomY2Box').each(function(d, i){
+            if(that.y2zoom[i]){
+                d3.select(this).call(that.y2zoom[i]);
+            }
+        });
 
+        this.renderCanvas.call(this.xyzoomCombined.bind(this));
 
     }
 
     onZoom() {
-        if(this.connectedGraph){
-            this.connectedGraph.zoom_update();
-            this.connectedGraph.renderData();
+        // TODO: resetting of zooms is not necessary when not using debounce
+        // but it breaks the interaction between different zoom objects
+        // maybe there is a better way of doing this instead of resetting it
+        if(!this.zoomActivity){
+            this.zoom_update();
+            this.renderData(true);
         }
-        this.zoom_update();
-        this.renderData();
     }
 
 
@@ -2924,37 +4250,56 @@ class graphly extends EventEmitter {
                 .attr('class', 'end-date')
                 .text(function(d){return dateFormat(d);});
         }
-        if(this.yTimeScale) {
-            this.el.selectAll('.y.axis>.tick:nth-of-type(2)')
-                .append('text')
-                .attr('dy', '-42px')
-                .attr('dx', '-60px')
-                .attr("transform", "rotate(-90)")
-                .attr('class', 'start-date')
-                .text(function(d){return dateFormat(d);});
-            this.el.selectAll('.y.axis>.tick:nth-last-of-type(2)')
-                .append('text')
-                .attr('dy', '-42px')
-                .attr('dx', '-60px')
-                .attr("transform", "rotate(-90)")
-                .attr('class', 'end-date')
-                .text(function(d){return dateFormat(d);});
+
+        let rsY = this.renderSettings.yAxis;
+
+        for (let posY=0; posY<rsY.length; posY++) {
+
+            if(this.checkTimeScale(rsY[posY][0])){
+                let yAx = this.el.selectAll('.y.axis')[0][posY];
+                if(yAx){
+                    d3.select(yAx).selectAll('.tick:nth-of-type(2)')
+                        .append('text')
+                        .attr('dy', '-53px')
+                        .attr('dx', '-60px')
+                        .attr("transform", "rotate(-90)")
+                        .attr('class', 'start-date')
+                        .text(function(d){return dateFormat(d);});
+                    d3.select(yAx).selectAll('.tick:nth-last-of-type(2)')
+                        .append('text')
+                        .attr('dy', '-53px')
+                        .attr('dx', '-60px')
+                        .attr("transform", "rotate(-90) translate(-55,0)")
+                        .attr('class', 'end-date')
+                        .text(function(d){return dateFormat(d);});
+                }
+            }
         }
-        if(this.y2TimeScale) {
-            this.el.selectAll('.y2.axis>.tick:nth-of-type(2)')
-                .append('text')
-                .attr('dy', this.width+52)
-                .attr('dx', '-60px')
-                .attr("transform", "rotate(-90)")
-                .attr('class', 'start-date')
-                .text(function(d){return dateFormat(d);});
-            this.el.selectAll('.y2.axis>.tick:nth-last-of-type(2)')
-                .append('text')
-                .attr('dy',  this.width+52)
-                .attr('dx', '-60px')
-                .attr("transform", "rotate(-90)")
-                .attr('class', 'end-date')
-                .text(function(d){return dateFormat(d);});
+
+
+        let rsY2 = this.renderSettings.y2Axis;
+
+        for (let posY=0; posY<rsY2.length; posY++) {
+
+            if(this.checkTimeScale(rsY2[posY][0])){
+                let yAx = this.el.selectAll('.y2.axis')[0][posY];
+                if(yAx){
+                    d3.select(yAx).selectAll('.tick:nth-of-type(2)')
+                        .append('text')
+                        .attr('dy', '60px')
+                        .attr('dx', '60px')
+                        .attr('transform', 'rotate(-90) translate(-125,0)')
+                        .attr('class', 'start-date')
+                        .text(function(d){return dateFormat(d);});
+                    d3.select(yAx).selectAll('.tick:nth-last-of-type(2)')
+                        .append('text')
+                        .attr('dy', '60px')
+                        .attr('dx', '60px')
+                        .attr('transform', 'rotate(-90) translate(-125,0)')
+                        .attr('class', 'end-date')
+                        .text(function(d){return dateFormat(d);});
+                }
+            }
         }
     }
 
@@ -2995,6 +4340,7 @@ class graphly extends EventEmitter {
                 x = text.attr("x"),
                 dx = 10,
                 tspan = text.text(null);
+            text.empty();
             while (word = words.pop()) {
                 line.push(word);
                 tspan.text(line.join(" "));
@@ -3015,62 +4361,51 @@ class graphly extends EventEmitter {
         this.el.selectAll('.x.axis>.tick text:first-of-type')
             .call(this.breakTickDown);
 
-        this.el.selectAll('.y.axis>.tick text:first-of-type')
+        this.el.selectAll('.y.axis>.tick text')
             .call(this.breakTickLeft);
 
     }
 
-
-    triggerZoomPreview(xZoom, xyZoom, xAxis, xScale){
-
-        var xytrns = xyZoom.translate();
-        let xtrns = xZoom.translate();
-
-        if(xyZoom.scale() !== 1 || (xytrns[0]!==0 && xytrns[1]!==0) ){
-            this.xzoom.scale(xyZoom.scale()).translate(xyZoom.translate());
-        }else if(xZoom.scale() !== 1 || (xtrns[0]!==0 && xtrns[1]!==0) ){
-            this.xzoom.scale(xZoom.scale()).translate(xZoom.translate());
-        }
-
-        this.slaveGraph = true;
-        this.previewZoom();
-
-    }
-
     debounceEndZoomEvent(){
+        this.zoomActivity = false;
         this.debounceZoom.bind(this)();
     }
 
-    previewZoom() {
+    previewZoom(yPos) {
 
+        this.zoomActivity = true;
         this.topSvg.selectAll('.temporary').remove();
         this.tooltip.style('display', 'none');
-
-        if(this.connectedGraph && !this.slaveGraph){
-            this.connectedGraph.triggerZoomPreview(
-                this.xzoom, this.xyzoom,
-                this.xAxis, this.xScale
-            );
-        }else if(this.slaveGraph){
-            this.slaveGraph = false;
-        }
-
 
         this.xAxisSvg.call(this.xAxis);
         for (let i = 0; i < this.additionalXAxis.length; i++) {
             this.addXAxisSvg[i].call(this.additionalXAxis[i]) ;
         }
 
-        if(this.renderSettings.yAxis.length > 0){
-            this.yAxisSvg.call(this.yAxis);
+        for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
+            let currYAxis = this.renderSettings.yAxis[yy];
+            if(currYAxis.length > 0){
+                if(this.yAxisSvg[yy]){
+                    this.yAxisSvg[yy].call(this.yAxis[yy]);
+                }
+            }
         }
 
-        for (let i = 0; i < this.additionalYAxis.length; i++) {
-            this.addYAxisSvg[i].call(this.additionalYAxis[i]) ;
+        for (let yy=0; yy<this.renderSettings.y2Axis.length; yy++){
+            let currY2Axis = this.renderSettings.y2Axis[yy];
+            if(currY2Axis.length > 0){
+                if(this.y2AxisSvg[yy]){
+                    this.y2AxisSvg[yy].call(this.y2Axis[yy]);
+                }
+            }
         }
 
-        this.addTimeInformation();
-        this.breakTicks();
+        for (let i = 0; i < this.addYAxisSvg.length; i++) {
+            for (let j = 0; j < this.addYAxisSvg[i].length; j++) {
+                this.addYAxisSvg[i][j].call(this.additionalYAxis[i][j]);
+            }
+        }
+
 
         // Limit zoom step to 10% of scale size to make sure zoom kumps are not
         // to big. Solves issue on big zoom jumps in Firefox (FF)
@@ -3079,23 +4414,78 @@ class graphly extends EventEmitter {
             this.xyzoom.scale()*1.1
         ]);*/
 
+        if (typeof yPos === 'undefined'){
+            yPos = 0;
+        }
+
+        if (typeof this.pXYS === 'undefined'){
+            this.pXYS = 1;
+        }
+
         let xScale = this.xzoom.scale();
-        let yScale = this.yzoom.scale();
-        let y2Scale = this.y2zoom.scale();
-        let xyScale = this.xyzoom.scale();
+        let xyScale = this.xyzoomCombined.scale();
 
-        let transXY = this.xyzoom.translate();
+        let transXY = this.xyzoomCombined.translate();
         let transX = this.xzoom.translate();
-        let transY = this.yzoom.translate();
-        let transY2 = this.y2zoom.translate();
 
-        if(this.renderSettings.y2Axis.length > 0){
-            if(transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1){
-                this.y2zoom
-                    .scale(xyScale)
-                    .translate(transXY);
+        let y2Scale, transY2;
+        if(this.y2zoom[yPos]){
+            y2Scale = this.y2zoom[yPos].scale();
+            transY2 = this.y2zoom[yPos].translate();
+        } else {
+            y2Scale = 1;
+            transY2 = [0,0];
+        }
+
+        let yScale, transY;
+        if(this.yzoom[yPos]){
+            yScale = this.yzoom[yPos].scale();
+            transY = this.yzoom[yPos].translate();
+        } else {
+            yScale = 1;
+            transY = [0,0];
+        }
+
+
+        /*let heighChunk = this.height/this.renderSettings.yAxis.length;
+        let modifier = Math.floor(
+            d3.event.sourceEvent.offsetY / heighChunk
+        );
+
+        // Recenter zoom point depending on which plot mouse is as we 
+        // only have one big zoom area
+        if(this.debounceActive || (this.pXYS !== xyScale)){
+            this.xyzoomCombined.center([
+                d3.event.sourceEvent.offsetX,
+                d3.event.sourceEvent.offsetY-(heighChunk*modifier)
+            ]);
+        }*/
+        this.pXYS = xyScale;
+
+        let xyCombinedChanged = false;
+
+        if( transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1 ){
+            xyCombinedChanged = true;
+            //console.log( transXY[0] +'; '+ transXY[1] +'; '+ xyScale);
+            for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
+                // Update all right y2 axis based on xy scale and trans
+                if(this.y2zoom[yy]){
+                    this.y2zoom[yy]
+                        .scale(xyScale)
+                        .translate(transXY);
+                    if(this.y2AxisSvg[yy]){
+                        this.y2AxisSvg[yy].call(this.y2Axis[yy]);
+                    }
+                }
+                if(this.yzoom[yy]){
+                    this.yzoom[yy]
+                        .scale(xyScale)
+                        .translate(transXY);
+                    if(this.yAxisSvg[yy]){
+                        this.yAxisSvg[yy].call(this.yAxis[yy]);
+                    }
+                }
             }
-            this.y2AxisSvg.call(this.y2Axis);
         }
 
         this.topSvg.selectAll('.highlightItem').remove();
@@ -3104,91 +4494,87 @@ class graphly extends EventEmitter {
 
             if(!this.previewActive){
                 this.renderCanvas.style('opacity','0');
-                this.oSc = this.currentScale;
-                this.oTr = this.currentTranlate;
-                this.oT = [
-                    d3.event.translate[0]/d3.event.scale,
-                    d3.event.translate[1]/d3.event.scale,
-                ];
                 this.previewActive = true;
-                this.svg.select('#previewImage').style('display', 'block');
-                this.svg.select('#previewImage2').style('display', 'block');
+                for (let yPos=0; yPos<this.renderSettings.yAxis.length; yPos++){
+                    this.svg.select('#previewImageL'+yPos).style('display', 'block');
+                    this.svg.select('#previewImageR'+yPos).style('display', 'block');
+                }
             }
 
+            for (let imgYPos=0; imgYPos<this.renderSettings.yAxis.length; imgYPos++){
 
-            if(xyScale!==1.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                transXY + ')scale(' + xyScale + ')');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                transXY + ')scale(' + xyScale + ')');
-            }else if(xScale !== 1.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
-            }else if(yScale !== 1.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
-            }else if(y2Scale !== 1.0){
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
-            }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                transXY + ')scale(1)');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                transXY + ')scale(1)');
-            }else if(transX[0]!==0.0 || transX[1] !==0.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(1)');
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [transX[0], 0.0] + ')scale(1)');
-            }else if(transY[0]!==0.0 || transY[1] !==0.0){
-                this.svg.select('#previewImage').attr('transform', 'translate(' + 
-                [0.0, transY[1.0]] + ')scale(1)');
-            }else if(transY2[0]!==0.0 || transY2[1] !==0.0){
-                this.svg.select('#previewImage2').attr('transform', 'translate(' + 
-                [0.0, transY2[1.0]] + ')scale(1)');
+                let prevImg = this.el.select('#previewImageL'+imgYPos);
+                let prevImg2 = this.el.select('#previewImageR'+imgYPos);
+                let alreadyMod = false;
+
+                if(xyScale!==1.0){
+                    alreadyMod = true;
+                    prevImg.attr('transform', 
+                        'translate(' +  transXY + ')scale(' + xyScale + ')'
+                    );
+                    prevImg2.attr('transform',
+                        'translate(' +   transXY + ')scale(' + xyScale + ')'
+                    );
+                }else if(xScale !== 1.0){
+                    prevImg.attr('transform', 'translate(' + 
+                    [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
+                    prevImg2.attr('transform', 'translate(' + 
+                    [transX[0], 0.0] + ')scale(' + [xScale, 1.0] + ')');
+
+                }else if(transXY[0]!==0.0 || transXY[1] !==0.0){
+                    alreadyMod = true;
+                    prevImg.attr('transform', 'translate(' + 
+                    transXY + ')scale(1)');
+                    prevImg2.attr('transform', 'translate(' + 
+                    transXY + ')scale(1)');
+
+                }else if(transX[0]!==0.0 || transX[1] !==0.0){
+                    prevImg.attr('transform', 'translate(' + 
+                    [transX[0], 0.0] + ')scale(1)');
+                    prevImg2.attr('transform', 'translate(' + 
+                    [transX[0], 0.0] + ')scale(1)');
+
+                }
+
+                if(imgYPos === yPos){
+                    if(!xyCombinedChanged && yScale !== 1.0){
+                        prevImg.attr('transform', 'translate(' + 
+                        [0.0, transY[1]] + ')scale(' + [1.0, yScale] + ')');
+
+                    }else if(!alreadyMod && (y2Scale !== 1.0)){
+                        prevImg2.attr('transform', 'translate(' + 
+                        [0.0, transY2[1]] + ')scale(' + [1.0, y2Scale] + ')');
+
+                    } else if(!xyCombinedChanged && (transY[0]!==0.0 || transY[1] !==0.0)){
+                        prevImg.attr('transform', 'translate(' + 
+                        [0.0, transY[1.0]] + ')scale(1)');
+
+                    }else if(!alreadyMod && (transY2[0]!==0.0 || transY2[1] !==0.0)){
+                        prevImg2.attr('transform', 'translate(' + 
+                        [0.0, transY2[1.0]] + ')scale(1)');
+                    }
+                }
             }
-
 
         }else{
+            // Transfer scale interactions from different zoom events
             // While interaction is happening only render visible plot once
             // debounce finished render also reference canvas to allow interaction
             this.renderData(false);
         }
+
+        this.addTimeInformation();
+        this.breakTicks();
+
+        // Set size of ticks once they have changed
+        this.svg.selectAll('.tick').attr('font-size', this.defaultTickSize+'px');
+
+        this.renderArrows();
     }
 
 
-    drawCircle(renderer, cx, cy, r, num_segments) { 
-        let theta = 2 * 3.1415926 / num_segments; 
-        let c = Math.cos(theta);//precalculate the sine and cosine
-        let s = Math.sin(theta);
-
-        x = r;//we start at angle = 0 
-        y = 0; 
-        
-        let prev_point = null;
-        for(let i = 0; i <= num_segments; i++) 
-        { 
-            if(prev_point){
-                let next_point = [x + cx, y + cy];
-                renderer.addLine(
-                    prev_point[0], prev_point[1], next_point[0],
-                    next_point[1], 5, 0.258, 0.525, 0.956, 1.0
-                );
-                prev_point = next_point;
-            }else{
-                prev_point = [x + cx, y + cy];
-            }
-            
-            //apply the rotation matrix
-            t = x;
-            x = c * x - s * y;
-            y = s * t + c * y;
-        }
-    }
-
-    renderRegression(data, reg, yScale, color, thickness) {
+    renderRegression(data, plotY, reg, yScale, color, thickness) {
+        yScale = yScale[plotY];
         let result;
         let c = defaultFor(color, [0.1, 0.4, 0.9]);
         if(c.length === 3){
@@ -3205,6 +4591,8 @@ class graphly extends EventEmitter {
             ];
         }
 
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
+
         switch(reg.type){
             case 'linear': {
                 result = regression('linear', data);
@@ -3218,10 +4606,11 @@ class graphly extends EventEmitter {
 
                 xPoints = xPoints.map(this.xScale);
                 yPoints = yPoints.map(yScale);
+                yPoints = yPoints.map((p)=>{return p+axisOffset;});
 
                 this.batchDrawer.addLine(
                     xPoints[1], yPoints[1],
-                    xPoints[0], yPoints[0], 1,
+                    xPoints[0], yPoints[0], thickness,
                     c[0], c[1], c[2], c[3]
                 );
                 break;
@@ -3260,12 +4649,12 @@ class graphly extends EventEmitter {
                         px1 = this.xScale(new Date(Math.ceil(x1)));
                         px2 = this.xScale(new Date(Math.ceil(x2)));
                     }
-                    py1 = yScale(y1);
-                    py2 = yScale(y2);
+                    py1 = yScale(y1) + axisOffset;
+                    py2 = yScale(y2) + axisOffset;
 
                     this.batchDrawer.addLine(
                         px1, py1,
-                        px2, py2, 1,
+                        px2, py2, thickness,
                         c[0], c[1], c[2], c[3]
                     );
                 }
@@ -3276,17 +4665,23 @@ class graphly extends EventEmitter {
         if(typeof reg.type !== 'undefined'){
             // render regression label
             let regrString = '';
-            for (var rPos = result.equation.length - 1; rPos >= 0; rPos--) {
-                regrString += result.equation[rPos].toPrecision(4);
-                if(rPos>1){
-                    regrString += 'x<sup>'+rPos+'</sup>';
-                } else if (rPos === 1){
-                    regrString += 'x';
-                }
-                if(rPos>0){
-                    regrString += ' + ';
+            if(reg.type === 'linear'){
+                regrString = result.equation[0].toPrecision(4)+'x + '+
+                             result.equation[1].toPrecision(4);
+            } else {
+                for (let rPos = result.equation.length - 1; rPos >= 0; rPos--) {
+                    regrString += result.equation[rPos].toPrecision(4);
+                    if(rPos>1){
+                        regrString += 'x<sup>'+rPos+'</sup>';
+                    } else if (rPos === 1){
+                        regrString += 'x';
+                    }
+                    if(rPos>0){
+                        regrString += ' + ';
+                    }
                 }
             }
+            
             regrString += '  (r<sup>2</sup>: '+ (result.r2).toPrecision(4)+')';
 
             this.el.select('#regressionInfo')
@@ -3297,7 +4692,7 @@ class graphly extends EventEmitter {
         }
     }
 
-    createRegression(data, parPos, yAxRen, inactive) {
+    createRegression(data, parPos, plotY, yAxRen, yScale, inactive) {
 
         let xAxRen = this.renderSettings.xAxis;
         let resultData;
@@ -3311,9 +4706,9 @@ class graphly extends EventEmitter {
 
                 // Check if regression is activated for this parameter and id
                 let id = datIds[i];
-                let regSett = this.dataSettings[yAxRen[parPos]];
+                let regSett = this.dataSettings[yAxRen];
 
-                if( this.dataSettings[yAxRen[parPos]].hasOwnProperty(id) ){
+                if( this.dataSettings[yAxRen].hasOwnProperty(id) ){
                     regSett = regSett[id];
                 }
 
@@ -3333,7 +4728,10 @@ class graphly extends EventEmitter {
                 };
 
                 var filteredX = data[xAxRen].filter(filterFunc.bind(this));
-                var filteredY = data[yAxRen[parPos]].filter(filterFunc.bind(this));
+                var filteredY = data[yAxRen].filter(filterFunc.bind(this));
+                // remove possible filtered out values
+                filteredX = filteredX.filter((d)=>{return !Number.isNaN(d);});
+                filteredY = filteredY.filter((d)=>{return !Number.isNaN(d);});
 
                 if(this.xTimeScale){
 
@@ -3348,82 +4746,68 @@ class graphly extends EventEmitter {
                     rC = regSett.color;
                     rC[3] = 1.0;
                 }
-                
-                let yScale = this.yScale;
-                if(this.renderSettings.y2Axis.indexOf(yAxRen[parPos]) !== -1){
-                    yScale = this.y2Scale;
-                }
 
                 if(!inactive){
-                    this.renderRegression(resultData, reg, yScale, rC);
+                    this.renderRegression(resultData, plotY, reg, yScale, rC);
                 }else{
-                    this.renderRegression(resultData, reg, yScale, [0.2,0.2,0.2,0.4]);
+                    this.renderRegression(resultData, plotY, reg, yScale, [0.2,0.2,0.2,0.4]);
                 }
             }
             
         }else{
-            let regSett = this.dataSettings[yAxRen[parPos]];
+            let regSett = this.dataSettings[yAxRen];
             let reg = {
                 type: regSett.regression,
                 order: regSett.regressionOrder
             };
 
-            let yScale = this.yScale;
-            if(this.renderSettings.y2Axis.indexOf(yAxRen[parPos]) !== -1){
-                yScale = this.y2Scale;
-            }
-
             if(typeof reg.type !== 'undefined'){
+                // remove possible filtered out values
+                let xdata = data[xAxRen].filter((d)=>{return !Number.isNaN(d);});
+                let ydata = data[yAxRen].filter((d)=>{return !Number.isNaN(d);});
                 // TODO: Check for size mismatch?
                 if(this.xTimeScale){
-                    resultData = data[xAxRen]
+                    resultData = xdata
                         .map(function(d){return d.getTime();})
-                        .zip(
-                            data[yAxRen[parPos]]
-                        );
+                        .zip(ydata);
                 }else{
-                    resultData = data[xAxRen].zip(
-                        data[yAxRen[parPos]]
-                    );
+                    
+                    resultData = xdata.zip(ydata);
                 }
+
                 if(!inactive){
                     // Check for predefined color
-                    if(this.dataSettings.hasOwnProperty(yAxRen[parPos]) &&
-                       this.dataSettings[yAxRen[parPos]].hasOwnProperty('color')){
+                    if(this.dataSettings.hasOwnProperty(yAxRen) &&
+                       this.dataSettings[yAxRen].hasOwnProperty('color')){
                         this.renderRegression(
-                            resultData, reg, yScale,
-                            this.dataSettings[yAxRen[parPos]].color
+                            resultData, plotY, reg, yScale,
+                            this.dataSettings[yAxRen].color
                         );
                 }else{
-                    this.renderRegression(resultData, reg, yScale);
+                    this.renderRegression(resultData, plotY, reg, yScale);
                 }
                     
                 }else{
-                    this.renderRegression(resultData, reg, yScale, [0.2,0.2,0.2,0.4]);
+                    this.renderRegression(resultData, plotY, reg, yScale, [0.2,0.2,0.2,0.4]);
                 }
             }
         }
     }
 
     getIdColor(param, id) {
+        // TODO: What todo when parameter has colorscale
         let rC;
-        let colorParam = this.renderSettings.colorAxis[param];
-        let cA = this.dataSettings[colorParam];
         let selPar = this.renderSettings.yAxis[param];
 
-        if (cA && cA.hasOwnProperty('colorscaleFunction')){
-            rC = cA.colorscaleFunction(id);
-            rC = [rC[0]/255, rC[1]/255, rC[2]/255];
-        }else{
-            // Check if color has been defined for specific parameter
-            if (this.renderSettings.hasOwnProperty('dataIdentifier')){
-                rC = this.dataSettings[selPar][id].color;
-            } else if(this.dataSettings[selPar].hasOwnProperty('color')){
-                rC = this.dataSettings[selPar].color;
-            } else { 
-                rC = [0.258, 0.525, 0.956];
-            }
+        // Check if color has been defined for specific parameter
+        if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+            rC = this.dataSettings[selPar][id].color;
+        } else if(this.dataSettings[selPar].hasOwnProperty('color')){
+            rC = this.dataSettings[selPar].color;
+        } else { 
+            rC = [0.258, 0.525, 0.956];
         }
+        
         return rC;
     }
 
@@ -3434,6 +4818,42 @@ class graphly extends EventEmitter {
     *        are being made. 
     */
     resize(debounce){
+
+        this.resize_update(debounce);
+        this.createColorScales();
+        this.createAxisLabels();
+
+        // Hide/show parameter info depending on if they have parameters
+        this.el.selectAll('.parameterInfo').each(function(){
+            if(d3.select(this).node().childNodes.length === 0){
+                d3.select(this).style('display', 'none');
+            } else {
+                d3.select(this).style('display', 'block')
+            }
+        });
+
+        this.batchDrawer.updateCanvasSize(this.width, this.height);
+        this.batchDrawerReference.updateCanvasSize(this.width, this.height);
+        this.zoom_update();
+
+        // Update size of labels
+        d3.selectAll('.axisLabel').attr('font-size', this.defaultLabelSize+'px');
+        d3.selectAll('.svgaxisLabel').attr('font-size', this.defaultLabelSize+'px');
+        d3.selectAll('.labelitem').style('font-size', this.defaultLabelSize+'px');
+    }
+
+
+    resize_update(debounce) {
+
+        // Check if subyaxis count has changed and offset respectively
+        if(this.enableSubYAxis) {
+            let addYT = this.renderSettings.additionalYTicks;
+            let maxL = 0;
+            for(let i=0; i<addYT.length; i++){
+                maxL = Math.max(maxL, addYT[i].length);
+            }
+            this.subAxisMarginY = 80*maxL;
+        }
 
         // Clear possible canvas styles
         this.renderCanvas.style('width', null);
@@ -3447,18 +4867,15 @@ class graphly extends EventEmitter {
         this.dim = this.el.node().getBoundingClientRect();
         // If there are colorscales to be rendered we need to apply additional
         // margin to the right reducing the total width
-        let csAmount = 0;
-        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
-            if(this.renderSettings.colorAxis[i] !== null){
-                csAmount++;
-            }
-        }
+        let csAmount = this.getMaxCSAmount();
+        
         if(this.renderSettings.hasOwnProperty('y2Axis') && 
-           this.renderSettings.y2Axis.length>0){
+           this.getMaxArrayLenght(this.renderSettings.y2Axis)>0){
             this.marginY2Offset = 40;
         } else {
             this.marginY2Offset = 0;
         }
+
         this.marginCSOffset = csAmount*100;
         this.width = this.dim.width - this.margin.left - 
                      this.margin.right - this.marginY2Offset - 
@@ -3478,21 +4895,7 @@ class graphly extends EventEmitter {
             'px' + ',' + (this.margin.top + 1.0) + 'px' + ')'
         );
 
-        this.resize_update();
-        this.createColorScales();
-        this.createAxisLabels();
-
-        this.batchDrawer.updateCanvasSize(this.width, this.height);
-        this.batchDrawerReference.updateCanvasSize(this.width, this.height);
-        this.renderData();
-        this.zoom_update();
-    }
-
-
-    resize_update() {
-
         this.xScale.range([0, this.width]);
-        this.yScale.range([this.height, 0]);
 
         this.svg.attr(
             'transform',
@@ -3517,24 +4920,101 @@ class graphly extends EventEmitter {
         this.xAxis.tickSize(-this.height);
         this.xAxisSvg.call(this.xAxis);
 
-        this.yAxis.innerTickSize(-this.width);
-        
+        // Update config and add plot buttons 
+        this.el.select('#globalSettingsContainer')
+            .style('left', (this.width/2)+this.margin.left-75+'px');
+        this.el.select('#globalSettings')
+            .style('left', (this.width/2)+this.margin.left-40+'px');
+        this.el.select('#newPlotLink')
+            .style('left', (this.width/2)+this.margin.left+40+'px');
 
-        if(this.renderSettings.yAxis.length > 0){
-            this.yAxisSvg.call(this.yAxis);
+        let heighChunk = this.height/this.yScale.length;
+
+        // Update rendergroups selections if available
+        this.el.selectAll('.groupSelect')
+            .style('top', (d,i)=>{return (Math.round(i*heighChunk)+this.margin.top-10)+'px'})
+            .style('left', Math.round(this.width/2)+'px');
+
+        this.el.selectAll('.cogIcon')
+            .style('top', (d,i)=>{return (Math.round(i*heighChunk)+this.margin.top)+'px'});
+
+        for (let yPos = 0; yPos < this.yScale.length; yPos++) {
+
+            let scaleRange = [heighChunk-this.separation, 0];
+            if(this.renderSettings.reversedYAxis){
+                scaleRange = [0, heighChunk-this.separation];
+            }
+            this.yScale[yPos].range(scaleRange);
+            this.yAxis[yPos].innerTickSize(-this.width);
+            
+            if(this.renderSettings.yAxis[yPos].length > 0){
+                if(this.yAxisSvg[yPos]){
+                    this.yAxisSvg[yPos].attr(
+                        'transform', 'translate(0,'+yPos*heighChunk+')'
+                    );
+                    this.yAxisSvg[yPos].call(this.yAxis[yPos]);
+                }
+            }
+
+            this.el.select('#renderingContainer'+yPos)
+                .attr('fill', 'none')
+                .attr(
+                    'transform',
+                    'translate(0,' + heighChunk*yPos + ')'
+                )
+                .attr('height', heighChunk-this.separation);
         }
 
         for (let i = 0; i < this.addYAxisSvg.length; i++) {
-            this.addYAxisSvg[i].attr(
-                'transform', 'translate(-'+((i*80)+80)+ ',0)'
-            );
-            this.addYAxisSvg[i].call(this.additionalYAxis[i]);
+            for (let j = 0; j < this.addYAxisSvg[i].length; j++) {
+                this.addYAxisSvg[i][j].attr(
+                    'transform', 'translate(-'+((j*80)+80)+ ','+i*heighChunk+')');
+                this.addYAxisSvg[i][j].call(this.additionalYAxis[i][j]);
+            }
         }
 
-        if(this.renderSettings.y2Axis.length > 0){
-            this.y2Axis.innerTickSize(this.width);
-            this.y2Scale.range([this.height, 0]);
-            this.y2AxisSvg.call(this.y2Axis);
+        this.el.select(this.nsId+'clipbox').select('rect')
+            .attr('height', heighChunk-this.separation)
+            .attr('width', this.width);
+
+        if(this.renderSettings.yAxis.length>1){
+
+            let heighChunk = this.height/this.renderSettings.yAxis.length;
+            let yy;
+            let clipnode = d3.select(this.nsId+'clipseparation').node();
+
+            for (yy = 0; yy<this.renderSettings.yAxis.length; yy++) {
+                d3.select(clipnode.childNodes[yy])
+                    .attr('width', this.width)
+                    .attr('height', heighChunk-this.separation)
+                    .attr(
+                        'transform',
+                        'translate(0,-'+(this.height-(heighChunk*yy))+')'
+                    );
+            }
+            // Update rect to contain all x axis tick labels
+            d3.select(clipnode.childNodes[yy])
+                .attr('width', this.width+this.margin.right)
+                .attr('height', this.margin.bottom+10+this.subAxisMarginX)
+                .attr(
+                    'transform',
+                    'translate(0,1)'
+                );
+        }
+
+        for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
+
+            this.y2Scale[yPos].range([heighChunk-this.separation, 0]);
+            this.y2Axis[yPos].innerTickSize(-this.width);
+            
+            if(this.renderSettings.y2Axis[yPos].length > 0){
+                if(this.y2AxisSvg[yPos]){
+                    this.y2AxisSvg[yPos].attr(
+                        'transform', 'translate('+this.width+','+yPos*heighChunk+')'
+                    );
+                    this.y2AxisSvg[yPos].call(this.y2Axis[yPos]);
+                }
+            }
         }
 
         this.renderCanvas
@@ -3570,46 +5050,77 @@ class graphly extends EventEmitter {
                 this.margin.bottom + this.subAxisMarginX
             );
 
-        this.el.select((this.nsId+'clipbox')).select('rect')
-            .attr('width', this.width)
-            .attr('height', this.height);
-
         this.el.select('#zoomXBox')
-            .attr('width', this.width)
+            .attr('width', this.width-20)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
 
-        this.el.select('#zoomYBox')
-            .attr('width', this.margin.left + this.subAxisMarginY)
-            .attr('height', this.height );
 
-        this.el.select('#zoomY2Box')
-            .attr('width', this.margin.right + this.marginY2Offset)
-            .attr('height', this.height )
-            .attr('transform', 'translate(' + (
-                this.width
-                ) + ',' + 0 + ')'
-            );
+        var that = this;
 
-        this.el.select('#zoomXBox')
-            .attr('width', this.width)
-            .attr('height', (this.margin.bottom+this.subAxisMarginX))
-            .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')');
+        for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+            this.el.select('#zoomYBox'+yPos)
+                .attr('width', this.margin.left)
+                .attr('height', heighChunk-this.separation-20 )
+                .attr(
+                    'transform',
+                    'translate(' + -(this.margin.left+this.subAxisMarginY) + 
+                    ',' + ((heighChunk*yPos)+20) + ')'
+                )
+                .attr('pointer-events', 'all');
 
-        this.el.select('#rectangleOutline')
-            .attr('width', this.width)
-            .attr('height', this.height);
+            this.el.select('#zoomY2Box'+yPos)
+                .attr('width', this.margin.right + this.marginY2Offset)
+                .attr('height', heighChunk-this.separation-20 )
+                .attr(
+                    'transform',
+                    'translate(' + this.width + 
+                    ',' + ((heighChunk*yPos)+20) + ')'
+                )
+                .attr('pointer-events', 'all');
+        }
 
-        this.el.select('#previewImage')
+
+        this.el.selectAll('.rectangleOutline').each(function(d,i){
+            d3.select(this)
+                .attr('width', that.width)
+                .attr('height', heighChunk-that.separation)
+                .attr(
+                    'transform',
+                    'translate(0,' + (heighChunk*i) + ')'
+                );
+        });
+
+
+        this.el.selectAll('.removePlot').each(function(d,i){
+            d3.select(this).style('top', ((heighChunk*i)+10+that.margin.top)+'px')
+        });
+
+        this.el.selectAll('.arrowChangePlot.up').each(function(d,i){
+            d3.select(this).style('top', ((heighChunk*(i+1))+that.margin.top+20)+'px')
+        });
+        this.el.selectAll('.arrowChangePlot.down').each(function(d,i){
+            d3.select(this).style('top', ((heighChunk*(i))+that.margin.top+45)+'px')
+        });
+
+        this.el.selectAll('.previewImage')
             .attr('width',  this.width)
-            .attr('height', this.height);
-
-        this.el.select('#previewImage2')
-            .attr('width',  this.width)
-            .attr('height', this.height);
+            .attr('height', heighChunk-that.separation);
 
         this.addTimeInformation();
         this.breakTicks();
+        this.renderArrows();
+
+        this.el.selectAll('.modifyAxisIcon.y2')
+            .attr(
+                'transform',
+                'translate(' + (60) + ' ,' + 0 + ') rotate(' + 180 + ')'
+            );
+        this.el.selectAll('.modifyAxisIcon.xaxis')
+            .attr(
+                'transform',
+                'translate(' + this.width + ' ,' + 20 + ') rotate(' + 180 + ')'
+            );
 
     }
 
@@ -3618,10 +5129,10 @@ class graphly extends EventEmitter {
         this.batchDrawerReference.updateCanvasSize(this.width, this.height);
         this.renderData();
         this.zoom_update();
-        //this.createHelperObjects();
     }
 
-    renderRectangles(data, idY, xGroup, yGroup, cAxis, updateReferenceCanvas) {
+    renderRectangles(data, xAxis, yAxis, xGroup, yGroup, cAxis, yScale, plotY,
+                     leftYAxis, updateReferenceCanvas) {
 
         // TODO: How to decide which item to take for counting
         // should we compare changes and look for errors in config?
@@ -3629,12 +5140,10 @@ class graphly extends EventEmitter {
 
         let currColCache = null;
         let colCacheAvailable = false;
+        let discreteColorScale = false;
+        let discreteCSOffset = 0;
 
-        let yScale = this.yScale;
-        // Check if parameter part of left or right y Scale
-        if(this.renderSettings.y2Axis.indexOf(idY) !== -1){
-            yScale = this.y2Scale;
-        }
+        yScale = yScale[plotY];
 
         // Identify how colors are applied to the points
         let singleColor = true;
@@ -3655,15 +5164,15 @@ class graphly extends EventEmitter {
 
         let constAlpha = this.defaultAlpha;
 
-        if(this.dataSettings[idY].hasOwnProperty('alpha')){
-            constAlpha = this.dataSettings[idY].alpha;
+        if(this.dataSettings[yAxis].hasOwnProperty('alpha')){
+            constAlpha = this.dataSettings[yAxis].alpha;
         } else {
-            this.dataSettings[idY].alpha = constAlpha;
+            this.dataSettings[yAxis].alpha = constAlpha;
         }
 
         if(singleColor) {
-            if(this.dataSettings[idY].hasOwnProperty('color')){
-                colorObj = this.dataSettings[idY].color.slice();
+            if(this.dataSettings[yAxis].hasOwnProperty('color')){
+                colorObj = this.dataSettings[yAxis].color.slice();
             } else {
                 colorObj = [0.258, 0.525, 0.956];
             }
@@ -3681,6 +5190,9 @@ class graphly extends EventEmitter {
             if(cA && cA.hasOwnProperty('extent')){
                 this.plotter.setDomain(cA.extent);
             }
+            if (cA && cA.hasOwnProperty('csDiscrete')){
+                discreteColorScale = cA.csDiscrete;
+            }
             // If current cs not equal to the set in the plotter update cs
             if(cs !== this.plotter.name){
                 this.plotter.setColorScale(cs);
@@ -3692,14 +5204,105 @@ class graphly extends EventEmitter {
             } else {
                 this.colorCache[cAxis] = [];
             }
+
+            if(discreteColorScale && this.colorCache[cAxis].length===0){
+                this.colorCache[cAxis] = this.discreteColorScales[cAxis];
+                colCacheAvailable = true;
+                currColCache = this.colorCache[cAxis];
+                discreteCSOffset = d3.min(data[cAxis]);
+            } else if(discreteColorScale){
+                discreteCSOffset = d3.min(data[cAxis]);
+            }
         }
+
+        // Check if cyclic axis and if currently displayed axis range needs to
+        // offset to be shown in "next cycle" above or below
+        let xMax, xMin, period, xoffset;
+
+        let xperiodic = false;
+        if(this.dataSettings.hasOwnProperty(xAxis) && 
+           this.dataSettings[xAxis].hasOwnProperty('periodic')){
+            xoffset = defaultFor(
+                this.dataSettings[xAxis].periodic.offset, 0
+            );
+            xperiodic = true;
+            period = this.dataSettings[xAxis].periodic.period;
+            xMax = this.xScale.domain()[1]-xoffset;
+            xMin = this.xScale.domain()[0]+xoffset;
+        }
+
+        let yMax, yMin, yoffset, yperiod;
+        let yperiodic = false;
+        if(this.dataSettings.hasOwnProperty(yAxis) && 
+           this.dataSettings[yAxis].hasOwnProperty('periodic') && leftYAxis){
+            yoffset = defaultFor(
+                this.dataSettings[yAxis].periodic.offset, 0
+            );
+            yperiodic = true;
+            yperiod = this.dataSettings[yAxis].periodic.period;
+            yMax = this.yScale[plotY].domain()[1]-yoffset;
+            yMin = this.yScale[plotY].domain()[0]+yoffset;
+        }
+
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
 
         for (let i=0; i<l; i++) {
 
-            let x1 = (this.xScale(data[xGroup[0]][i]));
-            let x2 = (this.xScale(data[xGroup[1]][i]));
-            let y1 = (yScale(data[yGroup[0]][i]));
-            let y2 = (yScale(data[yGroup[1]][i]));
+            // Manipulate value if we have a periodic parameter
+            let valY = data[yGroup[0]][i];
+            let valY2 = data[yGroup[1]][i];
+            let valX = data[xGroup[0]][i];
+            let valX2 = data[xGroup[1]][i];
+
+            // Skip "empty" values
+            if(Number.isNaN(valY) || Number.isNaN(valY2) ||
+                Number.isNaN(valX) || Number.isNaN(valX2)){
+                if(cAxis !== null){
+                    if(!colCacheAvailable){
+                        this.colorCache[cAxis].push(null);
+                    }
+                }
+                continue;
+            }
+
+            if(yperiodic){
+                let shiftpos = Math.abs(parseInt(yMax/yperiod));
+                let shiftneg = Math.abs(parseInt(yMin/yperiod));
+                if(yoffset===0){
+                    shiftneg = Math.abs(Math.floor(yMin/yperiod));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valY = valY + shift*yperiod;
+                    if(valY-yoffset > yMax){
+                        valY -= yperiod;
+                    }
+                    if(valY+yoffset < yMin){
+                        valY += yperiod;
+                    }
+
+                    valY2 = valY2 + shift*yperiod;
+                    if(valY2-yoffset > yMax){
+                        valY2 -= yperiod;
+                    }
+                    if(valY2+yoffset < yMin){
+                        valY2 += yperiod;
+                    }
+                }
+            }
+
+            let x1 = (this.xScale(valX));
+            let x2 = (this.xScale(valX2));
+
+            let y1 = yScale(valY);
+            y1+=axisOffset;
+            let y2 = yScale(valY2);
+            y2+=axisOffset;
+
 
             let idC = u.genColor();
 
@@ -3725,7 +5328,11 @@ class graphly extends EventEmitter {
             let rC;
             if(cAxis !== null){
                 if(colCacheAvailable){
-                    rC = currColCache[i];
+                    if(discreteColorScale){
+                        rC = currColCache[data[cAxis][i]];
+                    } else {
+                        rC = currColCache[i];
+                    }
                 } else {
                     rC = this.plotter.getColor(data[cAxis][i])
                         .map(function(c){return c/255;});
@@ -3755,11 +5362,11 @@ class graphly extends EventEmitter {
     }
 
 
-    renderPoints(data, xAxis, yAxis, cAxis, updateReferenceCanvas) {
+    renderPoints(data, xAxis, yAxis, cAxis, plotY, yScale, leftYAxis, updateReferenceCanvas) {
 
         let lp;
         let p_x, p_y;
-        let yScale = this.yScale;
+        yScale = yScale[plotY];
         let currColCache = null;
         let colCacheAvailable = false;
 
@@ -3778,25 +5385,28 @@ class graphly extends EventEmitter {
             lp = data[yAxis].length;
         }
 
-        // Check if parameter part of left or right y Scale
-        if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
-            yScale = this.y2Scale;
-        }
-
         // Identify how colors are applied to the points
-        let singleColor = true;
+        let singleSettings = true;
         let colorObj;
         let identParam;
+        let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
+        dotsize *= this.resFactor;
 
         if (this.renderSettings.hasOwnProperty('dataIdentifier')){
-            singleColor = false;
+            singleSettings = false;
+            dotsize = {};
             identParam = this.renderSettings.dataIdentifier.parameter;
             // Check if alpha value is set for all parameters
             let identifiers = this.renderSettings.dataIdentifier.identifiers;
             for (var i = 0; i < identifiers.length; i++) {
-                if(!this.dataSettings[identParam][identifiers[i]].hasOwnProperty('alpha')){
-                    this.dataSettings[identParam][identifiers[i]].alpha = this.defaultAlpha;
+                if(!this.dataSettings[yAxis][identifiers[i]].hasOwnProperty('alpha')){
+                    this.dataSettings[yAxis][identifiers[i]].alpha = this.defaultAlpha;
                 }
+                dotsize[identifiers[i]] = defaultFor(
+                    this.dataSettings[yAxis][identifiers[i]].size,
+                    DOTSIZE
+                );
+                dotsize[identifiers[i]] *= this.resFactor;
             }
         }
 
@@ -3808,7 +5418,7 @@ class graphly extends EventEmitter {
             this.dataSettings[yAxis].alpha = constAlpha;
         }
 
-        if(singleColor) {
+        if(singleSettings) {
             if(this.dataSettings[yAxis].hasOwnProperty('color')){
                 colorObj = [
                     this.dataSettings[yAxis].color[0],
@@ -3848,8 +5458,6 @@ class graphly extends EventEmitter {
         // Check if cyclic axis and if currently displayed axis range needs to
         // offset to be shown in "next cycle" above or below
         let xMax, xMin, period, xoffset;
-        let yMax = yScale.domain()[1];
-        let yMin = yScale.domain()[0];
 
         let xperiodic = false;
         if(this.dataSettings.hasOwnProperty(xAxis) && 
@@ -3861,28 +5469,125 @@ class graphly extends EventEmitter {
             period = this.dataSettings[xAxis].periodic.period;
             xMax = this.xScale.domain()[1]-xoffset;
             xMin = this.xScale.domain()[0]+xoffset;
-
         }
 
-        let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
-        dotsize *= this.resFactor;
-        
+        let yMax, yMin, yoffset, yperiod;
+        let yperiodic = false;
+        if(this.dataSettings.hasOwnProperty(yAxis) && 
+           this.dataSettings[yAxis].hasOwnProperty('periodic') && leftYAxis){
+            yoffset = defaultFor(
+                this.dataSettings[yAxis].periodic.offset, 0
+            );
+            yperiodic = true;
+            yperiod = this.dataSettings[yAxis].periodic.period;
+            yMax = this.yScale[plotY].domain()[1]-yoffset;
+            yMin = this.yScale[plotY].domain()[0]+yoffset;
+        }
+
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
+
+        let x, y, valX, valY, currDotSize;
+
         for (let j=0;j<lp; j++) {
 
-            let x, y, valX, valY;
+            if(singleSettings){
+                currDotSize = dotsize;
+            } else {
+                currDotSize = dotsize[data[identParam][j]];
+            }
+
+            if(!yGroup){
+                valY = data[yAxis][j];
+            } else {
+                // Check if we have a time variable
+                if(this.timeScales.indexOf(yGroup[0])!==-1){
+                    if( isNaN(data[yGroup[0]][j]) || isNaN(data[yGroup[1]][j]) ){
+                        valY = NaN;
+                    } else {
+                        valY = new Date(
+                            data[yGroup[0]][j].getTime() +
+                            (data[yGroup[1]][j].getTime() - data[yGroup[0]][j].getTime())/2
+                        );
+                    }
+                } else {
+                    valY = data[yGroup[0]][j] +
+                         (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
+                }
+            }
+
+            // If render settings uses colorscale axis get color from there
+            let rC;
+            if(cAxis !== null){
+                if(colCacheAvailable){
+                    rC = currColCache[j];
+                } else {
+                    rC = this.plotter.getColor(data[cAxis][j]);
+                    rC = [rC[0]/255, rC[1]/255, rC[2]/255, constAlpha];
+                    this.colorCache[cAxis].push(rC);
+                }
+                
+            } else {
+                if(singleSettings){
+                    rC = colorObj;
+                } else {
+                    let val = data[identParam][j];
+                    if(val){
+                        let col = this.dataSettings[yAxis][val].color;
+                        rC = [
+                            col[0], col[1], col[2],
+                            this.dataSettings[yAxis][val].alpha
+                        ];
+                    } else {
+                        rC = colorObj;
+                    }
+                }
+            }
+
+            // Manipulate value if we have a periodic parameter
+            if(yperiodic){
+                let shiftpos = Math.abs(parseInt(yMax/yperiod));
+                let shiftneg = Math.abs(parseInt(yMin/yperiod));
+                if(yoffset===0){
+                    shiftneg = Math.abs(Math.floor(yMin/yperiod));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valY = valY + shift*yperiod;
+                    if(valY-yoffset > yMax){
+                        valY -= yperiod;
+                    }
+                    if(valY+yoffset < yMin){
+                        valY += yperiod;
+                    }
+                    
+                }
+            }
+
+            y = yScale(valY);
+            y+=axisOffset;
 
             if(!xGroup){
                 valX = data[xAxis][j];
             } else {
                 // Check if we have a time variable
                 if(this.timeScales.indexOf(xGroup[0])!==-1){
-                    valX = new Date(
-                        data[xGroup[0]][j].getTime() +
-                        (
-                            data[xGroup[1]][j].getTime()-
-                            data[xGroup[0]][j].getTime()
-                        )/2
-                    );
+                    if( isNaN(data[xGroup[0]][j]) || isNaN(data[xGroup[1]][j]) ){
+                        valX = NaN;
+                    } else {
+                        valX = new Date(
+                            data[xGroup[0]][j].getTime() +
+                            (
+                                data[xGroup[1]][j].getTime()-
+                                data[xGroup[0]][j].getTime()
+                            )/2
+                        );
+                    }
+
+                   
                 } else {
                     valX = data[xGroup[0]][j] +
                          (data[xGroup[1]][j] - data[xGroup[0]][j])/2;
@@ -3912,48 +5617,6 @@ class graphly extends EventEmitter {
                 }
             }
             x = this.xScale(valX);
-
-            if(!yGroup){
-                valY = data[yAxis][j];
-            } else {
-                // Check if we have a time variable
-                if(this.timeScales.indexOf(yGroup[0])!==-1){
-                    valY = new Date(
-                        data[yGroup[0]][j].getTime() +
-                        (data[yGroup[1]][j].getTime() - data[yGroup[0]][j].getTime())/2
-                    );
-                } else {
-                    valY = data[yGroup[0]][j] +
-                         (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
-                }
-            }
-
-            y =  yScale(valY);
-            
-            // If render settings uses colorscale axis get color from there
-            let rC;
-            if(cAxis !== null){
-                if(colCacheAvailable){
-                    rC = currColCache[j];
-                } else {
-                    rC = this.plotter.getColor(data[cAxis][j]);
-                    rC = [rC[0]/255, rC[1]/255, rC[2]/255, constAlpha];
-                    this.colorCache[cAxis].push(rC);
-                }
-                
-            } else {
-                if(singleColor){
-                    rC = colorObj;
-                } else {
-                    let val = data[identParam][j];
-                    let col = this.dataSettings[yAxis][val].color;
-                    rC = [
-                        col[0], col[1], col[2],
-                        this.dataSettings[yAxis][val].alpha
-                    ];
-                }
-            }
-            
 
             let c = u.genColor();
 
@@ -4017,17 +5680,17 @@ class graphly extends EventEmitter {
                 if(!parSett.hasOwnProperty('symbol')){
                     parSett.symbol = 'circle';
                 }
-                par_properties.dotsize = dotsize;
+                par_properties.dotsize = currDotSize;
 
                 if(parSett.symbol !== null && parSett.symbol !== 'none'){
                     par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, dotsize, sym, rC[0], rC[1], rC[2], rC[3]
+                        x, y, currDotSize, sym, rC[0], rC[1], rC[2], rC[3]
                     );
                     if(!this.fixedSize && updateReferenceCanvas){
                         this.batchDrawerReference.addDot(
-                            x, y, dotsize, sym, nCol[0], nCol[1], nCol[2], -1.0
+                            x, y, currDotSize, sym, nCol[0], nCol[1], nCol[2], -1.0
                         );
                     }
                 }
@@ -4037,12 +5700,13 @@ class graphly extends EventEmitter {
             p_x = x;
             p_y = y;
         }
+
     }
 
-    renderFilteredOutPoints(data, xAxis, yAxis) {
+    renderFilteredOutPoints(data, xAxis, yAxis, plotY, yScale, leftYAxis) {
 
         let lp = data[xAxis].length;
-        let yScale = this.yScale;
+        yScale = yScale[plotY];
 
         // Check if parameter part of left or right y Scale
         if(this.renderSettings.y2Axis.indexOf(yAxis) !== -1){
@@ -4067,13 +5731,94 @@ class graphly extends EventEmitter {
             period = this.dataSettings[xAxis].periodic.period;
             xMax = this.xScale.domain()[1]-xoffset;
             xMin = this.xScale.domain()[0]+xoffset;
+        }
+
+        let yperiodic = false;
+        let yperiod, yoffset;
+        if(this.dataSettings.hasOwnProperty(yAxis) && 
+           this.dataSettings[yAxis].hasOwnProperty('periodic') && leftYAxis){
+            yoffset = defaultFor(
+                this.dataSettings[yAxis].periodic.offset, 0
+            );
+            yperiodic = true;
+            yperiod = this.dataSettings[yAxis].periodic.period;
+            yMax = this.yScale[plotY].domain()[1]-yoffset;
+            yMin = this.yScale[plotY].domain()[0]+yoffset;
 
         }
 
+        // Identify how colors are applied to the points
+        let singleSettings = true;
+        let colorObj;
+        let identParam;
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
         dotsize *= this.resFactor;
 
+        if (this.renderSettings.hasOwnProperty('dataIdentifier')){
+            singleSettings = false;
+            dotsize = {};
+            identParam = this.renderSettings.dataIdentifier.parameter;
+            // Check if alpha value is set for all parameters
+            let identifiers = this.renderSettings.dataIdentifier.identifiers;
+            for (var i = 0; i < identifiers.length; i++) {
+                if(!this.dataSettings[yAxis][identifiers[i]].hasOwnProperty('alpha')){
+                    this.dataSettings[yAxis][identifiers[i]].alpha = this.defaultAlpha;
+                }
+                dotsize[identifiers[i]] = defaultFor(
+                    this.dataSettings[yAxis][identifiers[i]].size,
+                    DOTSIZE
+                );
+                dotsize[identifiers[i]] *= this.resFactor;
+            }
+        }
+
+        let blockSize = (
+            this.height/this.renderSettings.yAxis.length - this.separation
+        ) * this.resFactor;
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
+
+        let currDotSize;
+
         for (let j=0;j<lp; j++) {
+
+            if(singleSettings){
+                currDotSize = dotsize;
+            } else {
+                currDotSize = dotsize[data[identParam][j]];
+            }
+
+            valY = data[yAxis][j];
+
+            // Manipulate value if we have a periodic parameter
+            if(yperiodic){
+                let shiftpos = Math.abs(parseInt(yMax/yperiod));
+                let shiftneg = Math.abs(parseInt(yMin/yperiod));
+                if(yoffset===0){
+                    shiftneg = Math.abs(Math.floor(yMin/yperiod));
+                }
+                let shift = Math.max(shiftpos, shiftneg);
+                if(shiftneg>shiftpos){
+                    shift*=-1;
+                }
+
+                if(Math.abs(shift) > 0){
+                    valY = valY + shift*yperiod;
+                    if(valY-yoffset > yMax){
+                        valY -= yperiod;
+                    }
+                    if(valY+yoffset < yMin){
+                        valY += yperiod;
+                    }
+                }
+            }
+
+            y = yScale(valY);
+
+            if(y<0 || y>blockSize){
+                continue;
+            }
+
+            y+=axisOffset;
 
             valX = data[xAxis][j];
             // Manipulate value if we have a periodic parameter
@@ -4101,7 +5846,6 @@ class graphly extends EventEmitter {
             }
             x = this.xScale(valX);
 
-            let y = yScale(data[yAxis][j]);
             let rC = [0.5, 0.5, 0.5];
 
             let par_properties = {
@@ -4143,7 +5887,7 @@ class graphly extends EventEmitter {
                     }
                     var sym = defaultFor(dotType[symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, dotsize, sym, rC[0], rC[1], rC[2], 0.2
+                        x, y, currDotSize, sym, rC[0], rC[1], rC[2], 0.2
                     );
                 }
             }
@@ -4167,8 +5911,8 @@ class graphly extends EventEmitter {
                 .on('click', ()=>{
                     this.createParameterInfo();
                     this.resize(false);
+                    this.emit('axisChange');
                     this.renderData();
-                    this.createColorScales();
                 });
         }
     }
@@ -4248,180 +5992,259 @@ class graphly extends EventEmitter {
 
 
     createInfoBoxes(){
+
+
+        let currHeight = this.height / this.yScale.length;
+
+        for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+
+            if(this.el.select('#parameterInfo'+yPos).empty()){
+                this.el.append('div')
+                    .attr('id', 'parameterInfo'+yPos)
+                    .attr('class', 'parameterInfo')
+                    .style('top', ((currHeight)*yPos + 10 + this.margin.top) +'px')
+                    .style(this.labelAllignment, ()=>{
+                        if(this.labelAllignment === 'left'){
+                            return this.margin.left+20+'px';
+                        } else {
+                            return this.margin.right+this.marginCSOffset+50+'px';
+                        }
+                    })
+                    .style('visibility', 'hidden');
+            } else {
+                this.el.select('#parameterInfo'+yPos).selectAll('*').remove();
+                this.el.select('#parameterInfo'+yPos)
+                    .style('top', ((currHeight)*yPos +10) + this.margin.top +'px')
+                    .style(this.labelAllignment, ()=>{
+                        if(this.labelAllignment === 'left'){
+                            return this.margin.left+20+'px';
+                        } else {
+                            return this.margin.right+this.marginCSOffset+50+'px';
+                        }
+                    });
+            }
+        }
+
         // Setup div for regression info rendering
         this.el.select('#regressionInfo').remove();
         this.el.append('div')
             .attr('id', 'regressionInfo')
-            .style('bottom', (this.margin.bottom+this.subAxisMarginX)+'px')
-            .style('left', (this.width/2)+'px');
+            .style('bottom', (this.margin.bottom+this.subAxisMarginX+40)+'px')
+            .style('left', ((this.width/2)-200+this.margin.left)+'px');
 
-        if(this.el.select('#parameterInfo').empty()){
-            this.el.append('div')
-                .attr('id', 'parameterInfo')
-                .style('top', this.margin.top*2+'px')
-                .style(
-                    'left', 
-                    (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-                )
-                .style('visibility', 'hidden');
-        } else {
-            this.el.select('#parameterInfo').selectAll('*').remove();
-            this.el.select('#parameterInfo')
-                .style('top', this.margin.top*2+'px')
-                .style(
-                    'left', 
-                    (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-                );
-        }
+        
 
 
         this.el.select('#parameterSettings').remove();
         this.el.append('div')
             .attr('id', 'parameterSettings')
-            .style('left', 
-                (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-            )
+            .style(this.labelAllignment, ()=>{
+                let xOffset = this.margin.right+this.marginCSOffset+50+'px';
+                if(this.labelAllignment === 'left'){
+                    xOffset = this.margin.left+20+'px';
+                }
+                return xOffset;
+            })
             .style('display', 'none');
 
-        if(this.el.select('#parameterInfo').selectAll('*').empty()){
-            this.el.select('#parameterInfo').style('visibility', 'hidden');
-            this.el.select('#svgInfoContainer').style('visibility', 'hidden');
-        }
     }
 
     updateInfoBoxes(){
         this.el.select('#regressionInfo')
-            .style('bottom', (this.margin.bottom+this.subAxisMarginX)+'px')
-            .style('left', (this.width/2)+'px');
+            .style('bottom', (this.margin.bottom+this.subAxisMarginX+40)+'px')
+            .style('left', ((this.width/2)-200+this.margin.left)+'px');
 
-        this.el.select('#parameterInfo')
-                .style('top', this.margin.top*2+'px')
-                .style(
-                    'left', 
-                    (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-                );
+        let currHeight = this.height / this.yScale.length;
+        for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
-        d3.select('#svgInfoContainer')
-            .attr('transform', 'translate(' + (this.width/2 - 90) + ',' +
-            (this.margin.top+1) + ')');
+            this.el.select('#parameterInfo'+yPos)
+                .style('top', ((currHeight)*yPos + 10 + this.margin.top) +'px')
+                .style(this.labelAllignment, ()=>{
+                    if(this.labelAllignment === 'left'){
+                        return this.margin.left+20+'px';
+                    } else {
+                        return this.margin.right+this.marginCSOffset+50+'px';
+                    }
+                });
+
+            this.el.select('#svgInfoContainer'+yPos)
+                .attr('transform', ()=>{
+                    let xOffset = (
+                        this.width - this.margin.right - 260
+                    );
+                    if(this.labelAllignment === 'left'){
+                        xOffset = '20';
+                    }
+                    return 'translate(' + 
+                        xOffset + ',' +
+                        ((currHeight)*yPos + 10) + ')';
+                });
+        }
 
         this.el.select('#parameterSettings')
-            .style('left', 
-                (this.width/2)+this.margin.left+this.subAxisMarginY-135+'px'
-            )
+            .style(this.labelAllignment, ()=>{
+                let xOffset = this.margin.right+this.marginCSOffset+50+'px';
+                if(this.labelAllignment === 'left'){
+                    xOffset = this.margin.left+20+'px';
+                }
+                return xOffset;
+            })
             .style('display', 'none');
     }
 
+
     applyDataFilters(){
+
+        this.startTiming('applyDataFilters');
 
         let data = {};
         let inactiveData = {};
 
         for(let p in this.data){
-            data[p] = this.data[p];
+            if(Array.isArray(this.data[p])){
+                data[p] = this.data[p].slice(0);
+            } else {
+                data[p] = this.data[p];
+            }
             inactiveData[p] = [];
         }
 
-        for (let f in this.filters){
-            let filter = this.filters[f];
-            let currentDataset = data[f];
+        var filters = Object.assign(
+            {},
+            this.filterManager.filters,
+            this.filterManager.boolFilters,
+            this.filterManager.maskFilters
+        );
 
+        for (let f in filters){
+
+            let currFilter = filters[f];
             // Check if parameter is actually in current data
             if(!data.hasOwnProperty(f)){
                 continue;
             }
+            let currentDataset = data[f].slice(0);
+
+            let applicableFilterList = [];
 
             for (let p in data){
 
                 let applicableFilter = true;
+                let indepFilter = true;
 
                 if(this.filterManager.filterSettings.hasOwnProperty('filterRelation')){
                     applicableFilter = false;
                     let filterRel = this.filterManager.filterSettings.filterRelation;
-                    let insideGroup = false;
+
                     for (let i = 0; i < filterRel.length; i++) {
+                        // If filter parameter not in any group it applies for all
+                        if(filterRel[i].indexOf(f)!==-1){
+                            indepFilter = false;
+                        }
                         // Check if both parameters are in the same group
                         if( (filterRel[i].indexOf(p)!==-1) && 
                             (filterRel[i].indexOf(f)!==-1)){
                             applicableFilter = true;
                             break;
                         }
-                        // Check if current parameter is in any group
-                        if(filterRel[i].indexOf(p)!==-1){
-                            insideGroup = true;
-                        }
                     }
-                    if(!insideGroup){
+                    if(indepFilter){
                         applicableFilter = true;
                     }
                 }
-                
+
                 if(applicableFilter){
-                    let tmpArray = data[p];
-                    data[p] = data[p].filter((e,i)=>{
-                        return filter(currentDataset[i]);
-                    });
-                    inactiveData[p].pushArray(
-                        tmpArray.filter((e,i)=>{
-                            return !filter(currentDataset[i]);
-                        })
-                    );
+                    applicableFilterList.push(p);
                 }
             }
+
+            for (let i=0; i<currentDataset.length; i++) {
+                if(!currFilter(currentDataset[i])){
+                    for(let af=0; af<applicableFilterList.length; af++){
+                        inactiveData[applicableFilterList[af]].push(
+                            this.data[applicableFilterList[af]][i]
+                        );
+                        data[applicableFilterList[af]][i] = NaN;
+                    }
+                }
+            }
+
         }
 
         this.currentData = data;
         this.currentInactiveData = inactiveData;
+        this.endTiming('applyDataFilters');
     }
 
     createParameterInfo(){
-        d3.select('#svgInfoContainer').remove();
-        // Add rendering representation to svg
-        let infoGroup = this.svg.append('g')
-            .attr('id', 'svgInfoContainer')
-            .attr('transform', 'translate(' + (this.width/2 - 90) + ',' +
-            (this.margin.top+1) + ')')
-            .style('visibility', 'hidden');
-        infoGroup.append('rect')
-            .attr('id', 'svgInfoRect')
-            .attr('width', 280)
-            .attr('height', 100)
-            .attr('fill', 'white')
-            .attr('stroke', 'black');
 
-        if(!this.el.select('#parameterInfo').empty()){
-            this.el.select('#parameterInfo').selectAll('*').remove();
-        }
+        let currHeight = this.height/this.renderSettings.yAxis.length;
 
-        let yAxRen = this.renderSettings.yAxis;
-        for (let parPos=0; parPos<yAxRen.length; parPos++){
+        for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
 
-            let idY = yAxRen[parPos];
-            // Add item to labels if there is no coloraxis is defined
-            this.addParameterLabel(idY);
-        }
+            this.el.select('#svgInfoContainer'+yPos).remove();
+            // Add rendering representation to svg
+            let infoGroup = this.svg.append('g')
+                .attr('id', 'svgInfoContainer'+yPos)
+                .attr('class', 'svgInfoContainer')
+                .attr('transform', ()=>{
+                    let xOffset = (this.width - this.margin.right - 260);
+                    if(this.labelAllignment === 'left'){
+                        xOffset = '20';
+                    }
+                    return 'translate(' + 
+                        xOffset + ',' +
+                        ((currHeight)*yPos + 10) + ')';
+                })
+                .style('visibility', 'hidden');
 
-        let y2AxRen = this.renderSettings.y2Axis;
-        for (let parPos=0; parPos<y2AxRen.length; parPos++){
+            infoGroup.append('rect')
+                .attr('id', 'svgInfoRect')
+                .attr('width', 280)
+                .attr('height', 100)
+                .attr('fill', 'white')
+                .attr('stroke', 'black');
 
-            let idY2 = y2AxRen[parPos];
-            // Add item to labels if there is no coloraxis is defined
-            this.addParameterLabel(idY2);
-        }
+            let parInfEl = this.el.select('#parameterInfo'+yPos);
+            if(!parInfEl.empty()){
+                parInfEl.selectAll('*').remove();
+            }
 
-        // Change height of settings panel to be just under labels
-        let dim = this.el.select('#parameterInfo').node().getBoundingClientRect();
-        this.el.select('#parameterSettings')
-                .style('top', (dim.height+this.margin.top+9)+'px');
+            let yAxRen = this.renderSettings.yAxis[yPos];
+            for (let parPos=0; parPos<yAxRen.length; parPos++){
 
-         if(this.displayParameterLabel && 
-            !this.el.select('#parameterInfo').selectAll('*').empty()){
-            this.el.select('#parameterInfo').style('visibility', 'visible');
+                let idY = yAxRen[parPos];
+                // Add item to labels if there is no coloraxis is defined
+                this.addParameterLabel(idY, infoGroup, parInfEl, yPos, 'left', parPos);
+            }
+
+            let y2AxRen = this.renderSettings.y2Axis[yPos];
+            for (let parPos=0; parPos<y2AxRen.length; parPos++){
+
+                let idY2 = y2AxRen[parPos];
+                // Add item to labels if there is no coloraxis is defined
+                this.addParameterLabel(idY2, infoGroup, parInfEl, yPos, 'right', parPos);
+            }
+
+            // Change height of settings panel to be just under labels
+            /*let dim = parInfEl.node().getBoundingClientRect();
+            this.el.select('#parameterSettings'+yPos)
+                    .style('top', (dim.height+this.margin.top+9)+'px');
+            */
+
+            if(this.displayParameterLabel && !parInfEl.selectAll('*').empty()){
+                parInfEl.style('visibility', 'visible');
+            }
         }
     }
 
 
-    renderColorScaleOptions(colorIndex){
+    renderColorScaleOptions(yPos, orientation, yAxisId, parPos){
+
+        let colAxis = this.renderSettings.colorAxis;
+        if(orientation==='right'){
+            colAxis = this.renderSettings.colorAxis2;
+        }
 
         this.el.select('#parameterSettings')
             .append('label')
@@ -4446,13 +6269,24 @@ class graphly extends EventEmitter {
                     ignoreKey = true;
                 }
             }
+
+            // Check for renderGroups
+            if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                let rGroup = this.renderSettings.groups[yPos];
+                if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(key) === -1){
+                    ignoreKey = true;
+                }
+            }
+
             if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
                 selectionChoices.push({value: key, label: key});
-                if(this.renderSettings.colorAxis[colorIndex] === key){
+                if(colAxis[yPos][parPos] === key){
                     selectionChoices[selectionChoices.length-1].selected = true;
                 }
             }
         }
+
+        selectionChoices = selectionChoices.sort((a, b) => a.value.localeCompare(b.value));
 
         labelColorParamSelect.selectAll('option')
             .data(selectionChoices).enter()
@@ -4468,8 +6302,23 @@ class graphly extends EventEmitter {
         function oncolorParamSelectionChange() {
             let selectValue = 
                 that.el.select('#colorParamSelection').property('value');
-            delete that.colorCache[that.renderSettings.colorAxis[colorIndex]];
-            that.renderSettings.colorAxis[colorIndex] = selectValue;
+            delete that.colorCache[colAxis[yPos][parPos]];
+            colAxis[yPos][parPos] = selectValue;
+            // Check if parameter already has a colorscale configured
+            if(that.dataSettings.hasOwnProperty(selectValue)){
+                let obj = that.dataSettings[selectValue];
+                if(obj.hasOwnProperty('colorscale')){
+                    that.el.select('#colorScaleSelection')
+                        .selectAll('option[value="'+obj.colorscale+'"]').property(
+                            'selected', true
+                        );
+                } else {
+                    that.el.select('#colorScaleSelection')
+                        .selectAll('option[value="viridis"]').property(
+                            'selected', true
+                        );
+                }
+            }
             that.addApply();
         }
 
@@ -4485,30 +6334,45 @@ class graphly extends EventEmitter {
             .attr('id','colorScaleSelection')
             .on('change',oncolorScaleSelectionChange);
 
-        let colorscales = [
-          'viridis', 'inferno', 'rainbow', 'jet', 'hsv', 'hot', 'cool', 'spring',
-          'summer', 'autumn', 'winter', 'bone', 'copper', 'greys', 'yignbu',
-          'greens', 'yiorrd', 'bluered', 'rdbu', 'picnic', 'portland',
-          'blackbody', 'earth', 'electric', 'magma', 'plasma'
-        ];
+        // Check if colorscales are available in plotty
+        this.colorscales = this.colorscales.filter((cs)=>{
+            return plotty.colorscales.hasOwnProperty(cs);
+        });
 
+        this.colorscales.sort();
+
+        let selectionAvailable = false;
         labelColorScaleSelect.selectAll('option')
-            .data(colorscales).enter()
+            .data(this.colorscales).enter()
             .append('option')
                 .text(function (d) { return d; })
                 .attr('value', function (d) { return d; })
                 .property('selected', (d)=>{
-                    let csId = this.renderSettings.colorAxis[colorIndex];
+                    let csId = colAxis[yPos][parPos];
                     let obj = this.dataSettings[csId];
                     if(obj && obj.hasOwnProperty('colorscale')){
-                        return d === this.dataSettings[csId].colorscale;
+                        if( d === this.dataSettings[csId].colorscale){
+                            selectionAvailable = true;
+                            return true;
+                        } else {
+                            return false;
+                        }
                     } else {
                         return false;
                     }
-                    
                 });
+
+        // Check if any colorscale has been selected, if not set viridis
+        // to default
+        if(!selectionAvailable){
+            labelColorScaleSelect.selectAll('option[value="viridis"]').property(
+                'selected', true
+            );
+        }
+
+
         function oncolorScaleSelectionChange() {
-            let csId = that.renderSettings.colorAxis[colorIndex];
+            let csId = colAxis[yPos][parPos];
             delete that.colorCache[csId];
             let selectValue = that.el.select('#colorScaleSelection').property('value');
             that.dataSettings[csId].colorscale = selectValue;
@@ -4517,53 +6381,88 @@ class graphly extends EventEmitter {
 
     }
 
+    renderParameterOptions(dataSettings, id, yPos, orientation, keepOpen, parPos){
 
-    renderParameterOptions(dataSettings, id){
+        let parSetEl = this.el.select('#parameterSettings');
+        if(!keepOpen && parSetEl.style('display') === 'block' && parSetEl.attr('data-id')===id){
+            parSetEl.style('display', 'none');
+            return;
+        }
+
+        parSetEl.attr('data-id', id);
 
         let that = this;
-        this.el.select('#parameterSettings').selectAll('*').remove();
+        parSetEl.selectAll('*').remove();
 
-        this.el.select('#parameterSettings')
+        // Get parameterInfo box to know where to place parametersettings
+        let currHeight = this.height/this.renderSettings.y2Axis.length;
+        let divHeight = this.el.select('#parameterInfo'+yPos).node().offsetHeight;
+
+        parSetEl
+            .style('top', ((currHeight*yPos)+divHeight+9+this.margin.top)+'px')
             .style('display', 'block');
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('div')
             .attr('class', 'parameterClose cross')
             .on('click', ()=>{
-                this.el.select('#parameterSettings')
+                parSetEl
                     .selectAll('*').remove();
-                this.el.select('#parameterSettings')
+                parSetEl
                     .style('display', 'none');
             });
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('label')
             .attr('for', 'displayName')
             .text('Label');
             
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('input')
             .attr('id', 'displayName')
             .attr('type', 'text')
             .attr('value', dataSettings.displayName)
             .on('input', function(){
-                dataSettings.displayName = this.value;
+                if(this.value === ''){
+                    delete dataSettings.displayName;
+                } else {
+                    dataSettings.displayName = this.value;
+                }
                 that.addApply();
             });
 
-        // Check if parameter is combined for x and y axis
-        let combined = false;
+        // Check if parameter and xaxis is combined
+        let xcombined = false;
+        let ycombined = false;
         let combPars = this.renderSettings.combinedParameters;
+        let sharedPars = this.renderSettings.sharedParameters;
+        let xAxis = this.renderSettings.xAxis;
 
-        if(combPars.hasOwnProperty(this.renderSettings.xAxis)){
-            if(combPars.hasOwnProperty(id)){
-                combined = true;
+        if(combPars.hasOwnProperty(xAxis)){
+            xcombined = true;
+        } else if(sharedPars){
+            if(sharedPars.hasOwnProperty(xAxis)){
+                // Shared parameters should be equivalent, so lets just look 
+                // at the first
+                if(combPars.hasOwnProperty(sharedPars[xAxis][0])){
+                    xcombined = true;
+                }
             }
         }
 
-        if(!combined){
-            this.el.select('#parameterSettings')
+        if(combPars.hasOwnProperty(id)){
+            ycombined = true;
+        } else if(sharedPars){
+            if(sharedPars.hasOwnProperty(id)){
+                if(combPars.hasOwnProperty(sharedPars[id][0])){
+                    xcombined = true;
+                }
+            }
+        }
+
+        if(!(xcombined && ycombined)){
+            parSetEl
                 .append('label')
                 .attr('for', 'symbolSelect')
                 .text('Symbol');
@@ -4582,7 +6481,7 @@ class graphly extends EventEmitter {
             ];
 
 
-            let select = this.el.select('#parameterSettings')
+            let select = parSetEl
               .append('select')
                 .attr('id','symbolSelect')
                 .on('change',onchange);
@@ -4603,12 +6502,12 @@ class graphly extends EventEmitter {
                 that.addApply();
             }
 
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'colorSelection')
                 .text('Color');
 
-            let colorSelect = this.el.select('#parameterSettings')
+            let colorSelect = parSetEl
                 .append('input')
                 .attr('id', 'colorSelection')
                 .attr('type', 'text')
@@ -4637,6 +6536,15 @@ class graphly extends EventEmitter {
                 
             });
 
+            function update() {
+                picker.set(this.value).enter();
+            }
+
+            picker.source.oncut = update;
+            picker.source.onpaste = update;
+            picker.source.onkeyup = update;
+            picker.source.oninput = update;
+
             let x = document.createElement('a');
                 x.href = 'javascript:;';
                 x.innerHTML = 'Close';
@@ -4647,12 +6555,12 @@ class graphly extends EventEmitter {
             picker.self.appendChild(x);
 
             // Add point size option
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'sizeSelection')
                 .text('Point size');
 
-            let sizeSelect = this.el.select('#parameterSettings')
+            let sizeSelect = parSetEl
                 .append('input')
                 .attr('id', 'sizeSelection')
                 .attr('type', 'text')
@@ -4663,17 +6571,17 @@ class graphly extends EventEmitter {
                     let val = Number(d3.event.currentTarget.value);
                     dataSettings.size = val;
                     that.addApply();
-                });;
+                });
         }
 
         if(this.displayAlphaOptions){
             
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'opacitySelection')
                 .text('Opacity');
 
-            this.el.select('#parameterSettings').append('input')
+            parSetEl.append('input')
                 .attr('id', 'opacityInput')
                 .attr('type', 'range')
                 .attr('min', 0)
@@ -4694,38 +6602,36 @@ class graphly extends EventEmitter {
                 });
         }
 
-        // Create and manage colorscale selection
-        // Find index of id
-        let renderIndex = this.renderSettings.yAxis.indexOf(id);
-        if(renderIndex === -1){
-            renderIndex = this.renderSettings.y2Axis.indexOf(id);
-            if(renderIndex !== -1){
-                renderIndex += this.renderSettings.yAxis.length;
-            }
-        }
         // Should normally always have an index
-        if(renderIndex !== -1 && this.displayColorscaleOptions){
-            let colorAxis = this.renderSettings.colorAxis[renderIndex];
+        if(this.displayColorscaleOptions){
+
+            let colorAxis = this.renderSettings.colorAxis;
+            if(orientation==='right'){
+                colorAxis = this.renderSettings.colorAxis2;
+            }
+
             let active = false;
-            if(colorAxis !== null){
+            if(typeof colorAxis[yPos][parPos] !== 'undefined' && 
+                      colorAxis[yPos][parPos]!==null){
                 active = true;
             }
 
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
-                .attr('for', 'colorscaleSelection')
-                .text('Apply colorscale');
+                .attr('for', 'colorscaleCB')
+                .text(this.colorscaleOptionLabel);
 
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('input')
-                .attr('id', 'colorscaleSelection')
+                .attr('id', 'colorscaleCB')
                 .attr('type', 'checkbox')
                 .property('checked', active)
                 .on('change', ()=>{
-                    if(d3.select("#colorscaleSelection").property("checked")){
+                    if(this.el.select("#colorscaleCB").property("checked")){
                         // Go through data settings and find currently available ones
                         let ds = this.dataSettings;
                         let selectionChoices = [];
+
                         for (let key in ds) {
                             // Check if key is part of a combined parameter
                             let ignoreKey = false;
@@ -4735,38 +6641,54 @@ class graphly extends EventEmitter {
                                     ignoreKey = true;
                                 }
                             }
+
+                            // Check for rendergroups for parameters we need to 
+                            // ignore
+                            if(this.renderSettings.renderGroups && 
+                                this.renderSettings.groups){
+                                let rGroup = this.renderSettings.groups[yPos];
+                                if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(key) === -1){
+                                    ignoreKey = true;
+                                }
+                            }
                             if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
                                 selectionChoices.push(key);
                             }
                         }
+
                         // Select first option
-                        that.renderSettings.colorAxis[renderIndex] = selectionChoices[0];
+                        if(typeof colorAxis[yPos][parPos]!=='undefined'){
+                            colorAxis[yPos][parPos] = selectionChoices[0];
+                        } else {
+                            colorAxis[yPos].push(selectionChoices[0]);
+                        }
                     } else {
-                        that.renderSettings.colorAxis[renderIndex] = null;
+                        colorAxis[yPos][parPos] = null;
                     }
-                    that.renderParameterOptions(dataSettings, id);
+                    that.renderParameterOptions(
+                        dataSettings, id, yPos, orientation, true, parPos
+                    );
                     that.addApply();
                 });
             // Need to add additional necessary options
             // drop down with possible parameters and colorscale
-            if(active){                           
-                this.renderColorScaleOptions(renderIndex);
+            if(active){
+                this.renderColorScaleOptions(yPos, orientation, id, parPos);
             }
 
         }
 
-        if(combined) {
-            this.addApply();
+        if(xcombined && ycombined) {
             return;
         }
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('label')
             .attr('for', 'lineConnect')
             .text('Line connect');
             
 
-        this.el.select('#parameterSettings')
+        parSetEl
             .append('input')
             .attr('id', 'lineConnect')
             .attr('type', 'checkbox')
@@ -4780,7 +6702,7 @@ class graphly extends EventEmitter {
             });
 
         if(this.enableFit){
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('label')
                 .attr('for', 'regressionCheckbox')
                 .text('Regression');
@@ -4791,7 +6713,7 @@ class graphly extends EventEmitter {
             ];
 
 
-            this.el.select('#parameterSettings')
+            parSetEl
                 .append('input')
                 .attr('id', 'regressionCheckbox')
                 .attr('type', 'checkbox')
@@ -4818,7 +6740,7 @@ class graphly extends EventEmitter {
     }
 
 
-    addParameterLabel(id){
+    addParameterLabel(id, infoGroup, parInfEl, yPos, orientation, parPos){
 
         // TODO: check for available objects instead of deleting and recreating them
 
@@ -4834,21 +6756,44 @@ class graphly extends EventEmitter {
 
         for (var i = 0; i < parIds.length; i++) {
 
+            // Check if current combination is available in data as per config
+            if(this.renderSettings.availableParameters.hasOwnProperty(parIds[i])){
+                if(this.renderSettings.availableParameters[parIds[i]].indexOf(id) === -1){
+                    continue;
+                }
+            }
+
+
             // Check if parameter is combined for x and y axis
             let combined = false;
             let combPars = this.renderSettings.combinedParameters;
+            let idX = this.renderSettings.xAxis;
 
-            if(combPars.hasOwnProperty(this.renderSettings.xAxis)){
+            // Check also for sharedParameters
+            let rS = this.renderSettings; 
+            if(rS.renderGroups !== false && rS.groups!== false && 
+                rS.sharedParameters !== false){
+                let currGroup = rS.renderGroups[rS.groups[yPos]];
+                if(rS.sharedParameters.hasOwnProperty(idX)){
+                    let sharedPars = rS.sharedParameters[idX];
+                    for (let i = 0; i < sharedPars.length; i++) {
+                        if(currGroup.parameters.indexOf(sharedPars[i])!==-1){
+                            idX = sharedPars[i];
+                        }
+                    }
+                }
+            }
+
+            if(combPars.hasOwnProperty(idX)){
                 if(combPars.hasOwnProperty(id)){
                     combined = true;
                 }
             }
 
 
-            let parDiv = this.el.select('#parameterInfo').append('div')
+            let parDiv = parInfEl.append('div')
                 .attr('class', 'labelitem');
 
-            let infoGroup = this.el.select('#svgInfoContainer');
             infoGroup.style('visibility', 'hidden');
 
             let dataSettings = this.dataSettings[id];
@@ -4858,15 +6803,31 @@ class graphly extends EventEmitter {
 
             let displayName;
 
+            let colorAxis = this.renderSettings.colorAxis;
+            if(orientation==='right'){
+                colorAxis = this.renderSettings.colorAxis2;
+            }
+
+            let colorAxisLabel = null;
+            if(typeof colorAxis[yPos][parPos] !== 'undefined' && 
+                      colorAxis[yPos][parPos]!==null){
+                colorAxisLabel = colorAxis[yPos][parPos];
+            }
+
             if(dataSettings.hasOwnProperty('displayName')){
                 displayName = dataSettings.displayName;
-            }else{
+            }else if(colorAxisLabel !== null){
+                displayName = colorAxisLabel;
+                if(parIds[i]!==null){
+                    displayName += ' ('+parIds[i]+')';
+                }
+            }else {
                 displayName = id;
                 if(parIds[i]!==null){
                     displayName += ' ('+parIds[i]+')';
                 }
             }
-            dataSettings.displayName = displayName;
+            //dataSettings.displayName = displayName;
 
             parDiv.append('div')
                 .style('display', 'inline')
@@ -4874,12 +6835,13 @@ class graphly extends EventEmitter {
                 .html(displayName);
 
             // Update size of rect based on size of original div
-            let boundRect = this.el.select('#parameterInfo').node().getBoundingClientRect();
-            this.el.select('#svgInfoRect').attr('height', boundRect.height);
+            let boundRect = parInfEl.node().getBoundingClientRect();
+            infoGroup.select('rect').attr('height', boundRect.height);
 
             // check amount of elements and calculate offset
-            let offset = 21 + d3.select('#svgInfoContainer').selectAll('text').size() *20;
+            let offset = 21 + infoGroup.selectAll('text').size() *20;
             let labelText = infoGroup.append('text')
+                .attr('class', 'svgaxisLabel')
                 .attr('text-anchor', 'middle')
                 .attr('y', offset)
                 .attr('x', 153)
@@ -4942,14 +6904,36 @@ class graphly extends EventEmitter {
                 }
             }
 
-            parDiv.on('click', this.renderParameterOptions.bind(this, dataSettings, id));
+            parDiv.on('click', this.renderParameterOptions.bind(
+                this, dataSettings, id, yPos, orientation, false, parPos
+            ));
         }
     }
 
 
-    renderParameter(idX, idY, idCS, yAxisSet, parPos, data, inactiveData, updateReferenceCanvas){
+    renderParameter(leftYAxis, idX, idY, idCS, plotY, yAxisSet, currYScale, 
+                    parPos, data, inactiveData, updateReferenceCanvas){
 
         this.startTiming('renderParameter:'+idY);
+
+
+        // Check if groups are being used and if a shared parameter is used as 
+        // x axis
+        let rS = this.renderSettings; 
+        if(rS.renderGroups !== false && rS.groups!== false && 
+            rS.sharedParameters !== false){
+
+            let currGroup = rS.renderGroups[rS.groups[plotY]];
+            if(rS.sharedParameters.hasOwnProperty(idX)){
+                let sharedPars = rS.sharedParameters[idX];
+
+                for (var i = 0; i < sharedPars.length; i++) {
+                    if(currGroup.parameters.indexOf(sharedPars[i])!==-1){
+                        idX = sharedPars[i];
+                    }
+                }
+            }
+        }
 
         let combPars = this.renderSettings.combinedParameters;
 
@@ -4962,28 +6946,41 @@ class graphly extends EventEmitter {
                 let xGroup = this.renderSettings.combinedParameters[idX];
                 let yGroup = this.renderSettings.combinedParameters[idY];
                 this.renderRectangles(
-                    data, idY, xGroup, yGroup, idCS, updateReferenceCanvas
+                    data, idX, idY, xGroup, yGroup, idCS, currYScale, plotY,
+                    leftYAxis, updateReferenceCanvas
                 );
             } else {
-                this.renderPoints(data, idX, idY, idCS, updateReferenceCanvas);
+                this.renderPoints(
+                    data, idX, idY, idCS, plotY,
+                    currYScale, leftYAxis, updateReferenceCanvas
+                );
             }
         } else {
             if(combPars.hasOwnProperty(idY)){
-                this.renderPoints(data, idX, idY, idCS, updateReferenceCanvas);
-            } else {
-                this.renderFilteredOutPoints(
-                    inactiveData, idX, idY,
+                this.renderPoints(
+                    data, idX, idY, idCS, plotY, currYScale, leftYAxis,
                     updateReferenceCanvas
                 );
+            } else {
+                if(this.showFilteredData) {
+                    this.renderFilteredOutPoints(
+                        inactiveData, idX, idY, plotY, currYScale, leftYAxis
+                    );
+                }
                 this.renderPoints(
-                    data, idX, idY, idCS,
+                    data, idX, idY, idCS, plotY, currYScale, leftYAxis,
                     updateReferenceCanvas
                 );
                 // Check if any regression type is selected for parameter
                 if(this.enableFit){
-                    this.createRegression(data, parPos, yAxisSet);
+                    this.createRegression(
+                        data, parPos, plotY, yAxisSet[parPos], currYScale
+                    );
                     if(inactiveData[yAxisSet[parPos]].length>0){
-                        this.createRegression(this.data, parPos, yAxisSet, true);
+                        this.createRegression(
+                            this.data, parPos, plotY, yAxisSet[parPos],
+                            currYScale, true
+                        );
                     }
                 }
                 
@@ -4996,39 +6993,214 @@ class graphly extends EventEmitter {
     updatePreviewImage(imageEl){
 
         if(this.debounceActive){
+
             this.renderCanvas.style('opacity','1');
-            let prevImg = this.el.select('#'+imageEl);
             this.startTiming('createPreviewImage:'+imageEl);
-            let img = this.renderCanvas.node().toDataURL();
+            
             this.endTiming('createPreviewImage:'+imageEl);
-            if(!prevImg.empty()){
-                prevImg.attr('xlink:href', img)
-                    .attr('transform', null)
-                    .style('display', 'none');
-            } else {
-                this.renderingContainer.insert('svg:image', ':first-child')
-                        /*.attr('id', 'previewImage2')
-                this.renderingContainer.append('svg:image')*/
-                    .attr('id', imageEl)
-                    .attr('xlink:href', img)
-                    .attr('x', 0)
-                    .attr('y', 0)
-                    .attr('width',  this.width)
-                    .attr('height', this.height)
-                    .style('display', 'none');
+            let heighChunk = this.height/this.renderSettings.yAxis.length;
+
+            for (let yPos=0; yPos<this.renderSettings.yAxis.length; yPos++){
+
+                // Render specific area of image corresponding to current plot
+                // Clear possible previous renderings
+                this.IRc.width = this.width;
+                this.IRc.height = heighChunk-this.separation;
+                this.IRctx.clearRect(0, 0, this.IRc.width, this.IRc.height);
+
+                this.IRctx.drawImage(
+                    this.renderCanvas.node(),
+                    0, heighChunk*yPos,
+                    this.IRc.width, this.IRc.height,
+                    0, 0,
+                    this.IRc.width, this.IRc.height
+                );
+
+                let img = this.IRc.toDataURL();
+
+                let prevImg = this.el.select('#'+imageEl+yPos);
+                let renderingContainer = this.el.select('#renderingContainer'+yPos);
+
+                if(!prevImg.empty()){
+                    prevImg.attr('xlink:href', img)
+                        .attr('transform', null)
+                        .style('display', 'none');
+                } else {
+                    renderingContainer.insert('svg:image', ':first-child')
+                        .attr('id', imageEl+yPos)
+                        .attr('class', 'previewImage')
+                        .attr('xlink:href', img)
+                        .attr('x', 0)
+                        .attr('y', 0)
+                        .attr('width',  this.width)
+                        .attr('height', heighChunk-this.separation)
+                        .style('display', 'none');
+                }
+                this.previewActive = false;
             }
-            this.previewActive = false;
+
+            if(this.debug){
+                this.el.select('#'+imageEl)
+                    .style('display', 'block')
+                    .attr('opacity', 0.5);
+            }
+
         } else {
-            let prevImg = this.el.select('#'+imageEl);
+            // We use the "first" (0) element as preview image for non
+            // debounce rendering
+            let renderingContainer = this.el.select('#renderingContainer'+0);
+            let prevImg = this.el.select('#'+imageEl+0);
             if(prevImg.empty()){
-                this.renderingContainer.append('svg:image')
-                    .attr('id', imageEl)
+                renderingContainer.append('svg:image')
+                    .attr('id', imageEl+0)
+                    .attr('class', 'previewImage')
                     .attr('x', 0)
                     .attr('y', 0)
                     .attr('width',  this.width)
                     .attr('height', this.height)
                     .style('display', 'none');
             }
+        }
+
+        
+    }
+
+    calculateColorDomain(colorAxis) {
+        if(colorAxis !== null){
+            if(this.dataSettings.hasOwnProperty(colorAxis)){
+                if(!this.dataSettings[colorAxis].hasOwnProperty('extent')){
+                    let domain;
+                    // Set current calculated extent to settings
+                    if(this.dataSettings[colorAxis].hasOwnProperty('nullValue')){
+                        let nV = this.dataSettings[colorAxis].nullValue;
+                        // If parameter has nullvalue defined ignore it 
+                        // when calculating extent
+                        domain = d3.extent(
+                            this.currentData[colorAxis], (v)=>{
+                                if(v !== nV){
+                                    return v;
+                                } else {
+                                    return null;
+                                }
+                            }
+                        );
+                    } else {
+                        if(this.checkTimeScale(colorAxis)){
+                            domain = d3.extent(
+                                this.currentData[colorAxis],
+                                (item)=>{return item.getTime()});
+                        } else {
+                            domain = d3.extent(this.currentData[colorAxis]);
+                        }
+                    }
+                    if(isNaN(domain[0])){
+                        domain[0] = 0;
+                    }
+                    if(isNaN(domain[1])){
+                        domain[1] = domain[0]+1;
+                    }
+                    if(domain[0] == domain[1]){
+                        domain[0]-=1;
+                        domain[1]+=1;
+                    }
+                    if(domain[0]>domain[1]){
+                        domain = domain.reverse();
+                    }
+                    this.dataSettings[colorAxis].extent = domain;
+                }
+            }
+        }
+    }
+
+
+    enableScissorTest(plotY){
+        // Set current "rendering area" so that other plots are not
+        // overplotted turn on the scissor test.
+        this.batchDrawer.getContext().enable(
+            this.batchDrawer.getContext().SCISSOR_TEST
+        );
+
+        if(this.batchDrawerReference){
+            this.batchDrawerReference.getContext().enable(
+                this.batchDrawerReference.getContext().SCISSOR_TEST
+            );
+        }
+
+
+        let amountOfPlots = this.renderSettings.yAxis.length;
+        let blockSize = (
+            this.height/amountOfPlots
+        ) * this.resFactor;
+
+        let revPlotY = (amountOfPlots-1)-plotY;
+        let axisOffset = revPlotY * (
+                (this.height/amountOfPlots)
+            )  * this.resFactor;
+
+        axisOffset+=(this.separation)+1;
+        blockSize-=this.separation+1;
+
+        // set the scissor rectangle.
+        this.batchDrawer.getContext().scissor(
+            0, axisOffset, this.width, blockSize
+        );
+
+        if(this.batchDrawerReference){
+            this.batchDrawerReference.getContext().scissor(
+                0, axisOffset, this.width, blockSize
+            );
+        }
+
+    }
+
+    renderArrows(){
+        if(!this.activeArrows){
+            return;
+        }
+        this.el.select('#arrowContainer').remove();
+
+        let arrCont = this.svg.append('g')
+            .attr('id', 'arrowContainer')
+            .attr('transform', 'translate(0,'+(this.height+16)+')')
+            .style('clip-path','url('+this.nsId+'arrowclipbox)');
+
+        // Create clip path
+        arrCont.append('defs').append('clipPath')
+            .attr('id', (this.nsId.substring(1)+'arrowclipbox'))
+            .append('rect')
+                .attr('fill', 'none')
+                .attr('width', this.width)
+                .attr('height', 30);
+
+        arrCont.append("svg:defs").append("svg:marker")
+            .attr("id", "arrow")
+                .attr("viewBox", "0 -5 10 10")
+                .attr('refX', 5)
+                .attr("markerWidth", 2)
+                .attr("markerHeight", 2)
+                .attr("orient", "auto")
+            .append("svg:path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("stroke", "green")
+                .attr("fill", "green");
+
+        var aV = this.arrowValues;
+        for(let gr=0; gr<this.arrowValues.length; gr++){
+            arrCont.append('line')
+                .attr('marker-end', "url(#arrow)")
+                .attr("x1", this.xScale(aV[gr][0])+5)
+                .attr("y1", 9)
+                .attr("x2", this.xScale(aV[gr][1])-5)
+                .attr("y2", 9)
+                .attr("stroke-width", 7)
+                .attr("stroke", "green");
+
+            arrCont.append('text')
+                .text('g'+aV[gr][2])
+                .attr("y", 24)
+                .attr("x", this.xScale( (aV[gr][0]+aV[gr][1])/2 ))
+                .attr('fill', 'green')
+                .attr('text-anchor', 'middle');
         }
     }
 
@@ -5043,11 +7215,9 @@ class graphly extends EventEmitter {
         this.startTiming('renderData');
 
         let xAxRen = this.renderSettings.xAxis;
-        let yAxRen = this.renderSettings.yAxis;
-        let y2AxRen = this.renderSettings.y2Axis;
         
         this.batchDrawer.clear();
-        if(this.batchDrawerReference){
+        if(this.batchDrawerReference && updateReferenceCanvas){
             this.batchDrawerReference.clear();
         }
 
@@ -5073,126 +7243,177 @@ class graphly extends EventEmitter {
 
         // Check if we need to update extents which have been reset because
         // of filtering on parameter
-        for (var i = 0; i < this.renderSettings.colorAxis.length; i++) {
-            let ca = this.renderSettings.colorAxis[i];
-            if(ca !== null){
-                if(this.dataSettings.hasOwnProperty(ca)){
-                    if(!this.dataSettings[ca].hasOwnProperty('extent')){
-                        let domain;
-                        // Set current calculated extent to settings
-                        if(this.dataSettings[ca].hasOwnProperty('nullValue')){
-                            let nV = this.dataSettings[ca].nullValue;
-                            // If parameter has nullvalue defined ignore it 
-                            // when calculating extent
-                            domain = d3.extent(
-                                this.currentData[ca], (v)=>{
-                                    if(v !== nV){
-                                        return v;
-                                    } else {
-                                        return null;
-                                    }
-                                }
-                            );
-                        } else {
-                            domain = d3.extent(this.currentData[ca]);
-                        }
-                        if(isNaN(domain[0])){
-                            domain[0] = 0;
-                        }
-                        if(isNaN(domain[1])){
-                            domain[1] = domain[0]+1;
-                        }
-                        if(domain[0] == domain[1]){
-                            domain[0]-=1;
-                            domain[1]+=1;
-                        }
-                        if(domain[0]>domain[1]){
-                            domain = domain.reverse();
-                        }
-                        this.dataSettings[ca].extent = domain;
-                        this.createColorScales();
-                    }
-                }
+        for (let i = 0; i < this.renderSettings.colorAxis.length; i++) {
+            for (let j = 0; j < this.renderSettings.colorAxis.length; j++) {
+                this.calculateColorDomain(this.renderSettings.colorAxis[i][j]);
+            }
+            for (let j = 0; j < this.renderSettings.colorAxis2.length; j++) {
+                this.calculateColorDomain(this.renderSettings.colorAxis2[i][j]);
             }
         }
 
-        this.updateInfoBoxes();
+
+        if(updateReferenceCanvas){
+            this.createColorScales();
+            this.updateInfoBoxes();
+        }
 
         let idX = xAxRen;
+        let yAxRen, y2AxRen;
+        
 
-        // If y2 axis is defined start rendering it as we need to render
-        // multiple times to have individial images for manipulation in
-        // debounce option
-        if(y2AxRen.length > 0){
-            for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                let idY2 = y2AxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[
-                    this.renderSettings.yAxis.length + parPos
-                ];
-                this.renderParameter(
-                    idX, idY2, idCS, this.renderSettings.y2Axis,
-                    parPos, this.currentData, this.currentInactiveData,
-                    updateReferenceCanvas
+        // Render first all y2 axis parameters
+        for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
+
+            y2AxRen = this.renderSettings.y2Axis[plotY];
+
+            this.enableScissorTest(plotY);
+
+            // If y2 axis is defined start rendering it as we need to render
+            // multiple times to have individial images for manipulation in
+            // debounce option
+            if(y2AxRen.length > 0){
+                for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                    let idY2 = y2AxRen[parPos];
+                    let idCS = this.renderSettings.colorAxis2[plotY][parPos];
+                    this.renderParameter(
+                        false, idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
+                        parPos, this.currentData, this.currentInactiveData,
+                        updateReferenceCanvas
+                    );
+                }
+            }
+
+            this.startTiming('batchDrawer:draw');
+            this.batchDrawer.draw();
+            this.endTiming('batchDrawer:draw');
+
+            if(!this.fixedSize && updateReferenceCanvas){
+                this.startTiming('batchDrawerReference:draw');
+                this.batchDrawerReference.draw();
+                this.endTiming('batchDrawerReference:draw');
+
+                this.batchDrawerReference.getContext().disable(
+                    this.batchDrawerReference.getContext().SCISSOR_TEST
                 );
             }
-            // Save preview image of rendering of second y axis 
-            // without data from first y axis
-            this.batchDrawer.draw();
-            this.updatePreviewImage('previewImage2');
-        }
-
-        this.batchDrawer.clear();
-        if(this.batchDrawerReference){
-            this.batchDrawerReference.clear();
-        }
-
-        for (let parPos=0; parPos<yAxRen.length; parPos++){
-
-            let idY = yAxRen[parPos];
-            let idCS = this.renderSettings.colorAxis[parPos];
-
-            this.renderParameter(
-                idX, idY, idCS, this.renderSettings.yAxis,
-                parPos, this.currentData, this.currentInactiveData,
-                updateReferenceCanvas
+            // turn off the scissor test so you can render like normal again.
+            this.batchDrawer.getContext().disable(
+                this.batchDrawer.getContext().SCISSOR_TEST
             );
+            
         }
+        // Save preview image of rendering of second y axis 
+        // without data from first y axis
+        this.updatePreviewImage('previewImageR');
 
-        this.startTiming('batchDrawer:draw');
-        this.batchDrawer.draw();
-        this.endTiming('batchDrawer:draw');
-        this.updatePreviewImage('previewImage');
 
-        if(!this.fixedSize && updateReferenceCanvas){
+        if(!this.fixedSize && updateReferenceCanvas && !this.debounceActive){
             this.startTiming('batchDrawerReference:draw');
             this.batchDrawerReference.draw();
             this.endTiming('batchDrawerReference:draw');
         }
 
-        // Render y2 parameters a second time on top of current canvas
-        if(y2AxRen.length > 0){
-            for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                let idY2 = y2AxRen[parPos];
-                let idCS = this.renderSettings.colorAxis[
-                    this.renderSettings.yAxis.length + parPos
-                ];
+        if(this.debounceActive){
+            // If debounce active clear all to create second clean
+            // image for left side
+            this.batchDrawer.clear();
+            if(this.batchDrawerReference){
+                this.batchDrawerReference.clear();
+            }
+        }
+
+        // Afterwards render all y axis parameters
+        for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+
+            yAxRen = this.renderSettings.yAxis[plotY];
+            
+            this.enableScissorTest(plotY);
+
+            for (let parPos=0; parPos<yAxRen.length; parPos++){
+
+                let idY = yAxRen[parPos];
+                let idCS = this.renderSettings.colorAxis[plotY][parPos];
+
                 this.renderParameter(
-                    idX, idY2, idCS, this.renderSettings.y2Axis,
+                    true, idX, idY, idCS, plotY, yAxRen, this.yScale,
                     parPos, this.currentData, this.currentInactiveData,
                     updateReferenceCanvas
                 );
             }
-            // Save preview image of rendering of second y axis 
-            // without data from first y axis
+
+            this.startTiming('batchDrawer:draw');
             this.batchDrawer.draw();
+            this.endTiming('batchDrawer:draw');
+
             if(!this.fixedSize && updateReferenceCanvas){
                 this.startTiming('batchDrawerReference:draw');
                 this.batchDrawerReference.draw();
                 this.endTiming('batchDrawerReference:draw');
+
+                this.batchDrawerReference.getContext().disable(
+                    this.batchDrawerReference.getContext().SCISSOR_TEST
+                );
+            }
+            // turn off the scissor test so you can render like normal again.
+            this.batchDrawer.getContext().disable(
+                this.batchDrawer.getContext().SCISSOR_TEST
+            );
+            
+        }
+        this.updatePreviewImage('previewImageL');
+
+
+
+        // If debounce is active we need to re-render the right y axis
+        // parameter as we had to clear it in order to create a clean left 
+        // y axis parameters rendering
+        if(this.debounceActive){
+            for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
+
+                this.enableScissorTest(plotY);
+
+                y2AxRen = this.renderSettings.y2Axis[plotY];
+                // If y2 axis is defined start rendering it as we need to render
+                // multiple times to have individial images for manipulation in
+                // debounce option
+                if(y2AxRen.length > 0){
+                    for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                        let idY2 = y2AxRen[parPos];
+                        let idCS = this.renderSettings.colorAxis2[plotY][parPos];
+                        this.renderParameter(
+                            false, idX, idY2, idCS, plotY, y2AxRen, this.y2Scale,
+                            parPos, this.currentData, this.currentInactiveData,
+                            updateReferenceCanvas
+                        );
+                    }
+                }
+
+                // Save preview image of rendering of second y axis 
+                // without data from first y axis
+                this.startTiming('batchDrawer:draw');
+                this.batchDrawer.draw();
+                this.endTiming('batchDrawer:draw');
+
+                if(!this.fixedSize && updateReferenceCanvas){
+                    this.startTiming('batchDrawerReference:draw');
+                    this.batchDrawerReference.draw();
+                    this.endTiming('batchDrawerReference:draw');
+                    this.batchDrawerReference.getContext().disable(
+                        this.batchDrawerReference.getContext().SCISSOR_TEST
+                    );
+                }
+
+                // turn off the scissor test so you can render like normal again.
+                this.batchDrawer.getContext().disable(
+                    this.batchDrawer.getContext().SCISSOR_TEST
+                );
+                
             }
         }
 
-        
+        this.renderArrows();
+
         /**
         * Event is fired when graph has finished rendering plot.
         * @event module:graphly.graphly#rendered
