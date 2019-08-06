@@ -3385,7 +3385,8 @@ class graphly extends EventEmitter {
         // "Flatten selections"
         let xSelection = [];
 
-        if(this.renderSettings.renderGroups !== false && 
+        if(this.renderSettings.hasOwnProperty('renderGroups') && 
+            this.renderSettings.renderGroups !== false && 
             this.renderSettings.groups!== false && 
             this.renderSettings.sharedParameters !== false && 
             this.renderSettings.sharedParameters.hasOwnProperty(this.renderSettings.xAxis)){
@@ -3565,7 +3566,8 @@ class graphly extends EventEmitter {
         for (let yPos = 0; yPos < multiLength; yPos++) {
 
             // Add group selection drop down and functionality
-            if(this.renderSettings.renderGroups !== false && 
+            if(this.renderSettings.hasOwnProperty('renderGroups') &&
+                this.renderSettings.renderGroups !== false && 
                 this.renderSettings.groups!== false){
 
                 let selectionGroups = Object.keys(this.renderSettings.renderGroups);
@@ -3893,9 +3895,14 @@ class graphly extends EventEmitter {
                     ];
                 }
             }
+
+            let addticks = null;
+            if(this.renderSettings.hasOwnProperty('additionalYTicks') && 
+                this.renderSettings.additionalYTicks.length >= yPos){
+                addticks = this.renderSettings.additionalYTicks[yPos];
+            }
             let yAxisformat = this.getAxisFormat(
-                yS[0], parameter,
-                this.renderSettings.additionalYTicks[yPos]
+                yS[0], parameter, addticks
             );
             this.yAxis[yPos].tickFormat(yAxisformat);
 
@@ -6720,7 +6727,8 @@ class graphly extends EventEmitter {
         for (var i = 0; i < parIds.length; i++) {
 
             // Check if current combination is available in data as per config
-            if(this.renderSettings.availableParameters.hasOwnProperty(parIds[i])){
+            if(this.renderSettings.hasOwnProperty('availableParameters') &&
+                this.renderSettings.availableParameters.hasOwnProperty(parIds[i])){
                 if(this.renderSettings.availableParameters[parIds[i]].indexOf(id) === -1){
                     continue;
                 }
@@ -6734,8 +6742,8 @@ class graphly extends EventEmitter {
 
             // Check also for sharedParameters
             let rS = this.renderSettings; 
-            if(rS.renderGroups !== false && rS.groups!== false && 
-                rS.sharedParameters !== false){
+            if(rS.hasOwnProperty('renderGroups') && rS.renderGroups !== false && 
+                rS.groups!== false && rS.sharedParameters !== false){
                 let currGroup = rS.renderGroups[rS.groups[yPos]];
                 if(rS.sharedParameters.hasOwnProperty(idX)){
                     let sharedPars = rS.sharedParameters[idX];
@@ -6883,8 +6891,8 @@ class graphly extends EventEmitter {
         // Check if groups are being used and if a shared parameter is used as 
         // x axis
         let rS = this.renderSettings; 
-        if(rS.renderGroups !== false && rS.groups!== false && 
-            rS.sharedParameters !== false){
+        if(rS.hasOwnProperty('renderGroups') && rS.renderGroups !== false &&
+            rS.groups!== false && rS.sharedParameters !== false){
 
             let currGroup = rS.renderGroups[rS.groups[plotY]];
             if(rS.sharedParameters.hasOwnProperty(idX)){
