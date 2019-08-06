@@ -1091,7 +1091,9 @@ class FilterManager extends EventEmitter {
     */
     updateFilterSettings(settings){
         this.filterSettings = settings;
-        this.visibleFilters = settings.visibleFilters;
+        if(settings.hasOwnProperty('visibleFilters')){
+            this.visibleFilters = settings.visibleFilters;
+        }
         this._renderFilters();
     }
 
