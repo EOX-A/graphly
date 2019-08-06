@@ -64,7 +64,7 @@ var graph = new graphly.graphly({
     //autoColorExtent: true
     //fixedSize: true,
     //fixedWidth: 2000
-    //multiYAxis: true,
+    //multiYAxis: false,
     //enableSubXAxis: false,
     //enableSubYAxis: false,
     //colorscales: ['jet', 'viridis', 'pakito', 'plasma'],

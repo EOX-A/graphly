@@ -211,7 +211,7 @@ class graphly extends EventEmitter {
     * @param {boolean} [options.enableSubYAxis=false] Enable selection option
     *        for x axis subticks, can also be a String if only enabled for one
     *        parameter.
-    * @property {boolean} [multiYAxis=false] Adds controls for managing 
+    * @property {boolean} [multiYAxis=true] Adds controls for managing 
     *        multiple y axis with single x axis,
     *
     * @param {String} [options.labelAllignment='right'] allignment for label box
@@ -234,7 +234,7 @@ class graphly extends EventEmitter {
         this.debug = defaultFor(options.debug, false);
         this.enableSubXAxis = defaultFor(options.enableSubXAxis, false);
         this.enableSubYAxis = defaultFor(options.enableSubYAxis, false);
-        this.multiYAxis = defaultFor(options.multiYAxis, false);
+        this.multiYAxis = defaultFor(options.multiYAxis, true);
         this.labelAllignment = defaultFor(options.labelAllignment, 'right');
         this.zoomActivity = false;
         this.activeArrows = false;
@@ -280,7 +280,9 @@ class graphly extends EventEmitter {
         this.defaultTickSize = 12;
         this.defaultLabelSize = 12;
 
-        if(!this.multiYAxis){
+
+        // If provided settings are not array of arrays convert it to it
+        if(Array.isArray(this.renderSettings.yAxis) && !Array.isArray(this.renderSettings.yAxis[0])){
             // Manage configuration as it would be a 1 element multi plot
             // this should bring together both functionalities
             this.renderSettings.yAxis = [this.renderSettings.yAxis];
