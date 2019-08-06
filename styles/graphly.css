@@ -133,6 +133,7 @@ input[type=text] {
 .filterContainer{
     box-shadow: 3px 3px 2px #ccc;
     margin-left: 4px;
+    margin-top: 3px;
     padding-top: 10px;
     position: relative;
 

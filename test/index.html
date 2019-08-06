@@ -33,28 +33,14 @@
 
 
         <select name="datafiles" id="datafiles" style="position:absolute;right:100px;top:50px;">
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T001124_20151001T014212_0001.MSP">ALD_U_N_2B_20151001T001124</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T091503_20151001T104518_0001.MSP">ALD_U_N_2B_20151001T091503</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T181657_20151001T195000_0001.MSP">ALD_U_N_2B_20151001T181657</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T014427_20151001T031430_0001.MSP">ALD_U_N_2B_20151001T014427</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T104454_20151001T121445_0001.MSP">ALD_U_N_2B_20151001T104454</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T194948_20151001T203715_0001.MSP">ALD_U_N_2B_20151001T194948</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T031418_20151001T044445_0001.MSP">ALD_U_N_2B_20151001T031418</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T121433_20151001T134436_0001.MSP">ALD_U_N_2B_20151001T121433</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T203651_20151002T001909_0001.MSP">ALD_U_N_2B_20151001T203651</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T044433_20151001T061512_0001.MSP">ALD_U_N_2B_20151001T044433</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T134412_20151001T151503_0001.MSP">ALD_U_N_2B_20151001T134412</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151002T001857_20151002T015536_0001.MSP">ALD_U_N_2B_20151002T001857</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T061448_20151001T074512_0001.MSP">ALD_U_N_2B_20151001T061448</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T151451_20151001T164530_0001.MSP">ALD_U_N_2B_20151001T151451</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T074500_20151001T091515_0001.MSP">ALD_U_N_2B_20151001T074500</option>
-          <option value="data/AE_OPER_ALD_U_N_2B_20151001T164518_20151001T181709_0001.MSP">ALD_U_N_2B_20151001T164518</option>
-          <option value="data/AE_OPER_AUX_MRC_1B_20071031T021229_20071031T022829_0002.MSP">AE_OPER_AUX_MRC</option>
+          <option value="" disabled selected>Select your option</option>
+          <option value="swarm">Swarm data</option>
+          <option value="L1B">L1B Aeolus data</option>
+          <option value="test">L2A Aeolus data</option>
+          <!--<option value="data/AE_OPER_AUX_MRC_1B_20071031T021229_20071031T022829_0002.MSP">AE_OPER_AUX_MRC</option>
           <option value="data/AE_OPER_AUX_RRC_1B_20071031T021229_20071031T022829_0002.MSP">AE_OPER_AUX_RRC</option>
           <option value="data/AE_OPER_AUX_ISR_1B_20071002T103629_20071002T110541_0002.MSP" selected>AE_OPER_AUX_ISR</option>
-          <option value="data/testdata_3k.csv">testdata 3K</option>
-          <option value="data/testdata_7k.csv">testdata 7K</option>
-          <option value="data/testdata_172k.csv">testdata 172K</option>
+          -->
           
         </select>
         <div class="container" style="float:left;height: 90%; width: 70%;">
@@ -65,6 +51,6 @@
 
         <script src="components/msgpack-lite/dist/msgpack.min.js"></script>
         <script src="../dist/graphly.js"></script>
-        <script src="scripts/main.js"></script>
+        <script src="scripts/main.js" type="module"></script>
   </body>
 </html>

@@ -1,9 +1,7 @@
 
 
 
-//global.d3 = d3;
-/*let msgpack = require('msgpack-lite');
-global.msgpack = msgpack;*/
+import * as addT from './additionalTesting.js';
 
 
 var dataSettings = {};
@@ -14,6 +12,16 @@ var renderSettings = {
 }
 
 // create random data
+
+// Standard Normal variate using Box-Muller transform.
+function randn_bm() {
+    var u = 0, v = 0;
+    while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    while(v === 0) v = Math.random();
+    return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+}
+
+
 var data = {};
 var parameters = [
     'parameter1', 'parameter2',
@@ -23,7 +31,7 @@ var amount = 1000;
 for (var i = 0; i < parameters.length; i++) {
     data[parameters[i]] = [];
     for (var j = 0; j < amount; j++) {
-        data[parameters[i]].push(Math.random());
+        data[parameters[i]].push(randn_bm());
     }
 }
 
@@ -98,28 +106,47 @@ graph.on('pointSelect', function(values){
 
 
 
+var xhr = new XMLHttpRequest();
+xhr.responseType = 'arraybuffer';
 
-d3.select('#datafiles').on('change', function(e){
 
-    var sel = document.getElementById('datafiles');
-    var sel_value = sel.options[sel.selectedIndex].value;
-
+xhr.onload = function(e) {
+    var tmp = new Uint8Array(this.response);
+    var data = msgpack.decode(tmp);
     
-   /* graph.setDataSettings(testbed14);
-    if (sel_value.indexOf('testdata') === -1){
-        if (sel_value.indexOf('MRC') !== -1){
-            graph.setRenderSettings(renderSettingsMRC);
-        }else if (sel_value.indexOf('RRC') !== -1){
-            graph.setRenderSettings(renderSettingsRRC);
-        }else if (sel_value.indexOf('ISR') !== -1){
-            graph.setRenderSettings(renderSettingsISR);
-        }else {
-        }
-        xhr.open('GET', sel_value, true);
-        xhr.send();
-    }else{
-        graph.renderSettings = renderSettingsSwarm;
-        graph.loadCSV(sel_value);
-    }*/
+    switch(selValue){
+        case 'swarm':
+            addT.handleSwarmData(data, graph, filterManager);
+        break;
+        case 'L1B':
+            addT.handleL1BData(data, graph, filterManager);
+        break;
+        case 'L2A':
+            addT.handleL2AData(data, graph, filterManager);
+        break;
+    }
 
-});
+
+};
+
+
+window.onload = function () {
+
+    var that = this;
+
+   d3.select('#datafiles').on('change', function(e){
+
+        var sel = document.getElementById('datafiles');
+        that.selValue = sel.options[sel.selectedIndex].value;
+
+        graph.renderSettings = addT.renderSettingsDefinition[that.selValue];
+        graph.dataSettings = addT.dataSettingsConfig[that.selValue];
+        filterManager.updateFilterSettings(addT.filterSettingsConfiguration[that.selValue]);
+
+        xhr.open('GET', ('data/'+that.selValue+'.mp'), true);
+        xhr.send();
+
+
+    });
+
+}
