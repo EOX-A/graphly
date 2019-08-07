@@ -3983,7 +3983,7 @@ class graphly extends EventEmitter {
             this.y2Axis.push(
                 d3.svg.axis()
                     .scale(this.y2Scale[yPos])
-                    .innerTickSize(this.width)
+                    .innerTickSize(-this.width)
                     .outerTickSize(0)
                     .orient('right')
             );
@@ -3998,7 +3998,7 @@ class graphly extends EventEmitter {
                 let currSvgy2Axis = this.svg.append('g')
                     .attr('class', 'y2 axis')
                     .attr(
-                        'transform', 'translate(0,'+yPos*heighChunk+')'
+                        'transform', 'translate('+this.width+','+yPos*heighChunk+')'
                     )
                     .call(this.y2Axis[yPos]);
 
