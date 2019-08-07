@@ -2541,6 +2541,24 @@ class graphly extends EventEmitter {
                     this.renderData(false);
                 });
 
+            con.append('label')
+                .attr('for', 'labelAllignment')
+                .text('Label allig.');
+
+            var that = this;
+            let labselect = con.append('select')
+                .attr('id', 'labelAllignment')
+                .on('change', function(){
+                    that.labelAllignment = this.value;
+                    that.updateInfoBoxes();
+                });
+
+            labselect.selectAll('option')
+                .data(['left', 'center', 'right']).enter()
+                .append('option')
+                    .text(function (d) { return d; })
+                    .property('selected', (d)=>{return d===this.labelAllignment;});
+
             this.el.append('div')
                 .attr('id', 'globalSettings')
                 .style('left', (this.width/2)+this.margin.left-40+'px')
@@ -4786,6 +4804,7 @@ class graphly extends EventEmitter {
         this.resize_update(debounce);
         this.createColorScales();
         this.createAxisLabels();
+        this.updateInfoBoxes();
 
         // Hide/show parameter info depending on if they have parameters
         this.el.selectAll('.parameterInfo').each(function(){
@@ -5954,6 +5973,21 @@ class graphly extends EventEmitter {
 
     }
 
+    calcOffset(){
+        let pos;
+        switch(this.labelAllignment){
+            case 'left':
+                pos = this.margin.left+20+'px';
+            break;
+            case 'right':
+                pos = (this.width-this.margin.left-(270/2)+20)+'px';
+            break;
+            case 'center':
+                pos = ((this.width/2)-(270/2)+this.margin.left) +'px';
+            break;
+        }
+        return pos;
+    }
 
     createInfoBoxes(){
 
@@ -5967,25 +6001,13 @@ class graphly extends EventEmitter {
                     .attr('id', 'parameterInfo'+yPos)
                     .attr('class', 'parameterInfo')
                     .style('top', ((currHeight)*yPos + 10 + this.margin.top) +'px')
-                    .style(this.labelAllignment, ()=>{
-                        if(this.labelAllignment === 'left'){
-                            return this.margin.left+20+'px';
-                        } else {
-                            return this.margin.right+this.marginCSOffset+50+'px';
-                        }
-                    })
+                    .style('left', this.calcOffset.bind(this))
                     .style('visibility', 'hidden');
             } else {
                 this.el.select('#parameterInfo'+yPos).selectAll('*').remove();
                 this.el.select('#parameterInfo'+yPos)
                     .style('top', ((currHeight)*yPos +10) + this.margin.top +'px')
-                    .style(this.labelAllignment, ()=>{
-                        if(this.labelAllignment === 'left'){
-                            return this.margin.left+20+'px';
-                        } else {
-                            return this.margin.right+this.marginCSOffset+50+'px';
-                        }
-                    });
+                    .style('left', this.calcOffset.bind(this));
             }
         }
 
@@ -6002,13 +6024,7 @@ class graphly extends EventEmitter {
         this.el.select('#parameterSettings').remove();
         this.el.append('div')
             .attr('id', 'parameterSettings')
-            .style(this.labelAllignment, ()=>{
-                let xOffset = this.margin.right+this.marginCSOffset+50+'px';
-                if(this.labelAllignment === 'left'){
-                    xOffset = this.margin.left+20+'px';
-                }
-                return xOffset;
-            })
+            .style('left', this.calcOffset.bind(this))
             .style('display', 'none');
 
     }
@@ -6023,21 +6039,21 @@ class graphly extends EventEmitter {
 
             this.el.select('#parameterInfo'+yPos)
                 .style('top', ((currHeight)*yPos + 10 + this.margin.top) +'px')
-                .style(this.labelAllignment, ()=>{
-                    if(this.labelAllignment === 'left'){
-                        return this.margin.left+20+'px';
-                    } else {
-                        return this.margin.right+this.marginCSOffset+50+'px';
-                    }
-                });
+                .style('left', this.calcOffset.bind(this));
 
             this.el.select('#svgInfoContainer'+yPos)
                 .attr('transform', ()=>{
-                    let xOffset = (
-                        this.width - this.margin.right - 260
-                    );
-                    if(this.labelAllignment === 'left'){
-                        xOffset = '20';
+                    let xOffset;
+                    switch(this.labelAllignment){
+                        case 'left':
+                            xOffset = 20;
+                        break;
+                        case 'right':
+                            xOffset = (this.width-(270)-30);
+                        break;
+                        case 'center':
+                            xOffset = ((this.width/2)-(270/2));
+                        break;
                     }
                     return 'translate(' + 
                         xOffset + ',' +
@@ -6046,13 +6062,7 @@ class graphly extends EventEmitter {
         }
 
         this.el.select('#parameterSettings')
-            .style(this.labelAllignment, ()=>{
-                let xOffset = this.margin.right+this.marginCSOffset+50+'px';
-                if(this.labelAllignment === 'left'){
-                    xOffset = this.margin.left+20+'px';
-                }
-                return xOffset;
-            })
+            .style('left', this.calcOffset.bind(this))
             .style('display', 'none');
     }
 
@@ -6152,9 +6162,17 @@ class graphly extends EventEmitter {
                 .attr('id', 'svgInfoContainer'+yPos)
                 .attr('class', 'svgInfoContainer')
                 .attr('transform', ()=>{
-                    let xOffset = (this.width - this.margin.right - 260);
-                    if(this.labelAllignment === 'left'){
-                        xOffset = '20';
+                    let xOffset;
+                    switch(this.labelAllignment){
+                        case 'left':
+                            xOffset = 20;
+                        break;
+                        case 'right':
+                            xOffset = (this.width-(270)-30);
+                        break;
+                        case 'center':
+                            xOffset = ((this.width/2)-(270/2));
+                        break;
                     }
                     return 'translate(' + 
                         xOffset + ',' +

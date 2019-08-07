@@ -37,6 +37,10 @@ input[type=text] {
     display: none;
 }
 
+#globalSettingsContainer label {
+    margin-right: 5px;
+}
+
 #labelFontSize, #tickFontSize{
     width: 146px;
 }
