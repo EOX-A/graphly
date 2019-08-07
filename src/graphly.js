@@ -1351,7 +1351,7 @@ class graphly extends EventEmitter {
             .style('clip-path','url('+this.nsId+'clipbox)');
 
         this.resFactor = 1;
-        this.resize();
+        this.resize(false);
     }
 
     addTextMouseover(text){
@@ -1535,6 +1535,11 @@ class graphly extends EventEmitter {
             curryAxArr[yPos].push(event.detail.value);
             // TODO: Check for adding of time parameter
 
+            // One item was added and none where before, we resize the right margin
+            if(orientation === 'right' && that.renderSettings.y2Axis[yPos].length === 1){
+                that.resize(false);
+            }
+
             that.recalculateBufferSize();
             that.initAxis();
             that.renderData();
@@ -1571,6 +1576,11 @@ class graphly extends EventEmitter {
                     renSett.colorAxis[yPos].splice(index,1);
                 } else if(orientation === 'right'){
                     renSett.colorAxis2[yPos].splice(index,1);
+                }
+
+                // One item was added and none where before, we resize the right margin
+                if(orientation === 'right' && that.renderSettings.y2Axis[yPos].length === 0){
+                    that.resize(false);
                 }
 
                 that.initAxis();
@@ -1985,8 +1995,8 @@ class graphly extends EventEmitter {
                     that.renderSettings.additionalXTicks.push(event.detail.value);
                     that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
                     that.initAxis();
-                    that.resize();
-                    //that.renderData();
+                    that.resize(false);
+                    that.renderData();
                     that.createAxisLabels();
                     that.emit('axisChange');
                 }, false);
@@ -1997,8 +2007,8 @@ class graphly extends EventEmitter {
                         that.renderSettings.additionalXTicks.splice(index, 1);
                         that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
                         that.initAxis();
-                        that.resize();
-                        //that.renderData();
+                        that.resize(false);
+                        that.renderData();
                         that.createAxisLabels();
                         that.emit('axisChange');
                     }
