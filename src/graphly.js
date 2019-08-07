@@ -2259,6 +2259,13 @@ class graphly extends EventEmitter {
             formXOffset = -100;
         }
 
+        if(!d3.selectAll('.rangeEdit').empty()){
+            // If rangeedit open just close / remove it when clicking it again
+            // and skip the rest
+            d3.selectAll('.rangeEdit').remove();
+            return;
+        }
+
         // Cleanup
         d3.selectAll('.rangeEdit').remove();
 
@@ -2327,9 +2334,8 @@ class graphly extends EventEmitter {
             .style('top', evty +  formYOffset + 'px')
             .style('left', evtx + formXOffset + formMaxPos.width + 'px')
             .on('click', function(){
-                d3.selectAll('.rangeEdit')
-                    .classed('hidden', true);
-                });
+                d3.selectAll('.rangeEdit').remove();
+            });
     }
 
     addColorScale(id, colors, ranges){
@@ -2821,32 +2827,8 @@ class graphly extends EventEmitter {
         this.createInfoBoxes();
         this.createParameterInfo();
 
-        
-
         // Cleanup
         this.el.selectAll('.rangeEdit').remove();
-        
-        // range edit forms 
-        this.el.append('input')
-            .attr('class', 'rangeEdit hidden')
-            .attr('id', 'rangeEditMax')
-            .attr('type', 'text')
-            .attr('size', 7);
-        this.el.append('input')
-            .attr('class', 'rangeEdit hidden')
-            .attr('id', 'rangeEditMin')
-            .attr('type', 'text')
-            .attr('size', 7);
-        this.el.append('input')
-            .attr('class', 'rangeEdit hidden')
-            .attr('id', 'rangeEditCancel')
-            .attr('type', 'button')
-            .attr('value', '✕');
-        this.el.append('input')
-            .attr('class', 'rangeEdit hidden')
-            .attr('id', 'rangeEditConfirm')
-            .attr('type', 'button')
-            .attr('value', '✔');
     }
 
 
@@ -7200,9 +7182,6 @@ class graphly extends EventEmitter {
         let xAxRen = this.renderSettings.xAxis;
         
         this.batchDrawer.clear();
-        if(this.batchDrawerReference && updateReferenceCanvas){
-            this.batchDrawerReference.clear();
-        }
 
         // If data object is undefined or empty return
         // TODO: There should be a cleaner way to do this, maybe clean all
@@ -7251,6 +7230,10 @@ class graphly extends EventEmitter {
             y2AxRen = this.renderSettings.y2Axis[plotY];
 
             this.enableScissorTest(plotY);
+
+            if(this.batchDrawerReference && updateReferenceCanvas){
+                this.batchDrawerReference.clear();
+            }
 
             // If y2 axis is defined start rendering it as we need to render
             // multiple times to have individial images for manipulation in

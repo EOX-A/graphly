@@ -411,6 +411,13 @@ class FilterManager extends EventEmitter {
         let formYOffset = 20;
         let formXOffset = 2;
 
+        if(!d3.selectAll('.rangeEdit').empty()){
+            // If rangeedit open just close / remove it when clicking it again
+            // and skip the rest
+            d3.selectAll('.rangeEdit').remove();
+            return;
+        }
+
         // Cleanup
         d3.selectAll('.rangeEdit').remove();
 
@@ -517,9 +524,8 @@ class FilterManager extends EventEmitter {
             .style('top', evty +  formYOffset + 'px')
             .style('left', evtx + formXOffset + formMaxPos.width + 'px')
             .on('click', function(){
-                d3.selectAll('.rangeEdit')
-                    .classed('hidden', true);
-                });
+                d3.selectAll('.rangeEdit').remove();
+            });
     }
 
     _createFilterElement(d, data) {

@@ -686,6 +686,8 @@ function flattenObservationArray(input){
 
 export function handleSwarmData(data, graph, filterManager){
 
+    graph.debounceActive = false;
+
     var ids = {
       'A': 'Alpha',
       'B': 'Bravo',
@@ -783,6 +785,8 @@ export function handleSwarmData(data, graph, filterManager){
 
 export function handleL1BData(data, graph, filterManager){
 
+    graph.debounceActive = true;
+
     var ds = data.ALD_U_N_1B.observation_data;
 
     var time = proxyFlattenObservationArraySE(ds.time, ds.mie_altitude);
@@ -829,6 +833,8 @@ export function handleL1BData(data, graph, filterManager){
 }
 
 export function handleL2AData(data, graph, filterManager){
+
+    graph.debounceActive = true;
 
     data = data['ALD_U_N_2A'];
     var keys = Object.keys(data);
