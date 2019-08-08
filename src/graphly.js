@@ -5476,6 +5476,7 @@ class graphly extends EventEmitter {
 
         for (let j=0;j<lp; j++) {
 
+
             if(singleSettings){
                 currDotSize = dotsize;
             } else {
@@ -5499,6 +5500,40 @@ class graphly extends EventEmitter {
                     valY = data[yGroup[0]][j] +
                          (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
                 }
+            }
+
+            if(!xGroup){
+                valX = data[xAxis][j];
+            } else {
+                // Check if we have a time variable
+                if(this.timeScales.indexOf(xGroup[0])!==-1){
+                    if( isNaN(data[xGroup[0]][j]) || isNaN(data[xGroup[1]][j]) ){
+                        valX = NaN;
+                    } else {
+                        valX = new Date(
+                            data[xGroup[0]][j].getTime() +
+                            (
+                                data[xGroup[1]][j].getTime()-
+                                data[xGroup[0]][j].getTime()
+                            )/2
+                        );
+                    }
+
+                   
+                } else {
+                    valX = data[xGroup[0]][j] +
+                         (data[xGroup[1]][j] - data[xGroup[0]][j])/2;
+                }
+            }
+
+            // Skip "empty" values
+            if(Number.isNaN(valY) || Number.isNaN(valX)){
+                if(cAxis !== null){
+                    if(!colCacheAvailable){
+                        this.colorCache[cAxis].push(null);
+                    }
+                }
+                continue;
             }
 
             // If render settings uses colorscale axis get color from there
@@ -5556,29 +5591,6 @@ class graphly extends EventEmitter {
             y = yScale(valY);
             y+=axisOffset;
 
-            if(!xGroup){
-                valX = data[xAxis][j];
-            } else {
-                // Check if we have a time variable
-                if(this.timeScales.indexOf(xGroup[0])!==-1){
-                    if( isNaN(data[xGroup[0]][j]) || isNaN(data[xGroup[1]][j]) ){
-                        valX = NaN;
-                    } else {
-                        valX = new Date(
-                            data[xGroup[0]][j].getTime() +
-                            (
-                                data[xGroup[1]][j].getTime()-
-                                data[xGroup[0]][j].getTime()
-                            )/2
-                        );
-                    }
-
-                   
-                } else {
-                    valX = data[xGroup[0]][j] +
-                         (data[xGroup[1]][j] - data[xGroup[0]][j])/2;
-                }
-            }
             // Manipulate value if we have a periodic parameter
             if(xperiodic){
                 let shiftpos = Math.abs(parseInt(xMax/period));
