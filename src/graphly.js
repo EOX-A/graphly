@@ -282,7 +282,10 @@ class graphly extends EventEmitter {
 
 
         // If provided settings are not array of arrays convert it to it
-        if(Array.isArray(this.renderSettings.yAxis) && !Array.isArray(this.renderSettings.yAxis[0])){
+         if(!this.multiYAxis || (
+                Array.isArray(this.renderSettings.yAxis) && 
+                !Array.isArray(this.renderSettings.yAxis[0])
+            )) {
             // Manage configuration as it would be a 1 element multi plot
             // this should bring together both functionalities
             this.renderSettings.yAxis = [this.renderSettings.yAxis];
