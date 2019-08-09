@@ -7165,7 +7165,13 @@ class graphly extends EventEmitter {
                         if(this.checkTimeScale(colorAxis)){
                             domain = d3.extent(
                                 this.currentData[colorAxis],
-                                (item)=>{return item.getTime()});
+                                (item)=>{
+                                    if(Number.isNaN(item)){
+                                        return NaN;
+                                    } else {
+                                        return item.getTime();
+                                    }
+                                });
                         } else {
                             domain = d3.extent(this.currentData[colorAxis]);
                         }
