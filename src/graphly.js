@@ -280,6 +280,9 @@ class graphly extends EventEmitter {
         this.defaultTickSize = 12;
         this.defaultLabelSize = 12;
 
+        this.settingsToApply = {};
+        this.settingsToDelete = [];
+
 
         // If provided settings are not array of arrays convert it to it
          if(!this.multiYAxis || (
@@ -5533,6 +5536,8 @@ class graphly extends EventEmitter {
                         this.colorCache[cAxis].push(null);
                     }
                 }
+                p_x = NaN;
+                p_y = NaN;
                 continue;
             }
 
@@ -5645,7 +5650,7 @@ class graphly extends EventEmitter {
             if (parSett){
 
                  if(parSett.hasOwnProperty('lineConnect') &&
-                    parSett.lineConnect && j>0){
+                    parSett.lineConnect && j>0 && !Number.isNaN(p_x)){
 
                     // Check if using ordinal scale (multiple
                     // parameters), do not connect if different
@@ -5893,7 +5898,8 @@ class graphly extends EventEmitter {
     }
 
 
-    addApply() {
+    addApply(dataSettings) {
+
         if(!this.el.select('#applyButton').empty()){
             this.el.select('#applyButton').remove();
         }
@@ -5907,10 +5913,46 @@ class graphly extends EventEmitter {
                 .attr('id', 'applyButton')
                 .text('Apply')
                 .on('click', ()=>{
-                    this.createParameterInfo();
-                    this.resize(false);
-                    this.emit('axisChange');
-                    this.renderData();
+                    if(Object.keys(this.settingsToApply).length>0 || 
+                        this.settingsToDelete.length>0){
+
+                        for(let key in this.settingsToApply){
+                            if(key === 'colorAxisChange'){
+                                let yPos = this.settingsToApply.colorAxisChange.yPos;
+                                let parPos = this.settingsToApply.colorAxisChange.parPos;
+                                let colPar = this.settingsToApply.colorAxisChange.colorParameter;
+                                let orientation = this.settingsToApply.colorAxisChange.orientation;
+                                let colorAxis = this.renderSettings.colorAxis;
+                                if(orientation === 'right'){
+                                    colorAxis = this.renderSettings.colorAxis2;
+                                }
+                                if(parPos !== null){
+                                    colorAxis[yPos][parPos] = colPar;
+                                } else {
+                                    colorAxis[yPos].push(colPar);
+                                }
+                            } else {
+                                if(key === 'alpha'){
+                                    // TODO: Possibly only update alpha in colorcache
+                                    for(let k in this.colorCache){
+                                        delete this.colorCache[k];
+                                    }
+                                }
+                                dataSettings[key] = this.settingsToApply[key];
+                            }
+                        }
+                        for (let pos=0; pos<this.settingsToDelete.length; pos++){
+                            delete dataSettings[this.settingsToDelete[pos]];
+                        }
+
+                        this.createParameterInfo();
+                        this.resize(false);
+                        this.emit('axisChange');
+                        this.renderData();
+                    } else {
+                        this.el.select('#parameterSettings').selectAll('*').remove();
+                        this.el.select('#parameterSettings').style('display', 'none');
+                    }
                 });
         }
     }
@@ -5947,15 +5989,21 @@ class graphly extends EventEmitter {
             function onregressionChange() {
                 let selectValue = 
                     that.el.select('#regressionSelect').property('value');
-                dataSettings.regression = selectValue;
+                that.settingsToApply.regression = selectValue;
                 addOrder();
-                that.addApply();
+                that.addApply(dataSettings);
             }
 
             function addOrder(){
                 that.el.select('#regressionOrderLabel').remove();
                 that.el.select('#regressionOrder').remove();
-                if(dataSettings.regression === 'polynomial'){
+                // If polynomial was just enabled but not yet saved or is opening
+                // settings with already saved regression option
+                if(that.settingsToApply.regression === 'polynomial' || 
+                    (
+                        dataSettings.regression === 'polynomial' && 
+                        !that.settingsToApply.hasOwnProperty('regression')
+                    )){
                     that.el.select('#parameterSettings')
                         .append('label')
                         .attr('id', 'regressionOrderLabel')
@@ -5968,9 +6016,8 @@ class graphly extends EventEmitter {
                         .attr('type', 'text')
                         .attr('value', defaultFor(dataSettings.regressionOrder, 3))
                         .on('input', function(){
-                            dataSettings.regressionOrder = Number(this.value);
-                            //that.renderRegressionOptions(id, regressionTypes);
-                            that.addApply();
+                            that.settingsToApply.regressionOrder = Number(this.value);
+                            that.addApply(dataSettings);
                         });
                 }
             }
@@ -5981,9 +6028,7 @@ class graphly extends EventEmitter {
             this.el.select('#regressionSelect').remove();
             this.el.select('#regressionOrderLabel').remove();
             this.el.select('#regressionOrder').remove();
-            delete dataSettings.regression;
-            delete dataSettings.regressionOrder;
-            this.addApply();
+            this.addApply(dataSettings);
         }
 
     }
@@ -6280,6 +6325,12 @@ class graphly extends EventEmitter {
                 if(colAxis[yPos][parPos] === key){
                     selectionChoices[selectionChoices.length-1].selected = true;
                 }
+                // The setting might not be yet applied and be coming from the
+                // settingsToApply
+                if(this.settingsToApply.hasOwnProperty('colorAxisChange') && 
+                    this.settingsToApply.colorAxisChange.colorParameter === key){
+                    selectionChoices[selectionChoices.length-1].selected = true;
+                }
             }
         }
 
@@ -6300,7 +6351,13 @@ class graphly extends EventEmitter {
             let selectValue = 
                 that.el.select('#colorParamSelection').property('value');
             delete that.colorCache[colAxis[yPos][parPos]];
-            colAxis[yPos][parPos] = selectValue;
+
+            that.settingsToApply.colorAxisChange = {
+                orientation: orientation,
+                yPos: yPos,
+                parPos: parPos,
+                colorParameter: selectValue
+            };
             // Check if parameter already has a colorscale configured
             if(that.dataSettings.hasOwnProperty(selectValue)){
                 let obj = that.dataSettings[selectValue];
@@ -6316,7 +6373,7 @@ class graphly extends EventEmitter {
                         );
                 }
             }
-            that.addApply();
+            that.addApply(null);
         }
 
 
@@ -6372,8 +6429,8 @@ class graphly extends EventEmitter {
             let csId = colAxis[yPos][parPos];
             delete that.colorCache[csId];
             let selectValue = that.el.select('#colorScaleSelection').property('value');
-            that.dataSettings[csId].colorscale = selectValue;
-            that.addApply();
+            that.settingsToApply.colorscale = selectValue;
+            that.addApply(that.dataSettings[csId]);
         }
 
     }
@@ -6403,10 +6460,11 @@ class graphly extends EventEmitter {
             .append('div')
             .attr('class', 'parameterClose cross')
             .on('click', ()=>{
-                parSetEl
-                    .selectAll('*').remove();
-                parSetEl
-                    .style('display', 'none');
+                // Reset settings to apply
+                that.settingsToApply = {};
+                that.settingsToDelete = [];
+                parSetEl.selectAll('*').remove();
+                parSetEl.style('display', 'none');
             });
 
         parSetEl
@@ -6422,11 +6480,11 @@ class graphly extends EventEmitter {
             .attr('value', dataSettings.displayName)
             .on('input', function(){
                 if(this.value === ''){
-                    delete dataSettings.displayName;
+                    that.settingsToDelete.push('displayName');
                 } else {
-                    dataSettings.displayName = this.value;
+                    that.settingsToApply.displayName = this.value;
                 }
-                that.addApply();
+                that.addApply(dataSettings);
             });
 
         // Check if parameter and xaxis is combined
@@ -6483,8 +6541,7 @@ class graphly extends EventEmitter {
                 .attr('id','symbolSelect')
                 .on('change',onchange);
 
-            let options = select
-              .selectAll('option')
+            select.selectAll('option')
                 .data(data).enter()
                 .append('option')
                     .text(function (d) { return d.name; })
@@ -6495,8 +6552,8 @@ class graphly extends EventEmitter {
 
             function onchange() {
                 let selectValue = that.el.select('#symbolSelect').property('value');
-                dataSettings.symbol = selectValue;
-                that.addApply();
+                that.settingsToApply.symbol = selectValue;
+                that.addApply(dataSettings);
             }
 
             parSetEl
@@ -6524,8 +6581,8 @@ class graphly extends EventEmitter {
                 let c = CP.HEX2RGB(color);
                 c = c.map(function(c){return c/255;});
                 if(!firstChange){
-                    dataSettings.color = c;
-                    that.addApply();
+                    that.settingsToApply.color = c;
+                    that.addApply(dataSettings);
                 }else{
                     dataSettings.color = c;
                     firstChange = false;
@@ -6552,13 +6609,11 @@ class graphly extends EventEmitter {
             picker.self.appendChild(x);
 
             // Add point size option
-            parSetEl
-                .append('label')
+            parSetEl.append('label')
                 .attr('for', 'sizeSelection')
                 .text('Point size');
 
-            let sizeSelect = parSetEl
-                .append('input')
+            parSetEl.append('input')
                 .attr('id', 'sizeSelection')
                 .attr('type', 'text')
                 .attr('value', 
@@ -6566,8 +6621,8 @@ class graphly extends EventEmitter {
                 )
                 .on('input', ()=>{
                     let val = Number(d3.event.currentTarget.value);
-                    dataSettings.size = val;
-                    that.addApply();
+                    that.settingsToApply.size = val;
+                    that.addApply(dataSettings);
                 });
         }
 
@@ -6590,12 +6645,8 @@ class graphly extends EventEmitter {
                 ))
                 .on('input', ()=>{
                     let val = d3.event.currentTarget.valueAsNumber;
-                    dataSettings.alpha = val;
-                    // TODO: Possibly only update alpha in colorcache
-                    for(let k in this.colorCache){
-                        delete this.colorCache[k];
-                    }
-                    that.addApply();
+                    that.settingsToApply.alpha = val;
+                    that.addApply(dataSettings);
                 });
         }
 
@@ -6608,9 +6659,16 @@ class graphly extends EventEmitter {
             }
 
             let active = false;
-            if(typeof colorAxis[yPos][parPos] !== 'undefined' && 
-                      colorAxis[yPos][parPos]!==null){
-                active = true;
+
+            if(that.settingsToApply.hasOwnProperty('colorAxisChange')){
+                if(that.settingsToApply.colorAxisChange.colorParameter !== null){
+                    active = true;
+                }
+            }
+            if(typeof colorAxis[yPos][parPos] !== 'undefined' && colorAxis[yPos][parPos]!==null){
+                if(!that.settingsToApply.hasOwnProperty('colorAxisChange')){
+                    active = true;
+                }
             }
 
             parSetEl
@@ -6655,17 +6713,34 @@ class graphly extends EventEmitter {
 
                         // Select first option
                         if(typeof colorAxis[yPos][parPos]!=='undefined'){
-                            colorAxis[yPos][parPos] = selectionChoices[0];
+                            // We are changing an axis here and not datasettings
+                            // so we save necessary info for change later on
+                            that.settingsToApply.colorAxisChange = {
+                                orientation: orientation,
+                                yPos: yPos,
+                                parPos: parPos,
+                                colorParameter: selectionChoices[0]
+                            };
                         } else {
-                            colorAxis[yPos].push(selectionChoices[0]);
+                            that.settingsToApply.colorAxisChange = {
+                                orientation: orientation,
+                                yPos: yPos,
+                                parPos: null,
+                                colorParameter: selectionChoices[0]
+                            };
                         }
                     } else {
-                        colorAxis[yPos][parPos] = null;
+                        that.settingsToApply.colorAxisChange = {
+                            orientation: orientation,
+                            yPos: yPos,
+                            parPos: parPos,
+                            colorParameter: null
+                        };
                     }
                     that.renderParameterOptions(
                         dataSettings, id, yPos, orientation, true, parPos
                     );
-                    that.addApply();
+                    that.addApply(dataSettings);
                 });
             // Need to add additional necessary options
             // drop down with possible parameters and colorscale
@@ -6693,9 +6768,9 @@ class graphly extends EventEmitter {
                 defaultFor(dataSettings.lineConnect, false)
             )
             .on('change', function(){
-                dataSettings.lineConnect = 
+                that.settingsToApply.lineConnect = 
                     !defaultFor(dataSettings.lineConnect, false);
-                that.addApply();
+                that.addApply(dataSettings);
             });
 
         if(this.enableFit){
@@ -6721,14 +6796,18 @@ class graphly extends EventEmitter {
                     // If activated there is no type defined so we
                     // define a defualt one, for now linear
                     if(that.el.select('#regressionCheckbox').property('checked')){
-                         dataSettings.regression = defaultFor(
+                        that.settingsToApply.regression = defaultFor(
                             dataSettings.regression,
                             'linear'
                         );
+                    } else {
+                        // If unchecked remove regression parameters
+                        that.settingsToDelete.push('regression');
+                        that.settingsToDelete.push('regressionOrder');
                     }
 
                     that.renderRegressionOptions(id, regressionTypes, dataSettings);
-                    that.addApply();
+                    that.addApply(dataSettings);
                 });
 
             that.renderRegressionOptions(id, regressionTypes, dataSettings);
@@ -7209,6 +7288,10 @@ class graphly extends EventEmitter {
     *        color reference canvas
     */
     renderData(updateReferenceCanvas) {
+
+        // Reset possible non applied settings
+        this.settingsToApply = {};
+        this.settingsToDelete = [];
 
         this.startTiming('renderData');
 
