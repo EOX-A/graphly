@@ -5162,15 +5162,14 @@ class graphly extends EventEmitter {
             if(cA && cA.hasOwnProperty('extent')){
                 //this.plotter.setDomain(cA.extent);
                 this.batchDrawer.setDomain(cA.extent);
-                this.batchDrawer._initUniforms();
             }
             if (cA && cA.hasOwnProperty('csDiscrete')){
                 discreteColorScale = cA.csDiscrete;
             }
-            // If current cs not equal to the set in the plotter update cs
-            if(cs !== this.plotter.name){
-                this.plotter.setColorScale(cs);
-            }
+
+            this.batchDrawer.setColorScale(cs);
+            this.batchDrawer._initUniforms();
+            
 
             // TODO get discrete colorscales working again
             /*if(discreteColorScale && this.colorCache[cAxis].length===0){
@@ -5185,7 +5184,7 @@ class graphly extends EventEmitter {
 
         // Check if cyclic axis and if currently displayed axis range needs to
         // offset to be shown in "next cycle" above or below
-        let xMax, xMin, period, xoffset;
+        let xoffset;
 
         let xperiodic = false;
         if(this.dataSettings.hasOwnProperty(xAxis) && 
@@ -5409,14 +5408,18 @@ class graphly extends EventEmitter {
             if (cA && cA.hasOwnProperty('colorscale')){
                 cs = cA.colorscale;
             }
+            let resetUniforms = false;
             if(cA && cA.hasOwnProperty('extent')){
-                //this.plotter.setDomain(cA.extent);
                 this.batchDrawer.setDomain(cA.extent);
-                this.batchDrawer._initUniforms();
+                resetUniforms = true;
             }
             // If current cs not equal to the set in the plotter update cs
             if(cs !== this.plotter.name){
-                this.plotter.setColorScale(cs);
+                this.batchDrawer.setColorScale(cs);
+                resetUniforms = true;
+            }
+            if(resetUniforms){
+                this.batchDrawer._initUniforms();
             }
         }
 
@@ -7272,9 +7275,8 @@ class graphly extends EventEmitter {
 
         let xAxRen = this.renderSettings.xAxis;
 
-        this.batchDrawer.setColorScale('viridis');
-        
         this.batchDrawer.clear();
+        this.batchDrawer.setColorScale('viridis');
 
         // If data object is undefined or empty return
         // TODO: There should be a cleaner way to do this, maybe clean all
