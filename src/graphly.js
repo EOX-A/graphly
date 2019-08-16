@@ -227,7 +227,6 @@ class graphly extends EventEmitter {
         // Passed options
         this.el = d3.select(options.el);
         this.nsId = options.el;
-        this.colorCache = {};
         this.defaultAlpha = defaultFor(options.defaultAlpha, 1.0);
         this.ignoreParameters = defaultFor(options.ignoreParameters, []);
         this.resFactor = 1;
@@ -1020,10 +1019,6 @@ class graphly extends EventEmitter {
 
         if(!this.batchDrawer){
             return;
-        }
-        // Remove all color caches
-        for(let k in this.colorCache){
-            delete this.colorCache[k];
         }
         // Reset colorscale range if filter changed for parameter with 
         // colorscale
@@ -2220,7 +2215,6 @@ class graphly extends EventEmitter {
                 .text(label);
 
             let csZoomEvent = ()=>{
-                delete this.colorCache[id];
                 g.call(colorAxis);
                 this.dataSettings[id].extent = colorAxisScale.domain();
                 this.renderData(false);
@@ -2360,8 +2354,7 @@ class graphly extends EventEmitter {
             axis.scale().domain(newDataDomain);
             g.call(axis);
             zoom.y(axis.scale());
-            if(parameterid && this.colorCache.hasOwnProperty(parameterid)){
-                delete this.colorCache[parameterid];
+            if(parameterid){
                 this.dataSettings[parameterid].extent = axis.scale().domain();
             }
             this.emit('axisExtentChanged');
@@ -2978,10 +2971,6 @@ class graphly extends EventEmitter {
     loadData(data){
         
         this.startTiming('loadData');
-        // Clean colorcache
-        for(let k in this.colorCache){
-            delete this.colorCache[k];
-        }
 
         this.data = {};
         for (var dk in data){
@@ -3807,12 +3796,6 @@ class graphly extends EventEmitter {
                     }
                 }
             }
-
-            // TODO: Allow multiple domains!
-            if(domain){
-                this.plotter.setDomain(domain);
-            }
-
 
             let yScaleType, y2ScaleType;
             // TODO: how to handle multiple different scale types
@@ -5177,7 +5160,9 @@ class graphly extends EventEmitter {
                 cs = cA.colorscale;
             }
             if(cA && cA.hasOwnProperty('extent')){
-                this.plotter.setDomain(cA.extent);
+                //this.plotter.setDomain(cA.extent);
+                this.batchDrawer.setDomain(cA.extent);
+                this.batchDrawer._initUniforms();
             }
             if (cA && cA.hasOwnProperty('csDiscrete')){
                 discreteColorScale = cA.csDiscrete;
@@ -5186,22 +5171,16 @@ class graphly extends EventEmitter {
             if(cs !== this.plotter.name){
                 this.plotter.setColorScale(cs);
             }
-            // Check if colorcache is available to be used
-            if(this.colorCache.hasOwnProperty(cAxis) && this.colorCache[cAxis].length > 0){
-                colCacheAvailable = true;
-                currColCache = this.colorCache[cAxis];
-            } else {
-                this.colorCache[cAxis] = [];
-            }
 
-            if(discreteColorScale && this.colorCache[cAxis].length===0){
+            // TODO get discrete colorscales working again
+            /*if(discreteColorScale && this.colorCache[cAxis].length===0){
                 this.colorCache[cAxis] = this.discreteColorScales[cAxis];
                 colCacheAvailable = true;
                 currColCache = this.colorCache[cAxis];
                 discreteCSOffset = d3.min(data[cAxis]);
             } else if(discreteColorScale){
                 discreteCSOffset = d3.min(data[cAxis]);
-            }
+            }*/
         }
 
         // Check if cyclic axis and if currently displayed axis range needs to
@@ -5246,11 +5225,6 @@ class graphly extends EventEmitter {
             // Skip "empty" values
             if(Number.isNaN(valY) || Number.isNaN(valY2) ||
                 Number.isNaN(valX) || Number.isNaN(valX2)){
-                if(cAxis !== null){
-                    if(!colCacheAvailable){
-                        this.colorCache[cAxis].push(null);
-                    }
-                }
                 continue;
             }
 
@@ -5315,8 +5289,11 @@ class graphly extends EventEmitter {
             let nCol = [idC[0]/255, idC[1]/255, idC[2]/255];
 
             let rC;
+            let renderValue = Number.NEGATIVE_INFINITY;
             if(cAxis !== null){
-                if(colCacheAvailable){
+                rC = [1.0, 0.0, 0.0, constAlpha];
+                renderValue = data[cAxis][i];
+                /*if(colCacheAvailable){
                     if(discreteColorScale){
                         rC = currColCache[data[cAxis][i]];
                     } else {
@@ -5327,7 +5304,7 @@ class graphly extends EventEmitter {
                         .map(function(c){return c/255;});
                     rC[3] = constAlpha;
                     this.colorCache[cAxis].push(rC);
-                }
+                }*/
             } else {
                 if(singleColor){
                     rC = colorObj;
@@ -5340,11 +5317,15 @@ class graphly extends EventEmitter {
                 }
             }
             this.colourToNode[idC.join('-')] = par_properties;
-            this.batchDrawer.addRect(x1,y1,x2,y2, rC[0], rC[1], rC[2], rC[3]);
+            this.batchDrawer.addRect(
+                x1,y1,x2,y2, rC[0], rC[1], rC[2], rC[3],
+                renderValue
+            );
 
             if(!this.fixedSize && updateReferenceCanvas){
                 this.batchDrawerReference.addRect(
-                    x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0
+                    x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0,
+                    Number.NEGATIVE_INFINITY
                 );
             }
         } // end data for loop
@@ -5429,18 +5410,13 @@ class graphly extends EventEmitter {
                 cs = cA.colorscale;
             }
             if(cA && cA.hasOwnProperty('extent')){
-                this.plotter.setDomain(cA.extent);
+                //this.plotter.setDomain(cA.extent);
+                this.batchDrawer.setDomain(cA.extent);
+                this.batchDrawer._initUniforms();
             }
             // If current cs not equal to the set in the plotter update cs
             if(cs !== this.plotter.name){
                 this.plotter.setColorScale(cs);
-            }
-            // Check if colorcache is available to be used
-            if(this.colorCache.hasOwnProperty(cAxis) && this.colorCache[cAxis].length > 0){
-                colCacheAvailable = true;
-                currColCache = this.colorCache[cAxis];
-            } else {
-                this.colorCache[cAxis] = [];
             }
         }
 
@@ -5531,11 +5507,6 @@ class graphly extends EventEmitter {
 
             // Skip "empty" values
             if(Number.isNaN(valY) || Number.isNaN(valX)){
-                if(cAxis !== null){
-                    if(!colCacheAvailable){
-                        this.colorCache[cAxis].push(null);
-                    }
-                }
                 p_x = NaN;
                 p_y = NaN;
                 continue;
@@ -5938,12 +5909,6 @@ class graphly extends EventEmitter {
                                     colorAxis[yPos].push(colPar);
                                 }
                             } else {
-                                if(key === 'alpha'){
-                                    // TODO: Possibly only update alpha in colorcache
-                                    for(let k in this.colorCache){
-                                        delete this.colorCache[k];
-                                    }
-                                }
                                 dataSettings[key] = this.settingsToApply[key];
                             }
                         }
@@ -6356,7 +6321,6 @@ class graphly extends EventEmitter {
         function oncolorParamSelectionChange() {
             let selectValue = 
                 that.el.select('#colorParamSelection').property('value');
-            delete that.colorCache[colAxis[yPos][parPos]];
 
             that.settingsToApply.colorAxisChange = {
                 orientation: orientation,
@@ -6433,7 +6397,6 @@ class graphly extends EventEmitter {
 
         function oncolorScaleSelectionChange() {
             let csId = colAxis[yPos][parPos];
-            delete that.colorCache[csId];
             let selectValue = that.el.select('#colorScaleSelection').property('value');
             that.settingsToApply.colorscale = selectValue;
             that.addApply(that.dataSettings[csId]);
