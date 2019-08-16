@@ -5543,14 +5543,17 @@ class graphly extends EventEmitter {
 
             // If render settings uses colorscale axis get color from there
             let rC;
+            let renderValue = Number.NEGATIVE_INFINITY;
             if(cAxis !== null){
-                if(colCacheAvailable){
+                /*if(colCacheAvailable){
                     rC = currColCache[j];
                 } else {
                     rC = this.plotter.getColor(data[cAxis][j]);
                     rC = [rC[0]/255, rC[1]/255, rC[2]/255, constAlpha];
                     this.colorCache[cAxis].push(rC);
-                }
+                }*/
+                rC = [1.0, 0.0, 0.0, constAlpha];
+                renderValue = data[cAxis][j];
                 
             } else {
                 if(singleSettings){
@@ -5689,11 +5692,14 @@ class graphly extends EventEmitter {
                     par_properties.symbol = parSett.symbol;
                     var sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, currDotSize, sym, rC[0], rC[1], rC[2], rC[3]
+                        x, y, currDotSize, sym, 
+                        rC[0], rC[1], rC[2], rC[3], renderValue
                     );
                     if(!this.fixedSize && updateReferenceCanvas){
                         this.batchDrawerReference.addDot(
-                            x, y, currDotSize, sym, nCol[0], nCol[1], nCol[2], -1.0
+                            x, y, currDotSize, sym, 
+                            nCol[0], nCol[1], nCol[2], -1.0,
+                            Number.NEGATIVE_INFINITY
                         );
                     }
                 }
@@ -5890,7 +5896,7 @@ class graphly extends EventEmitter {
                     }
                     var sym = defaultFor(dotType[symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, currDotSize, sym, rC[0], rC[1], rC[2], 0.2
+                        x, y, currDotSize, sym, rC[0], rC[1], rC[2], 0.2, Number.NEGATIVE_INFINITY
                     );
                 }
             }
@@ -7302,6 +7308,8 @@ class graphly extends EventEmitter {
         this.startTiming('renderData');
 
         let xAxRen = this.renderSettings.xAxis;
+
+        this.batchDrawer.setColorScale('viridis');
         
         this.batchDrawer.clear();
 
