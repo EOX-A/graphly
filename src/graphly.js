@@ -563,6 +563,13 @@ class graphly extends EventEmitter {
             this.batchDrawerReference = new BatchDrawer(
                 this.referenceCanvas.node(), params
             );
+
+
+            this.batchDrawerReference.setDomain([0,1]);
+            this.batchDrawerReference.setColorScale('cool');
+            this.batchDrawerReference.setNoDataValue(Number.NEGATIVE_INFINITY)
+            this.batchDrawerReference._initUniforms();
+
             this.referenceContext = this.batchDrawerReference.getContext();
         }
 
@@ -5323,7 +5330,7 @@ class graphly extends EventEmitter {
 
             if(!this.fixedSize && updateReferenceCanvas){
                 this.batchDrawerReference.addRect(
-                    x1,y1,x2,y2, nCol[0], nCol[1], nCol[2], 1.0,
+                    x1,y1,x2,y2, nCol[0], nCol[1], nCol[2],-1.0,
                     Number.NEGATIVE_INFINITY
                 );
             }
@@ -5414,7 +5421,7 @@ class graphly extends EventEmitter {
                 resetUniforms = true;
             }
             // If current cs not equal to the set in the plotter update cs
-            if(cs !== this.plotter.name){
+            if(cs !== this.batchDrawer.csName){
                 this.batchDrawer.setColorScale(cs);
                 resetUniforms = true;
             }
@@ -5519,13 +5526,6 @@ class graphly extends EventEmitter {
             let rC;
             let renderValue = Number.NEGATIVE_INFINITY;
             if(cAxis !== null){
-                /*if(colCacheAvailable){
-                    rC = currColCache[j];
-                } else {
-                    rC = this.plotter.getColor(data[cAxis][j]);
-                    rC = [rC[0]/255, rC[1]/255, rC[2]/255, constAlpha];
-                    this.colorCache[cAxis].push(rC);
-                }*/
                 rC = [1.0, 0.0, 0.0, constAlpha];
                 renderValue = data[cAxis][j];
                 
@@ -5641,7 +5641,8 @@ class graphly extends EventEmitter {
                             if(x-p_x>-this.width/2){
                                 this.batchDrawer.addLine(
                                     p_x, p_y, x, y, (1.5*this.resFactor),
-                                    rC[0], rC[1], rC[2], rC[3]
+                                    rC[0], rC[1], rC[2], rC[3],
+                                    renderValue
                                 );
                             }
                         }
@@ -5651,7 +5652,8 @@ class graphly extends EventEmitter {
                         if(x-p_x>-this.width/2){
                             this.batchDrawer.addLine(
                                 p_x, p_y, x, y, (1.5*this.resFactor),
-                                rC[0], rC[1], rC[2], rC[3]
+                                rC[0], rC[1], rC[2], rC[3],
+                                renderValue
                             );
                         }
                     }
@@ -6320,6 +6322,7 @@ class graphly extends EventEmitter {
                 });
 
         let that = this;
+        var dataSettings;
 
         function oncolorParamSelectionChange() {
             let selectValue = 
@@ -6334,6 +6337,7 @@ class graphly extends EventEmitter {
             // Check if parameter already has a colorscale configured
             if(that.dataSettings.hasOwnProperty(selectValue)){
                 let obj = that.dataSettings[selectValue];
+                dataSettings = obj;
                 if(obj.hasOwnProperty('colorscale')){
                     that.el.select('#colorScaleSelection')
                         .selectAll('option[value="'+obj.colorscale+'"]').property(
@@ -6346,7 +6350,7 @@ class graphly extends EventEmitter {
                         );
                 }
             }
-            that.addApply(null);
+            that.addApply(dataSettings);
         }
 
 
@@ -6400,6 +6404,18 @@ class graphly extends EventEmitter {
 
         function oncolorScaleSelectionChange() {
             let csId = colAxis[yPos][parPos];
+            if(csId === null){
+                // the colorscale on which the configuration is being applied
+                // is not yet been applied itself, so changing colorscale 
+                // when at the same time adding the colorscale attribute in the 
+                // settings, so we need to check for parameters to apply
+                if(that.settingsToApply.hasOwnProperty('colorAxisChange')){
+                    if(that.settingsToApply.colorAxisChange.yPos === yPos && 
+                       that.settingsToApply.colorAxisChange.parPos === parPos){
+                        csId = that.settingsToApply.colorAxisChange.colorParameter;
+                    }
+                }
+            }
             let selectValue = that.el.select('#colorScaleSelection').property('value');
             that.settingsToApply.colorscale = selectValue;
             that.addApply(that.dataSettings[csId]);
@@ -7276,7 +7292,6 @@ class graphly extends EventEmitter {
         let xAxRen = this.renderSettings.xAxis;
 
         this.batchDrawer.clear();
-        this.batchDrawer.setColorScale('viridis');
 
         // If data object is undefined or empty return
         // TODO: There should be a cleaner way to do this, maybe clean all
