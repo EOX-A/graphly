@@ -86,6 +86,7 @@ class BatchDrawer {
         this.LINE_END_BUF = 2;
         this.LINE_WIDTH_BUF = 3;
         this.LINE_COLOR_BUF = 4;
+        this.LINE_VALUE_BUF = 5;
 
         this.DOT_VX_BUF = 0;
         this.DOT_POS_BUF = 1;
@@ -177,6 +178,7 @@ class BatchDrawer {
         this.lineEndArray = new Float32Array(this.maxLines * 2);
         this.lineWidthArray = new Float32Array(this.maxLines);
         this.lineColorArray = new Float32Array(this.maxLines * 4);
+        this.lineValueArray = new Float32Array(this.maxLines);
 
         this.dotPosArray = new Float32Array(this.maxDots * 2);
         this.dotSizeArray = new Float32Array(this.maxDots);
@@ -194,6 +196,7 @@ class BatchDrawer {
         this.lineEndBuffer = this._initArrayBuffer(this.lineEndArray, 2);
         this.lineWidthBuffer = this._initArrayBuffer(this.lineWidthArray, 1);
         this.lineColorBuffer = this._initArrayBuffer(this.lineColorArray, 4);
+        this.lineValueBuffer = this._initArrayBuffer(this.lineValueArray, 1);
 
         this.dotPosBuffer = this._initArrayBuffer(this.dotPosArray, 2);
         this.dotSizeBuffer = this._initArrayBuffer(this.dotSizeArray, 1);
@@ -233,6 +236,7 @@ class BatchDrawer {
             this.GL.bindAttribLocation(program, this.LINE_END_BUF, 'inLineEnd');
             this.GL.bindAttribLocation(program, this.LINE_WIDTH_BUF, 'inLineWidth');
             this.GL.bindAttribLocation(program, this.LINE_COLOR_BUF, 'lineColor');
+            this.GL.bindAttribLocation(program, this.LINE_VALUE_BUF, 'value');
         } else if (shape === 'dot') {
             this.GL.bindAttribLocation(program, this.DOT_VX_BUF, 'vertexPos');
             this.GL.bindAttribLocation(program, this.DOT_POS_BUF, 'inDotPos');
@@ -352,7 +356,7 @@ class BatchDrawer {
 
 
 
-    addLine(startX, startY, endX, endY, width, colorR, colorG, colorB, colorA) {
+    addLine(startX, startY, endX, endY, width, colorR, colorG, colorB, colorA, value) {
         this.lineStartArray[2*this.numLines] = startX;
         this.lineStartArray[2*this.numLines+1] = startY;
         this.lineEndArray[2*this.numLines] = endX;
@@ -362,6 +366,7 @@ class BatchDrawer {
         this.lineColorArray[4*this.numLines+1] = colorG;
         this.lineColorArray[4*this.numLines+2] = colorB;
         this.lineColorArray[4*this.numLines+3] = colorA;
+        this.lineValueArray[this.numLines] = value;
         this.numLines++;
     }
 
@@ -459,7 +464,6 @@ class BatchDrawer {
     }
 
     setColorScale(name) {
-
         if (!this.colorscales.hasOwnProperty(name)) {
             throw new Error("No such color scale '" + name + "'");
         }
@@ -471,7 +475,7 @@ class BatchDrawer {
             this.colorScaleCanvas.height = 1;  
         }
         this._renderColorScaleToCanvas(name, this.colorScaleCanvas);
-        this.name = name;
+        this.csName = name;
         this._setColorScaleImage(this.colorScaleCanvas);
     }
 
@@ -541,6 +545,9 @@ class BatchDrawer {
 
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineColorBuffer);
         this.GL.bufferSubData(this.GL.ARRAY_BUFFER, 0, this.lineColorArray , 0, this.numLines * 4);
+
+        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.lineValueBuffer);
+        this.GL.bufferSubData(this.GL.ARRAY_BUFFER, 0, this.lineValueArray , 0, this.numLines);
     }
 
 
@@ -590,6 +597,7 @@ class BatchDrawer {
         gl.enableVertexAttribArray(this.LINE_END_BUF);
         gl.enableVertexAttribArray(this.LINE_WIDTH_BUF);
         gl.enableVertexAttribArray(this.LINE_COLOR_BUF);
+        gl.enableVertexAttribArray(this.LINE_VALUE_BUF);
 
         // Bind all line vertex buffers:
         gl.bindBuffer(gl.ARRAY_BUFFER, this.lineVertexBuffer);
@@ -610,6 +618,10 @@ class BatchDrawer {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.lineColorBuffer);
         gl.vertexAttribPointer(this.LINE_COLOR_BUF, 4, gl.FLOAT, false, 16, 0);
         gl.vertexAttribDivisor(this.LINE_COLOR_BUF, 1);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineValueBuffer);
+        gl.vertexAttribPointer(this.LINE_VALUE_BUF, 1, gl.FLOAT, false, 4, 0);
+        gl.vertexAttribDivisor(this.LINE_VALUE_BUF, 1);
 
         // Draw all line instances:
         gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.numLines);
@@ -711,6 +723,7 @@ class BatchDrawer {
         gl.enableVertexAttribArray(this.LINE_END_BUF);
         gl.enableVertexAttribArray(this.LINE_WIDTH_BUF);
         gl.enableVertexAttribArray(this.LINE_COLOR_BUF);
+        gl.enableVertexAttribArray(this.LINE_VALUE_BUF);
 
         // Bind all line vertex buffers:
         gl.bindBuffer(gl.ARRAY_BUFFER, this.lineVertexBuffer);
@@ -731,6 +744,10 @@ class BatchDrawer {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.lineColorBuffer);
         gl.vertexAttribPointer(this.LINE_COLOR_BUF, 4, gl.FLOAT, false, 16, 0);
         this.ext.vertexAttribDivisorANGLE(this.LINE_COLOR_BUF, 1);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineValueBuffer);
+        gl.vertexAttribPointer(this.LINE_VALUE_BUF, 1, gl.FLOAT, false, 4, 0);
+        this.ext.vertexAttribDivisorANGLE(this.LINE_VALUE_BUF, 1);
 
         // Draw all line instances:
         this.ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.numLines);
@@ -809,7 +826,7 @@ class BatchDrawer {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.rectValueBuffer);
         gl.vertexAttribPointer(this.RECT_VALUE_BUF, 1, gl.FLOAT, false, 4, 0);
-        gl.vertexAttribDivisor(this.RECT_VALUE_BUF, 1);
+        this.ext.vertexAttribDivisorANGLE(this.RECT_VALUE_BUF, 1);
 
         // Draw all rect instances:
         this.ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.numRects);
@@ -847,14 +864,14 @@ class BatchDrawer {
 
                     vec4 color_out = vec4(color.rgb  * color.a, color.a);
 
-                    if(value != u_noDataValue){
-                        float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
-                        vec4 text_col = texture(u_textureScale, vec2(normalisedValue, 0));
-                        color_out = vec4(text_col.rgb  * color.a, color.a);
-                    }
-
                     if(color.a < 0.0){
                         color_out = vec4(color.rgb, 1.0);
+                    } else {
+                        if(value != u_noDataValue){
+                            float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            vec4 text_col = texture(u_textureScale, vec2(normalisedValue, 0));
+                            color_out = vec4(text_col.rgb  * color.a, color.a);
+                        }
                     }
 
                     if(dotType == 0.0){ 
@@ -1030,10 +1047,24 @@ class BatchDrawer {
                 lineFragSource =
                    `#version 300 es
                     precision mediump float;
+
                     in vec4 color;
+                    in float value;
                     out vec4 fragmentColor;
+
+                    uniform sampler2D u_textureScale;
+                    uniform float u_noDataValue;
+                    uniform vec2 u_domain;
+
                     void main(void) {
-                        fragmentColor = vec4(color.rgb  * color.a, color.a);;
+                        vec4 color_out = vec4(color.rgb  * color.a, color.a);
+
+                        if(value != u_noDataValue){
+                            float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            vec4 text_col = texture(u_textureScale, vec2(normalisedValue, 0));
+                            color_out = vec4(text_col.rgb  * color.a, color.a);
+                        }
+                        fragmentColor = color_out;
                 }`;
             
                 lineVertexSource = 
@@ -1044,14 +1075,17 @@ class BatchDrawer {
                     layout(location = 2) in vec2 inLineEnd;
                     layout(location = 3) in float inLineWidth;
                     layout(location = 4) in vec4 lineColor;
+                    layout(location = 5) in float inValue;
 
                     out vec4 color;
+                    out float value;
 
                     uniform mat3 projection;
                     uniform vec2 resolutionScale;
 
                     void main(void) {
                         color = lineColor;
+                        value = inValue;
 
                         vec2 lineStart = inLineStart * resolutionScale;
                         vec2 lineEnd = inLineEnd * resolutionScale;
@@ -1091,12 +1125,17 @@ class BatchDrawer {
                     uniform vec2 u_domain;
 
                     void main(void) {
+
                         vec4 color_out = vec4(color.rgb  * color.a, color.a);
 
-                        if(value != u_noDataValue){
-                            float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
-                            vec4 text_col = texture(u_textureScale, vec2(normalisedValue, 0));
-                            color_out = vec4(text_col.rgb  * color.a, color.a);
+                        if(color.a < 0.0){
+                            color_out = vec4(color.rgb, 1.0);
+                        } else {
+                            if(value != u_noDataValue){
+                                float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                                vec4 text_col = texture(u_textureScale, vec2(normalisedValue, 0));
+                                color_out = vec4(text_col.rgb  * color.a, color.a);
+                            }
                         }
 
                         fragmentColor = color_out;
@@ -1152,16 +1191,28 @@ class BatchDrawer {
                 #define TWO_PI 6.28318530718
 
                 precision mediump float;
-                
+
                 varying vec4 color;
                 varying float dotType;
                 varying float dotSize;
+                varying float value;
+
+                uniform sampler2D u_textureScale;
+                uniform float u_noDataValue;
+                uniform vec2 u_domain;
                 
                 void main(void) {
 
-                    vec4 color_out = vec4(color.rgb * color.a, color.a);
+                    vec4 color_out = vec4(color.rgb  * color.a, color.a);
+
                     if(color.a < 0.0){
                         color_out = vec4(color.rgb, 1.0);
+                    } else {
+                        if(value != u_noDataValue){
+                            float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            vec4 text_col = texture2D(u_textureScale, vec2(normalisedValue, 0));
+                            color_out = vec4(text_col.rgb  * color.a, color.a);
+                        }
                     }
 
                     if(dotType == 0.0){ 
@@ -1313,10 +1364,12 @@ class BatchDrawer {
                 attribute float inDotSize;
                 attribute vec4 dotColor;
                 attribute float inDotType;
+                attribute float inValue;
 
                 varying vec4 color;
                 varying float dotSize;
                 varying float dotType;
+                varying float value;
 
                 uniform mat3 projection;
                 uniform vec2 resolutionScale;
@@ -1325,6 +1378,7 @@ class BatchDrawer {
                     color = dotColor;
                     dotSize = inDotSize;
                     dotType = inDotType;
+                    value = inValue;
                     gl_PointSize =  inDotSize;
                     vec2 dotPos = resolutionScale * inDotPos;
                     float dotSize = resolutionScale.x * inDotSize;
@@ -1339,10 +1393,23 @@ class BatchDrawer {
             lineFragSource =
                 `#version 100
                 precision mediump float;
+
                 varying vec4 color;
+                varying float value;
+
+                uniform sampler2D u_textureScale;
+                uniform float u_noDataValue;
+                uniform vec2 u_domain;
 
                 void main(void) {
-                    gl_FragColor = color;
+                    vec4 color_out = vec4(color.rgb  * color.a, color.a);
+
+                    if(value != u_noDataValue){
+                        float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                        vec4 text_col = texture2D(u_textureScale, vec2(normalisedValue, 0));
+                        color_out = vec4(text_col.rgb  * color.a, color.a);
+                    }
+                    gl_FragColor = color_out;
                 }`;
 
             lineVertexSource = 
@@ -1354,15 +1421,17 @@ class BatchDrawer {
                 attribute vec2 inLineEnd;
                 attribute float inLineWidth;
                 attribute vec4 lineColor;
+                attribute float inValue;
 
                 varying vec4 color;
+                varying float value;
 
                 uniform mat3 projection;
                 uniform vec2 resolutionScale;
 
                 void main(void) {
                     color = lineColor;
-
+                    value = inValue;
                     vec2 lineStart = inLineStart * resolutionScale;
                     vec2 lineEnd = inLineEnd * resolutionScale;
                     float lineWidth = inLineWidth * resolutionScale.x;
@@ -1393,9 +1462,26 @@ class BatchDrawer {
                 `#version 100
                 precision mediump float;
                 varying vec4 color;
+                varying float value;
+
+                uniform sampler2D u_textureScale;
+                uniform float u_noDataValue;
+                uniform vec2 u_domain;
 
                 void main(void) {
-                    gl_FragColor = vec4(color.rgb * color.a, color.a);
+
+                    vec4 color_out = vec4(color.rgb  * color.a, color.a);
+
+                    if(color.a < 0.0){
+                        color_out = vec4(color.rgb, 1.0);
+                    } else {
+                        if(value != u_noDataValue){
+                            float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            vec4 text_col = texture2D(u_textureScale, vec2(normalisedValue, 0));
+                            color_out = vec4(text_col.rgb  * color.a, color.a);
+                        }
+                    }
+                    gl_FragColor = color_out;
                 }`;
                 
             rectVertexSource = 
@@ -1406,14 +1492,17 @@ class BatchDrawer {
                 attribute vec2 inRectStart;
                 attribute vec2 inRectEnd;
                 attribute vec4 rectColor;
+                attribute float inValue;
 
                 varying vec4 color;
+                varying float value;
 
                 uniform mat3 projection;
                 uniform vec2 resolutionScale;
 
                 void main(void) {
                     color = rectColor;
+                    value = inValue;
 
                     vec2 rectStart = inRectStart * resolutionScale;
                     vec2 rectEnd = inRectEnd * resolutionScale;
