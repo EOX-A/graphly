@@ -532,7 +532,7 @@ class graphly extends EventEmitter {
 
         // Set parameters
         let params = {
-            forceGL1: false, // use WebGL 1 even if WebGL 2 is available
+            forceGL1: true, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             coordinateSystem: 'pixels',
             contextParams: {
@@ -542,6 +542,8 @@ class graphly extends EventEmitter {
 
         // Initialize BatchDrawer:
         this.batchDrawer = new BatchDrawer(this.renderCanvas.node(), params);
+
+        this.batchDrawer.setNoDataValue(Number.MIN_SAFE_INTEGER);
 
 
         if(!this.fixedSize){
@@ -567,7 +569,7 @@ class graphly extends EventEmitter {
 
             this.batchDrawerReference.setDomain([0,1]);
             this.batchDrawerReference.setColorScale('cool');
-            this.batchDrawerReference.setNoDataValue(Number.NEGATIVE_INFINITY)
+            this.batchDrawerReference.setNoDataValue(Number.MIN_SAFE_INTEGER);
             this.batchDrawerReference._initUniforms();
 
             this.referenceContext = this.batchDrawerReference.getContext();
@@ -5118,9 +5120,8 @@ class graphly extends EventEmitter {
         var l = data[xGroup[0]].length;
 
         let currColCache = null;
-        let colCacheAvailable = false;
-        let discreteColorScale = false;
-        let discreteCSOffset = 0;
+        let discreteCSOffset;
+        let discreteColorScaleEnabled = false;
 
         yScale = yScale[plotY];
 
@@ -5171,7 +5172,7 @@ class graphly extends EventEmitter {
                 this.batchDrawer.setDomain(cA.extent);
             }
             if (cA && cA.hasOwnProperty('csDiscrete')){
-                discreteColorScale = cA.csDiscrete;
+                discreteColorScaleEnabled = true;
             }
 
             this.batchDrawer.setColorScale(cs);
@@ -5179,14 +5180,10 @@ class graphly extends EventEmitter {
             
 
             // TODO get discrete colorscales working again
-            /*if(discreteColorScale && this.colorCache[cAxis].length===0){
-                this.colorCache[cAxis] = this.discreteColorScales[cAxis];
-                colCacheAvailable = true;
-                currColCache = this.colorCache[cAxis];
+            if(discreteColorScaleEnabled){
+                currColCache = this.discreteColorScales[cAxis];
                 discreteCSOffset = d3.min(data[cAxis]);
-            } else if(discreteColorScale){
-                discreteCSOffset = d3.min(data[cAxis]);
-            }*/
+            }
         }
 
         // Check if cyclic axis and if currently displayed axis range needs to
@@ -5295,22 +5292,14 @@ class graphly extends EventEmitter {
             let nCol = [idC[0]/255, idC[1]/255, idC[2]/255];
 
             let rC;
-            let renderValue = Number.NEGATIVE_INFINITY;
+            let renderValue = Number.MIN_SAFE_INTEGER;
             if(cAxis !== null){
                 rC = [1.0, 0.0, 0.0, constAlpha];
-                renderValue = data[cAxis][i];
-                /*if(colCacheAvailable){
-                    if(discreteColorScale){
-                        rC = currColCache[data[cAxis][i]];
-                    } else {
-                        rC = currColCache[i];
-                    }
+                if(discreteColorScaleEnabled){
+                    rC = currColCache[data[cAxis][i]];
                 } else {
-                    rC = this.plotter.getColor(data[cAxis][i])
-                        .map(function(c){return c/255;});
-                    rC[3] = constAlpha;
-                    this.colorCache[cAxis].push(rC);
-                }*/
+                    renderValue = data[cAxis][i];
+                }
             } else {
                 if(singleColor){
                     rC = colorObj;
@@ -5331,7 +5320,7 @@ class graphly extends EventEmitter {
             if(!this.fixedSize && updateReferenceCanvas){
                 this.batchDrawerReference.addRect(
                     x1,y1,x2,y2, nCol[0], nCol[1], nCol[2],-1.0,
-                    Number.NEGATIVE_INFINITY
+                    Number.MIN_SAFE_INTEGER
                 );
             }
         } // end data for loop
@@ -5524,7 +5513,7 @@ class graphly extends EventEmitter {
 
             // If render settings uses colorscale axis get color from there
             let rC;
-            let renderValue = Number.NEGATIVE_INFINITY;
+            let renderValue = Number.MIN_SAFE_INTEGER;
             if(cAxis !== null){
                 rC = [1.0, 0.0, 0.0, constAlpha];
                 renderValue = data[cAxis][j];
@@ -5675,7 +5664,7 @@ class graphly extends EventEmitter {
                         this.batchDrawerReference.addDot(
                             x, y, currDotSize, sym, 
                             nCol[0], nCol[1], nCol[2], -1.0,
-                            Number.NEGATIVE_INFINITY
+                            Number.MIN_SAFE_INTEGER
                         );
                     }
                 }
@@ -5872,7 +5861,7 @@ class graphly extends EventEmitter {
                     }
                     var sym = defaultFor(dotType[symbol], 2.0);
                     this.batchDrawer.addDot(
-                        x, y, currDotSize, sym, rC[0], rC[1], rC[2], 0.2, Number.NEGATIVE_INFINITY
+                        x, y, currDotSize, sym, rC[0], rC[1], rC[2], 0.2, Number.MIN_SAFE_INTEGER
                     );
                 }
             }

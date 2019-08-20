@@ -55,7 +55,7 @@ var graph = new graphly.graphly({
     filterManager: filterManager,
     debounceActive: false,
     debug: true,
-    labelAllignment: 'center',
+    //labelAllignment: 'center',
     //enableFit: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false
@@ -124,6 +124,9 @@ xhr.onload = function(e) {
         break;
         case 'L2A':
             addT.handleL2AData(data, graph, filterManager);
+        break;
+        case 'L2B_group':
+            addT.handleL2BGroupData(data, graph, filterManager);
         break;
     }
 

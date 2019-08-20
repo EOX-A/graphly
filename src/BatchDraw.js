@@ -53,8 +53,8 @@ class BatchDrawer {
             },
         }
 
-        this.setNoDataValue(Number.NEGATIVE_INFINITY);
-        this.setDomain([-5,5]);
+        this.setNoDataValue(Number.MIN_VALUE);
+        this.setDomain([0,1]);
         
         switch(params.coordinateSystem) {
         case null:
@@ -1127,7 +1127,6 @@ class BatchDrawer {
                     void main(void) {
 
                         vec4 color_out = vec4(color.rgb  * color.a, color.a);
-
                         if(color.a < 0.0){
                             color_out = vec4(color.rgb, 1.0);
                         } else {
@@ -1137,7 +1136,6 @@ class BatchDrawer {
                                 color_out = vec4(text_col.rgb  * color.a, color.a);
                             }
                         }
-
                         fragmentColor = color_out;
                 }`;
             
