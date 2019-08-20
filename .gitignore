@@ -3,3 +3,4 @@ test/components
 .tmp
 test/data
 stats.json
+dist/*.png

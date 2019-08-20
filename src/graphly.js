@@ -3674,6 +3674,9 @@ class graphly extends EventEmitter {
                             let newxPar;
                             if(that.renderSettings.yAxis.length === 1){
                                 let xaxPar = that.renderSettings.xAxis;
+                                if(Array.isArray(xaxPar)){
+                                    xaxPar = xaxPar[0];
+                                }
                                 // Try to find equvalent parameter
                                 let tmpPar = xaxPar.replace(prevGroup, groupKey);
                                 if(newGroupPars.indexOf(tmpPar)!==-1){
