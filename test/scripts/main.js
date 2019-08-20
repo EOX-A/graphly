@@ -55,7 +55,7 @@ var graph = new graphly.graphly({
     filterManager: filterManager,
     debounceActive: false,
     debug: true,
-    labelAllignment: 'center',
+    //labelAllignment: 'center',
     //enableFit: false,
     //displayColorscaleOptions: false,
     //displayAlphaOptions: false
@@ -76,6 +76,10 @@ var graph = new graphly.graphly({
     //defaultAxisTickFormat: 'customExp'
 
 });
+
+graph.addColorScale(
+    'redwhiteblue',['#ff0000', '#ffffff', '#0000ff'], [0, 0.5, 1]
+);
 
 filterManager.loadData(data);
 graph.loadData(data);
@@ -124,6 +128,9 @@ xhr.onload = function(e) {
         break;
         case 'L2A':
             addT.handleL2AData(data, graph, filterManager);
+        break;
+        case 'L2B_group':
+            addT.handleL2BGroupData(data, graph, filterManager);
         break;
     }
 

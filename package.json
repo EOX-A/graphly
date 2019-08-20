@@ -10,10 +10,10 @@
     "babel-polyfill": "^6.26.0",
     "c-p": "^1.4.0",
     "choices.js": "^3.0.4",
+    "colorscalesdef": "github:eox-a/colorscalesdef",
     "d3": "~3.5.3",
     "file-saver": "~1.2.0",
     "msgpack-lite": "^0.1.26",
-    "plotty": "^0.2.0",
     "regression": "^1.4.0"
   },
   "devDependencies": {
@@ -35,7 +35,7 @@
     "node": ">=0.8.0"
   },
   "scripts": {
-    "build-min": "webpack --config=webpack.min.config.js ",
+    "build-min": "webpack --config=webpack.min.config.js --profile --json > stats.json",
     "start": "npm-run webpack-dev-server",
     "jsdoc": "rm -rf docs/*; jsdoc -r src README.md -d docs -t node_modules/ink-docstrap/template -c jsdoc.json"
   }

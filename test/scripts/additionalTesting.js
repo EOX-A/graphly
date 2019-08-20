@@ -189,8 +189,67 @@ export var renderSettingsDefinition = {
             time: ['time_start', 'time_end'],
         },
         colorAxis: ['CPR_Cloud_mask']
-    }
+    },
 
+    'L2B_group': {
+        xAxis: ['measurements'],
+        yAxis: [
+            ['rayleigh_bins']
+        ],
+        combinedParameters: {
+            mie_bins: ['mie_bins_end', 'mie_bins_start'],
+            mie_measurements: ['mie_meas_start', 'mie_meas_end'],
+            rayleigh_bins: ['rayleigh_bins_end', 'rayleigh_bins_start'],
+            rayleigh_measurements: ['rayleigh_meas_start', 'rayleigh_meas_end']
+        },
+        colorAxis: [
+            ['rayleigh_meas_map']
+        ],
+        groups: ['rayleigh'],
+        reversedYAxis: true,
+        additionalXTicks: [],
+        additionalYTicks: [[]],
+        y2Axis: [[]],
+        colorAxis2: [[]],
+        renderGroups: {
+            mie: {
+                parameters: [
+                    'mie_bins',
+                    'mie_measurements',
+                    'mie_bins_end',
+                    'mie_bins_start',
+                    'mie_meas_start',
+                    'mie_meas_end',
+                    'mie_meas_map'
+                ],
+                defaults: {
+                    yAxis: 'mie_bins',
+                    colorAxis: 'mie_meas_map'
+                }
+            },
+            rayleigh: {
+                parameters: [
+                    'rayleigh_bins',
+                    'rayleigh_measurements',
+                    'rayleigh_bins_end',
+                    'rayleigh_bins_start',
+                    'rayleigh_meas_start',
+                    'rayleigh_meas_end',
+                    'rayleigh_meas_map'
+                ],
+                defaults: {
+                    yAxis: 'rayleigh_bins',
+                    colorAxis: 'rayleigh_meas_map'
+                }
+            }
+        },
+        sharedParameters: {
+            'measurements': [
+                'mie_measurements', 'rayleigh_measurements'
+            ],
+        },
+        availableParameters: false
+    }
 
 
 };
@@ -221,7 +280,7 @@ export var dataSettingsConfig = {
 
         'SCA_extinction': {
             uom: '10-6 * m^-1',
-            colorscale: 'plasma',
+            colorscale: 'viridis',
             extent: [-20, 20]
         },
         'SCA_extinction_variance': {
@@ -230,7 +289,7 @@ export var dataSettingsConfig = {
         },
         'SCA_backscatter': {
             uom: '10-6 * m^-1* sr^-1',
-            colorscale: 'plasma',
+            colorscale: 'viridis',
             extent: [-20, 20]
         },
         'SCA_backscatter_variance': {
@@ -378,7 +437,7 @@ export var dataSettingsConfig = {
         },
         mie_HLOS_wind_speed: {
             uom: 'm/s',
-            colorscale: 'plasma',
+            colorscale: 'viridis',
             //extent: [-5000,5000]
             //outline: false
         },
@@ -403,7 +462,7 @@ export var dataSettingsConfig = {
         },
         rayleigh_HLOS_wind_speed: {
             uom: 'm/s',
-            colorscale: 'plasma',
+            colorscale: 'viridis',
            // nullValue: 642.7306076260679
             extent: [-50,50]
             //outline: false
@@ -416,7 +475,7 @@ export var dataSettingsConfig = {
         T_elec: {
             symbol: 'circle',
             uom: 'n',
-            colorscale: 'plasma'
+            colorscale: 'viridis'
             //regression: 'polynomial',
             //lineConnect: true
         },
@@ -480,6 +539,18 @@ export var dataSettingsConfig = {
             colorscale: 'viridis',
             extent: [-140,39]
         }
+    },
+
+    'L2B_group': {
+        'mie_meas_map': {
+            colorscale: 'jet',
+            csDiscrete: true
+        },
+
+        'rayleigh_meas_map': {
+            colorscale: 'jet',
+            csDiscrete: true
+        },
     }
 
 
@@ -627,7 +698,9 @@ export var filterSettingsConfiguration = {
             /*'SunDeclination', 'SunRightAscension', 'SunHourAngle',
             'SunAzimuthAngle', 'SunZenithAngle'*/
         ],
-    }
+    },
+
+    'L2B_group': {}
 
 }
 
@@ -785,7 +858,7 @@ export function handleSwarmData(data, graph, filterManager){
 
 export function handleL1BData(data, graph, filterManager){
 
-    graph.debounceActive = true;
+    graph.debounceActive = false;
 
     var ds = data.ALD_U_N_1B.observation_data;
 
@@ -974,6 +1047,215 @@ export function handleL2AData(data, graph, filterManager){
 
       filterManager.loadData(data);
       graph.loadData(data);
+}
+
+
+export function handleL2BGroupData(data, graph, filterManager){
+
+    data = data['ALD_U_N_2B'];
+    var keys = Object.keys(data);
+    var ds = data;
+    var resData = {};
+
+    var observationMeasSize = 30;
+
+    var mie_bins_start = [];
+    var mie_bins_end = [];
+    var mie_meas_start = [];
+    var mie_meas_end = [];
+    var mie_measurement_map = [];
+    var mie_obs_start = [];
+
+    var mGS = ds.mie_grouping_data.mie_grouping_start_obs;
+    var mGE = ds.mie_grouping_data.mie_grouping_end_obs;
+
+    var mMS, mME;
+    if(ds.mie_grouping_data.hasOwnProperty('mie_grouping_start_meas_per_obs')){
+    mMS = ds.mie_grouping_data.mie_grouping_start_meas_per_obs;
+    } else if(ds.mie_grouping_data.hasOwnProperty('mie_grouping_start_meas_obs')){
+    mMS = ds.mie_grouping_data.mie_grouping_start_meas_obs;
+    }
+    if(ds.mie_grouping_data.hasOwnProperty('mie_grouping_end_meas_per_obs')){
+    mME = ds.mie_grouping_data.mie_grouping_end_meas_per_obs;
+    } else if(ds.mie_grouping_data.hasOwnProperty('mie_grouping_end_meas_obs')){
+    mME = ds.mie_grouping_data.mie_grouping_end_meas_obs;
+    }
+
+
+    var mie_groupArrows = [];
+
+    if(typeof mGS === 'undefined'){
+    // empty dataset just retunr
+    return;
+    }
+
+    for (var i = 0; i < mGS.length; i++) {
+
+      var mMeasStart = (((mGS[i]-1)*observationMeasSize) + mMS[i])-1;
+      var mMeasEnd = ((mGE[i]-1)*observationMeasSize) + mME[i];
+      var mMeasDelta = (mMeasEnd - mMeasStart)-1;
+
+      mie_groupArrows.push([
+        mMeasStart,
+        mMeasEnd,
+        i
+      ]);
+
+      var obs_mie_bins_start = [];
+      var obs_mie_bins_end = [];
+      var obs_mie_meas_start = [];
+      var obs_mie_meas_end = [];
+      var obs_mie_measurement_map = [];
+      mie_obs_start.push(mGS[i]);
+
+      if(mMeasStart>=ds.measurement_data.mie_measurement_map.length){
+        continue;
+      }
+
+      for (var j=0; j<ds.measurement_data.mie_measurement_map[mMeasStart].length; j++){
+
+        for (var m=0; m<=mMeasDelta; m++) {
+          if((mMeasStart+m)>ds.measurement_data.mie_measurement_map.length){
+            console.log(mMeasStart);
+          }
+          if(ds.measurement_data.mie_measurement_map[mMeasStart+m][j] !== 0){
+              obs_mie_bins_start.push(j);
+              obs_mie_bins_end.push(j+1);
+              obs_mie_meas_start.push(mMeasStart+m);
+              obs_mie_meas_end.push((mMeasStart+m+1));
+              obs_mie_measurement_map.push(
+                ds.measurement_data.mie_measurement_map[mMeasStart+m][j]
+              );
+          }
+        }
+      }
+      mie_bins_start.push(obs_mie_bins_start);
+      mie_bins_end.push(obs_mie_bins_end);
+      mie_meas_start.push(obs_mie_meas_start);
+      mie_meas_end.push(obs_mie_meas_end);
+      mie_measurement_map.push(obs_mie_measurement_map);
+    }
+
+    resData.mie_bins_start = mie_bins_start;
+    resData.mie_bins_end = mie_bins_end;
+    resData.mie_meas_start = mie_meas_start;
+    resData.mie_meas_end = mie_meas_end;
+    resData.mie_meas_map = mie_measurement_map;
+    resData.mie_obs_start = mie_obs_start;
+    resData.mie_groupArrows = mie_groupArrows;
+
+
+    var rayleigh_bins_start = [];
+    var rayleigh_bins_end = [];
+    var rayleigh_meas_start = [];
+    var rayleigh_meas_end = [];
+    var rayleigh_measurement_map = [];
+    var rayleigh_obs_start = [];
+
+    var rGS = ds.rayleigh_grouping_data.rayleigh_grouping_start_obs;
+    var rGE = ds.rayleigh_grouping_data.rayleigh_grouping_end_obs;
+
+    var rMS, rME;
+    if(ds.rayleigh_grouping_data.hasOwnProperty('rayleigh_grouping_start_meas_per_obs')){
+    rMS = ds.rayleigh_grouping_data.rayleigh_grouping_start_meas_per_obs;
+    } else if(ds.rayleigh_grouping_data.hasOwnProperty('rayleigh_grouping_start_meas_obs')){
+    rMS = ds.rayleigh_grouping_data.rayleigh_grouping_start_meas_obs;
+    }
+    if(ds.rayleigh_grouping_data.hasOwnProperty('rayleigh_grouping_end_meas_per_obs')){
+    rME = ds.rayleigh_grouping_data.rayleigh_grouping_end_meas_per_obs;
+    } else if(ds.rayleigh_grouping_data.hasOwnProperty('rayleigh_grouping_end_meas_obs')){
+    rME = ds.rayleigh_grouping_data.rayleigh_grouping_end_meas_obs;
+    }
+
+    var rayleigh_groupArrows = [];
+
+    for (var i = 0; i < rGS.length; i++) {
+
+      var rMeasStart = (((rGS[i]-1)*observationMeasSize) + rMS[i])-1;
+      var rMeasEnd = ((rGE[i]-1)*observationMeasSize) + rME[i];
+      var rMeasDelta = (rMeasEnd - rMeasStart)-1;
+
+      rayleigh_groupArrows.push([
+        rMeasStart,
+        rMeasEnd,
+        i
+      ]);
+
+      var obs_rayleigh_bins_start = [];
+      var obs_rayleigh_bins_end = [];
+      var obs_rayleigh_meas_start = [];
+      var obs_rayleigh_meas_end = [];
+      var obs_rayleigh_measurement_map = [];
+      rayleigh_obs_start.push(rGS[i]);
+
+      if(rMeasStart>=ds.measurement_data.rayleigh_measurement_map.length){
+        continue;
+      }
+
+      for (var j=0; j<ds.measurement_data.rayleigh_measurement_map[rMeasStart].length; j++){
+
+        for (var m=0; m<=rMeasDelta; m++) {
+          if((rMeasStart+m)>ds.measurement_data.rayleigh_measurement_map.length){
+            console.log(rMeasStart);
+          }
+          if(ds.measurement_data.rayleigh_measurement_map[rMeasStart+m][j] !== 0){
+              obs_rayleigh_bins_start.push(j);
+              obs_rayleigh_bins_end.push(j+1);
+              obs_rayleigh_meas_start.push(rMeasStart+m);
+              obs_rayleigh_meas_end.push((rMeasStart+m+1));
+              obs_rayleigh_measurement_map.push(
+                ds.measurement_data.rayleigh_measurement_map[rMeasStart+m][j]
+              );
+          }
+        }
+      }
+      rayleigh_bins_start.push(obs_rayleigh_bins_start);
+      rayleigh_bins_end.push(obs_rayleigh_bins_end);
+      rayleigh_meas_start.push(obs_rayleigh_meas_start);
+      rayleigh_meas_end.push(obs_rayleigh_meas_end);
+      rayleigh_measurement_map.push(obs_rayleigh_measurement_map);
+    }
+
+    resData.rayleigh_bins_start = rayleigh_bins_start;
+    resData.rayleigh_bins_end = rayleigh_bins_end;
+    resData.rayleigh_meas_start = rayleigh_meas_start;
+    resData.rayleigh_meas_end = rayleigh_meas_end;
+    resData.rayleigh_meas_map = rayleigh_measurement_map;
+    resData.rayleigh_obs_start = rayleigh_obs_start;
+    resData.rayleigh_groupArrows = rayleigh_groupArrows;
+
+
+    var pageSize = 3;
+    var pos = 0;
+    var group = 'rayleigh';
+
+    var meas_start = 'var_meas_start'.replace('var', group);
+    var meas_end = 'var_meas_end'.replace('var', group);
+    var groupArrows = 'var_groupArrows'.replace('var', group);
+
+    var slicedData = {};
+
+    for (var key in resData){
+        slicedData[key] = resData[key].slice(
+            pos, ((pos+pageSize))
+        ).flat();
+    }
+
+
+    graph.addGroupArrows(
+        resData[groupArrows].slice(pos, ((pos+pageSize)))
+    );
+    graph.setXDomain([
+        d3.extent(slicedData[meas_start])[0],
+        d3.extent(slicedData[meas_end])[1]
+    ]);
+
+    graph.loadData(slicedData);
+
+
+    //filterManager.loadData(resData);
+    //graph.loadData(resData);
+
 }
 
 
