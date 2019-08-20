@@ -77,6 +77,10 @@ var graph = new graphly.graphly({
 
 });
 
+graph.addColorScale(
+    'redwhiteblue',['#ff0000', '#ffffff', '#0000ff'], [0, 0.5, 1]
+);
+
 filterManager.loadData(data);
 graph.loadData(data);
 

@@ -121,7 +121,6 @@ import * as u from './utils';
 
 let regression = require('regression');
 let d3 = require('d3');
-let plotty = require('plotty');
 
 require('c-p');
 
@@ -131,9 +130,9 @@ let Choices = require('choices.js');
 let BatchDrawer = require('./BatchDraw.js');
 let FilterManager = require('./FilterManager.js');
 let canvg = require('./vendor/canvg.js');
+let colorscalesdef = require('colorscalesdef');
 
 global.FilterManager = FilterManager;
-global.plotty = plotty;
 
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
@@ -217,7 +216,7 @@ class graphly extends EventEmitter {
     * @param {String} [options.labelAllignment='right'] allignment for label box
     * @param {Array} [options.colorscales] Array of strings with colorscale 
     *        identifiers that should be provided for selection, default list
-    *        includes colorscales from plotty
+    *        includes colorscales from colorscalesdef (eox-a)
     * @param {boolean} [options.showFilteredData=true] Option to show greyed out
     *        data points when filtering
     */
@@ -471,14 +470,10 @@ class graphly extends EventEmitter {
         this.mouseDown = false;
         this.prevMousePos = null;
 
+        let colorscalesKeys = Object.keys(colorscalesdef.colorscales);
         this.colorscales = defaultFor(
             options.colorscales,
-            [
-              'viridis', 'inferno', 'rainbow', 'jet', 'hsv', 'hot', 'cool', 'spring',
-              'summer', 'autumn', 'winter', 'bone', 'copper', 'greys', 'yignbu',
-              'greens', 'yiorrd', 'bluered', 'rdbu', 'picnic', 'portland',
-              'blackbody', 'earth', 'electric', 'magma', 'plasma'
-            ]
+            colorscalesKeys
         );
         this.discreteColorScales = {};
 
@@ -504,12 +499,6 @@ class graphly extends EventEmitter {
         
 
         let self = this;
-
-        this.plotter = new plotty.plot({
-            canvas: document.createElement('canvas'),
-            domain: [0,1]
-        });
-
 
         // tooltip
         this.tooltip = this.el.append('div')
@@ -2196,11 +2185,11 @@ class graphly extends EventEmitter {
                 cs = cA.colorscale;
             }
 
-            // If current cs not equal to the set in the plotter update cs
-            if(cs !== this.plotter.name){
-                this.plotter.setColorScale(cs);
+            // If current cs not equal to the set in the batchdrawe update cs
+            if(cs !== this.batchDrawer.csName){
+                this.batchDrawer.setColorScale(cs);
             }
-            let image = this.plotter.getColorScaleImage().toDataURL("image/jpg");
+            let image = this.batchDrawer.getColorScaleImage().toDataURL("image/jpg");
 
             g.append("image")
                 .attr("class", "colorscaleimage")
@@ -2348,7 +2337,7 @@ class graphly extends EventEmitter {
     }
 
     addColorScale(id, colors, ranges){
-        plotty.addColorScale(id, colors, ranges);
+        this.batchDrawer.addColorScale(id, colors, ranges);
         this.colorscales.push(id);
     }
 
@@ -5168,7 +5157,6 @@ class graphly extends EventEmitter {
                 cs = cA.colorscale;
             }
             if(cA && cA.hasOwnProperty('extent')){
-                //this.plotter.setDomain(cA.extent);
                 this.batchDrawer.setDomain(cA.extent);
             }
             if (cA && cA.hasOwnProperty('csDiscrete')){
@@ -5409,7 +5397,7 @@ class graphly extends EventEmitter {
                 this.batchDrawer.setDomain(cA.extent);
                 resetUniforms = true;
             }
-            // If current cs not equal to the set in the plotter update cs
+            // If current cs not equal to the set in the batchsrawe update cs
             if(cs !== this.batchDrawer.csName){
                 this.batchDrawer.setColorScale(cs);
                 resetUniforms = true;
@@ -6354,9 +6342,9 @@ class graphly extends EventEmitter {
             .attr('id','colorScaleSelection')
             .on('change',oncolorScaleSelectionChange);
 
-        // Check if colorscales are available in plotty
+        // Check if colorscales are defined in colorscalesdef
         this.colorscales = this.colorscales.filter((cs)=>{
-            return plotty.colorscales.hasOwnProperty(cs);
+            return colorscalesdef.colorscales.hasOwnProperty(cs);
         });
 
         this.colorscales.sort();

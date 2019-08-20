@@ -17,7 +17,6 @@ module.exports = {
         "d3": "d3",
     },
     plugins: [
-        //new webpack.optimize.UglifyJsPlugin()
     ],
     module: {
         rules: [
