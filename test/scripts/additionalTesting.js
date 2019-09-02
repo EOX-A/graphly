@@ -173,8 +173,10 @@ export var renderSettingsDefinition = {
             parameter: 'id',
             identifiers: ['Alpha', 'Upload']
         },
+        additionalXTicks: [],
+        additionalYTicks: [],
         availableParameters: {
-            'Alpha': ['Spacecraft', 'Timestamp', 'Latitude', 'Longitude', 'Radius', 'F', 'F_error', 'B_NEC_resAC', 'B_VFM', 'B_error', 'B_NEC', 'Kp', 'Dst', 'F107', 'QDLat', 'QDLon', 'MLT', 'OrbitNumber', 'OrbitDirection', 'QDOrbitDirection', 'SunDeclination', 'SunRightAscension', 'SunHourAngle', 'SunAzimuthAngle', 'SunZenithAngle'],
+            'Alpha': ['Spacecraft', 'Timestamp', 'Latitude', 'Longitude', 'Radius', 'F', 'F_error', 'B_NEC_resAC', 'B_VFM', 'B_error', 'B_N','B_E','B_C', 'Kp', 'Dst', 'F107', 'QDLat', 'QDLon', 'MLT', 'OrbitNumber', 'OrbitDirection', 'QDOrbitDirection', 'SunDeclination', 'SunRightAscension', 'SunHourAngle', 'SunAzimuthAngle', 'SunZenithAngle'],
             'Upload': ['Spacecraft', 'Timestamp', 'Latitude', 'Longitude', 'Radius', 'Kp', 'Dst', 'F107', 'QDLat', 'QDLon', 'MLT', 'Relative_STEC_RMS', 'Relative_STEC', 'Absolute_STEC', 'GPS_Position', 'LEO_Position', 'SunDeclination', 'SunRightAscension', 'SunHourAngle', 'SunAzimuthAngle', 'SunZenithAngle']
         }
     },
@@ -759,7 +761,7 @@ function flattenObservationArray(input){
 
 export function handleSwarmData(data, graph, filterManager){
 
-    graph.debounceActive = false;
+    graph.debounceActive = true;
 
     var ids = {
       'A': 'Alpha',
@@ -858,7 +860,7 @@ export function handleSwarmData(data, graph, filterManager){
 
 export function handleL1BData(data, graph, filterManager){
 
-    graph.debounceActive = false;
+    graph.debounceActive = true;
 
     var ds = data.ALD_U_N_1B.observation_data;
 

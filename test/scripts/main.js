@@ -54,7 +54,7 @@ var graph = new graphly.graphly({
     renderSettings: renderSettings,
     filterManager: filterManager,
     debounceActive: false,
-    debug: true,
+    debug: false,
     //labelAllignment: 'center',
     //enableFit: false,
     //displayColorscaleOptions: false,
