@@ -521,7 +521,7 @@ class graphly extends EventEmitter {
 
         // Set parameters
         let params = {
-            forceGL1: true, // use WebGL 1 even if WebGL 2 is available
+            forceGL1: false, // use WebGL 1 even if WebGL 2 is available
             clearColor: {r: 0, g: 0, b: 0, a: 0}, // Color to clear screen with
             coordinateSystem: 'pixels',
             contextParams: {
