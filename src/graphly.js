@@ -4583,7 +4583,8 @@ class graphly extends EventEmitter {
                 this.batchDrawer.addLine(
                     xPoints[1], yPoints[1],
                     xPoints[0], yPoints[0], thickness,
-                    c[0], c[1], c[2], c[3]
+                    c[0], c[1], c[2], c[3],
+                    Number.MIN_SAFE_INTEGER
                 );
                 break;
             }
@@ -4627,7 +4628,8 @@ class graphly extends EventEmitter {
                     this.batchDrawer.addLine(
                         px1, py1,
                         px2, py2, thickness,
-                        c[0], c[1], c[2], c[3]
+                        c[0], c[1], c[2], c[3],
+                        Number.MIN_SAFE_INTEGER
                     );
                 }
                 break;
