@@ -626,7 +626,9 @@ export var filterSettingsConfiguration = {
             'mie_observation_type',
             'rayleigh_HLOS_wind_speed',
             'mie_HLOS_wind_speed',
-            'albedo_off_nadir'
+            'albedo_off_nadir',
+            'mie_bin_quality_flag',
+            'rayleigh_bin_quality_flag'
         ],
         maskParameter: {
             'mie_bin_quality_flag': {

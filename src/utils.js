@@ -366,3 +366,25 @@ export function getdiscreteColor() {
     nextDisCol = (nextDisCol+1)%discColsLen;
     return hexToRgb(selCol);
 }
+
+function isObject(obj) {
+  var type = typeof obj;
+  return !Array.isArray(obj) && (type === 'function' || type === 'object' && !!obj);
+}
+
+export function iterationCopy(src) {
+  let target = {};
+  for (let prop in src) {
+    if (src.hasOwnProperty(prop)) {
+      // if the value is a nested object, recursively copy all it's properties
+      if (isObject(src[prop])) {
+        target[prop] = iterationCopy(src[prop]);
+      } else if(Array.isArray(src[prop])){
+        target[prop] = src[prop].slice();
+      } else {
+        target[prop] = src[prop];
+      }
+    }
+  }
+  return target;
+}

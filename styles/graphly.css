@@ -548,3 +548,7 @@ input[type=text] {
     position: absolute;
     z-index: 5;
 }
+
+.bitcontainer{
+    height: 20px;
+}

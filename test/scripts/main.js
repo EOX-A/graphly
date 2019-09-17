@@ -99,6 +99,10 @@ d3.select('#save').on('click', function(){
     graph.saveImage('png' , 2);
 });
 
+d3.select('#resetfilter').on('click', function(){
+    graph.filterManager.resetManager();
+});
+
 
 d3.select('#reload').on('click', function(){
     graph.loadData(data);

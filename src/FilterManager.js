@@ -76,6 +76,8 @@ class FilterManager extends EventEmitter {
         });
         this.choiceParameter = defaultFor(this.filterSettings.choiceParameter, []);
         this.maskParameter = defaultFor(this.filterSettings.maskParameter, []);
+        this.originalMaskParameter = utils.iterationCopy(this.maskParameter);
+
         this.data = defaultFor(params.data, {});
         this.dataSettings = defaultFor(this.filterSettings.dataSettings, {});
         this.showCloseButtons = defaultFor(params.showCloseButtons, false);
@@ -112,8 +114,16 @@ class FilterManager extends EventEmitter {
     */
     resetManager(){
         this.initManager();
-        this.emit('filterChange', {});
+
+        // Reset mask parameters to original settings
+        this.maskParameter = utils.iterationCopy(this.originalMaskParameter);
+
+        // TODO: Resetting defaults for mask filters needs a specific order
+        //       to work, not sure how, this needs to be rechecked, might be
+        //       a temporal relation thing
+        this._filtersChanged();
         this._renderFilters();
+        this._filtersChanged();
     }
 
     _initData() {
@@ -322,7 +332,8 @@ class FilterManager extends EventEmitter {
         var subdivs = div.selectAll("input")
             .data(mP.values)
             .enter()
-            .append('div');
+            .append('div')
+            .attr('class', 'bitcontainer');
 
         subdivs.append('div')
             .attr('class', function(d,i){
@@ -1097,12 +1108,23 @@ class FilterManager extends EventEmitter {
     */
     updateFilterSettings(settings){
         this.filterSettings = settings;
+
         if(settings.hasOwnProperty('visibleFilters')){
             this.visibleFilters = settings.visibleFilters;
+        }
+
+        if(settings.hasOwnProperty('maskParameter')){
+            this.maskParameter = settings.maskParameter;
+            this.originalMaskParameter = utils.iterationCopy(settings.maskParameter);
+        }
+
+        if(settings.hasOwnProperty('choiceParameter')){
+            this.choiceParameter = settings.choiceParameter;
         }
         if(!settings.hasOwnProperty('parameterMatrix')){
             this.filterSettings.parameterMatrix = {};
         }
+
         this._renderFilters();
     }
 
