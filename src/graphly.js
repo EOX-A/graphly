@@ -1149,42 +1149,55 @@ class graphly extends EventEmitter {
             // Hide axis edit buttons
             this.svg.selectAll('.modifyAxisIcon').style('display', 'none');
 
+            // Render all y axis parameters
+            for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
-            // Draw y2 first so it is on bottom
-            for (let plotY = 0; plotY < y2AxRen.length; plotY++) {
-                for (let parPos=0; parPos<y2AxRen[plotY].length; parPos++){
-                    if(typeof y2AxRen[plotY][parPos] !== 'undefined'){
-                        this.renderParameter(
-                            false, xAxRen,
-                            this.renderSettings.y2Axis[plotY][parPos],
-                            this.renderSettings.colorAxis2[plotY][parPos],
-                            plotY, y2AxRen, this.y2Scale,
-                            parPos, this.currentData, this.currentInactiveData,
-                            false
-                        );
-                    }
+                yAxRen = this.renderSettings.yAxis[plotY];
+                
+                this.enableScissorTest(plotY);
+
+                for (let parPos=0; parPos<yAxRen.length; parPos++){
+
+                    let idY = yAxRen[parPos];
+                    let idCS = this.renderSettings.colorAxis[plotY][parPos];
+
+                    this.renderParameter(
+                        true, xAxRen, idY, idCS, plotY, yAxRen, this.yScale,
+                        parPos, this.currentData, this.currentInactiveData,
+                        false
+                    );
                 }
+                this.batchDrawer.draw();
+                // turn off the scissor test so you can render like normal again.
+                this.batchDrawer.getContext().disable(
+                    this.batchDrawer.getContext().SCISSOR_TEST
+                );
             }
 
+            // Render afterwards all y2 axis parameters
             for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
 
-                for (let parPos=0; parPos<yAxRen[plotY].length; parPos++){
-                    if(typeof yAxRen[plotY][parPos] !== 'undefined'){
+                y2AxRen = this.renderSettings.y2Axis[plotY];
+
+                this.enableScissorTest(plotY);
+
+                if(y2AxRen.length > 0){
+                    for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                        let idY2 = y2AxRen[parPos];
+                        let idCS = this.renderSettings.colorAxis2[plotY][parPos];
                         this.renderParameter(
-                            true, xAxRen,
-                            this.renderSettings.yAxis[plotY][parPos],
-                            this.renderSettings.colorAxis[plotY][parPos],
-                            plotY,
-                            yAxRen, this.yScale,
+                            false, xAxRen, idY2, idCS, plotY, y2AxRen, this.y2Scale,
                             parPos, this.currentData, this.currentInactiveData,
                             false
                         );
                     }
                 }
+                this.batchDrawer.draw();
+                // turn off the scissor test so you can render like normal again.
+                this.batchDrawer.getContext().disable(
+                    this.batchDrawer.getContext().SCISSOR_TEST
+                );
             }
-
-            this.batchDrawer.draw();
-
         }
 
         // We need to first render the canvas if the debounce active is false
@@ -7195,12 +7208,12 @@ class graphly extends EventEmitter {
 
         // set the scissor rectangle.
         this.batchDrawer.getContext().scissor(
-            0, axisOffset, this.width, blockSize
+            0, axisOffset, (this.width * this.resFactor), blockSize
         );
 
         if(this.batchDrawerReference){
             this.batchDrawerReference.getContext().scissor(
-                0, axisOffset, this.width, blockSize
+                0, axisOffset, (this.width * this.resFactor), blockSize
             );
         }
 
