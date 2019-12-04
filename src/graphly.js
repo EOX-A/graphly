@@ -4988,6 +4988,9 @@ class graphly extends EventEmitter {
                     'transform',
                     'translate(0,1)'
                 );
+        } else {
+            this.el.select(this.nsId+'clipseparation').selectAll('rect')
+            .attr('width', this.width);
         }
 
         for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
