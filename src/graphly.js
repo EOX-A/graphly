@@ -7273,6 +7273,25 @@ class graphly extends EventEmitter {
         }
     }
 
+    findAlternativeSharedXAxis(idX, plotY){
+        var returnId = idX;
+        // If necessary update the current x axis parameter used based on 
+        // current plot group
+        if(this.renderSettings.renderGroups && 
+            this.renderSettings.groups && 
+            this.renderSettings.sharedParameters.hasOwnProperty(idX)){
+            let sharPars = this.renderSettings.sharedParameters[idX];
+            let rGroup = this.renderSettings.groups[plotY];
+            for (var sp = 0; sp < sharPars.length; sp++) {
+                if(this.renderSettings.renderGroups[rGroup]
+                    .parameters.indexOf(sharPars[sp]) !== -1){
+                    returnId = sharPars[sp];
+                }
+            }
+        }
+        return returnId;
+    }
+
 
     /**
     * Render the data as graph
@@ -7334,7 +7353,6 @@ class graphly extends EventEmitter {
 
         // Render first all y2 axis parameters
         for (let plotY = 0; plotY < this.renderSettings.yAxis.length; plotY++) {
-
             y2AxRen = this.renderSettings.y2Axis[plotY];
 
             this.enableScissorTest(plotY);
@@ -7342,6 +7360,8 @@ class graphly extends EventEmitter {
             if(this.batchDrawerReference && updateReferenceCanvas){
                 this.batchDrawerReference.clear();
             }
+
+            idX = this.findAlternativeSharedXAxis(xAxRen, plotY);
 
             // If y2 axis is defined start rendering it as we need to render
             // multiple times to have individial images for manipulation in
@@ -7400,6 +7420,7 @@ class graphly extends EventEmitter {
         // Afterwards render all y axis parameters
         for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
 
+            idX = this.findAlternativeSharedXAxis(xAxRen, plotY);
             yAxRen = this.renderSettings.yAxis[plotY];
             
             this.enableScissorTest(plotY);
@@ -7447,6 +7468,7 @@ class graphly extends EventEmitter {
 
                 this.enableScissorTest(plotY);
 
+                idX = this.findAlternativeSharedXAxis(xAxRen, plotY);
                 y2AxRen = this.renderSettings.y2Axis[plotY];
                 // If y2 axis is defined start rendering it as we need to render
                 // multiple times to have individial images for manipulation in
