@@ -3646,7 +3646,7 @@ class graphly extends EventEmitter {
                                     } else {
                                         // If not found check for defaults
                                         if(newGroup.hasOwnProperty('defaults') && 
-                                           newGroup.defaults.hasOwnProperty('yAxis')){
+                                           newGroup.defaults.hasOwnProperty('colorAxis')){
                                             newColAxis.push(newGroup.defaults.colorAxis);
                                         } else {
                                             // Search for closest match
@@ -3661,7 +3661,13 @@ class graphly extends EventEmitter {
                                         }
                                     }
                                 } else {
-                                    newColAxis.push(null);
+                                    // We also check here for default colorscale
+                                    if(newGroup.hasOwnProperty('defaults') && 
+                                       newGroup.defaults.hasOwnProperty('colorAxis')){
+                                        newColAxis.push(newGroup.defaults.colorAxis);
+                                    } else {
+                                        newColAxis.push(null);
+                                    }
                                 }
                             }
 
