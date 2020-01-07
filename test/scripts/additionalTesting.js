@@ -168,7 +168,7 @@ export var renderSettingsDefinition = {
             'latitude_of_DEM_intersection': ['latitude_of_DEM_intersection'],
         },
         additionalXTicks: [],
-        additionalYTicks: [],
+        additionalYTicks: [[],[]],
         availableParameters: false
     },
 
@@ -184,7 +184,7 @@ export var renderSettingsDefinition = {
             identifiers: ['Alpha', 'Upload']
         },
         additionalXTicks: [],
-        additionalYTicks: [],
+        additionalYTicks: [[],[]],
         availableParameters: {
             'Alpha': ['Spacecraft', 'Timestamp', 'Latitude', 'Longitude', 'Radius', 'F', 'F_error', 'B_NEC_resAC', 'B_VFM', 'B_error', 'B_N','B_E','B_C', 'Kp', 'Dst', 'F107', 'QDLat', 'QDLon', 'MLT', 'OrbitNumber', 'OrbitDirection', 'QDOrbitDirection', 'SunDeclination', 'SunRightAscension', 'SunHourAngle', 'SunAzimuthAngle', 'SunZenithAngle'],
             'Upload': ['Spacecraft', 'Timestamp', 'Latitude', 'Longitude', 'Radius', 'Kp', 'Dst', 'F107', 'QDLat', 'QDLon', 'MLT', 'Relative_STEC_RMS', 'Relative_STEC', 'Absolute_STEC', 'GPS_Position', 'LEO_Position', 'SunDeclination', 'SunRightAscension', 'SunHourAngle', 'SunAzimuthAngle', 'SunZenithAngle']

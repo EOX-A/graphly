@@ -73,7 +73,8 @@ var graph = new graphly.graphly({
     //ignoreParameters: ['__info__'],
     //margin: {top: 50, left: 90, bottom: 50, right: 40},
     //colorAxisTickFormat: 'customExp',
-    //defaultAxisTickFormat: 'customExp'
+    //defaultAxisTickFormat: 'customExp',
+    enableSubXAxis: 'datetime'
 
 });
 

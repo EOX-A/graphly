@@ -1777,7 +1777,7 @@ class graphly extends EventEmitter {
                 // of the group
                 if(this.renderSettings.sharedParameters.hasOwnProperty(this.renderSettings.xAxis)){
                     let sharPars = this.renderSettings.sharedParameters[this.renderSettings.xAxis];
-                    for (var i = 0; i < xChoices.length; i++) {
+                    for (let i = 0; i < xChoices.length; i++) {
                         if(sharPars.indexOf(xChoices[i].value)!==-1){
                             xChoices[i].selected = true;
                         }
@@ -1785,10 +1785,35 @@ class graphly extends EventEmitter {
                 }
             } else if(this.renderSettings.yAxis.length > 1){
                 xChoices = [];
-                for (var key in this.renderSettings.sharedParameters){
-                    xChoices.push({value: key, label: key});
-                    if(this.renderSettings.xAxis === key){
-                        xChoices[xChoices.length-1].selected = true;
+                for (let key in this.renderSettings.sharedParameters){
+                    // Check if related keys available in data
+                    let allAvailable = true;
+                    for (let sp = 0; sp < this.renderSettings.sharedParameters[key].length; sp++) {
+                        let currpar = this.renderSettings.sharedParameters[key][sp];
+
+                        // Check if shared parameter is a combined parameter
+                        if(comPars.hasOwnProperty(currpar)){
+                            let currComb = comPars[currpar];
+                            var allComAv = true;
+                            for(let ci=0; ci<currComb.length; ci++){
+                                if(!this.data.hasOwnProperty(currComb[ci])){
+                                    allComAv = false;
+                                }
+                            }
+                            if(!allComAv){
+                                allAvailable = false;
+                            }
+                        } else if(!this.data.hasOwnProperty(currpar)){
+                            // If not check if parameter is in data
+                            allAvailable = false;
+                        }
+                        
+                    }
+                    if(allAvailable){
+                        xChoices.push({value: key, label: key});
+                        if(this.renderSettings.xAxis === key){
+                            xChoices[xChoices.length-1].selected = true;
+                        }
                     }
                 }
             }
