@@ -3797,8 +3797,6 @@ class graphly extends EventEmitter {
                             }
                             that.emit('axisChange');
                             that.loadData(that.data);
-                            that.init
-
                         });
 
                 select.selectAll('option')
