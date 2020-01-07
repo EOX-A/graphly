@@ -215,6 +215,8 @@ class graphly extends EventEmitter {
     *        multiple y axis with single x axis,
     *
     * @param {String} [options.labelAllignment='right'] allignment for label box
+    * @param {boolean} [options.connectFilteredPoints=false] option to render
+    *        lines between points when there are filtered points in between
     * @param {Array} [options.colorscales] Array of strings with colorscale 
     *        identifiers that should be provided for selection, default list
     *        includes colorscales from colorscalesdef (eox-a)
@@ -235,6 +237,7 @@ class graphly extends EventEmitter {
         this.enableSubYAxis = defaultFor(options.enableSubYAxis, false);
         this.multiYAxis = defaultFor(options.multiYAxis, true);
         this.labelAllignment = defaultFor(options.labelAllignment, 'right');
+        this.connectFilteredPoints = defaultFor(options.connectFilteredPoints, false);
         this.zoomActivity = false;
         this.activeArrows = false;
 
@@ -2553,6 +2556,20 @@ class graphly extends EventEmitter {
                 });
 
             con.append('label')
+                .attr('for', 'connectFilteredPoints')
+                .text('Line connect filtered');
+
+            con.append('input')
+                .attr('id', 'connectFilteredPoints')
+                .attr('type', 'checkbox')
+                .property('checked', this.connectFilteredPoints)
+                .on('input', ()=>{
+                    this.connectFilteredPoints = 
+                        d3.select("#connectFilteredPoints").property("checked");
+                    this.renderData(false);
+                });
+
+            con.append('label')
                 .attr('for', 'labelAllignment')
                 .text('Label allig.');
 
@@ -2933,6 +2950,18 @@ class graphly extends EventEmitter {
                         color: [Math.random(), Math.random(), Math.random()],
                         alpha: this.defaultAlpha
                     };
+                } else {
+                    if(!this.dataSettings[keys[i]].hasOwnProperty('color')){
+                        this.dataSettings[keys[i]].color = [
+                            Math.random(), Math.random(), Math.random()
+                        ];
+                    }
+                    if(!this.dataSettings[keys[i]].hasOwnProperty('uom')){
+                        this.dataSettings[keys[i]].uom = null;
+                    }
+                    if(!this.dataSettings[keys[i]].hasOwnProperty('alpha')){
+                        this.dataSettings[keys[i]].alpha = this.defaultAlpha;
+                    }
                 }
             }
 
@@ -3674,19 +3703,25 @@ class graphly extends EventEmitter {
 
                             for (var i = 0; i < currY2Axis.length; i++) {
                                 // Try to find equvalent parameter
-                                let tmpPar = currY2Axis[i].replace(prevGroup, groupKey);
-                                if(newGroupPars.indexOf(tmpPar)!==-1){
-                                    newY2Axis.push(tmpPar);
-                                    // Check for corresponding color
-                                    let tmpCol = currCol2Axis[i].replace(prevGroup, groupKey);
-                                    if(newGroupPars.indexOf(tmpCol)!==-1){
-                                        newCol2Axis.push(tmpCol)
+                                if(currY2Axis[i] !== null){
+                                    let tmpPar = currY2Axis[i].replace(prevGroup, groupKey);
+                                    if(newGroupPars.indexOf(tmpPar)!==-1){
+                                        newY2Axis.push(tmpPar);
+                                        // Check for corresponding color
+                                        if(currCol2Axis[i] !== null){
+                                            let tmpCol = currCol2Axis[i].replace(prevGroup, groupKey);
+                                            if(newGroupPars.indexOf(tmpCol)!==-1){
+                                                newCol2Axis.push(tmpCol)
+                                            } else {
+                                                // If no colorscale equivalent found set to null
+                                                newCol2Axis.push(null);
+                                            }
+                                        } else {
+                                            newCol2Axis.push(null);
+                                        }
                                     } else {
-                                        // If no colorscale equivalent found set to null
-                                        newCol2Axis.push(null);
+                                        // TODO
                                     }
-                                } else {
-                                    // TODO
                                 }
                             }
 
@@ -3737,6 +3772,7 @@ class graphly extends EventEmitter {
                             }
                             that.emit('axisChange');
                             that.loadData(that.data);
+                            that.init
 
                         });
 
@@ -5522,8 +5558,10 @@ class graphly extends EventEmitter {
 
             // Skip "empty" values
             if(Number.isNaN(valY) || Number.isNaN(valX)){
-                p_x = NaN;
-                p_y = NaN;
+                if(!this.connectFilteredPoints){
+                    p_x = NaN;
+                    p_y = NaN;
+                }
                 continue;
             }
 
