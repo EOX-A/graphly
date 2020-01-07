@@ -2524,7 +2524,7 @@ class graphly extends EventEmitter {
             d3.selectAll('.arrowChangePlot').remove();
         }
 
-        if(d3.select('#globalSettings').empty()){
+        if(this.el.select('#globalSettings').empty()){
 
             let con = this.el.append('div')
                 .attr('id', 'globalSettingsContainer')
@@ -2535,7 +2535,7 @@ class graphly extends EventEmitter {
             con.append('div')
                 .attr('class', 'labelClose cross')
                 .on('click', ()=>{
-                    d3.select('#globalSettingsContainer').style('display', 'none');
+                    this.el.select('#globalSettingsContainer').style('display', 'none');
                 });
 
             con.append('label')
@@ -2576,7 +2576,7 @@ class graphly extends EventEmitter {
                 .property('checked', this.showFilteredData)
                 .on('input', ()=>{
                     this.showFilteredData = 
-                        d3.select("#showFilteredDataOption").property("checked");
+                        this.el.select("#showFilteredDataOption").property("checked");
                     this.renderData(false);
                 });
 
@@ -2590,7 +2590,7 @@ class graphly extends EventEmitter {
                 .property('checked', this.connectFilteredPoints)
                 .on('input', ()=>{
                     this.connectFilteredPoints = 
-                        d3.select("#connectFilteredPoints").property("checked");
+                        this.el.select("#connectFilteredPoints").property("checked");
                     this.renderData(false);
                 });
 
@@ -2618,13 +2618,13 @@ class graphly extends EventEmitter {
                 .text('Config')
                 .style('top', (this.margin.top-20)+'px')
                 .on('click', ()=>{
-                    let vis = d3.select('#globalSettingsContainer').style('display');
+                    let vis = this.el.select('#globalSettingsContainer').style('display');
                     if (vis === 'block'){
-                         d3.select('#globalSettingsContainer').style('display', 'none');
+                         this.el.select('#globalSettingsContainer').style('display', 'none');
                     } else {
-                        d3.select('#globalSettingsContainer').style('display', 'block');
-                        d3.select('#labelFontSize').node().focus();
-                        d3.select('#labelFontSize').node().select();
+                        this.el.select('#globalSettingsContainer').style('display', 'block');
+                        this.el.select('#labelFontSize').node().focus();
+                        this.el.select('#labelFontSize').node().select();
                     }
                 });
         }
