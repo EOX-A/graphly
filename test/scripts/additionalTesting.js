@@ -114,7 +114,8 @@ export var renderSettingsDefinition = {
             rayleigh_datetime: ['rayleigh_datetime_start', 'rayleigh_datetime_end'],
             rayleigh_altitude: ['rayleigh_altitude_bottom', 'rayleigh_altitude_top'],
             mie_datetime: ['mie_datetime_start', 'mie_datetime_end'],
-            mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top']
+            mie_altitude: ['mie_altitude_bottom', 'mie_altitude_top'],
+            latitude_of_DEM_intersection: ['latitude_of_DEM_intersection_start', 'latitude_of_DEM_intersection_end'],
         },
         colorAxis: [['mie_HLOS_wind_speed'], ['rayleigh_HLOS_wind_speed']],
         colorAxis2: [[], []],
@@ -129,20 +130,28 @@ export var renderSettingsDefinition = {
                     'mie_quality_flag_data',
                     'mie_altitude_top',
                     'mie_altitude_bottom',
-                    'geoid_separation'
+                    'geoid_separation',
+                    'latitude_of_DEM_intersection',
+                    'latitude_of_DEM_intersection_start',
+                    'latitude_of_DEM_intersection_end',
                 ],
             },
             rayleigh: {
                 parameters: [
                     'rayleigh_datetime',
                     'rayleigh_altitude',
+                    'rayleigh_altitude_start',
+                    'rayleigh_altitude_end',
                     'rayleigh_HLOS_wind_speed',
                     'rayleigh_bin_quality_flag',
                     'rayleigh_altitude_top',
                     'rayleigh_altitude_bottom',
                     'rayleigh_datetime_start',
                     'rayleigh_datetime_end',
-                    'geoid_separation'
+                    'geoid_separation',
+                    'latitude_of_DEM_intersection',
+                    'latitude_of_DEM_intersection_start',
+                    'latitude_of_DEM_intersection_end',
                 ]
             }
         },
@@ -155,7 +164,8 @@ export var renderSettingsDefinition = {
             ],
             'geoid_separation': [
                 'geoid_separation'
-            ]
+            ],
+            'latitude_of_DEM_intersection': ['latitude_of_DEM_intersection'],
         },
         additionalXTicks: [],
         additionalYTicks: [],

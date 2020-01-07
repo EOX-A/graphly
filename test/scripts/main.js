@@ -91,6 +91,10 @@ graph.on('rendered', function() {
     //console.log('rendered');
 });
 
+graph.on('colorScaleChange', function(parameter) {
+    console.log(parameter);
+});
+
 filterManager.on('filterChange', function(filters){
     //console.log(filters);
 });

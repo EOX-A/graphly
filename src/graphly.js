@@ -160,6 +160,7 @@ function debounce(func, wait, immediate) {
 * @fires module:graphly.graphly#pointSelect
 * @fires module:graphly.graphly#axisChange
 * @fires module:graphly.graphly#rendered
+@fires module:graphly.graphly#colorScaleChange
 */
 class graphly extends EventEmitter {
 
@@ -5884,7 +5885,7 @@ class graphly extends EventEmitter {
     }
 
 
-    addApply(dataSettings) {
+    addApply(dataSettings, parId) {
 
         if(!this.el.select('#applyButton').empty()){
             this.el.select('#applyButton').remove();
@@ -5919,6 +5920,20 @@ class graphly extends EventEmitter {
                                 }
                             } else {
                                 dataSettings[key] = this.settingsToApply[key];
+                                if(key === 'colorscale'){
+                                    /**
+                                    * Fires when the colorscale for a parameter
+                                    * is changed
+                                    *
+                                    * @event module:graphly.graphly#colorsScaleChange
+                                    * @property {Object} containing parameter key
+                                    * and colorscale identifier
+                                    */
+                                    this.emit('colorScaleChange', {
+                                        parameter: parId,
+                                        colorscale: this.settingsToApply[key]
+                                    });
+                                }
                             }
                         }
                         for (let pos=0; pos<this.settingsToDelete.length; pos++){
@@ -6422,7 +6437,7 @@ class graphly extends EventEmitter {
             }
             let selectValue = that.el.select('#colorScaleSelection').property('value');
             that.settingsToApply.colorscale = selectValue;
-            that.addApply(that.dataSettings[csId]);
+            that.addApply(that.dataSettings[csId], csId);
         }
 
     }
