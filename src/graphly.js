@@ -1886,18 +1886,19 @@ class graphly extends EventEmitter {
             // parameter to the choices
             let comPars =  this.renderSettings.combinedParameters;
             for (let comKey in comPars){
+
                 let includePar = true;
                 for (let par=0; par<comPars[comKey].length; par++){
-                    if(!this.data.hasOwnProperty(comPars[comKey][par])){
+                    let curK = comPars[comKey][par];
+                    if(!this.data.hasOwnProperty(curK)){
                         includePar = false;
                     }
-                }
-
-                // Check for renderGroups
-                if(this.renderSettings.renderGroups && this.renderSettings.groups){
-                    let rGroup = this.renderSettings.groups[yPos];
-                    if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(comKey) === -1){
-                        includePar = false;
+                    // Check for renderGroups
+                    if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                        let rGroup = this.renderSettings.groups[yPos];
+                        if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(curK) === -1){
+                            includePar = false;
+                        }
                     }
                 }
 
