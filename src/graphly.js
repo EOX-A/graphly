@@ -1761,9 +1761,14 @@ class graphly extends EventEmitter {
             }
 
             if(includePar){
-                xChoices.push({value: comKey, label: comKey});
-                if(this.renderSettings.xAxis === comKey){
-                    xChoices[xChoices.length-1].selected = true;
+                let res = xChoices.filter(function(ch) {
+                  return ch.value === comKey;
+                });
+                if(res.length === 0){
+                    xChoices.push({value: comKey, label: comKey});
+                    if(this.renderSettings.xAxis === comKey){
+                        xChoices[xChoices.length-1].selected = true;
+                    }
                 }
             }
         }
@@ -1794,7 +1799,7 @@ class graphly extends EventEmitter {
                         // Check if shared parameter is a combined parameter
                         if(comPars.hasOwnProperty(currpar)){
                             let currComb = comPars[currpar];
-                            var allComAv = true;
+                            let allComAv = true;
                             for(let ci=0; ci<currComb.length; ci++){
                                 if(!this.data.hasOwnProperty(currComb[ci])){
                                     allComAv = false;
@@ -1810,9 +1815,14 @@ class graphly extends EventEmitter {
                         
                     }
                     if(allAvailable){
-                        xChoices.push({value: key, label: key});
-                        if(this.renderSettings.xAxis === key){
-                            xChoices[xChoices.length-1].selected = true;
+                        let res = xChoices.filter(function(ch) {
+                          return ch.value === key;
+                        });
+                        if(res.length === 0){
+                            xChoices.push({value: key, label: key});
+                            if(this.renderSettings.xAxis === key){
+                                xChoices[xChoices.length-1].selected = true;
+                            }
                         }
                     }
                 }
@@ -1903,18 +1913,28 @@ class graphly extends EventEmitter {
                 }
 
                 if(includePar){
-                    yChoices.push({value: comKey, label: comKey});
-                    y2Choices.push({value: comKey, label: comKey});
+                    let res = yChoices.filter(function(ch) {
+                      return ch.value === comKey;
+                    });
+                    if(res.length === 0){
+                        yChoices.push({value: comKey, label: comKey});
+                        if(currYAxis.indexOf(comKey)!==-1){
+                            yChoices[yChoices.length-1].selected = true;
+                            y2Choices.pop();
+                        }
+                    }
+                    res = y2Choices.filter(function(ch) {
+                      return ch.value === comKey;
+                    });
+                    if(res.length === 0){
+                        y2Choices.push({value: comKey, label: comKey});
+                        // Add selected attribute also to y2 axis selections
+                        if(currY2Axis.indexOf(comKey)!==-1){
+                            y2Choices[y2Choices.length-1].selected = true;
+                            yChoices.pop();
+                        }
+                    }
 
-                    if(currYAxis.indexOf(comKey)!==-1){
-                        yChoices[yChoices.length-1].selected = true;
-                        y2Choices.pop();
-                    }
-                    // Add selected attribute also to y2 axis selections
-                    if(currY2Axis.indexOf(comKey)!==-1){
-                        y2Choices[y2Choices.length-1].selected = true;
-                        yChoices.pop();
-                    }
                 }
             }
 
