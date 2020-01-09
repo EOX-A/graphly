@@ -684,17 +684,25 @@ class graphly extends EventEmitter {
                             if(nodeId.hasOwnProperty('x2') && 
                                nodeId.hasOwnProperty('y2')) {
                                 //Draw the Rectangle
+                                // Make sure coords are ordered correctly
+                                let x1 = nodeId.x1.coord;
+                                let x2 = nodeId.x2.coord;
+                                let y1 = nodeId.y1.coord;
+                                let y2 = nodeId.y2.coord;
+                                if(nodeId.y1.coord > nodeId.y2.coord){
+                                    y1 = nodeId.y2.coord;
+                                    y2 = nodeId.y1.coord;
+                                }
+                                if(nodeId.x1.coord > nodeId.x2.coord){
+                                    x1 = nodeId.x2.coord;
+                                    x2 = nodeId.x1.coord;
+                                }
                                 self.topSvg.append('rect')
                                     .attr('class', 'temporary')
-                                    .attr('x', nodeId.x1.coord)
-                                    .attr('y', nodeId.y2.coord)
-                                    .attr('width', Math.abs(
-                                        nodeId.x2.coord - nodeId.x1.coord
-                                    ))
-                                    .attr(
-                                        'height', 
-                                        Math.abs(nodeId.y1.coord - nodeId.y2.coord)
-                                    )
+                                    .attr('x', x1)
+                                    .attr('y', y1)
+                                    .attr('width', (x2-x1))
+                                    .attr('height', (y2-y1))
                                     .style('fill', 'rgba(0,0,0,0.2)')
                                     .style('stroke', 'rgba(0,0,200,1');
                             }
