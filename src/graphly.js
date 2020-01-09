@@ -600,11 +600,16 @@ class graphly extends EventEmitter {
             .style('z-index', 10)
             .style('pointer-events', 'none')
             .append('g')
+            .style('clip-path','url('+this.nsId+'hoverClipBox)')
             .attr(
                 'transform',
                 'translate(' + (this.margin.left+this.subAxisMarginY+1) + ',' +
                 (this.margin.top+1) + ')'
             );
+
+        // Create clip path
+        this.topSvg.append('defs').append('clipPath')
+            .attr('id', (this.nsId.substring(1)+'hoverClipBox'));
 
         // Make sure we hide the tooltip as soon as we get out of the canvas
         // else it can kind of "stick" when moving the mouse fast
@@ -622,7 +627,7 @@ class graphly extends EventEmitter {
                 this.mouseDown = true;
                 this.tooltip.style('display', 'none');
                 this.tooltip.selectAll('*').remove();
-                self.topSvg.selectAll('*').remove();
+                this.topSvg.selectAll('.temporary').remove();
                 this.emit('pointSelect', null);
             });
 
@@ -683,9 +688,9 @@ class graphly extends EventEmitter {
                                     .attr('class', 'temporary')
                                     .attr('x', nodeId.x1.coord)
                                     .attr('y', nodeId.y2.coord)
-                                    .attr(
-                                        'width', (nodeId.x2.coord - nodeId.x1.coord)
-                                    )
+                                    .attr('width', Math.abs(
+                                        nodeId.x2.coord - nodeId.x1.coord
+                                    ))
                                     .attr(
                                         'height', 
                                         Math.abs(nodeId.y1.coord - nodeId.y2.coord)
@@ -821,7 +826,7 @@ class graphly extends EventEmitter {
                         .attr('class', 'labelClose cross')
                         .style('margin-right', '10px')
                         .on('click', ()=>{
-                            this.topSvg.selectAll('*').remove();
+                            this.topSvg.selectAll('.temporary').remove();
                             this.tooltip.style('display', 'none');
                             this.emit('pointSelect', null);
                         });
@@ -3579,6 +3584,9 @@ class graphly extends EventEmitter {
                 .attr("y", "0")
                 .attr('id', this.nsId.substring(1)+'clipseparation');
 
+            let hoverInfoSeparator = this.el.select(this.nsId+'hoverClipBox');
+            hoverInfoSeparator.selectAll('rect').remove();
+
             let heighChunk = this.height/this.renderSettings.yAxis.length;
             for (let yy = 0; yy<this.renderSettings.yAxis.length; yy++) {
                 clippathseparation.append('rect')
@@ -3589,6 +3597,15 @@ class graphly extends EventEmitter {
                     .attr(
                         'transform',
                         'translate(0,-'+(this.height-(heighChunk*yy))+')'
+                    );
+                hoverInfoSeparator.append('rect')
+                    .attr('fill', 'none')
+                    .attr('y', 0)
+                    .attr('width', this.width)
+                    .attr('height', heighChunk-this.separation)
+                    .attr(
+                        'transform',
+                        'translate(0,'+((heighChunk*yy))+')'
                     );
             }
             // Add rect to contain all x axis tick labels
@@ -5051,6 +5068,21 @@ class graphly extends EventEmitter {
         this.el.select(this.nsId+'clipbox').select('rect')
             .attr('height', heighChunk-this.separation)
             .attr('width', this.width);
+
+        let hoverInfoSeparator = this.el.select(this.nsId+'hoverClipBox');
+        hoverInfoSeparator.selectAll('rect').remove();
+
+        for (let yy = 0; yy<this.renderSettings.yAxis.length; yy++) {
+            hoverInfoSeparator.append('rect')
+                .attr('fill', 'none')
+                .attr('y', 0)
+                .attr('width', this.width)
+                .attr('height', heighChunk-this.separation)
+                .attr(
+                    'transform',
+                    'translate(0,'+((heighChunk*yy))+')'
+                );
+        }
 
         if(this.renderSettings.yAxis.length>1){
 
@@ -7310,16 +7342,16 @@ class graphly extends EventEmitter {
             )  * this.resFactor;
 
         axisOffset+=(this.separation)+1;
-        blockSize-=this.separation+1;
+        blockSize-=this.separation;
 
         // set the scissor rectangle.
         this.batchDrawer.getContext().scissor(
-            0, axisOffset, (this.width * this.resFactor), blockSize
+            1, axisOffset-1, (this.width * this.resFactor), blockSize
         );
 
         if(this.batchDrawerReference){
             this.batchDrawerReference.getContext().scissor(
-                0, axisOffset, (this.width * this.resFactor), blockSize
+                1, axisOffset-1, (this.width * this.resFactor), blockSize
             );
         }
 
