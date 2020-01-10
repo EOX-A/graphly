@@ -775,18 +775,25 @@ class graphly extends EventEmitter {
                             // make sure all coords are available
                             if(nodeId.hasOwnProperty('x2') && 
                                nodeId.hasOwnProperty('y2')) {
+                                let x1 = nodeId.x1.coord;
+                                let x2 = nodeId.x2.coord;
+                                let y1 = nodeId.y1.coord;
+                                let y2 = nodeId.y2.coord;
+                                if(nodeId.y1.coord > nodeId.y2.coord){
+                                    y1 = nodeId.y2.coord;
+                                    y2 = nodeId.y1.coord;
+                                }
+                                if(nodeId.x1.coord > nodeId.x2.coord){
+                                    x1 = nodeId.x2.coord;
+                                    x2 = nodeId.x1.coord;
+                                }
                                 //Draw the Rectangle
                                 self.topSvg.append('rect')
                                     .attr('class', 'highlightItem')
-                                    .attr('x', nodeId.x1.coord)
-                                    .attr('y', nodeId.y2.coord)
-                                    .attr(
-                                        'width', (nodeId.x2.coord - nodeId.x1.coord)
-                                    )
-                                    .attr(
-                                        'height', 
-                                        Math.abs(nodeId.y1.coord - nodeId.y2.coord)
-                                    )
+                                    .attr('x', x1)
+                                    .attr('y', y1)
+                                    .attr('width', (x2-x1))
+                                    .attr('height', (y2-y1))
                                     .style('fill', 'rgba(0,0,0,0.2)')
                                     .style('stroke', 'rgba(0,0,200,1');
                             }
@@ -849,7 +856,7 @@ class graphly extends EventEmitter {
                         for (var i = 0; i < keysSorted.length; i++) {
                             // check for rendergroups for possible parameters 
                             // that need to be ignored
-                             // Check for renderGroups
+                            // Check for renderGroups
                             if(this.renderSettings.renderGroups && 
                                 this.renderSettings.groups){
                                 let rGroup = this.renderSettings.groups[plotY];
@@ -870,6 +877,21 @@ class graphly extends EventEmitter {
                                self.dataSettings[key].uom !== null){
                                 uomAvailable = true;
                                 tObj.Unit = self.dataSettings[key].uom;
+                            } else {
+                                // Check if parameter is part of a combined
+                                // parameter if yes use uom of original
+                                if(this.renderSettings.hasOwnProperty('combinedParameters')){
+                                    for(let cpkey in this.renderSettings.combinedParameters){
+                                        if(this.renderSettings.combinedParameters[cpkey].indexOf(key) !== -1){
+                                            if(self.dataSettings.hasOwnProperty(cpkey) &&
+                                               self.dataSettings[cpkey].hasOwnProperty('uom') &&
+                                               self.dataSettings[cpkey].uom !== null ){
+                                                uomAvailable = true;
+                                                tObj.Unit = self.dataSettings[cpkey].uom;
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             tabledata.push(tObj);
                         }
