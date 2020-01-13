@@ -44,8 +44,11 @@
 *        with keys for each possible identifier and an array with parameter 
 *        identifiers as stringslist of can be provided so that only those
 *        are shown as parameter labels that allow configuration
-* @property {boolean} [reversedYAxis] Option to revert y axis extent 
+* @property {Array boolean} [reversedYAxis] Array, same length as yAxis with
+*        boolean values for each plot if left y axis reversed or not
 *        (high values on bottom, low values on top)
+* @property {Array boolean} [reversedY2Axis] Array, same length as yAxis with
+*        boolean values for each plot if right y axis reversed or not
 */
 
 /**
@@ -328,7 +331,7 @@ class graphly extends EventEmitter {
         this.y2AxisLabel = [];          this.y2AxisLabel = defaultFor(this.renderSettings.y2AxisLabel, null);
         this.xAxisLabel = defaultFor(this.renderSettings.xAxisLabel, null);
 
-         let fillArray = (arr, val)=>{
+        let fillArray = (arr, val)=>{
             for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
                 arr.push(val);
             }
@@ -411,8 +414,20 @@ class graphly extends EventEmitter {
         );
 
         this.renderSettings.reversedYAxis = defaultFor(
-            this.renderSettings.reversedYAxis, false
+            this.renderSettings.reversedYAxis, null
         );
+        if(this.renderSettings.reversedYAxis === null){
+            this.renderSettings.reversedYAxis = [];
+            fillArray(this.renderSettings.reversedYAxis, false);
+        }
+
+        this.renderSettings.reversedY2Axis = defaultFor(
+            this.renderSettings.reversedY2Axis, null
+        );
+        if(this.renderSettings.reversedY2Axis === null){
+            this.renderSettings.reversedY2Axis = [];
+            fillArray(this.renderSettings.reversedY2Axis, false);
+        }
 
         this.renderSettings.y2Axis = defaultFor(
             this.renderSettings.y2Axis, []
@@ -1163,7 +1178,7 @@ class graphly extends EventEmitter {
             let currHeight = this.height/this.yScale.length;
 
             for (let yPos = 0; yPos < this.yScale.length; yPos++) {
-                if(this.renderSettings.reversedYAxis){
+                if(this.renderSettings.reversedYAxis[yPos]){
                     this.yScale[yPos].range([
                         0, Math.floor((currHeight-this.separation)*this.resFactor)
                     ]);
@@ -1175,9 +1190,15 @@ class graphly extends EventEmitter {
             }
 
             for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
-                this.y2Scale[yPos].range([
-                    Math.floor((currHeight-this.separation)*this.resFactor), 0
-                ]);
+                if(this.renderSettings.reversedY2Axis[yPos]){
+                    this.y2Scale[yPos].range([
+                        0, Math.floor((currHeight-this.separation)*this.resFactor)
+                    ]);
+                } else  {
+                    this.y2Scale[yPos].range([
+                        Math.floor((currHeight-this.separation)*this.resFactor), 0
+                    ]);
+                }
             }
 
             let xAxRen = this.renderSettings.xAxis;
@@ -1521,7 +1542,8 @@ class graphly extends EventEmitter {
             .attr('class', 'axisOption');
 
         if(!this.yTimeScale){
-            con.append('input')
+            let divCont = con.append('div');
+            divCont.append('input')
                 .attr('id', 'logYoption')
                 .attr('type', 'checkbox')
                 .property('checked', 
@@ -1543,10 +1565,36 @@ class graphly extends EventEmitter {
                     that.renderData();
                 });
 
-            con.append('label')
+            divCont.append('label')
                 .attr('for', 'logYoption')
                 .text('Logarithmic scale (base-10) ');
         }
+        let divCont = con.append('div');
+        divCont.append('input')
+            .attr('id', 'reversedYOption')
+            .attr('type', 'checkbox')
+            .property('checked', 
+                function(){
+                    if(orientation==='left'){
+                        return defaultFor(that.renderSettings.reversedYAxis[yPos], false)
+                    } else if (orientation === 'right'){
+                        return defaultFor(that.renderSettings.reversedY2Axis[yPos], false)
+                    }
+                }
+            )
+            .on('change', function(){
+                if(orientation==='left'){
+                    that.renderSettings.reversedYAxis[yPos] = !that.renderSettings.reversedYAxis[yPos];
+                } else if (orientation === 'right'){
+                    that.renderSettings.reversedY2Axis[yPos] = !that.renderSettings.reversedY2Axis[yPos];
+                }
+                that.initAxis();
+                that.renderData();
+            });
+
+        divCont.append('label')
+            .attr('for', 'reversedYOption')
+            .text('Reverse axis');
 
 
         scaleChoices.attr('multiple', true);
@@ -2546,6 +2594,8 @@ class graphly extends EventEmitter {
                         this.renderSettings.colorAxis.push([]);
                         this.renderSettings.colorAxis2.push([]);
                         this.renderSettings.additionalYTicks.push([]);
+                        this.renderSettings.reversedYAxis.push(false);
+                        this.renderSettings.reversedY2Axis.push(false);
 
                         if(this.renderSettings.renderGroups && 
                             this.renderSettings.groups){
@@ -2732,6 +2782,9 @@ class graphly extends EventEmitter {
                         renSett.colorAxis.splice(index, 1);
                         renSett.colorAxis2.splice(index, 1);
 
+                        renSett.reversedYAxis.splice(index, 1);
+                        renSett.reversedY2Axis.splice(index, 1);
+
                         let addYT = this.renderSettings.additionalYTicks; 
                         addYT.splice(index,1);
                         // Recalculate subaxis margin
@@ -2785,18 +2838,24 @@ class graphly extends EventEmitter {
                             let currColAx = rS.colorAxis[index];
                             let currColAx2 = rS.colorAxis2[index];
                             let curraddYTicks = rS.additionalYTicks[index];
+                            let currRevY = rS.reversedYAxis[index];
+                            let currRevY2 = rS.reversedY2Axis[index];
 
                             rS.yAxis[index] = rS.yAxis[index-1];
                             rS.y2Axis[index] = rS.y2Axis[index-1];
                             rS.additionalYTicks[index] = rS.additionalYTicks[index-1];
                             rS.colorAxis[index] = rS.colorAxis[index-1];
                             rS.colorAxis2[index] = rS.colorAxis2[index-1];
+                            rS.reversedYAxis[index] = rS.reversedYAxis[index-1];
+                            rS.reversedY2Axis[index] = rS.reversedY2Axis[index-1];
 
                             rS.yAxis[index-1] = curryAxis;
                             rS.y2Axis[index-1] = curry2Axis;
                             rS.additionalYTicks[index-1] = curraddYTicks;
                             rS.colorAxis[index-1] = currColAx;
                             rS.colorAxis2[index-1] = currColAx2;
+                            rS.reversedYAxis[index-1] = currRevY;
+                            rS.reversedY2Axis[index-1] = currRevY2;
 
                             if(rS.renderGroups && rS.groups){
                                 let currGroup = rS.groups[index];
@@ -2831,18 +2890,24 @@ class graphly extends EventEmitter {
                             let currColAx = rS.colorAxis[index];
                             let currColAx2 = rS.colorAxis2[index];
                             let curraddYTicks = rS.additionalYTicks[index];
+                            let currRevY = rS.reversedYAxis[index];
+                            let currRevY2 = rS.reversedY2Axis[index];
 
                             rS.yAxis[index] = rS.yAxis[index+1];
                             rS.y2Axis[index] = rS.y2Axis[index+1];
                             rS.additionalYTicks[index] = rS.additionalYTicks[index+1];
                             rS.colorAxis[index] = rS.colorAxis[index+1];
                             rS.colorAxis2[index] = rS.colorAxis2[index+1];
+                            rS.reversedYAxis[index] = rS.reversedYAxis[index+1];
+                            rS.reversedY2Axis[index] = rS.reversedY2Axis[index+1];
 
                             rS.yAxis[index+1] = curryAxis;
                             rS.y2Axis[index+1] = curry2Axis;
                             rS.additionalYTicks[index+1] = curraddYTicks;
                             rS.colorAxis[index+1] = currColAx;
                             rS.colorAxis2[index+1] = currColAx2;
+                            rS.reversedYAxis[index+1] = currRevY;
+                            rS.reversedY2Axis[index+1] = currRevY2;
 
                             if(rS.renderGroups && rS.groups){
                                 let currGroup = rS.groups[index];
@@ -3967,28 +4032,26 @@ class graphly extends EventEmitter {
             }
 
 
-            if(this.logY[yPos]){
-                let start = yExtent[0];
-                let end = yExtent[1];
+            let scaleRange = [heighChunk-this.separation, 0];
 
+            if(this.renderSettings.reversedYAxis[yPos]){
+                scaleRange = [0, heighChunk-this.separation];
+            }
+
+            if(this.logY[yPos]){
                 // if both positive or negative all fine else
                 if(yExtent[0]<=0 && yExtent[1]>0){
-                    start = 0.005;
+                    yExtent[0] = 0.005;
                 }
                 if(yExtent[0]>=0 && yExtent[1]<0){
-                    start = -0.005;
+                    yExtent[0] = -0.005;
                 }
-
                 this.yScale.push(
                     d3.scale.log()
-                        .domain([start,end])
-                        .range([heighChunk-this.separation, 0])
+                        .domain(yExtent)
+                        .range(scaleRange)
                 );
-            }else{
-                let scaleRange = [heighChunk-this.separation, 0];
-                if(this.renderSettings.reversedYAxis){
-                    scaleRange = [0, heighChunk-this.separation];
-                }
+            } else {
                 this.yScale.push(
                     yScaleType
                         .domain(yExtent)
@@ -3996,32 +4059,33 @@ class graphly extends EventEmitter {
                 );
             }
 
-            if(this.logY2[yPos]){
-                let start = y2Extent[0];
-                let end = y2Extent[1];
+            let scaleRange2 = [heighChunk-this.separation, 0];
 
+            if(this.renderSettings.reversedY2Axis[yPos]){
+                scaleRange2 = [0, heighChunk-this.separation];
+            }
+
+            if(this.logY2[yPos]){
                 // if both positive or negative all fine else
                 if(y2Extent[0]<=0 && y2Extent[1]>0){
-                    start = 0.005;
+                    y2Extent[0] = 0.005;
                 }
                 if(y2Extent[0]>=0 && y2Extent[1]<0){
-                    start = -0.005;
+                    y2Extent[0] = -0.005;
                 }
-
                 this.y2Scale.push(
                     d3.scale.log()
-                        .domain([start,end])
-                        .range([heighChunk-this.separation, 0])
+                        .domain(y2Extent)
+                        .range(scaleRange2)
                 );
-            }else{
+            } else {
                 this.y2Scale.push(
                     y2ScaleType
                         .domain(y2Extent)
-                        .range([heighChunk-this.separation, 0])
+                        .range(scaleRange2)
                 );
             }
 
-            
             this.yAxis.push(
                 d3.svg.axis()
                     .scale(this.yScale[yPos])
@@ -5063,7 +5127,7 @@ class graphly extends EventEmitter {
         for (let yPos = 0; yPos < this.yScale.length; yPos++) {
 
             let scaleRange = [heighChunk-this.separation, 0];
-            if(this.renderSettings.reversedYAxis){
+            if(this.renderSettings.reversedYAxis[yPos]){
                 scaleRange = [0, heighChunk-this.separation];
             }
             this.yScale[yPos].range(scaleRange);
@@ -5144,7 +5208,11 @@ class graphly extends EventEmitter {
 
         for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
 
-            this.y2Scale[yPos].range([heighChunk-this.separation, 0]);
+            let scaleRange = [heighChunk-this.separation, 0];
+            if(this.renderSettings.reversedY2Axis[yPos]){
+                scaleRange = [0, heighChunk-this.separation];
+            }
+            this.y2Scale[yPos].range(scaleRange);
             this.y2Axis[yPos].innerTickSize(-this.width);
             
             if(this.renderSettings.y2Axis[yPos].length > 0){

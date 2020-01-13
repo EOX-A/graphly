@@ -483,6 +483,10 @@ input[type=text] {
 
 }
 
+.axisOption div {
+    margin-top: 7px;
+}
+
 .axisOption input[type=text]{
     width: 150px;
 }
