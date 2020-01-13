@@ -3159,6 +3159,20 @@ class graphly extends EventEmitter {
         
         this.startTiming('loadData');
 
+        // Make sure default values are loaded correctly if rendersettings were
+        // changed
+        if( !this.renderSettings.hasOwnProperty('reversedYAxis') || 
+            !this.renderSettings.hasOwnProperty('reversedY2Axis') ||
+            (this.renderSettings.yAxis.length !== this.renderSettings.reversedYAxis.length) ||
+            (this.renderSettings.yAxis.length !== this.renderSettings.reversedY2Axis.length)){
+            let rev = [];
+            for (let cc = 0; cc < this.renderSettings.yAxis.length; cc++) {
+                rev.push(false);
+            }
+            this.renderSettings.reversedYAxis = rev;
+            this.renderSettings.reversedY2Axis = rev.slice();
+        }
+
         this.data = {};
         for (var dk in data){
             // Ignore keys added to ignore list
