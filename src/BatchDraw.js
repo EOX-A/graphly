@@ -494,10 +494,12 @@ class BatchDrawer {
     }
 
     addColorScale(id, colors, ranges){
-        this.colorscales[id] = {
-            colors: colors,
-            positions: ranges
-        };
+        if(!this.colorscales.hasOwnProperty(id)){
+            this.colorscales[id] = {
+                colors: colors,
+                positions: ranges
+            };
+        }
     }
 
     _renderColorScaleToCanvas(name, canvas) {

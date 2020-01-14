@@ -2484,7 +2484,9 @@ class graphly extends EventEmitter {
 
     addColorScale(id, colors, ranges){
         this.batchDrawer.addColorScale(id, colors, ranges);
-        this.colorscales.push(id);
+        if(this.colorscales.indexOf(id) !== -1){
+            this.colorscales.push(id);
+        }
     }
 
     updateAxis (axis, g, zoom, parameterid) {
