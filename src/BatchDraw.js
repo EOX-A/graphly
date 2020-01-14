@@ -464,6 +464,35 @@ class BatchDrawer {
         return this.colorScaleImage;
     }
 
+    getColor(val) {
+        const steps = this.colorScaleCanvas.width;
+        const csImageData = this.colorScaleCanvas
+            .getContext('2d')
+            .getImageData(0, 0, steps, 1).data;
+        const trange = this.domain[1] - this.domain[0];
+        let c = Math.round(((val - this.domain[0]) / trange) * steps);
+        let alpha = 255;
+        if (c < 0) {
+            c = 0;
+            if (!this.clampLow) {
+                alpha = 0;
+            }
+        }
+        if (c > 255) {
+            c = 255;
+            if (!this.clampHigh) {
+                alpha = 0;
+            }
+        }
+
+        return [
+            csImageData[c * 4],
+            csImageData[(c * 4) + 1],
+            csImageData[(c * 4) + 2],
+            alpha,
+        ];
+    }
+
     addColorScale(id, colors, ranges){
         this.colorscales[id] = {
             colors: colors,
