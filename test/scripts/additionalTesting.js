@@ -40,6 +40,11 @@ export var renderSettingsDefinition = {
                     'MCA_LOD',
                     'albedo_off_nadir'
                 ],
+                defaults: {
+                    yAxis: 'mie_altitude',
+                    xAxis: 'time',
+                    colorAxis: 'MCA_extinction'
+                }
             },
             SCA: {
                 parameters: [

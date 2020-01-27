@@ -1624,11 +1624,21 @@ class graphly extends EventEmitter {
             let renSett = that.renderSettings;
             let curryAxArr = renSett.yAxis;
 
+            // Look for default value
+            let defaultColorscale = null;
+            if(renSett.hasOwnProperty('renderGroups')){
+                let currGroup = renSett.groups[yPos];
+                if(renSett.renderGroups.hasOwnProperty(currGroup) && 
+                    renSett.renderGroups[currGroup].hasOwnProperty('defaults')){
+                    defaultColorscale = renSett.renderGroups[currGroup].defaults.colorAxis;
+                }
+            }
+
             if(orientation === 'left'){
-                renSett.colorAxis[yPos].push(null);
+                renSett.colorAxis[yPos].push(defaultColorscale);
             } else if(orientation === 'right'){
                 curryAxArr = renSett.y2Axis;
-                renSett.colorAxis2[yPos].push(null);
+                renSett.colorAxis2[yPos].push(defaultColorscale);
             }
 
             curryAxArr[yPos].push(event.detail.value);
