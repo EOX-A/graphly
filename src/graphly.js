@@ -1624,13 +1624,19 @@ class graphly extends EventEmitter {
             let renSett = that.renderSettings;
             let curryAxArr = renSett.yAxis;
 
-            // Look for default value
+            let currPar = event.detail.value;
+
+            // Look for default colorscale value only if it is a combined parameter
             let defaultColorscale = null;
-            if(renSett.hasOwnProperty('renderGroups')){
-                let currGroup = renSett.groups[yPos];
-                if(renSett.renderGroups.hasOwnProperty(currGroup) && 
-                    renSett.renderGroups[currGroup].hasOwnProperty('defaults')){
-                    defaultColorscale = renSett.renderGroups[currGroup].defaults.colorAxis;
+            if(renSett.hasOwnProperty('combinedParameters') && 
+                renSett.combinedParameters.hasOwnProperty(currPar)){
+                if(renSett.hasOwnProperty('renderGroups')){
+                    let currGroup = renSett.groups[yPos];
+                    if(renSett.renderGroups.hasOwnProperty(currGroup) && 
+                        renSett.renderGroups[currGroup].hasOwnProperty('defaults')){
+                        defaultColorscale = renSett
+                            .renderGroups[currGroup].defaults.colorAxis;
+                    }
                 }
             }
 
@@ -1641,7 +1647,7 @@ class graphly extends EventEmitter {
                 renSett.colorAxis2[yPos].push(defaultColorscale);
             }
 
-            curryAxArr[yPos].push(event.detail.value);
+            curryAxArr[yPos].push(currPar);
             // TODO: Check for adding of time parameter
 
             // One item was added and none where before, we resize the right margin
