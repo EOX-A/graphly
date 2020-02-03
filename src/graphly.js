@@ -5210,33 +5210,27 @@ class graphly extends EventEmitter {
                 );
         }
 
-        if(this.renderSettings.yAxis.length>1){
+        heighChunk = this.height/this.renderSettings.yAxis.length;
+        let yy;
+        let clipnode = d3.select(this.nsId+'clipseparation').node();
 
-            let heighChunk = this.height/this.renderSettings.yAxis.length;
-            let yy;
-            let clipnode = d3.select(this.nsId+'clipseparation').node();
-
-            for (yy = 0; yy<this.renderSettings.yAxis.length; yy++) {
-                d3.select(clipnode.childNodes[yy])
-                    .attr('width', this.width)
-                    .attr('height', heighChunk-this.separation)
-                    .attr(
-                        'transform',
-                        'translate(0,-'+(this.height-(heighChunk*yy))+')'
-                    );
-            }
-            // Update rect to contain all x axis tick labels
+        for (yy = 0; yy<this.renderSettings.yAxis.length; yy++) {
             d3.select(clipnode.childNodes[yy])
-                .attr('width', this.width+this.margin.right)
-                .attr('height', this.margin.bottom+10+this.subAxisMarginX)
+                .attr('width', this.width)
+                .attr('height', heighChunk-this.separation)
                 .attr(
                     'transform',
-                    'translate(0,1)'
+                    'translate(0,-'+(this.height-(heighChunk*yy))+')'
                 );
-        } else {
-            this.el.select(this.nsId+'clipseparation').selectAll('rect')
-            .attr('width', this.width);
         }
+        // Update rect to contain all x axis tick labels
+        d3.select(clipnode.childNodes[yy])
+            .attr('width', this.width+this.margin.right)
+            .attr('height', this.margin.bottom+10+this.subAxisMarginX)
+            .attr(
+                'transform',
+                'translate(0,1)'
+            );
 
         for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
 

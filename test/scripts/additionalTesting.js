@@ -44,7 +44,12 @@ export var renderSettingsDefinition = {
                     yAxis: 'mie_altitude',
                     xAxis: 'time',
                     colorAxis: 'MCA_extinction'
-                }
+                },
+                positionAlias: {
+                                'latitude': 'latitude_of_DEM_intersection_obs',
+                                'longitude': 'longitude_of_DEM_intersection_obs',
+                                'altitude': 'mie_altitude'
+                            }
             },
             SCA: {
                 parameters: [
