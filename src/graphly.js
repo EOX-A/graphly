@@ -6192,6 +6192,32 @@ class graphly extends EventEmitter {
 
 
     renderRegressionOptions(id, regressionTypes, dataSettings) {
+        // Check if parameter shown is composed of combined parameters
+        let combPars = this.renderSettings.combinedParameters;
+        let idX = this.renderSettings.xAxis;
+        let idY = id;
+
+        // If a combined parameter is provided we need to render either
+        // a line or a rectangle as we have two parameters per item
+        // Check for renderGroups
+        if(this.renderSettings.sharedParameters){
+            if(this.renderSettings.sharedParameters.hasOwnProperty(idX)){
+                if(this.renderSettings.sharedParameters[idX].length>0){
+                    idX = this.renderSettings.sharedParameters[idX][0];
+                }
+            }
+            if(this.renderSettings.sharedParameters.hasOwnProperty(idY)){
+                if(this.renderSettings.sharedParameters[idY].length>0){
+                    idY = this.renderSettings.sharedParameters[idY][0];
+                }
+            }
+        }
+        if(combPars.hasOwnProperty(idX) || combPars.hasOwnProperty(idY)){
+             this.el.select('#regressionCheckbox').remove();
+             this.el.select('label[for=regressionCheckbox]').remove();
+             return;
+        }
+
         let checked = this.el.select('#regressionCheckbox').property('checked');
         let that = this;
 
