@@ -74,7 +74,8 @@ var graph = new graphly.graphly({
     //margin: {top: 50, left: 90, bottom: 50, right: 40},
     //colorAxisTickFormat: 'customExp',
     //defaultAxisTickFormat: 'customExp',
-    enableSubXAxis: 'datetime'
+    enableSubXAxis: 'datetime',
+    //disableAntiAlias: true
 
 });
 

@@ -100,7 +100,7 @@
 
 import 'babel-polyfill';
 
-let dotType = {
+const dotType = {
     rectangle: 0.0,
     rectangle_empty: 1.0,
     circle: 2.0,
@@ -225,6 +225,8 @@ class graphly extends EventEmitter {
     *        includes colorscales from colorscalesdef (eox-a)
     * @param {boolean} [options.showFilteredData=true] Option to show greyed out
     *        data points when filtering
+    * @param {boolean} [options.disableAntiAlias=false] Allows disabling antialias
+    *        of the rendering context
     */
     constructor(options) {
         super();
@@ -243,6 +245,7 @@ class graphly extends EventEmitter {
         this.connectFilteredPoints = defaultFor(options.connectFilteredPoints, false);
         this.zoomActivity = false;
         this.activeArrows = false;
+        this.disableAntiAlias = defaultFor(options.disableAntiAlias, false);
 
         // Separation of plots in multiplot functionality
         this.separation = 25;
@@ -547,6 +550,10 @@ class graphly extends EventEmitter {
                 preserveDrawingBuffer: true
             }
         };
+
+        if(this.disableAntiAlias){
+            params.contextParams.antialias = false;
+        }
 
         // Initialize BatchDrawer:
         this.batchDrawer = new BatchDrawer(this.renderCanvas.node(), params);
