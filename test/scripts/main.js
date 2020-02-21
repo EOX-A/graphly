@@ -136,6 +136,9 @@ xhr.onload = function(e) {
         case 'L1B':
             addT.handleL1BData(data, graph, filterManager);
         break;
+        case 'L2B':
+            addT.handleL2BData(data, graph, filterManager);
+        break;
         case 'L2A':
             addT.handleL2AData(data, graph, filterManager);
         break;
