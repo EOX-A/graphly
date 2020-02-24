@@ -745,28 +745,30 @@ class FilterManager extends EventEmitter {
     _createChoiceFilterElements(el){
 
         let keys = Object.keys(this.choiceParameter);
-        var that = this;
+        let that = this;
 
-        for (var i = 0; i < keys.length; i++) {
+        for (let i = 0; i < keys.length; i++) {
 
-            var id = keys[i];
-            var data = this.choiceParameter[id];
+            let id = keys[i];
+            let data = this.choiceParameter[id];
+            let selected = data.selected;
 
             if(!this.boolFilStat.hasOwnProperty(id)){
-                this.boolFilStat[id] = {
-                    enabled: false
-                };
+                if(selected === -1){
+                    this.boolFilStat[id] = {enabled: false};
+                } else {
+                    this.boolFilStat[id] = {enabled: true};
+                }
             }
 
 
-            var selected = data.selected;
             // If parameter is actually available in the dataset render it
             if(this.data.hasOwnProperty(id)){
 
-                var container = el.append('div')
+                let container = el.append('div')
                     .attr('class', 'choiceParameterContainer');
 
-                var label = container.append('label')
+                let label = container.append('label')
                         .attr('for', id)
                         .text(id);
 
@@ -819,11 +821,14 @@ class FilterManager extends EventEmitter {
                 // making sure all configured filters are used initially
                 // for now i will check here if the filter applys and will
                 // call a filterchange event
-                if(selected!==-1 && !this.boolFilters.hasOwnProperty(id)){
+                if(selected!==-1) {
                     this.boolFilters[id] = (val)=>{
                         return val === selected;
                     };
-                    this._filtersChanged();
+                    if(!this.boolFilters.hasOwnProperty(id)){
+                        this._filtersChanged();
+                        //this.boolFilStat[id] = {enabled: true};
+                    }
                 }
             }
         }
@@ -859,18 +864,24 @@ class FilterManager extends EventEmitter {
             // If parameter is actually available in the dataset render it
             if(this.data.hasOwnProperty(d)){
 
-                let parEnabled =  this.boolParameter.enabled[i];
-                if(parEnabled){
-                    this.boolFilters[d] = (val)=>{
-                        return !!val === true;
-                    };
+                let parEnabled;
+                if(this.boolFilStat.hasOwnProperty(d)){
+                    parEnabled = this.boolFilStat[d].enabled;
+                } else {
+                    parEnabled =  this.boolParameter.enabled[i];
+                    if(parEnabled){
+                        this.boolFilters[d] = (val)=>{
+                            return !!val === true;
+                        };
+                    }
+                    if(!this.boolFilStat.hasOwnProperty(d)){
+                        this.boolFilStat[d] = {
+                            enabled: parEnabled,
+                            checked: true
+                        };
+                    }
                 }
-                if(!this.boolFilStat.hasOwnProperty(d)){
-                    this.boolFilStat[d] = {
-                        enabled: parEnabled,
-                        checked: true
-                    };
-                }
+
                 var container = div.append('div')
                     .attr('class', 'boolParameterContainer');
 
@@ -1120,6 +1131,9 @@ class FilterManager extends EventEmitter {
 
         if(settings.hasOwnProperty('choiceParameter')){
             this.choiceParameter = settings.choiceParameter;
+        }
+        if(settings.hasOwnProperty('boolParameter')){
+            this.boolParameter = settings.boolParameter;
         }
         if(!settings.hasOwnProperty('parameterMatrix')){
             this.filterSettings.parameterMatrix = {};

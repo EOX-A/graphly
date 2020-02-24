@@ -1655,8 +1655,8 @@ export function handleL2BData(data, graph, filterManager){
   }
 
   data = resData;
-  graph.loadData(data);
   filterManager.loadData(data);
+  graph.loadData(data);
 
 }
 

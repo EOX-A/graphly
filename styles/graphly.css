@@ -163,7 +163,11 @@ input[type=text] {
     margin-left: 5px;
     margin-right: 5px;
     margin-top: 2px;
+    word-break: break-word;
+    width: 120px;
+    padding-left: 15px;
 }
+
 
 .choiceParameterContainer select{
     float: right;
