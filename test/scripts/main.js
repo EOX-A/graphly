@@ -55,6 +55,7 @@ var graph = new graphly.graphly({
     filterManager: filterManager,
     debounceActive: false,
     debug: false,
+    shortenLabels: ['mie_','rayleigh_', 'mie_wind_result_', 'rayleigh_wind_result_'],
     //labelAllignment: 'center',
     //enableFit: false,
     //displayColorscaleOptions: false,

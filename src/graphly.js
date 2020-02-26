@@ -218,6 +218,8 @@ class graphly extends EventEmitter {
     *        multiple y axis with single x axis,
     *
     * @param {String} [options.labelAllignment='right'] allignment for label box
+    * @param {Array} [options.shortenLabels] Array of strings to be truncated in 
+    *        labels to shorten length as they could be already defined by group
     * @param {boolean} [options.connectFilteredPoints=false] option to render
     *        lines between points when there are filtered points in between
     * @param {Array} [options.colorscales] Array of strings with colorscale 
@@ -247,6 +249,9 @@ class graphly extends EventEmitter {
         this.activeArrows = false;
         this.disableAntiAlias = defaultFor(options.disableAntiAlias, false);
 
+        // We create a regex to replace items in shortenLabels parameter
+        let shortenItems = defaultFor(options.shortenLabels, []);
+        this.shortenLabelsRegex = new RegExp('^'+shortenItems.join('|'));
         // Separation of plots in multiplot functionality
         this.separation = 25;
 
@@ -331,7 +336,8 @@ class graphly extends EventEmitter {
         );
 
         this.yAxisLabel = defaultFor(this.renderSettings.yAxisLabel, null);
-        this.y2AxisLabel = [];          this.y2AxisLabel = defaultFor(this.renderSettings.y2AxisLabel, null);
+        this.y2AxisLabel = [];
+        this.y2AxisLabel = defaultFor(this.renderSettings.y2AxisLabel, null);
         this.xAxisLabel = defaultFor(this.renderSettings.xAxisLabel, null);
 
         let fillArray = (arr, val)=>{
@@ -1463,16 +1469,16 @@ class graphly extends EventEmitter {
         settObj.remove();
 
         let uniq = currAxis;
-
         let listText = [];
         // Add uom info to unique elements
         for (var i = 0; i < uniq.length; i++) {
             if(this.dataSettings.hasOwnProperty(uniq[i]) && 
                this.dataSettings[uniq[i]].hasOwnProperty('uom') &&
                this.dataSettings[uniq[i]].uom !== null){
-                listText.push(uniq[i]+' ['+this.dataSettings[uniq[i]].uom+'] ');
+                listText.push(uniq[i].replace(this.shortenLabelsRegex,'')+
+                    ' ['+this.dataSettings[uniq[i]].uom+'] ');
             }else{
-                listText.push(uniq[i]);
+                listText.push(uniq[i].replace(this.shortenLabelsRegex,''));
             }
         }
 
@@ -2299,7 +2305,7 @@ class graphly extends EventEmitter {
                 g.append('text')
                     .attr('text-anchor', 'middle')
                     .attr('transform', 'translate(' + (0) + ' ,'+(-2)+')')
-                    .text(id);
+                    .text(id.replace(this.shortenLabelsRegex,''));
                 g.append('text')
                     .attr('text-anchor', 'middle')
                     .attr('transform', 'translate(' + (0) + ' ,'+(12)+')')
@@ -2379,7 +2385,7 @@ class graphly extends EventEmitter {
             g.append('text')
                 .attr('text-anchor', 'middle')
                 .attr('transform', 'translate(' + 66 + ' ,'+(innerHeight/2)+') rotate(270)')
-                .text(label);
+                .text(label.replace(this.shortenLabelsRegex,''));
 
             let csZoomEvent = ()=>{
                 g.call(colorAxis);
