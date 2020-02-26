@@ -43,7 +43,8 @@ var filterSettings = {
 var filterManager = new FilterManager({
     el:'#filters',
     filterSettings: filterSettings,
-    ignoreParameters: '__info__'
+    ignoreParameters: '__info__',
+    replaceUnderscore: true
 });
 
 
@@ -55,6 +56,7 @@ var graph = new graphly.graphly({
     filterManager: filterManager,
     debounceActive: false,
     debug: false,
+    replaceUnderscore: true,
     //labelAllignment: 'center',
     //enableFit: false,
     //displayColorscaleOptions: false,

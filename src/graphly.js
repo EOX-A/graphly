@@ -44,10 +44,10 @@
 *        with keys for each possible identifier and an array with parameter 
 *        identifiers as stringslist of can be provided so that only those
 *        are shown as parameter labels that allow configuration
-* @property {Array boolean} [reversedYAxis] Array, same length as yAxis with
+* @property {Array.boolean} [reversedYAxis] Array, same length as yAxis with
 *        boolean values for each plot if left y axis reversed or not
 *        (high values on bottom, low values on top)
-* @property {Array boolean} [reversedY2Axis] Array, same length as yAxis with
+* @property {Array.boolean} [reversedY2Axis] Array, same length as yAxis with
 *        boolean values for each plot if right y axis reversed or not
 */
 
@@ -183,6 +183,9 @@ class graphly extends EventEmitter {
     * @param {boolean} [options.displayParameterLabel=true] Setting to configure 
     *        if parameter label box is always shown or is hidden and can be
     *        opened with the cog symbol.
+    * @param {boolean} [options.replaceUnderscore=false] Setting to configure 
+    *        if underlines appearing in parameter labels should be replaced by
+    *        spaces.
     * @param {boolean} [options.displayColorscaleOptions=true] Setting to allow
     *        adding colorscale as third dimensio nto rendered points
     * @param {boolean} [options.displayAlphaOptions=true] Enable/disable
@@ -246,6 +249,12 @@ class graphly extends EventEmitter {
         this.zoomActivity = false;
         this.activeArrows = false;
         this.disableAntiAlias = defaultFor(options.disableAntiAlias, false);
+        this.replaceUnderscore = defaultFor(options.replaceUnderscore, false);
+
+        this.labelReplace = /a^/; // Default not matchin anything
+        if(this.replaceUnderscore){
+            this.labelReplace = /_/g;
+        }
 
         // Separation of plots in multiplot functionality
         this.separation = 25;
@@ -331,7 +340,7 @@ class graphly extends EventEmitter {
         );
 
         this.yAxisLabel = defaultFor(this.renderSettings.yAxisLabel, null);
-        this.y2AxisLabel = [];          this.y2AxisLabel = defaultFor(this.renderSettings.y2AxisLabel, null);
+        this.y2AxisLabel = defaultFor(this.renderSettings.y2AxisLabel, null);
         this.xAxisLabel = defaultFor(this.renderSettings.xAxisLabel, null);
 
         let fillArray = (arr, val)=>{
@@ -931,7 +940,9 @@ class graphly extends EventEmitter {
                           .selectAll('th')
                           .data(columns).enter()
                           .append('th')
-                            .text(function (column) { return column; });
+                            .text(function (column) { 
+                                return column.replace(this.labelReplace, ' '); 
+                            });
 
                         // create a row for each object in the data
                         let rows = tbody.selectAll('tr')
@@ -1470,9 +1481,10 @@ class graphly extends EventEmitter {
             if(this.dataSettings.hasOwnProperty(uniq[i]) && 
                this.dataSettings[uniq[i]].hasOwnProperty('uom') &&
                this.dataSettings[uniq[i]].uom !== null){
-                listText.push(uniq[i]+' ['+this.dataSettings[uniq[i]].uom+'] ');
+                listText.push(uniq[i].replace(this.labelReplace, ' ') +
+                    ' ['+this.dataSettings[uniq[i]].uom+'] ');
             }else{
-                listText.push(uniq[i]);
+                listText.push(uniq[i].replace(this.labelReplace, ' '));
             }
         }
 
@@ -1482,7 +1494,7 @@ class graphly extends EventEmitter {
         }
 
         if(yAxisLabel[yPos]){
-            listText = [yAxisLabel[yPos]];
+            listText = [yAxisLabel[yPos]].replace(this.labelReplace, ' ');
         }
         
         let labelText = this.svg.append('text')
@@ -1973,8 +1985,14 @@ class graphly extends EventEmitter {
                 // Check if key is available in data first
                 if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
 
-                    yChoices.push({value: key, label: key});
-                    y2Choices.push({value: key, label: key});
+                    yChoices.push({
+                        value: key,
+                        label: key.replace(this.labelReplace, ' ')
+                    });
+                    y2Choices.push({
+                        value: key,
+                        label: key.replace(this.labelReplace, ' ')
+                    });
 
                     if(currYAxis.indexOf(key)!==-1){
                         yChoices[yChoices.length-1].selected = true;
@@ -2023,7 +2041,10 @@ class graphly extends EventEmitter {
                       return ch.value === comKey;
                     });
                     if(res.length === 0){
-                        yChoices.push({value: comKey, label: comKey});
+                        yChoices.push({
+                            value: comKey,
+                            label: comKey.replace(this.labelReplace, ' ')
+                        });
                         if(currYAxis.indexOf(comKey)!==-1){
                             yChoices[yChoices.length-1].selected = true;
                             y2Choices.pop();
@@ -2033,7 +2054,10 @@ class graphly extends EventEmitter {
                       return ch.value === comKey;
                     });
                     if(res.length === 0){
-                        y2Choices.push({value: comKey, label: comKey});
+                        y2Choices.push({
+                            value: comKey,
+                            label: comKey.replace(this.labelReplace, ' ')
+                        });
                         // Add selected attribute also to y2 axis selections
                         if(currY2Axis.indexOf(comKey)!==-1){
                             y2Choices[y2Choices.length-1].selected = true;
@@ -2056,6 +2080,9 @@ class graphly extends EventEmitter {
         }
 
         let xLabel = this.renderSettings.xAxis;
+        if(Array.isArray(this.renderSettings.xAxis)){
+            xLabel = this.renderSettings.xAxis.join();
+        }
         if(this.dataSettings.hasOwnProperty(xLabel) && 
            this.dataSettings[xLabel].hasOwnProperty('uom') &&
            this.dataSettings[xLabel].uom !== null){
@@ -2077,7 +2104,7 @@ class graphly extends EventEmitter {
             .attr('stroke', 'none')
             .attr('font-weight', 'bold')
             .attr('text-decoration', 'none')
-            .text(xLabel);
+            .text(xLabel.replace(this.labelReplace, ' '));
 
         this.addTextMouseover(labelxtext);
 
@@ -2127,7 +2154,8 @@ class graphly extends EventEmitter {
             .attr('type', 'text')
             .property('value', xLabel)
             .on('input', function(){
-                that.el.select('.xAxisLabel.axisLabel').text(this.value);
+                that.el.select('.xAxisLabel.axisLabel')
+                    .text(this.value.replace(this.labelReplace, ' '));
                 that.xAxisLabel = this.value;
                 that.emit('axisChange');
             });
@@ -2211,7 +2239,10 @@ class graphly extends EventEmitter {
                     )+')')
                     .attr('stroke', 'none')
                     .attr('text-decoration', 'none')
-                    .text(this.renderSettings.additionalXTicks[i]);
+                    .text(
+                        this.renderSettings.additionalXTicks[i]
+                            .replace(this.labelReplace, ' ')
+                    );
             }
         }
 
@@ -2231,7 +2262,7 @@ class graphly extends EventEmitter {
                             )
                             .attr('stroke', 'none')
                             .attr('text-decoration', 'none')
-                            .text(aYT[i][j]);
+                            .text(aYT[i][j].replace(this.labelReplace, ' '));
                     }
                 }
             }
@@ -2299,7 +2330,7 @@ class graphly extends EventEmitter {
                 g.append('text')
                     .attr('text-anchor', 'middle')
                     .attr('transform', 'translate(' + (0) + ' ,'+(-2)+')')
-                    .text(id);
+                    .text(id.replace(this.labelReplace, ' '));
                 g.append('text')
                     .attr('text-anchor', 'middle')
                     .attr('transform', 'translate(' + (0) + ' ,'+(12)+')')
@@ -2379,7 +2410,7 @@ class graphly extends EventEmitter {
             g.append('text')
                 .attr('text-anchor', 'middle')
                 .attr('transform', 'translate(' + 66 + ' ,'+(innerHeight/2)+') rotate(270)')
-                .text(label);
+                .text(label.replace(this.labelReplace, ' '));
 
             let csZoomEvent = ()=>{
                 g.call(colorAxis);
@@ -4546,7 +4577,7 @@ class graphly extends EventEmitter {
                     .attr("x", 0)
                     .attr("y", y)
                     .attr("dy", lineNumber++ * lineHeight + dy  + "px")
-                    .text(word);
+                    .text(word.replace(this.labelReplace, ' '));
             }
         });
     }
@@ -4573,7 +4604,7 @@ class graphly extends EventEmitter {
                     .attr("x", x)
                     .attr("y", 0)
                     .attr("dx", -(lineNumber++ * offset + dx)  + "px")
-                    .text(word);
+                    .text(word.replace(this.labelReplace, ' '));
             }
         });
     }
@@ -6244,7 +6275,7 @@ class graphly extends EventEmitter {
             regressionSelect.selectAll('option')
                 .data(regressionTypes).enter()
                 .append('option')
-                    .text(function (d) { return d.name; })
+                    .text(function (d) { return d.name.replace(this.labelReplace, ' '); })
                     .attr('value', function (d) { return d.value; })
                     .property('selected', function(d){
                         return d.value === dataSettings.regression;
@@ -6587,7 +6618,7 @@ class graphly extends EventEmitter {
             }
 
             if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
-                selectionChoices.push({value: key, label: key});
+                selectionChoices.push({value: key, label: key.replace(this.labelReplace, ' ')});
                 if(colAxis[yPos][parPos] === key){
                     selectionChoices[selectionChoices.length-1].selected = true;
                 }
@@ -7187,7 +7218,7 @@ class graphly extends EventEmitter {
             parDiv.append('div')
                 .style('display', 'inline')
                 .attr('id', id)
-                .html(displayName);
+                .html(displayName.replace(this.labelReplace, ' '));
 
             // Update size of rect based on size of original div
             let boundRect = parInfEl.node().getBoundingClientRect();

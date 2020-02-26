@@ -371,7 +371,7 @@ input[type=text] {
 }
 
 .filterContainer label{
-    top: -2px;
+    top: -3px;
     display:inline-block;
     font-size: 0.8em;
     position:relative;
@@ -396,6 +396,10 @@ input[type=text] {
     z-index: 5;
 }
 
+
+.editButton.add, .editButton.remove{
+    margin-top: 0px;
+}
 .editButton.add:before {
     content: "+";
     line-height: 11px;
@@ -559,4 +563,10 @@ input[type=text] {
 
 .bitcontainer{
     height: 20px;
+}
+
+
+/* Overwrite default break-all from choices*/
+.choices__list--dropdown {
+    word-break: break-word!important;
 }

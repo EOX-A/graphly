@@ -53,8 +53,8 @@ class FilterManager extends EventEmitter {
     * @param options.el {String} d3 selector identifer string.
     * @param options.showCloseButtons {boolean} Optional, default false.
     *        Add close icon for each filter.
-    * @param options.replaceUnderlines {boolean} Optional, default false.
-    *        Replace underlines  with spaces when showing parameter identifier
+    * @param options.replaceUnderscore {boolean} Optional, default false.
+    *        Replace underscore  with spaces when showing parameter identifier
     *        as labels.
     * @param options.filterSettings {FilterSettings} Optional additional Filter 
     *        Settings.
@@ -81,8 +81,13 @@ class FilterManager extends EventEmitter {
         this.data = defaultFor(params.data, {});
         this.dataSettings = defaultFor(this.filterSettings.dataSettings, {});
         this.showCloseButtons = defaultFor(params.showCloseButtons, false);
-        this.replaceUnderlines = defaultFor(params.replaceUnderlines, false);
+        this.replaceUnderscore = defaultFor(params.replaceUnderscore, false);
         this.ignoreParameters = defaultFor(params.ignoreParameters, []);
+
+        this.labelReplace = /a^/; // Default not matchin anything
+        if(this.replaceUnderscore){
+            this.labelReplace = /_/g;
+        }
         
         this.initManager();
         this.extents = {};
@@ -255,15 +260,13 @@ class FilterManager extends EventEmitter {
                 this.emit('removeFilter', d);
             });
 
-        var label = d;
+        var label = d.replace(this.labelReplace, ' ');
         if(this.dataSettings.hasOwnProperty(d) && 
             this.dataSettings[d].hasOwnProperty('uom') && 
             this.dataSettings[d].uom !== null){
             label += ' ['+this.dataSettings[d].uom + ']';
         }
-        if(this.replaceUnderlines){
-            label = label.replace(/_/g, " ");
-        }
+
         div.append('div')
             .attr('class', 'parameterLabel')
             .style('transform', d=>{
@@ -376,7 +379,9 @@ class FilterManager extends EventEmitter {
                     }
                     return color;
                 })
-                .text(function(d) { return d[0]; })
+                .text(function(d) { 
+                    return d[0].replace(that.labelReplace, ' ');
+                })
             .append("input")
                 .property("checked", function(d,i){
                     return selection[i];
@@ -564,14 +569,11 @@ class FilterManager extends EventEmitter {
                 this.emit('removeFilter', d);
             });
 
-        var label = d;
+        var label = d.replace(this.labelReplace, ' ');
         if(this.dataSettings.hasOwnProperty(d) && 
             this.dataSettings[d].hasOwnProperty('uom') && 
             this.dataSettings[d].uom !== null){
             label += ' ['+this.dataSettings[d].uom + ']';
-        }
-        if(this.replaceUnderlines){
-            label = label.replace(/_/g, " ");
         }
 
         if(this.brushes.hasOwnProperty(d)){
@@ -602,7 +604,7 @@ class FilterManager extends EventEmitter {
                 'px) rotate(-90deg)';
             })
             .style('width', height-20+'px')
-            .html(label);
+            .html(label.replace(this.labelReplace, ' '));
 
         var svg = div.append('svg')
             .attr('width', (width))
@@ -770,7 +772,7 @@ class FilterManager extends EventEmitter {
 
                 let label = container.append('label')
                         .attr('for', id)
-                        .text(id);
+                        .text(id.replace(this.labelReplace, ' '));
 
                 let choiceSelect = container
                     .append('select')
@@ -888,7 +890,7 @@ class FilterManager extends EventEmitter {
                 var label = container.append('label')
                         .attr('for', d)
                         .style('color', '#555')
-                        .text(d);
+                        .text(d.replace(this.labelReplace, ' '));
 
                 container.append('div')
                         .attr('class', function(){
