@@ -47,7 +47,7 @@
 			<li class="dropdown">
 				<a href="events.list.html" class="dropdown-toggle" data-toggle="dropdown">Events<b class="caret"></b></a>
 				<ul class="dropdown-menu ">
-					<li><a href="module-graphly.FilterManager.html#event:removeFilter">graphly.FilterManager#event:removeFilter</a></li><li><a href="module-graphly.FilterManager.html#event:filterChange">graphly.FilterManager#event:filterChange</a></li><li><a href="module-graphly.graphly.html#event:pointSelect">graphly.graphly#event:pointSelect</a></li><li><a href="module-graphly.graphly.html#event:axisChange">graphly.graphly#event:axisChange</a></li><li><a href="module-graphly.graphly.html#event:rendered">graphly.graphly#event:rendered</a></li>
+					<li><a href="module-graphly.FilterManager.html#event:removeFilter">graphly.FilterManager#event:removeFilter</a></li><li><a href="module-graphly.FilterManager.html#event:filterChange">graphly.FilterManager#event:filterChange</a></li><li><a href="module-graphly.graphly.html#event:pointSelect">graphly.graphly#event:pointSelect</a></li><li><a href="module-graphly.graphly.html#event:axisChange">graphly.graphly#event:axisChange</a></li><li><a href="module-graphly.graphly.html#event:colorsScaleChange">graphly.graphly#event:colorsScaleChange</a></li><li><a href="module-graphly.graphly.html#event:rendered">graphly.graphly#event:rendered</a></li>
 				</ul>
 			</li>
 			
@@ -384,6 +384,48 @@
             <td class="description last">Setting to configure 
        if parameter label box is always shown or is hidden and can be
        opened with the cog symbol.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>replaceUnderscore</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    false
+                
+                </td>
+            
+
+            <td class="description last">Setting to configure 
+       if underlines appearing in parameter labels should be replaced by
+       spaces.</td>
         </tr>
 
     
@@ -1083,6 +1125,47 @@
 
         <tr>
             
+                <td class="name"><code>connectFilteredPoints</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    false
+                
+                </td>
+            
+
+            <td class="description last">option to render
+       lines between points when there are filtered points in between</td>
+        </tr>
+
+    
+
+        <tr>
+            
                 <td class="name"><code>colorscales</code></td>
             
 
@@ -1158,6 +1241,47 @@
 
             <td class="description last">Option to show greyed out
        data points when filtering</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>disableAntiAlias</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    false
+                
+                </td>
+            
+
+            <td class="description last">Allows disabling antialias
+       of the rendering context</td>
         </tr>
 
     
@@ -1295,6 +1419,8 @@
         <li><a href="module-graphly.graphly.html#event:axisChange">module:graphly.graphly#event:axisChange</a></li>
     
         <li><a href="module-graphly.graphly.html#event:rendered">module:graphly.graphly#event:rendered</a></li>
+    
+        <li>module:graphly.graphly#event:colorScaleChange</li>
     </ul>
     
 
@@ -2630,6 +2756,139 @@ axis settings.
             
 <hr>
 <dt>
+    <h4 class="name" id="event:colorsScaleChange">colorsScaleChange</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        Fires when the colorscale for a parameter
+is changed
+    </div>
+    
+
+    
+
+    
+
+    
+    
+
+    
+<dl class="details">
+    
+
+    <h5 class="subsection-title">Properties:</h5>
+
+    <dl>
+
+<table class="props table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>containing</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">parameter key
+and colorscale identifier</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+</dl>
+
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
     <h4 class="name" id="event:rendered">rendered</h4>
     
     
@@ -2750,7 +3009,7 @@ axis settings.
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.3</a>
 	
-		on 2019-08-20T16:17:24+02:00
+		on 2020-02-26T16:18:28+01:00
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>
