@@ -5622,8 +5622,6 @@ class graphly extends EventEmitter {
         let lp;
         let p_x, p_y;
         yScale = yScale[plotY];
-        let currColCache = null;
-        let colCacheAvailable = false;
 
         let combPars = this.renderSettings.combinedParameters;
         let xGroup = false;
@@ -5971,7 +5969,23 @@ class graphly extends EventEmitter {
 
     renderFilteredOutPoints(data, xAxis, yAxis, plotY, yScale, leftYAxis) {
 
-        let lp = data[xAxis].length;
+        let lp;
+
+        let combPars = this.renderSettings.combinedParameters;
+        let xGroup = false;
+        let yGroup = false;
+        // Check if either x or y axis is a combined parameter
+        if(combPars.hasOwnProperty(xAxis)){
+            xGroup = combPars[xAxis];
+        } else {
+            lp = data[xAxis].length;
+        }
+        if(combPars.hasOwnProperty(yAxis)){
+            yGroup = combPars[yAxis];
+        } else {
+            lp = data[yAxis].length;
+        }
+
         yScale = yScale[plotY];
 
         // Check if parameter part of left or right y Scale
@@ -6053,7 +6067,48 @@ class graphly extends EventEmitter {
                 currDotSize = dotsize[data[identParam][j]];
             }
 
-            valY = data[yAxis][j];
+            if(!yGroup){
+                valY = data[yAxis][j];
+            } else {
+                // Check if we have a time variable
+                if(this.timeScales.indexOf(yGroup[0])!==-1){
+                    if( isNaN(data[yGroup[0]][j]) || isNaN(data[yGroup[1]][j]) ){
+                        valY = NaN;
+                    } else {
+                        valY = new Date(
+                            data[yGroup[0]][j].getTime() +
+                            (data[yGroup[1]][j].getTime() - data[yGroup[0]][j].getTime())/2
+                        );
+                    }
+                } else {
+                    valY = data[yGroup[0]][j] +
+                         (data[yGroup[1]][j] - data[yGroup[0]][j])/2;
+                }
+            }
+
+            if(!xGroup){
+                valX = data[xAxis][j];
+            } else {
+                // Check if we have a time variable
+                if(this.timeScales.indexOf(xGroup[0])!==-1){
+                    if( isNaN(data[xGroup[0]][j]) || isNaN(data[xGroup[1]][j]) ){
+                        valX = NaN;
+                    } else {
+                        valX = new Date(
+                            data[xGroup[0]][j].getTime() +
+                            (
+                                data[xGroup[1]][j].getTime()-
+                                data[xGroup[0]][j].getTime()
+                            )/2
+                        );
+                    }
+
+                   
+                } else {
+                    valX = data[xGroup[0]][j] +
+                         (data[xGroup[1]][j] - data[xGroup[0]][j])/2;
+                }
+            }
 
             // Manipulate value if we have a periodic parameter
             if(yperiodic){
@@ -6086,7 +6141,6 @@ class graphly extends EventEmitter {
 
             y+=axisOffset;
 
-            valX = data[xAxis][j];
             // Manipulate value if we have a periodic parameter
             if(xperiodic){
                 let shiftpos = Math.abs(parseInt(xMax/period));
@@ -6117,12 +6171,12 @@ class graphly extends EventEmitter {
             let par_properties = {
                 index: j,
                 x: {
-                    val: data[xAxis][j],
+                    val: valX,
                     id: xAxis,
                     coord: x
                 },
                 y: {
-                    val: data[yAxis][j],
+                    val: valY,
                     id: yAxis,
                     coord: y
                 },
@@ -7340,6 +7394,11 @@ class graphly extends EventEmitter {
                     data, idX, idY, idCS, plotY,
                     currYScale, leftYAxis, updateReferenceCanvas
                 );
+                if(this.showFilteredData) {
+                    this.renderFilteredOutPoints(
+                        inactiveData, idX, idY, plotY, currYScale, leftYAxis
+                    );
+                }
             }
         } else {
             if(combPars.hasOwnProperty(idY)){

@@ -982,7 +982,8 @@ export var filterSettingsConfiguration = {
             'mie_HLOS_wind_speed',
             'albedo_off_nadir',
             'mie_bin_quality_flag',
-            'rayleigh_bin_quality_flag'
+            'rayleigh_bin_quality_flag',
+            'geoid_separation'
         ],
         maskParameter: {
             'mie_bin_quality_flag': {
