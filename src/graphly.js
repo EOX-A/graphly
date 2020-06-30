@@ -14,12 +14,12 @@
 * @property {Array.String} [y2AxisLabel] Array of labels to be used instead of 
 *         generated label based on selected parameters.
 * @property {Object} combinedParameters
-* @property {Array.String} colorAxis Array of parameter
-*        id strings of parameters to be rendered used for third dimension
-*        as colorscale. If used number of array items must be equal to 
-*        number of items in y and y2 axis combined. It is possible to use
-*        null if any of the selected parameters for y or y2 axis should not
-*        use a colorscale representation. 
+* @property {Array.Array} colorAxis Array of strings for each plot passed as
+*        array. For each parameter rendered on y axis one colorscale parameter
+*        can be provided, use null for parameters without colorscale
+* @property {Array.Array} colorAxis Array of strings for each plot passed as
+*        array. For each parameter rendered on y2 (right) axis one colorscale 
+*        parameter can be provided, use null for parameters without colorscale
 * @property {Object} [dataIdentifier] Contains key "parameter" with identifier 
 *       string of parameter used to separate data into groups and key 
 *       "identifiers" with array of strings with possible values in data array.
@@ -40,6 +40,16 @@
 *        additional labels that should be used for the y axis
 * @property {Array.String} [additionalY2Ticks] Array with parameter ids for 
 *        additional labels that should be used for the second y axis
+* @property {Array.String} [yAxisExtent] Array of two value arrays for extent
+*        to be set for each y axis instead of calculating from data range
+* @property {Array.String} [y2AxisExtent] Array of two value arrays for extent
+*        to be set for each y2 (right) axis instead of calculating from data range
+* @property {Array.String} [yAxisLocked] Array of booleans indicating if range
+*        calculation for y axis is locked, so range is not recalculated when 
+*        reloading data
+* @property {Array.String} [y2AxisLocked] Array of booleans indicating if range
+*        calculation for y 2 axis is locked, so range is not recalculated when
+*        reloading data
 * @property {Object} [availableParameters] When using dataIdentifier an object
 *        with keys for each possible identifier and an array with parameter 
 *        identifiers as stringslist of can be provided so that only those
@@ -114,6 +124,9 @@ const dotType = {
 
 let DOTSIZE = 8;
 
+let lockicon = require('../styles/lock.svg');
+let unlockicon = require('../styles/unlock.svg');
+
 require('../styles/graphly.css');
 require('../node_modules/choices.js/assets/styles/css/choices.css');
 require('../node_modules/c-p/color-picker.css');
@@ -139,6 +152,11 @@ global.FilterManager = FilterManager;
 
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
+function warning(message) {
+    (console ? (console.warn || console.log) : function (m) { return m; })
+        (message)
+    ;
+}
 
 function debounce(func, wait, immediate) {
     var timeout;
@@ -228,6 +246,9 @@ class graphly extends EventEmitter {
     *        includes colorscales from colorscalesdef (eox-a)
     * @param {boolean} [options.showFilteredData=true] Option to show greyed out
     *        data points when filtering
+    * @param {boolean} [options.allowLockingAxisScale=false] Option to add lock
+    *        functionality to all y axis to fix the current scale event when
+    *        reloading data, when set event fires when any y axis extent changes
     * @param {boolean} [options.disableAntiAlias=false] Allows disabling antialias
     *        of the rendering context
     */
@@ -249,6 +270,7 @@ class graphly extends EventEmitter {
         this.zoomActivity = false;
         this.activeArrows = false;
         this.disableAntiAlias = defaultFor(options.disableAntiAlias, false);
+        this.allowLockingAxisScale = defaultFor(options.allowLockingAxisScale, false);
         this.replaceUnderscore = defaultFor(options.replaceUnderscore, false);
 
         this.labelReplace = /a^/; // Default not matchin anything
@@ -286,8 +308,26 @@ class graphly extends EventEmitter {
             }
         });
 
-        // TOOO: How could some defaults be guessed for rendering?
         this.dataSettings = defaultFor(options.dataSettings, {});
+
+        // Go through dataSettings and provide default colors if not defined
+        let rKeys = Object.keys(this.dataSettings);
+        let cGen = d3.scale.category10();
+        if(rKeys.length > 10){
+            cGen = d3.scale.category20();
+        }
+
+        for (var i = 0; i < rKeys.length; i++) {
+            let k = rKeys[i];
+            if(!this.dataSettings[k].hasOwnProperty('color') || 
+                typeof this.dataSettings[k].color === 'undefined'){
+                let col = cGen(i);
+                col = CP.HEX2RGB(col.slice(1));
+                col = col.map(function(c){return c/255;});
+                this.dataSettings[k].color = col;
+            }
+        }
+
         this.setRenderSettings(options.renderSettings);
 
         this.logX = defaultFor(options.logX, false);
@@ -301,91 +341,8 @@ class graphly extends EventEmitter {
         this.settingsToDelete = [];
 
 
-        // If provided settings are not array of arrays convert it to it
-         if(!this.multiYAxis || (
-                Array.isArray(this.renderSettings.yAxis) && 
-                !Array.isArray(this.renderSettings.yAxis[0])
-            )) {
-            // Manage configuration as it would be a 1 element multi plot
-            // this should bring together both functionalities
-            this.renderSettings.yAxis = [this.renderSettings.yAxis];
-            if(this.renderSettings.y2Axis){
-                this.renderSettings.y2Axis = [this.renderSettings.y2Axis];
-            } else {
-                this.renderSettings.y2Axis = [[]];
-            }
-            if(this.renderSettings.colorAxis){
-                this.renderSettings.colorAxis = [this.renderSettings.colorAxis];
-            } else {
-                this.renderSettings.colorAxis = [[]];
-            }
-            if(this.renderSettings.colorAxis2){
-                this.renderSettings.colorAxis2 = [this.renderSettings.colorAxis2];
-            } else {
-                this.renderSettings.colorAxis2 = [[]];
-            }
-        }
-
-        this.renderSettings.availableParameters = defaultFor(
-            this.renderSettings.availableParameters, false
-        );
-        this.renderSettings.renderGroups = defaultFor(
-            this.renderSettings.renderGroups, false
-        );
-        this.renderSettings.sharedParameters = defaultFor(
-            this.renderSettings.sharedParameters, false
-        );
-        this.renderSettings.groups = defaultFor(
-            this.renderSettings.groups, false
-        );
-
-        this.yAxisLabel = defaultFor(this.renderSettings.yAxisLabel, null);
-        this.y2AxisLabel = defaultFor(this.renderSettings.y2AxisLabel, null);
-        this.xAxisLabel = defaultFor(this.renderSettings.xAxisLabel, null);
-
-        let fillArray = (arr, val)=>{
-            for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
-                arr.push(val);
-            }
-        }
-        if(this.yAxisLabel === null){
-            this.yAxisLabel = [];
-            fillArray(this.yAxisLabel, null);
-        }
-        if(this.y2AxisLabel === null){
-            this.y2AxisLabel = [];
-            fillArray(this.y2AxisLabel, null);
-        }
-
-        this.logY = [];
-        fillArray(this.logY, false);
-        this.logY2 = [];
-        fillArray(this.logY2, false);
-
         this.colorAxisTickFormat = defaultFor(options.colorAxisTickFormat, 'g');
         this.defaultAxisTickFormat = defaultFor(options.defaultAxisTickFormat, 'g');
-
-        // Check if sub axis option set if not initialize with empty array
-        if(this.enableSubXAxis){
-            this.renderSettings.additionalXTicks = defaultFor(
-                this.renderSettings.additionalXTicks, []
-            );
-        }
-        this.renderSettings.additionalYTicks = defaultFor(
-            this.renderSettings.additionalYTicks, []
-        );
-
-        if(this.enableSubYAxis){
-            if(this.multiYAxis){
-                for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
-                    this.renderSettings.additionalYTicks.push([]);
-                }
-            }
-        } else {
-            this.renderSettings.additionalYTicks = [
-                this.renderSettings.additionalYTicks
-            ];
-        }
 
         this.timeScales = [];
 
@@ -405,7 +362,6 @@ class graphly extends EventEmitter {
             this.marginY2Offset = 40;
         }
 
-
         // Calculate necessary additional offset if sub ticks have been selected
         if(this.enableSubXAxis) {
             this.subAxisMarginX = 40*this.renderSettings.additionalXTicks.length;
@@ -419,31 +375,6 @@ class graphly extends EventEmitter {
             }
             this.subAxisMarginY = 80*maxL;
         }
-
-
-        this.renderSettings.combinedParameters = defaultFor(
-            this.renderSettings.combinedParameters, {}
-        );
-
-        this.renderSettings.reversedYAxis = defaultFor(
-            this.renderSettings.reversedYAxis, null
-        );
-        if(this.renderSettings.reversedYAxis === null){
-            this.renderSettings.reversedYAxis = [];
-            fillArray(this.renderSettings.reversedYAxis, false);
-        }
-
-        this.renderSettings.reversedY2Axis = defaultFor(
-            this.renderSettings.reversedY2Axis, null
-        );
-        if(this.renderSettings.reversedY2Axis === null){
-            this.renderSettings.reversedY2Axis = [];
-            fillArray(this.renderSettings.reversedY2Axis, false);
-        }
-
-        this.renderSettings.y2Axis = defaultFor(
-            this.renderSettings.y2Axis, []
-        );
 
         this.debounceActive = defaultFor(options.debounceActive, true);
         this.dim = this.el.node().getBoundingClientRect();
@@ -1138,25 +1069,115 @@ class graphly extends EventEmitter {
     * @param {Object} settings See renderSettings description of graphly constructor.
     */
     setRenderSettings(settings){
-        this.renderSettings = defaultFor(settings, {});
-
-        // Go through rendersettings and provide default colors if not defined
-        let rKeys = Object.keys(this.dataSettings);
-        let cGen = d3.scale.category10();
-        if(rKeys.length > 10){
-            cGen = d3.scale.category20();
+        // TODO: Do sanity checks for passed settings
+        if (typeof settings === 'undefined') {
+            warning('Settings object can\'t be undefined');
+            return;
         }
-
-        for (var i = 0; i < rKeys.length; i++) {
-            let k = rKeys[i];
-            if(!this.dataSettings[k].hasOwnProperty('color') || 
-                typeof this.dataSettings[k].color === 'undefined'){
-                let col = cGen(i);
-                col = CP.HEX2RGB(col.slice(1));
-                col = col.map(function(c){return c/255;});
-                this.dataSettings[k].color = col;
+        this.renderSettings = settings;
+        // If provided settings are not array of arrays convert it to it
+         if(!this.multiYAxis || (
+                Array.isArray(this.renderSettings.yAxis) && 
+                !Array.isArray(this.renderSettings.yAxis[0])
+            )) {
+            // Manage configuration as it would be a 1 element multi plot
+            // this should bring together both functionalities
+            this.renderSettings.yAxis = [this.renderSettings.yAxis];
+            if(this.renderSettings.y2Axis){
+                this.renderSettings.y2Axis = [this.renderSettings.y2Axis];
+            } else {
+                this.renderSettings.y2Axis = [[]];
+            }
+            if(this.renderSettings.colorAxis){
+                this.renderSettings.colorAxis = [this.renderSettings.colorAxis];
+            } else {
+                this.renderSettings.colorAxis = [[]];
+            }
+            if(this.renderSettings.colorAxis2){
+                this.renderSettings.colorAxis2 = [this.renderSettings.colorAxis2];
+            } else {
+                this.renderSettings.colorAxis2 = [[]];
             }
         }
+
+        this.renderSettings.availableParameters = defaultFor(
+            this.renderSettings.availableParameters, false
+        );
+        this.renderSettings.renderGroups = defaultFor(
+            this.renderSettings.renderGroups, false
+        );
+        this.renderSettings.sharedParameters = defaultFor(
+            this.renderSettings.sharedParameters, false
+        );
+        this.renderSettings.groups = defaultFor(
+            this.renderSettings.groups, false
+        );
+
+        let createFilledArray = (val)=>{
+            const outputArray = [];
+            for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
+                outputArray.push(val);
+            }
+            return outputArray;
+        }
+
+        this.yAxisLabel = defaultFor(
+            this.renderSettings.yAxisLabel, createFilledArray(null)
+        );
+        this.y2AxisLabel = defaultFor(
+            this.renderSettings.y2AxisLabel, createFilledArray(null)
+        );
+        this.xAxisLabel = defaultFor(this.renderSettings.xAxisLabel, null);
+
+
+        this.logY = createFilledArray(false);
+        this.logY2 = createFilledArray(false);
+
+        // Check if sub axis option set if not initialize with empty array
+        if(this.enableSubXAxis){
+            this.renderSettings.additionalXTicks = defaultFor(
+                this.renderSettings.additionalXTicks, []
+            );
+        }
+        this.renderSettings.additionalYTicks = defaultFor(
+            this.renderSettings.additionalYTicks, []
+        );
+
+        if(this.enableSubYAxis){
+            for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
+                this.renderSettings.additionalYTicks.push([]);
+            }
+        } else {
+            this.renderSettings.additionalYTicks = [
+                this.renderSettings.additionalYTicks
+            ];
+        }
+
+        this.renderSettings.combinedParameters = defaultFor(
+            this.renderSettings.combinedParameters, {}
+        );
+        this.renderSettings.reversedYAxis = defaultFor(
+            this.renderSettings.reversedYAxis, createFilledArray(false)
+        );
+        this.renderSettings.reversedY2Axis = defaultFor(
+            this.renderSettings.reversedY2Axis, createFilledArray(false)
+        );
+        this.renderSettings.y2Axis = defaultFor(
+            this.renderSettings.y2Axis, []
+        );
+        this.renderSettings.yAxisExtent = defaultFor(
+            this.renderSettings.yAxisExtent, createFilledArray(null)
+        );
+        this.renderSettings.y2AxisExtent = defaultFor(
+            this.renderSettings.y2AxisExtent, createFilledArray(null)
+        );
+        this.renderSettings.yAxisLocked = defaultFor(
+            this.renderSettings.yAxisLocked, createFilledArray(false)
+        );
+        this.renderSettings.y2AxisLocked = defaultFor(
+            this.renderSettings.y2AxisLocked, createFilledArray(false)
+        );
+
     }
 
     /**
@@ -1226,6 +1247,7 @@ class graphly extends EventEmitter {
 
             // Hide axis edit buttons
             this.svg.selectAll('.modifyAxisIcon').style('display', 'none');
+            this.svg.selectAll('.lockAxisIcon').style('display', 'none');
 
             // Render all y axis parameters
             for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
@@ -1433,8 +1455,9 @@ class graphly extends EventEmitter {
 
         this.svg.selectAll('.previewImage').style('display', 'none');
         this.svg.selectAll('.svgInfoContainer').style('visibility', 'hidden');
-        // Hide axis edit buttons
+        // Unhide axis edit buttons
         this.svg.selectAll('.modifyAxisIcon').style('display', 'block');
+        this.svg.selectAll('.lockAxisIcon').style('display', 'block');
 
         // Set first render container as it was before
         this.el.select('#renderingContainer0')
@@ -2557,6 +2580,21 @@ class graphly extends EventEmitter {
             if(parameterid){
                 this.dataSettings[parameterid].extent = axis.scale().domain();
             }
+            // Go through all axis and save the extent if they are locked
+            if (this.allowLockingAxisScale) {
+                for (var yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+                    if (this.renderSettings.hasOwnProperty('yAxisLocked')
+                        && this.renderSettings.yAxisLocked.length >= yPos
+                        && this.renderSettings.yAxisLocked[yPos]){
+                        this.renderSettings.yAxisExtent[yPos] = this.yScale[yPos].domain();
+                    }
+                    if (this.renderSettings.hasOwnProperty('y2AxisLocked')
+                        && this.renderSettings.y2AxisLocked.length >= yPos
+                        && this.renderSettings.y2AxisLocked[yPos]){
+                        this.renderSettings.y2AxisExtent[yPos] = this.y2Scale[yPos].domain();
+                    }
+                }
+            }
             this.emit('axisExtentChanged');
             this.addTimeInformation();
             this.breakTicks();
@@ -2652,6 +2690,10 @@ class graphly extends EventEmitter {
                         this.renderSettings.additionalYTicks.push([]);
                         this.renderSettings.reversedYAxis.push(false);
                         this.renderSettings.reversedY2Axis.push(false);
+                        this.renderSettings.yAxisLocked.push(false);
+                        this.renderSettings.y2AxisLocked.push(false);
+                        this.renderSettings.yAxisExtent.push([]);
+                        this.renderSettings.y2AxisExtent.push([]);
 
                         if(this.renderSettings.renderGroups && 
                             this.renderSettings.groups){
@@ -2841,6 +2883,11 @@ class graphly extends EventEmitter {
                         renSett.reversedYAxis.splice(index, 1);
                         renSett.reversedY2Axis.splice(index, 1);
 
+                        renSett.yAxisLocked.splice(index, 1);
+                        renSett.y2AxisLocked.splice(index, 1);
+                        renSett.yAxisExtent.splice(index, 1);
+                        renSett.y2AxisExtent.splice(index, 1);
+
                         let addYT = this.renderSettings.additionalYTicks; 
                         addYT.splice(index,1);
                         // Recalculate subaxis margin
@@ -2876,6 +2923,12 @@ class graphly extends EventEmitter {
                         this.loadData(this.data);
                     });
 
+                const shiftParameter = (parameter, index, direction) => {
+                    let rS = this.renderSettings;
+                    const tmpVar = rS[parameter][index];
+                    rS[parameter][index] = rS[parameter][index+direction];
+                    rS[parameter][index+direction] = tmpVar;
+                }
                 // Add move up arrow 
                 if(plotY>0){
                     this.el.append('div')
@@ -2885,33 +2938,19 @@ class graphly extends EventEmitter {
                         .style('left', '10px')
                         .style('top', (offsetY+this.margin.top+20)+'px')
                         .on('click', ()=>{
-
                             let index = Number(d3.select(d3.event.target).attr('data-index'));
                             let rS = this.renderSettings;
-
-                            let curryAxis = rS.yAxis[index];
-                            let curry2Axis = rS.y2Axis[index];
-                            let currColAx = rS.colorAxis[index];
-                            let currColAx2 = rS.colorAxis2[index];
-                            let curraddYTicks = rS.additionalYTicks[index];
-                            let currRevY = rS.reversedYAxis[index];
-                            let currRevY2 = rS.reversedY2Axis[index];
-
-                            rS.yAxis[index] = rS.yAxis[index-1];
-                            rS.y2Axis[index] = rS.y2Axis[index-1];
-                            rS.additionalYTicks[index] = rS.additionalYTicks[index-1];
-                            rS.colorAxis[index] = rS.colorAxis[index-1];
-                            rS.colorAxis2[index] = rS.colorAxis2[index-1];
-                            rS.reversedYAxis[index] = rS.reversedYAxis[index-1];
-                            rS.reversedY2Axis[index] = rS.reversedY2Axis[index-1];
-
-                            rS.yAxis[index-1] = curryAxis;
-                            rS.y2Axis[index-1] = curry2Axis;
-                            rS.additionalYTicks[index-1] = curraddYTicks;
-                            rS.colorAxis[index-1] = currColAx;
-                            rS.colorAxis2[index-1] = currColAx2;
-                            rS.reversedYAxis[index-1] = currRevY;
-                            rS.reversedY2Axis[index-1] = currRevY2;
+                            shiftParameter('yAxis', index, -1);
+                            shiftParameter('y2Axis', index, -1);
+                            shiftParameter('colorAxis', index, -1);
+                            shiftParameter('colorAxis2', index, -1);
+                            shiftParameter('additionalYTicks', index, -1);
+                            shiftParameter('reversedYAxis', index, -1);
+                            shiftParameter('reversedY2Axis', index, -1);
+                            shiftParameter('yAxisLocked', index, -1);
+                            shiftParameter('y2AxisLocked', index, -1);
+                            shiftParameter('yAxisExtent', index, -1);
+                            shiftParameter('y2AxisExtent', index, -1);
 
                             if(rS.renderGroups && rS.groups){
                                 let currGroup = rS.groups[index];
@@ -2941,29 +2980,17 @@ class graphly extends EventEmitter {
                             let index = Number(d3.select(d3.event.target).attr('data-index'));
                             let rS = this.renderSettings;
 
-                            let curryAxis = rS.yAxis[index];
-                            let curry2Axis = rS.y2Axis[index];
-                            let currColAx = rS.colorAxis[index];
-                            let currColAx2 = rS.colorAxis2[index];
-                            let curraddYTicks = rS.additionalYTicks[index];
-                            let currRevY = rS.reversedYAxis[index];
-                            let currRevY2 = rS.reversedY2Axis[index];
-
-                            rS.yAxis[index] = rS.yAxis[index+1];
-                            rS.y2Axis[index] = rS.y2Axis[index+1];
-                            rS.additionalYTicks[index] = rS.additionalYTicks[index+1];
-                            rS.colorAxis[index] = rS.colorAxis[index+1];
-                            rS.colorAxis2[index] = rS.colorAxis2[index+1];
-                            rS.reversedYAxis[index] = rS.reversedYAxis[index+1];
-                            rS.reversedY2Axis[index] = rS.reversedY2Axis[index+1];
-
-                            rS.yAxis[index+1] = curryAxis;
-                            rS.y2Axis[index+1] = curry2Axis;
-                            rS.additionalYTicks[index+1] = curraddYTicks;
-                            rS.colorAxis[index+1] = currColAx;
-                            rS.colorAxis2[index+1] = currColAx2;
-                            rS.reversedYAxis[index+1] = currRevY;
-                            rS.reversedY2Axis[index+1] = currRevY2;
+                            shiftParameter('yAxis', index, 1);
+                            shiftParameter('y2Axis', index, 1);
+                            shiftParameter('colorAxis', index, 1);
+                            shiftParameter('colorAxis2', index, 1);
+                            shiftParameter('additionalYTicks', index, 1);
+                            shiftParameter('reversedYAxis', index, 1);
+                            shiftParameter('reversedY2Axis', index, 1);
+                            shiftParameter('yAxisLocked', index, 1);
+                            shiftParameter('y2AxisLocked', index, 1);
+                            shiftParameter('yAxisExtent', index, 1);
+                            shiftParameter('y2AxisExtent', index, 1);
 
                             if(rS.renderGroups && rS.groups){
                                 let currGroup = rS.groups[index];
@@ -4042,9 +4069,28 @@ class graphly extends EventEmitter {
             }
 
 
+            if (this.renderSettings.hasOwnProperty('yAxisLocked')
+                && this.renderSettings.yAxisLocked.length >= yPos
+                && this.renderSettings.yAxisLocked[yPos]
+                && this.renderSettings.hasOwnProperty('yAxisExtent')
+                && this.renderSettings.yAxisExtent.length >= yPos
+                && this.renderSettings.yAxisExtent[yPos] !== null) {
+                yExtent = this.renderSettings.yAxisExtent[yPos];
+            } else {
+                yExtent = this.calculateExtent(ySelection);
+            }
 
-            yExtent = this.calculateExtent(ySelection);
-            y2Extent = this.calculateExtent(y2Selection);
+            if (this.renderSettings.hasOwnProperty('y2AxisLocked')
+                && this.renderSettings.y2AxisLocked.length >= yPos
+                && this.renderSettings.y2AxisLocked[yPos]
+                && this.renderSettings.hasOwnProperty('y2AxisExtent')
+                && this.renderSettings.y2AxisExtent.length >= yPos
+                && this.renderSettings.y2AxisExtent[yPos] !== null) {
+                y2Extent = this.renderSettings.y2AxisExtent[yPos];
+            } else {
+                y2Extent = this.calculateExtent(y2Selection);
+            }
+            
 
             let yRange = yExtent[1] - yExtent[0];
             let y2Range = y2Extent[1] - y2Extent[0];
@@ -4093,12 +4139,16 @@ class graphly extends EventEmitter {
 
             // Recalculate domain so that data is not directly at border
             if(!this.fixedSize){
-                yExtent = calcExtent(
-                    yExtent, yRange, this.yTimeScale, [0.02, 0.02]
-                );
-                y2Extent = calcExtent(
-                    y2Extent, y2Range, this.y2TimeScale, [0.02, 0.02]
-                );
+                if(!this.allowLockingAxisScale && !this.renderSettings.yAxisLocked[yPos]) {
+                    yExtent = calcExtent(
+                        yExtent, yRange, this.yTimeScale, [0.02, 0.02]
+                    );
+                }
+                if(!this.allowLockingAxisScale && !this.renderSettings.y2AxisLocked[yPos]) {
+                    y2Extent = calcExtent(
+                        y2Extent, y2Range, this.y2TimeScale, [0.02, 0.02]
+                    );
+                }
             }
 
 
@@ -4215,7 +4265,29 @@ class graphly extends EventEmitter {
                             );
                         }.bind(this));
                 }
-
+                if(this.allowLockingAxisScale) {
+                    if (this.renderSettings.hasOwnProperty('yAxisLocked')) {
+                        const icon = this.renderSettings.yAxisLocked[yPos]
+                            ? lockicon : unlockicon;
+                        currSvgyAxis.append('image')
+                            .attr('xlink:href', icon)
+                            .attr('class', 'lockAxisIcon')
+                            .attr('transform', 'translate(-' + 50 + ' ,' + 0 + ')')
+                            .on('click', function (){
+                                this.renderSettings.yAxisExtent[yPos] =
+                                    this.yScale[yPos].domain();
+                                this.renderSettings.yAxisLocked[yPos] = 
+                                    !this.renderSettings.yAxisLocked[yPos];
+                                this.initAxis();
+                                if(!this.renderSettings.yAxisLocked[yPos]){
+                                    // Axis range is recalculated data need to 
+                                    // be re-rendered
+                                    this.renderData();
+                                }
+                                this.emit('axisExtentChanged');
+                            }.bind(this));
+                    }
+                }
             } else {
                 this.yAxisSvg.push(null);
             }
@@ -4290,6 +4362,29 @@ class graphly extends EventEmitter {
                                 evtx, evty, this.y2zoom[yPos], 'left'
                             );
                         }.bind(this))
+                }
+                if(this.allowLockingAxisScale) {
+                    if (this.renderSettings.hasOwnProperty('y2AxisLocked')) {
+                        const icon = this.renderSettings.y2AxisLocked[yPos]
+                            ? lockicon : unlockicon;
+                        currSvgy2Axis.append('image')
+                            .attr('xlink:href', icon)
+                            .attr('class', 'lockAxisIcon')
+                            .attr('transform', 'translate(' + 27 + ' ,' + 0 + ')')
+                            .on('click', function (){
+                                this.renderSettings.y2AxisExtent[yPos] =
+                                    this.y2Scale[yPos].domain();
+                                this.renderSettings.y2AxisLocked[yPos] = 
+                                    !this.renderSettings.y2AxisLocked[yPos];
+                                this.initAxis();
+                                if(!this.renderSettings.y2AxisLocked[yPos]){
+                                    // Axis range is recalculated data need to 
+                                    // be re-rendered
+                                    this.renderData();
+                                }
+                                this.emit('axisExtentChanged');
+                            }.bind(this));
+                    }
                 }
             } else {
                 this.y2AxisSvg.push(null);
@@ -4470,6 +4565,22 @@ class graphly extends EventEmitter {
 
         this.renderCanvas.call(this.xyzoomCombined.bind(this));
 
+        // Go through all axis and save the extent if they are locked
+        if (this.allowLockingAxisScale) {
+            for (var yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+                if (this.renderSettings.hasOwnProperty('yAxisLocked')
+                    && this.renderSettings.yAxisLocked.length >= yPos
+                    && this.renderSettings.yAxisLocked[yPos]){
+                    this.renderSettings.yAxisExtent[yPos] = this.yScale[yPos].domain();
+                }
+                if (this.renderSettings.hasOwnProperty('y2AxisLocked')
+                    && this.renderSettings.y2AxisLocked.length >= yPos
+                    && this.renderSettings.y2AxisLocked[yPos]){
+                    this.renderSettings.y2AxisExtent[yPos] = this.y2Scale[yPos].domain();
+                }
+            }
+        }
+        this.emit('axisExtentChanged');
     }
 
     onZoom() {

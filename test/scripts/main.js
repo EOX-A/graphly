@@ -9,6 +9,12 @@ var renderSettings = {
     xAxis: 'parameter1',
     yAxis: [ 'parameter2'],
     colorAxis: ['parameter3'],
+    y2Axis: ['parameter3'],
+    colorAxis2: [null],
+    yAxisExtent: [[0,100]],
+    y2AxisExtent: [null],
+    yAxisLocked: [true],
+    y2AxisLocked: [false],
 }
 
 // create random data
@@ -21,19 +27,25 @@ function randn_bm() {
     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
 }
 
-
 var data = {};
-var parameters = [
-    'parameter1', 'parameter2',
-    'parameter3', 'parameter4'
-];
-var amount = 1000;
-for (var i = 0; i < parameters.length; i++) {
-    data[parameters[i]] = [];
-    for (var j = 0; j < amount; j++) {
-        data[parameters[i]].push(randn_bm());
+generateRandomData();
+
+function generateRandomData() {
+    var parameters = [
+        'parameter1', 'parameter2',
+        'parameter3', 'parameter4'
+    ];
+    var amount = 1000;
+    for (var i = 0; i < parameters.length; i++) {
+        data[parameters[i]] = [];
+        for (var j = 0; j < amount; j++) {
+            var extent = Math.random() * 100;
+            data[parameters[i]].push(randn_bm() * extent);
+        }
     }
 }
+
+
 
 
 var filterSettings = {
@@ -44,7 +56,7 @@ var filterManager = new FilterManager({
     el:'#filters',
     filterSettings: filterSettings,
     ignoreParameters: '__info__',
-    replaceUnderscore: true
+    replaceUnderscore: true,
 });
 
 
@@ -77,7 +89,8 @@ var graph = new graphly.graphly({
     //colorAxisTickFormat: 'customExp',
     //defaultAxisTickFormat: 'customExp',
     enableSubXAxis: 'datetime',
-    //disableAntiAlias: true
+    allowLockingAxisScale: true,
+    //disableAntiAlias: true,
 
 });
 
@@ -113,13 +126,22 @@ d3.select('#resetfilter').on('click', function(){
 
 
 d3.select('#reload').on('click', function(){
+    generateRandomData();
     graph.loadData(data);
+    graph.filterManager.resetManager();
 });
 
 
 graph.on('pointSelect', function(values){
     console.log(values);
 });
+
+graph.on('axisExtentChanged', function(){
+    console.log(this.renderSettings.yAxisExtent);
+    console.log(this.renderSettings.y2AxisExtent);
+    console.log(this.renderSettings.yAxisLocked);
+    console.log(this.renderSettings.y2AxisLocked);
+})
 
 
 

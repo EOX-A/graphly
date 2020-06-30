@@ -1008,6 +1008,24 @@ export var filterSettingsConfiguration = {
                enabled: [
                   true, false, false, false, false, false, false, false, false,
                   false, false, false, false, false, false, false
+              ],
+              appliedTo: [
+                'mie_HLOS_wind_speed',
+                'geoid_separation',
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
               ]
           },
           'rayleigh_bin_quality_flag': {
