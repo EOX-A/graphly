@@ -184,7 +184,7 @@ window.onload = function () {
         var sel = document.getElementById('datafiles');
         that.selValue = sel.options[sel.selectedIndex].value;
 
-        graph.renderSettings = addT.renderSettingsDefinition[that.selValue];
+        graph.setRenderSettings(addT.renderSettingsDefinition[that.selValue]);
         graph.dataSettings = addT.dataSettingsConfig[that.selValue];
         filterManager.updateFilterSettings(addT.filterSettingsConfiguration[that.selValue]);
 

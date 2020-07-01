@@ -1139,20 +1139,10 @@ class graphly extends EventEmitter {
                 this.renderSettings.additionalXTicks, []
             );
         }
+        
         this.renderSettings.additionalYTicks = defaultFor(
-            this.renderSettings.additionalYTicks, []
+            this.renderSettings.additionalYTicks, createFilledArray([])
         );
-
-        if(this.enableSubYAxis){
-            for (let i = 0; i < this.renderSettings.yAxis.length; i++) {
-                this.renderSettings.additionalYTicks.push([]);
-            }
-        } else {
-            this.renderSettings.additionalYTicks = [
-                this.renderSettings.additionalYTicks
-            ];
-        }
-
         this.renderSettings.combinedParameters = defaultFor(
             this.renderSettings.combinedParameters, {}
         );
@@ -1177,7 +1167,6 @@ class graphly extends EventEmitter {
         this.renderSettings.y2AxisLocked = defaultFor(
             this.renderSettings.y2AxisLocked, createFilledArray(false)
         );
-
     }
 
     /**
@@ -2275,7 +2264,6 @@ class graphly extends EventEmitter {
             for (let i = 0; i < aYT.length; i++) {
                 if(typeof aYT[i] !== 'undefined'){
                     for(let j=0; j<aYT[i].length; j++){
-
                         this.svg.append('text')
                             .attr('class', 'subYAxisLabel subAxisLabel')
                             .attr('text-anchor', 'middle')
@@ -4139,12 +4127,16 @@ class graphly extends EventEmitter {
 
             // Recalculate domain so that data is not directly at border
             if(!this.fixedSize){
-                if(!this.allowLockingAxisScale && !this.renderSettings.yAxisLocked[yPos]) {
+                if(!this.allowLockingAxisScale
+                    && this.renderSettings.hasOwnProperty('yAxisLocked')
+                    && !this.renderSettings.yAxisLocked[yPos]) {
                     yExtent = calcExtent(
                         yExtent, yRange, this.yTimeScale, [0.02, 0.02]
                     );
                 }
-                if(!this.allowLockingAxisScale && !this.renderSettings.y2AxisLocked[yPos]) {
+                if(!this.allowLockingAxisScale 
+                    && this.renderSettings.hasOwnProperty('y2AxisLocked')
+                    && !this.renderSettings.y2AxisLocked[yPos]) {
                     y2Extent = calcExtent(
                         y2Extent, y2Range, this.y2TimeScale, [0.02, 0.02]
                     );
