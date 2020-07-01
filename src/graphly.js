@@ -1506,7 +1506,7 @@ class graphly extends EventEmitter {
         }
 
         if(yAxisLabel[yPos]){
-            listText = [yAxisLabel[yPos]].replace(this.labelReplace, ' ');
+            listText = [yAxisLabel[yPos].replace(this.labelReplace, ' ')];
         }
         
         let labelText = this.svg.append('text')
