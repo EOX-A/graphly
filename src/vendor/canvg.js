@@ -2402,7 +2402,9 @@
             var isSvg = href.match(/\.svg$/)
 
             if(href.substring(0, 21) != 'data:image/png;base64'){
-                svg.Images.push(this);
+                // TODO: For now we ignore base 64 images in the svg as this breaks
+                // rendering of referenced images
+                //svg.Images.push(this);
             }
             this.loaded = false;
             if (!isSvg) {

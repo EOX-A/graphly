@@ -517,11 +517,11 @@ input[type=text] {
     margin-top: -3px;
 }
 
-.modifyAxisIcon{
+.modifyAxisIcon, .lockAxisIcon{
     pointer-events: all;
 }
 
-.modifyAxisIcon:hover, #rangeEditCancel:hover, #rangeEditConfirm{
+.modifyAxisIcon:hover, #rangeEditCancel:hover, #rangeEditConfirm, .lockAxisIcon:hover{
     cursor: pointer;
 }
 
