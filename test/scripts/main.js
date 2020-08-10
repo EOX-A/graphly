@@ -4,17 +4,23 @@
 import * as addT from './additionalTesting.js';
 
 
-var dataSettings = {};
+var dataSettings = {
+    parameter3: {
+        colorscale: 'plasma',
+        uom: 'uom',
+        logarithmic: true,
+    }
+};
 var renderSettings = {
     xAxis: 'parameter1',
     yAxis: [ 'parameter2'],
     colorAxis: ['parameter3'],
-    y2Axis: ['parameter3'],
-    colorAxis2: [null],
-    yAxisExtent: [[0,100]],
-    y2AxisExtent: [null],
-    yAxisLocked: [true],
-    y2AxisLocked: [false],
+    y2Axis: [],
+    colorAxis2: [],
+    yAxisExtent: [null],
+    y2AxisExtent: [],
+    /*yAxisLocked: [true],
+    y2AxisLocked: [false],*/
 }
 
 // create random data
@@ -35,14 +41,17 @@ function generateRandomData() {
         'parameter1', 'parameter2',
         'parameter3', 'parameter4'
     ];
-    var amount = 1000;
+    /*var amount = 1000;
     for (var i = 0; i < parameters.length; i++) {
         data[parameters[i]] = [];
         for (var j = 0; j < amount; j++) {
             var extent = Math.random() * 100;
             data[parameters[i]].push(randn_bm() * extent);
         }
-    }
+    }*/
+    data['parameter1'] = [0, 0, 0, 0, 0, 0, 0, 0];
+    data['parameter2'] = [1, 2, 3, 4, 5, 6, 7, 8];
+    data['parameter3'] = [0.1, 1, 10, 100, 1000, 10000, 1000000, 10000000];
 }
 
 

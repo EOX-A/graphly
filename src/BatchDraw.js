@@ -27,6 +27,7 @@ class BatchDrawer {
         this.colorscales = colorscalesdef.colorscales;
 
         this.setNoDataValue(Number.MIN_VALUE);
+        this.setLogScale(0.0);
         this.setDomain([0,1]);
         
         switch(params.coordinateSystem) {
@@ -276,6 +277,9 @@ class BatchDrawer {
         let lineNoDataValueLocation = gl.getUniformLocation(this.lineProgram, "u_noDataValue");
         gl.uniform1f(lineNoDataValueLocation, this.noDataValue);
 
+        let linelogScaleLocation = gl.getUniformLocation(this.lineProgram, "u_logscale");
+        gl.uniform1f(linelogScaleLocation, this.logScale);
+
         let lineDomainLocation = gl.getUniformLocation(this.lineProgram, "u_domain");
         gl.uniform2fv(lineDomainLocation, this.domain);
 
@@ -291,6 +295,9 @@ class BatchDrawer {
         let dotNoDataValueLocation = gl.getUniformLocation(this.dotProgram, "u_noDataValue");
         gl.uniform1f(dotNoDataValueLocation, this.noDataValue);
 
+        let dotlogScaleLocation = gl.getUniformLocation(this.dotProgram, "u_logscale");
+        gl.uniform1f(dotlogScaleLocation, this.logScale);
+
         let dotDomainLocation = gl.getUniformLocation(this.dotProgram, "u_domain");
         gl.uniform2fv(dotDomainLocation, this.domain);
 
@@ -305,6 +312,9 @@ class BatchDrawer {
 
         let rectNoDataValueLocation = gl.getUniformLocation(this.rectProgram, "u_noDataValue");
         gl.uniform1f(rectNoDataValueLocation, this.noDataValue);
+
+        let rectlogScaleLocation = gl.getUniformLocation(this.rectProgram, "u_logscale");
+        gl.uniform1f(rectlogScaleLocation, this.logScale);
 
         let rectDomainLocation = gl.getUniformLocation(this.rectProgram, "u_domain");
         gl.uniform2fv(rectDomainLocation, this.domain);
@@ -454,6 +464,10 @@ class BatchDrawer {
 
     setNoDataValue(noDataValue) {
         this.noDataValue = noDataValue;
+    }
+
+    setLogScale(logScale) {
+        this.logScale = logScale;
     }
 
     setDomain(domain) {
@@ -873,6 +887,7 @@ class BatchDrawer {
 
                 uniform sampler2D u_textureScale;
                 uniform float u_noDataValue;
+                uniform float u_logscale;
                 uniform vec2 u_domain;
 
                 void main(void) {
@@ -883,7 +898,12 @@ class BatchDrawer {
                         color_out = vec4(color.rgb, 1.0);
                     } else {
                         if(value != u_noDataValue){
-                            float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            float normalisedValue;
+                            if(u_logscale == 1.0) {
+                                normalisedValue = (log(value) - log(u_domain[0])) / (log(u_domain[1]) - log(u_domain[0]));
+                            } else {
+                                normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            }
                             vec4 text_col = texture(u_textureScale, vec2(normalisedValue, 0));
                             color_out = vec4(text_col.rgb  * color.a, color.a);
                         }

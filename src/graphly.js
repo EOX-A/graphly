@@ -2369,8 +2369,15 @@ class graphly extends EventEmitter {
                 colorAxisScale = d3.time.scale.utc();
             }
 
+            if(this.dataSettings[id].hasOwnProperty('logarithmic')
+                && this.dataSettings[id].logarithmic){
+                colorAxisScale = d3.scale.log();
+                // TODO: What to do if negative and postive values are in range
+            }
+
             colorAxisScale.domain(dataRange);
             colorAxisScale.range([innerHeight, 0]);
+
 
             let colorAxis = d3.svg.axis()
                 .orient("right")
@@ -2382,6 +2389,9 @@ class graphly extends EventEmitter {
                 csformat = u.customScientificTickFormat;
             } else if(this.colorAxisTickFormat === 'customExp'){
                 csformat = u.customExponentTickFormat;
+            } else if(this.dataSettings[id].hasOwnProperty('logarithmic')
+                && this.dataSettings[id].logarithmic){
+                colorAxis.ticks(0, 'e');
             } else {
                 csformat = d3.format(this.filterAxisTickFormat);
             }
@@ -5567,6 +5577,9 @@ class graphly extends EventEmitter {
             if (cA && cA.hasOwnProperty('csDiscrete')){
                 discreteColorScaleEnabled = true;
             }
+            if (cA && cA.hasOwnProperty('logarithmic')){
+                this.batchDrawer.setLogScale(1.0);
+            }
 
             this.batchDrawer.setColorScale(cs);
             this.batchDrawer._initUniforms();
@@ -5799,6 +5812,9 @@ class graphly extends EventEmitter {
             if(cA && cA.hasOwnProperty('extent')){
                 this.batchDrawer.setDomain(cA.extent);
                 resetUniforms = true;
+            }
+            if (cA && cA.hasOwnProperty('logarithmic')){
+                this.batchDrawer.setLogScale(1.0);
             }
             // If current cs not equal to the set in the batchsrawe update cs
             if(cs !== this.batchDrawer.csName){
