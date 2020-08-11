@@ -2373,6 +2373,11 @@ class graphly extends EventEmitter {
                 && this.dataSettings[id].logarithmic){
                 colorAxisScale = d3.scale.log();
                 // TODO: What to do if negative and postive values are in range
+                /*if(dataRange[0]<0 && dataRange[1]>0) {
+                    dataRange[0] = 0;
+                } else if (dataRange[0]>0 && dataRange[1]<0) {
+                    dataRange[1] = 0;
+                }*/
             }
 
             colorAxisScale.domain(dataRange);
@@ -5578,7 +5583,9 @@ class graphly extends EventEmitter {
                 discreteColorScaleEnabled = true;
             }
             if (cA && cA.hasOwnProperty('logarithmic')){
-                this.batchDrawer.setLogScale(1.0);
+                this.batchDrawer.setLogScale(cA.logarithmic);
+            } else {
+                this.batchDrawer.setLogScale(false);
             }
 
             this.batchDrawer.setColorScale(cs);
@@ -5814,7 +5821,11 @@ class graphly extends EventEmitter {
                 resetUniforms = true;
             }
             if (cA && cA.hasOwnProperty('logarithmic')){
-                this.batchDrawer.setLogScale(1.0);
+                this.batchDrawer.setLogScale(cA.logarithmic);
+                resetUniforms = true;
+            } else {
+                this.batchDrawer.setLogScale(false);
+                resetUniforms = true;
             }
             // If current cs not equal to the set in the batchsrawe update cs
             if(cs !== this.batchDrawer.csName){
@@ -6751,21 +6762,22 @@ class graphly extends EventEmitter {
     }
 
 
-    renderColorScaleOptions(yPos, orientation, yAxisId, parPos){
+    renderColorScaleOptions(dataSettings, yPos, orientation, yAxisId, parPos){
 
         let colAxis = this.renderSettings.colorAxis;
+
         if(orientation==='right'){
             colAxis = this.renderSettings.colorAxis2;
         }
 
-        this.el.select('#parameterSettings')
-            .append('label')
+        let parSett = this.el.select('#parameterSettings');
+
+        parSett.append('label')
             .attr('id', 'labelColorParamSelection')
             .attr('for', 'colorParamSelection')
             .text('Parameter');
 
-        let labelColorParamSelect = this.el.select('#parameterSettings')
-          .append('select')
+        let labelColorParamSelect = parSett.append('select')
             .attr('id','colorParamSelection')
             .on('change',oncolorParamSelectionChange);
 
@@ -6816,7 +6828,6 @@ class graphly extends EventEmitter {
                 });
 
         let that = this;
-        var dataSettings;
 
         function oncolorParamSelectionChange() {
             let selectValue = 
@@ -6914,6 +6925,28 @@ class graphly extends EventEmitter {
             that.settingsToApply.colorscale = selectValue;
             that.addApply(that.dataSettings[csId], csId);
         }
+
+        let selectValue = that.el.select('#colorParamSelection').property('value');
+        let obj = {};
+        if(that.dataSettings.hasOwnProperty(selectValue)){
+            obj = that.dataSettings[selectValue];
+        }
+        parSett.append('label')
+            .attr('for', 'logscale')
+            .text('Log color scale');
+            
+
+        parSett.append('input')
+            .attr('id', 'logscale')
+            .attr('type', 'checkbox')
+            .property('checked', 
+                defaultFor(obj.logarithmic, false)
+            )
+            .on('change', function(){
+                that.settingsToApply.logarithmic = 
+                    !defaultFor(obj.logarithmic, false);
+                that.addApply(obj);
+            });
 
     }
 
@@ -7227,7 +7260,7 @@ class graphly extends EventEmitter {
             // Need to add additional necessary options
             // drop down with possible parameters and colorscale
             if(active){
-                this.renderColorScaleOptions(yPos, orientation, id, parPos);
+                this.renderColorScaleOptions(dataSettings, yPos, orientation, id, parPos);
             }
 
         }
@@ -7676,7 +7709,31 @@ class graphly extends EventEmitter {
                     if(domain[0]>domain[1]){
                         domain = domain.reverse();
                     }
+
+                    // Check if parameter has log colorscale option
+                    if(this.dataSettings[colorAxis].hasOwnProperty('logarithmic')
+                        && this.dataSettings[colorAxis].logarithmic){
+                        // If yes make sure domain does not cross 0
+                        if(domain[0]<0 && domain[1]>0) {
+                            domain[0] = 1e-20;
+                        }
+                    }
                     this.dataSettings[colorAxis].extent = domain;
+                } else {
+                    // Check if parameter has log colorscale option
+                    let domain = this.dataSettings[colorAxis].extent;
+                    if(this.dataSettings[colorAxis].hasOwnProperty('logarithmic')
+                        && this.dataSettings[colorAxis].logarithmic){
+                        // If yes make sure domain does not cross 0
+                        if(domain[0]<0 && domain[1]>0) {
+                            // Find smallest value over 0
+                            let tmpDomain = d3.extent(
+                                this.currentData[colorAxis].filter((val)=>val>0.0)
+                            );
+                            domain[0] = tmpDomain[0];
+                            this.dataSettings[colorAxis].extent = domain;
+                        }
+                    }
                 }
             }
         }

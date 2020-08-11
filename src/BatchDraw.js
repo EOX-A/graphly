@@ -27,7 +27,7 @@ class BatchDrawer {
         this.colorscales = colorscalesdef.colorscales;
 
         this.setNoDataValue(Number.MIN_VALUE);
-        this.setLogScale(0.0);
+        this.setLogScale(false);
         this.setDomain([0,1]);
         
         switch(params.coordinateSystem) {
@@ -467,7 +467,11 @@ class BatchDrawer {
     }
 
     setLogScale(logScale) {
-        this.logScale = logScale;
+        if(logScale) {
+            this.logScale = 1.0;
+        } else {
+            this.logScale = 0.0;
+        }
     }
 
     setDomain(domain) {
@@ -1089,13 +1093,19 @@ class BatchDrawer {
 
                     uniform sampler2D u_textureScale;
                     uniform float u_noDataValue;
+                    uniform float u_logscale;
                     uniform vec2 u_domain;
 
                     void main(void) {
                         vec4 color_out = vec4(color.rgb  * color.a, color.a);
 
                         if(value != u_noDataValue){
-                            float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            float normalisedValue;
+                            if(u_logscale == 1.0) {
+                                normalisedValue = (log(value) - log(u_domain[0])) / (log(u_domain[1]) - log(u_domain[0]));
+                            } else {
+                                normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            }
                             vec4 text_col = texture(u_textureScale, vec2(normalisedValue, 0));
                             color_out = vec4(text_col.rgb  * color.a, color.a);
                         }
@@ -1157,6 +1167,7 @@ class BatchDrawer {
 
                     uniform sampler2D u_textureScale;
                     uniform float u_noDataValue;
+                    uniform float u_logscale;
                     uniform vec2 u_domain;
 
                     void main(void) {
@@ -1166,7 +1177,12 @@ class BatchDrawer {
                             color_out = vec4(color.rgb, 1.0);
                         } else {
                             if(value != u_noDataValue){
-                                float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                                float normalisedValue;
+                                if(u_logscale == 1.0) {
+                                    normalisedValue = (log(value) - log(u_domain[0])) / (log(u_domain[1]) - log(u_domain[0]));
+                                } else {
+                                    normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                                }
                                 vec4 text_col = texture(u_textureScale, vec2(normalisedValue, 0));
                                 color_out = vec4(text_col.rgb  * color.a, color.a);
                             }
@@ -1232,6 +1248,7 @@ class BatchDrawer {
 
                 uniform sampler2D u_textureScale;
                 uniform float u_noDataValue;
+                uniform float u_logscale;
                 uniform vec2 u_domain;
                 
                 void main(void) {
@@ -1242,7 +1259,12 @@ class BatchDrawer {
                         color_out = vec4(color.rgb, 1.0);
                     } else {
                         if(value != u_noDataValue){
-                            float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            float normalisedValue;
+                            if(u_logscale == 1.0) {
+                                normalisedValue = (log(value) - log(u_domain[0])) / (log(u_domain[1]) - log(u_domain[0]));
+                            } else {
+                                normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            }
                             vec4 text_col = texture2D(u_textureScale, vec2(normalisedValue, 0));
                             color_out = vec4(text_col.rgb  * color.a, color.a);
                         }
@@ -1432,13 +1454,19 @@ class BatchDrawer {
 
                 uniform sampler2D u_textureScale;
                 uniform float u_noDataValue;
+                uniform float u_logscale;
                 uniform vec2 u_domain;
 
                 void main(void) {
                     vec4 color_out = vec4(color.rgb  * color.a, color.a);
 
                     if(value != u_noDataValue){
-                        float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                        float normalisedValue;
+                        if(u_logscale == 1.0) {
+                            normalisedValue = (log(value) - log(u_domain[0])) / (log(u_domain[1]) - log(u_domain[0]));
+                        } else {
+                            normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                        }
                         vec4 text_col = texture2D(u_textureScale, vec2(normalisedValue, 0));
                         color_out = vec4(text_col.rgb  * color.a, color.a);
                     }
@@ -1499,6 +1527,7 @@ class BatchDrawer {
 
                 uniform sampler2D u_textureScale;
                 uniform float u_noDataValue;
+                uniform float u_logscale;
                 uniform vec2 u_domain;
 
                 void main(void) {
@@ -1509,7 +1538,12 @@ class BatchDrawer {
                         color_out = vec4(color.rgb, 1.0);
                     } else {
                         if(value != u_noDataValue){
-                            float normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            float normalisedValue;
+                            if(u_logscale == 1.0) {
+                                normalisedValue = (log(value) - log(u_domain[0])) / (log(u_domain[1]) - log(u_domain[0]));
+                            } else {
+                                normalisedValue = (value - u_domain[0]) / (u_domain[1] - u_domain[0]);
+                            }
                             vec4 text_col = texture2D(u_textureScale, vec2(normalisedValue, 0));
                             color_out = vec4(text_col.rgb  * color.a, color.a);
                         }
