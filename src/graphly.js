@@ -2390,13 +2390,14 @@ class graphly extends EventEmitter {
                 .scale(colorAxisScale);
 
             let csformat;
-            if(this.colorAxisTickFormat === 'customSc'){
+            if(this.dataSettings[id].hasOwnProperty('logarithmic')
+                && this.dataSettings[id].logarithmic){
+                colorAxis.ticks(0, '0.0e');
+                //csformat = d3.format('e');
+            } else if(this.colorAxisTickFormat === 'customSc'){
                 csformat = u.customScientificTickFormat;
             } else if(this.colorAxisTickFormat === 'customExp'){
                 csformat = u.customExponentTickFormat;
-            } else if(this.dataSettings[id].hasOwnProperty('logarithmic')
-                && this.dataSettings[id].logarithmic){
-                colorAxis.ticks(0, 'e');
             } else {
                 csformat = d3.format(this.filterAxisTickFormat);
             }
