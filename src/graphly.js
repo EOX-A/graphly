@@ -2372,12 +2372,6 @@ class graphly extends EventEmitter {
             if(this.dataSettings[id].hasOwnProperty('logarithmic')
                 && this.dataSettings[id].logarithmic){
                 colorAxisScale = d3.scale.log();
-                // TODO: What to do if negative and postive values are in range
-                /*if(dataRange[0]<0 && dataRange[1]>0) {
-                    dataRange[0] = 0;
-                } else if (dataRange[0]>0 && dataRange[1]<0) {
-                    dataRange[1] = 0;
-                }*/
             }
 
             colorAxisScale.domain(dataRange);
@@ -7714,9 +7708,12 @@ class graphly extends EventEmitter {
                     // Check if parameter has log colorscale option
                     if(this.dataSettings[colorAxis].hasOwnProperty('logarithmic')
                         && this.dataSettings[colorAxis].logarithmic){
-                        // If yes make sure domain does not cross 0
-                        if(domain[0]<0 && domain[1]>0) {
-                            domain[0] = 1e-20;
+                        // Find smallest value over 0
+                        if(domain[0]<=0 && domain[1]>0) {
+                            let tmpDomain = d3.extent(
+                                this.currentData[colorAxis].filter((val)=>val>0.0)
+                            );
+                            domain[0] = tmpDomain[0];
                         }
                     }
                     this.dataSettings[colorAxis].extent = domain;
@@ -7726,7 +7723,7 @@ class graphly extends EventEmitter {
                     if(this.dataSettings[colorAxis].hasOwnProperty('logarithmic')
                         && this.dataSettings[colorAxis].logarithmic){
                         // If yes make sure domain does not cross 0
-                        if(domain[0]<0 && domain[1]>0) {
+                        if(domain[0]<=0 && domain[1]>0) {
                             // Find smallest value over 0
                             let tmpDomain = d3.extent(
                                 this.currentData[colorAxis].filter((val)=>val>0.0)
