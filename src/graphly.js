@@ -2369,8 +2369,14 @@ class graphly extends EventEmitter {
                 colorAxisScale = d3.time.scale.utc();
             }
 
+            if(this.dataSettings[id].hasOwnProperty('logarithmic')
+                && this.dataSettings[id].logarithmic){
+                colorAxisScale = d3.scale.log();
+            }
+
             colorAxisScale.domain(dataRange);
             colorAxisScale.range([innerHeight, 0]);
+
 
             let colorAxis = d3.svg.axis()
                 .orient("right")
@@ -2378,7 +2384,11 @@ class graphly extends EventEmitter {
                 .scale(colorAxisScale);
 
             let csformat;
-            if(this.colorAxisTickFormat === 'customSc'){
+            if(this.dataSettings[id].hasOwnProperty('logarithmic')
+                && this.dataSettings[id].logarithmic){
+                colorAxis.ticks(0, '0.0e');
+                //csformat = d3.format('e');
+            } else if(this.colorAxisTickFormat === 'customSc'){
                 csformat = u.customScientificTickFormat;
             } else if(this.colorAxisTickFormat === 'customExp'){
                 csformat = u.customExponentTickFormat;
@@ -5567,6 +5577,11 @@ class graphly extends EventEmitter {
             if (cA && cA.hasOwnProperty('csDiscrete')){
                 discreteColorScaleEnabled = true;
             }
+            if (cA && cA.hasOwnProperty('logarithmic')){
+                this.batchDrawer.setLogScale(cA.logarithmic);
+            } else {
+                this.batchDrawer.setLogScale(false);
+            }
 
             this.batchDrawer.setColorScale(cs);
             this.batchDrawer._initUniforms();
@@ -5798,6 +5813,13 @@ class graphly extends EventEmitter {
             let resetUniforms = false;
             if(cA && cA.hasOwnProperty('extent')){
                 this.batchDrawer.setDomain(cA.extent);
+                resetUniforms = true;
+            }
+            if (cA && cA.hasOwnProperty('logarithmic')){
+                this.batchDrawer.setLogScale(cA.logarithmic);
+                resetUniforms = true;
+            } else {
+                this.batchDrawer.setLogScale(false);
                 resetUniforms = true;
             }
             // If current cs not equal to the set in the batchsrawe update cs
@@ -6735,21 +6757,22 @@ class graphly extends EventEmitter {
     }
 
 
-    renderColorScaleOptions(yPos, orientation, yAxisId, parPos){
+    renderColorScaleOptions(dataSettings, yPos, orientation, yAxisId, parPos){
 
         let colAxis = this.renderSettings.colorAxis;
+
         if(orientation==='right'){
             colAxis = this.renderSettings.colorAxis2;
         }
 
-        this.el.select('#parameterSettings')
-            .append('label')
+        let parSett = this.el.select('#parameterSettings');
+
+        parSett.append('label')
             .attr('id', 'labelColorParamSelection')
             .attr('for', 'colorParamSelection')
             .text('Parameter');
 
-        let labelColorParamSelect = this.el.select('#parameterSettings')
-          .append('select')
+        let labelColorParamSelect = parSett.append('select')
             .attr('id','colorParamSelection')
             .on('change',oncolorParamSelectionChange);
 
@@ -6800,7 +6823,6 @@ class graphly extends EventEmitter {
                 });
 
         let that = this;
-        var dataSettings;
 
         function oncolorParamSelectionChange() {
             let selectValue = 
@@ -6898,6 +6920,28 @@ class graphly extends EventEmitter {
             that.settingsToApply.colorscale = selectValue;
             that.addApply(that.dataSettings[csId], csId);
         }
+
+        let selectValue = that.el.select('#colorParamSelection').property('value');
+        let obj = {};
+        if(that.dataSettings.hasOwnProperty(selectValue)){
+            obj = that.dataSettings[selectValue];
+        }
+        parSett.append('label')
+            .attr('for', 'logscale')
+            .text('Log color scale');
+            
+
+        parSett.append('input')
+            .attr('id', 'logscale')
+            .attr('type', 'checkbox')
+            .property('checked', 
+                defaultFor(obj.logarithmic, false)
+            )
+            .on('change', function(){
+                that.settingsToApply.logarithmic = 
+                    !defaultFor(obj.logarithmic, false);
+                that.addApply(obj);
+            });
 
     }
 
@@ -7211,7 +7255,7 @@ class graphly extends EventEmitter {
             // Need to add additional necessary options
             // drop down with possible parameters and colorscale
             if(active){
-                this.renderColorScaleOptions(yPos, orientation, id, parPos);
+                this.renderColorScaleOptions(dataSettings, yPos, orientation, id, parPos);
             }
 
         }
@@ -7660,7 +7704,34 @@ class graphly extends EventEmitter {
                     if(domain[0]>domain[1]){
                         domain = domain.reverse();
                     }
+
+                    // Check if parameter has log colorscale option
+                    if(this.dataSettings[colorAxis].hasOwnProperty('logarithmic')
+                        && this.dataSettings[colorAxis].logarithmic){
+                        // Find smallest value over 0
+                        if(domain[0]<=0 && domain[1]>0) {
+                            let tmpDomain = d3.extent(
+                                this.currentData[colorAxis].filter((val)=>val>0.0)
+                            );
+                            domain[0] = tmpDomain[0];
+                        }
+                    }
                     this.dataSettings[colorAxis].extent = domain;
+                } else {
+                    // Check if parameter has log colorscale option
+                    let domain = this.dataSettings[colorAxis].extent;
+                    if(this.dataSettings[colorAxis].hasOwnProperty('logarithmic')
+                        && this.dataSettings[colorAxis].logarithmic){
+                        // If yes make sure domain does not cross 0
+                        if(domain[0]<=0 && domain[1]>0) {
+                            // Find smallest value over 0
+                            let tmpDomain = d3.extent(
+                                this.currentData[colorAxis].filter((val)=>val>0.0)
+                            );
+                            domain[0] = tmpDomain[0];
+                            this.dataSettings[colorAxis].extent = domain;
+                        }
+                    }
                 }
             }
         }
