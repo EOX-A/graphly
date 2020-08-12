@@ -4154,10 +4154,10 @@ class graphly extends EventEmitter {
             }
 
 
-            let scaleRange = [heighChunk-this.separation, 20];
+            let scaleRange = [heighChunk-this.separation, 0];
 
             if(this.renderSettings.reversedYAxis[yPos]){
-                scaleRange = [20, heighChunk-this.separation];
+                scaleRange = [0, heighChunk-this.separation];
             }
 
             if(this.logY[yPos]){
@@ -4181,10 +4181,10 @@ class graphly extends EventEmitter {
                 );
             }
 
-            let scaleRange2 = [heighChunk-this.separation, 20];
+            let scaleRange2 = [heighChunk-this.separation, 0];
 
             if(this.renderSettings.reversedY2Axis[yPos]){
-                scaleRange2 = [20, heighChunk-this.separation];
+                scaleRange2 = [0, heighChunk-this.separation];
             }
 
             if(this.logY2[yPos]){
@@ -4723,6 +4723,20 @@ class graphly extends EventEmitter {
     }
 
     breakTicks() {
+
+        // Make sure all text from ticks are shown
+        this.el.selectAll('.y.axis>.tick text')
+            .attr('display', 'block'); 
+        // Hide top most y axis tick if they are to close to upper line to 
+        // make sure enough space is available for buttons
+        const topTicks = this.el.selectAll('.y.axis>.tick:last-of-type');
+        topTicks.each(function(){
+            var item = d3.select(this);
+            var components = d3.transform(item.attr('transform'));
+            if(components.translate[1] < 25) {
+                item.select('text').attr('display', 'none');
+            }
+        });
 
         this.el.selectAll('.x.axis>.tick text:first-of-type')
             .call(this.breakTickDown);
@@ -5309,9 +5323,9 @@ class graphly extends EventEmitter {
 
         for (let yPos = 0; yPos < this.yScale.length; yPos++) {
 
-            let scaleRange = [heighChunk-this.separation, 20];
+            let scaleRange = [heighChunk-this.separation, 0];
             if(this.renderSettings.reversedYAxis[yPos]){
-                scaleRange = [20, heighChunk-this.separation];
+                scaleRange = [0, heighChunk-this.separation];
             }
             this.yScale[yPos].range(scaleRange);
             this.yAxis[yPos].innerTickSize(-this.width);
@@ -5385,9 +5399,9 @@ class graphly extends EventEmitter {
 
         for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
 
-            let scaleRange = [heighChunk-this.separation, 20];
+            let scaleRange = [heighChunk-this.separation, 0];
             if(this.renderSettings.reversedY2Axis[yPos]){
-                scaleRange = [20, heighChunk-this.separation];
+                scaleRange = [0, heighChunk-this.separation];
             }
             this.y2Scale[yPos].range(scaleRange);
             this.y2Axis[yPos].innerTickSize(-this.width);
