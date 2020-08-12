@@ -1598,7 +1598,7 @@ class graphly extends EventEmitter {
 
             divCont.append('label')
                 .attr('for', 'logYoption')
-                .text('Logarithmic scale (base-10) ');
+                .text('Logarithmic scale');
         }
         let divCont = con.append('div');
         divCont.append('input')
@@ -4154,10 +4154,10 @@ class graphly extends EventEmitter {
             }
 
 
-            let scaleRange = [heighChunk-this.separation, 0];
+            let scaleRange = [heighChunk-this.separation, 20];
 
             if(this.renderSettings.reversedYAxis[yPos]){
-                scaleRange = [0, heighChunk-this.separation];
+                scaleRange = [20, heighChunk-this.separation];
             }
 
             if(this.logY[yPos]){
@@ -4181,10 +4181,10 @@ class graphly extends EventEmitter {
                 );
             }
 
-            let scaleRange2 = [heighChunk-this.separation, 0];
+            let scaleRange2 = [heighChunk-this.separation, 20];
 
             if(this.renderSettings.reversedY2Axis[yPos]){
-                scaleRange2 = [0, heighChunk-this.separation];
+                scaleRange2 = [20, heighChunk-this.separation];
             }
 
             if(this.logY2[yPos]){
@@ -5311,7 +5311,7 @@ class graphly extends EventEmitter {
 
             let scaleRange = [heighChunk-this.separation, 20];
             if(this.renderSettings.reversedYAxis[yPos]){
-                scaleRange = [0, heighChunk-this.separation];
+                scaleRange = [20, heighChunk-this.separation];
             }
             this.yScale[yPos].range(scaleRange);
             this.yAxis[yPos].innerTickSize(-this.width);
@@ -5387,7 +5387,7 @@ class graphly extends EventEmitter {
 
             let scaleRange = [heighChunk-this.separation, 20];
             if(this.renderSettings.reversedY2Axis[yPos]){
-                scaleRange = [0, heighChunk-this.separation];
+                scaleRange = [20, heighChunk-this.separation];
             }
             this.y2Scale[yPos].range(scaleRange);
             this.y2Axis[yPos].innerTickSize(-this.width);
