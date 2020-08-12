@@ -5309,7 +5309,7 @@ class graphly extends EventEmitter {
 
         for (let yPos = 0; yPos < this.yScale.length; yPos++) {
 
-            let scaleRange = [heighChunk-this.separation, 0];
+            let scaleRange = [heighChunk-this.separation, 20];
             if(this.renderSettings.reversedYAxis[yPos]){
                 scaleRange = [0, heighChunk-this.separation];
             }
@@ -5385,7 +5385,7 @@ class graphly extends EventEmitter {
 
         for (let yPos = 0; yPos < this.y2Scale.length; yPos++) {
 
-            let scaleRange = [heighChunk-this.separation, 0];
+            let scaleRange = [heighChunk-this.separation, 20];
             if(this.renderSettings.reversedY2Axis[yPos]){
                 scaleRange = [0, heighChunk-this.separation];
             }
@@ -6928,7 +6928,7 @@ class graphly extends EventEmitter {
         }
         parSett.append('label')
             .attr('for', 'logscale')
-            .text('Log color scale');
+            .text('Log. colorscale');
             
 
         parSett.append('input')
