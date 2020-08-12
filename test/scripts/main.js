@@ -76,7 +76,7 @@ var graph = new graphly.graphly({
     renderSettings: renderSettings,
     filterManager: filterManager,
     debounceActive: false,
-    debug: false,
+    debug: true,
     replaceUnderscore: true,
     //labelAllignment: 'center',
     //enableFit: false,
