@@ -4849,7 +4849,6 @@ class graphly extends EventEmitter {
 
         if( transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1 ){
             xyCombinedChanged = true;
-            //console.log( transXY[0] +'; '+ transXY[1] +'; '+ xyScale);
             for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
                 // Update all right y2 axis based on xy scale and trans
                 if(this.y2zoom[yy]){
@@ -5604,8 +5603,8 @@ class graphly extends EventEmitter {
             this.batchDrawer.setColorScale(cs);
             this.batchDrawer._initUniforms();
 
-            // Check if mask parameter is set
-            if (cA && cA.hasOwnProperty('maskParameter')){
+            // Check if mask parameter is enabled and set
+            if (this.enableMaskParameters && cA && cA.hasOwnProperty('maskParameter')){
                 if(data.hasOwnProperty(cA.maskParameter)){
                     maskParameter = cA.maskParameter;
                 }
@@ -6403,6 +6402,14 @@ class graphly extends EventEmitter {
                                     colorAxis[yPos][parPos] = colPar;
                                 } else {
                                     colorAxis[yPos].push(colPar);
+                                }
+                            } else if (key === 'maskParameterChange'){
+                                let colorParameter = this.settingsToApply.maskParameterChange.colorParameter;
+                                let maskParameter = this.settingsToApply.maskParameterChange.maskParameter;
+                                if(maskParameter !== 'None'){
+                                    this.dataSettings[colorParameter].maskParameter = maskParameter;
+                                } else {
+                                    delete this.dataSettings[colorParameter].maskParameter;
                                 }
                             } else {
                                 dataSettings[key] = this.settingsToApply[key];
@@ -7310,6 +7317,7 @@ class graphly extends EventEmitter {
             // Go through data settings and find currently available ones
             let ds = this.dataSettings;
             let selectionChoices = [];
+            let currPar = colAxis[yPos][parPos];
             for (let key in ds) {
                 // Check if key is part of a combined parameter
                 let ignoreKey = false;
@@ -7330,7 +7338,6 @@ class graphly extends EventEmitter {
 
                 if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
                     selectionChoices.push({value: key, label: key.replace(this.labelReplace, ' ')});
-                    var currPar = colAxis[yPos][parPos];
                     if(this.dataSettings.hasOwnProperty(currPar)
                         && this.dataSettings[currPar].hasOwnProperty('maskParameter')
                         && this.dataSettings[currPar].maskParameter === key) {
@@ -7367,15 +7374,12 @@ class graphly extends EventEmitter {
             function onmaskParamSelectionChange() {
                 let selectValue = 
                     that.el.select('#maskParamSelection').property('value');
-                console.log(selectValue);
-                /*that.settingsToApply.colorAxisChange = {
-                    orientation: orientation,
-                    yPos: yPos,
-                    parPos: parPos,
-                    colorParameter: selectValue
+                that.settingsToApply.maskParameterChange = {
+                    colorParameter: currPar,
+                    maskParameter: selectValue
                 };
                 // Check if parameter already has a colorscale configured
-                if(that.dataSettings.hasOwnProperty(selectValue)){
+                /*if(that.dataSettings.hasOwnProperty(selectValue)){
                     let obj = that.dataSettings[selectValue];
                     dataSettings = obj;
                     if(obj.hasOwnProperty('colorscale')){

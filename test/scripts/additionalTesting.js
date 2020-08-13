@@ -1667,7 +1667,6 @@ export function handleL2AData(data, graph, filterManager){
         resData.signCross = signCross;
       }
       data = resData;
-      console.log(data);
       filterManager.loadData(data);
       graph.loadData(data);
 }
