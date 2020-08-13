@@ -99,6 +99,7 @@ var graph = new graphly.graphly({
     //defaultAxisTickFormat: 'customExp',
     enableSubXAxis: 'datetime',
     allowLockingAxisScale: true,
+    enableMaskParameters: true,
     //disableAntiAlias: true,
 
 });
@@ -187,6 +188,16 @@ xhr.onload = function(e) {
 window.onload = function () {
 
     var that = this;
+
+    var startloaded = 'L2A';
+    if(startloaded){
+        this.selValue = startloaded;
+        graph.setRenderSettings(addT.renderSettingsDefinition[startloaded]);
+        graph.dataSettings = addT.dataSettingsConfig[startloaded];
+        filterManager.updateFilterSettings(addT.filterSettingsConfiguration[startloaded]);
+        xhr.open('GET', ('data/'+startloaded+'.mp'), true);
+        xhr.send();
+    }
 
    d3.select('#datafiles').on('change', function(e){
 

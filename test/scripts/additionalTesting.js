@@ -64,6 +64,7 @@ export var renderSettingsDefinition = {
                     'SCA_backscatter_variance',
                     'SCA_LOD_variance',
                     'SCA_extinction',
+                    'SCA_extinction_valid',
                     'SCA_backscatter',
                     'SCA_LOD',
                     'SCA_SR',
@@ -474,7 +475,8 @@ export var dataSettingsConfig = {
         'SCA_extinction': {
             uom: '10-6 * m^-1',
             colorscale: 'viridis',
-            extent: [-20, 20]
+            extent: [-20, 20],
+            maskParameter: 'SCA_extinction_valid',
         },
         'SCA_extinction_variance': {
             uom: 'm^-2',
@@ -926,7 +928,16 @@ export var filterSettingsConfiguration = {
             'Reference_Pulse_Response',
             'Reference_Pulse_Error_Mie_Response',
             'albedo_off_nadir',
+            'SCA_extinction_valid',
         ],
+        boolParameter: {
+            parameters: [
+                'SCA_extinction_valid',
+            ],
+            enabled: [
+                false,
+            ]
+        },
         /*choiceParameter: {
             'mie_observation_type': {
                 options: [
@@ -1531,6 +1542,43 @@ export function handleL2AData(data, graph, filterManager){
        (resData.hasOwnProperty('MCA_time_obs') && resData['MCA_time_obs'].length > 0) && 
        (resData.hasOwnProperty('ICA_time_obs') && resData['ICA_time_obs'].length > 0)) {
 
+        var conversionFunction = function(value, maskLength){
+            var boolArray = [];
+            var result = Math.abs(value).toString(2);
+            while(result.length < maskLength) {
+                result = "0" + result;
+            }
+            for (var i=0; i<result.length; i++) {
+                boolArray.push(result[i] === '1');
+            }
+            return boolArray;
+        }
+
+        if(ds.sca_data.hasOwnProperty('SCA_processing_qc_flag')){
+            // Split up bits into separate components
+            /*
+            ['Bit 8', 'Extinction; data valid 1, otherwise 0'],
+            ['Bit 7', 'Backscatter; data valid 1, otherwise 0'],
+            ['Bit 6', 'Mie SNR; data valid 1, otherwise 0'],
+            ['Bit 5', 'Rayleigh SNR; data valid 1, otherwise 0'],
+            ['Bit 4', 'Extinction error bar; data valid 1, otherwise 0'],
+            ['Bit 3', 'Backscatter error bar; data valid 1, otherwise 0'],
+            ['Bit 2', 'cumulative LOD; data valid 1, otherwise 0'],
+            ['Bit 1', 'Spare'],
+            */
+            var sca_extinction_valid = [];
+            for (var ff = 0; ff < ds.sca_data.SCA_processing_qc_flag.length; ff++) {
+                var profBoolArray = [];
+                var currProf = ds.sca_data.SCA_processing_qc_flag[ff];
+                for (var pp = 0; pp < currProf.length; pp++) {
+                    var boolArray = conversionFunction(currProf[pp], 8);
+                    profBoolArray.push(boolArray[7]);
+                }
+                sca_extinction_valid.push(profBoolArray);
+            }
+            resData['SCA_extinction_valid'] = sca_extinction_valid.flat();
+        }
+
         // Create new start and stop time to allow rendering
         resData['SCA_time_obs_start'] = resData['SCA_time_obs'].slice();
         resData['SCA_time_obs_stop'] = resData['SCA_time_obs'].slice(24, resData['SCA_time_obs'].length);
@@ -1619,7 +1667,6 @@ export function handleL2AData(data, graph, filterManager){
         resData.signCross = signCross;
       }
       data = resData;
-
       filterManager.loadData(data);
       graph.loadData(data);
 }

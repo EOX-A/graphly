@@ -251,6 +251,8 @@ class graphly extends EventEmitter {
     *        reloading data, when set event fires when any y axis extent changes
     * @param {boolean} [options.disableAntiAlias=false] Allows disabling antialias
     *        of the rendering context
+    * @param {boolean} [enableMaskParameters=false] Adds option to mask data base
+    *        on boolean array in data for a parameter
     */
     constructor(options) {
         super();
@@ -272,6 +274,7 @@ class graphly extends EventEmitter {
         this.disableAntiAlias = defaultFor(options.disableAntiAlias, false);
         this.allowLockingAxisScale = defaultFor(options.allowLockingAxisScale, false);
         this.replaceUnderscore = defaultFor(options.replaceUnderscore, false);
+        this.enableMaskParameters = defaultFor(options.enableMaskParameters, false);
 
         this.labelReplace = /a^/; // Default not matchin anything
         if(this.replaceUnderscore){
@@ -4846,7 +4849,6 @@ class graphly extends EventEmitter {
 
         if( transXY[0] !== 0 || transXY[1]!==0 || xyScale !== 1 ){
             xyCombinedChanged = true;
-            //console.log( transXY[0] +'; '+ transXY[1] +'; '+ xyScale);
             for (let yy=0; yy<this.renderSettings.yAxis.length; yy++){
                 // Update all right y2 axis based on xy scale and trans
                 if(this.y2zoom[yy]){
@@ -5540,6 +5542,7 @@ class graphly extends EventEmitter {
         let currColCache = null;
         let discreteCSOffset;
         let discreteColorScaleEnabled = false;
+        let maskParameter;
 
         yScale = yScale[plotY];
 
@@ -5599,6 +5602,13 @@ class graphly extends EventEmitter {
 
             this.batchDrawer.setColorScale(cs);
             this.batchDrawer._initUniforms();
+
+            // Check if mask parameter is enabled and set
+            if (this.enableMaskParameters && cA && cA.hasOwnProperty('maskParameter')){
+                if(data.hasOwnProperty(cA.maskParameter)){
+                    maskParameter = cA.maskParameter;
+                }
+            }
             
 
             // TODO get discrete colorscales working again
@@ -5651,6 +5661,12 @@ class graphly extends EventEmitter {
             if(Number.isNaN(valY) || Number.isNaN(valY2) ||
                 Number.isNaN(valX) || Number.isNaN(valX2)){
                 continue;
+            }
+
+            if(typeof maskParameter !== 'undefined') {
+                if(!data[maskParameter][i]){
+                    continue;
+                }
             }
 
             if(yperiodic){
@@ -6386,6 +6402,14 @@ class graphly extends EventEmitter {
                                     colorAxis[yPos][parPos] = colPar;
                                 } else {
                                     colorAxis[yPos].push(colPar);
+                                }
+                            } else if (key === 'maskParameterChange'){
+                                let colorParameter = this.settingsToApply.maskParameterChange.colorParameter;
+                                let maskParameter = this.settingsToApply.maskParameterChange.maskParameter;
+                                if(maskParameter !== 'None'){
+                                    this.dataSettings[colorParameter].maskParameter = maskParameter;
+                                } else {
+                                    delete this.dataSettings[colorParameter].maskParameter;
                                 }
                             } else {
                                 dataSettings[key] = this.settingsToApply[key];
@@ -7270,6 +7294,107 @@ class graphly extends EventEmitter {
             // drop down with possible parameters and colorscale
             if(active){
                 this.renderColorScaleOptions(dataSettings, yPos, orientation, id, parPos);
+            }
+
+        }
+
+        if(this.enableMaskParameters) {
+            // Go through data settings and find currently available ones
+            let parSett = this.el.select('#parameterSettings');
+            let colAxis = this.renderSettings.colorAxis;
+            if(orientation==='right'){
+                colAxis = this.renderSettings.colorAxis2;
+            }
+
+            parSett.append('label')
+                .attr('for', 'maskParamSelection')
+                .text('Mask');
+
+            let maskParamSelect = parSett.append('select')
+                .attr('id','maskParamSelection')
+                .on('change',onmaskParamSelectionChange);
+
+            // Go through data settings and find currently available ones
+            let ds = this.dataSettings;
+            let selectionChoices = [];
+            let currPar = colAxis[yPos][parPos];
+            for (let key in ds) {
+                // Check if key is part of a combined parameter
+                let ignoreKey = false;
+                let comKey = null;
+                for (comKey in this.renderSettings.combinedParameters){
+                    if(this.renderSettings.combinedParameters[comKey].indexOf(key) !== -1){
+                        ignoreKey = true;
+                    }
+                }
+
+                // Check for renderGroups
+                if(this.renderSettings.renderGroups && this.renderSettings.groups){
+                    let rGroup = this.renderSettings.groups[yPos];
+                    if(this.renderSettings.renderGroups[rGroup].parameters.indexOf(key) === -1){
+                        ignoreKey = true;
+                    }
+                }
+
+                if( !ignoreKey && (this.data.hasOwnProperty(key)) ){
+                    selectionChoices.push({value: key, label: key.replace(this.labelReplace, ' ')});
+                    if(this.dataSettings.hasOwnProperty(currPar)
+                        && this.dataSettings[currPar].hasOwnProperty('maskParameter')
+                        && this.dataSettings[currPar].maskParameter === key) {
+                        selectionChoices[selectionChoices.length-1].selected = true;
+                    }
+                    // The setting might not be yet applied and be coming from the
+                    // settingsToApply
+                    /*if(this.settingsToApply.hasOwnProperty('maskParameterChange') && 
+                        this.settingsToApply.maskParameterChange === key){
+                        selectionChoices[selectionChoices.length-1].selected = true;
+                    }*/
+                }
+            }
+
+            selectionChoices = selectionChoices.sort((a, b) => a.value.localeCompare(b.value));
+            // Check if any selected
+            if(selectionChoices.filter((item)=>item.selected).length>0){
+                selectionChoices.unshift({value: null, label: 'None'});
+            } else {
+                selectionChoices.unshift({value: null, label: 'None', selected: true});
+            }
+
+            maskParamSelect.selectAll('option')
+                .data(selectionChoices).enter()
+                .append('option')
+                    .text(function (d) { return d.label; })
+                    .attr('value', function (d) { return d.value; })
+                    .property('selected', function(d){
+                        return d.hasOwnProperty('selected');
+                    });
+
+            let that = this;
+
+            function onmaskParamSelectionChange() {
+                let selectValue = 
+                    that.el.select('#maskParamSelection').property('value');
+                that.settingsToApply.maskParameterChange = {
+                    colorParameter: currPar,
+                    maskParameter: selectValue
+                };
+                // Check if parameter already has a colorscale configured
+                /*if(that.dataSettings.hasOwnProperty(selectValue)){
+                    let obj = that.dataSettings[selectValue];
+                    dataSettings = obj;
+                    if(obj.hasOwnProperty('colorscale')){
+                        that.el.select('#colorScaleSelection')
+                            .selectAll('option[value="'+obj.colorscale+'"]').property(
+                                'selected', true
+                            );
+                    } else {
+                        that.el.select('#colorScaleSelection')
+                            .selectAll('option[value="viridis"]').property(
+                                'selected', true
+                            );
+                    }
+                }*/
+                that.addApply(dataSettings);
             }
 
         }
