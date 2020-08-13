@@ -64,6 +64,7 @@ export var renderSettingsDefinition = {
                     'SCA_backscatter_variance',
                     'SCA_LOD_variance',
                     'SCA_extinction',
+                    'SCA_extinction_valid',
                     'SCA_backscatter',
                     'SCA_LOD',
                     'SCA_SR',
@@ -474,7 +475,8 @@ export var dataSettingsConfig = {
         'SCA_extinction': {
             uom: '10-6 * m^-1',
             colorscale: 'viridis',
-            extent: [-20, 20]
+            extent: [-20, 20],
+            maskParameter: 'SCA_extinction_valid',
         },
         'SCA_extinction_variance': {
             uom: 'm^-2',
