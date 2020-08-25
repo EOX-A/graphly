@@ -320,7 +320,7 @@ class graphly extends EventEmitter {
             cGen = d3.scale.category20();
         }
 
-        for (var i = 0; i < rKeys.length; i++) {
+        for (let i = 0; i < rKeys.length; i++) {
             let k = rKeys[i];
             if(!this.dataSettings[k].hasOwnProperty('color') || 
                 typeof this.dataSettings[k].color === 'undefined'){
@@ -786,12 +786,12 @@ class graphly extends EventEmitter {
                     let ttdim = this.tooltip.node().getBoundingClientRect();
                 
                     // TODO: make sure tooltip is inside window
-                    var topPos = d3.event.pageY - dim.top + 10;
+                    let topPos = d3.event.pageY - dim.top + 10;
 
                     if (topPos+ttdim.height > dim.height){
                         topPos = topPos - ttdim.height + 10;
                     }
-                    var leftPos = (d3.event.pageX - dim.left + 10);
+                    let leftPos = (d3.event.pageX - dim.left + 10);
                     if(leftPos+240 > dim.width){
                         leftPos = leftPos - 275;
                     }
@@ -818,7 +818,7 @@ class graphly extends EventEmitter {
                         // Check for groups and remove 
                         let tabledata = [];
                         let uomAvailable = false;
-                        for (var i = 0; i < keysSorted.length; i++) {
+                        for (let i = 0; i < keysSorted.length; i++) {
                             // check for rendergroups for possible parameters 
                             // that need to be ignored
                             // Check for renderGroups
@@ -838,8 +838,10 @@ class graphly extends EventEmitter {
                                 'Parameter': key,
                                 'Value': val
                             }
-                            if(self.dataSettings[key].hasOwnProperty('uom') &&
-                               self.dataSettings[key].uom !== null){
+                            let currEl;
+                            if(this.dataSettings.hasOwnProperty(key) 
+                                && self.dataSettings[key].hasOwnProperty('uom')
+                                && self.dataSettings[key].uom !== null){
                                 uomAvailable = true;
                                 tObj.Unit = self.dataSettings[key].uom;
                             } else {
@@ -847,17 +849,41 @@ class graphly extends EventEmitter {
                                 // parameter if yes use uom of original
                                 if(this.renderSettings.hasOwnProperty('combinedParameters')){
                                     for(let cpkey in this.renderSettings.combinedParameters){
-                                        if(this.renderSettings.combinedParameters[cpkey].indexOf(key) !== -1){
-                                            if(self.dataSettings.hasOwnProperty(cpkey) &&
-                                               self.dataSettings[cpkey].hasOwnProperty('uom') &&
-                                               self.dataSettings[cpkey].uom !== null ){
+                                        if(cpkey === key){
+                                            currEl = this.renderSettings.combinedParameters[cpkey][0];
+                                            if(self.dataSettings.hasOwnProperty(currEl) &&
+                                               self.dataSettings[currEl].hasOwnProperty('uom') &&
+                                               self.dataSettings[currEl].uom !== null ){
                                                 uomAvailable = true;
-                                                tObj.Unit = self.dataSettings[cpkey].uom;
+                                                tObj.Unit = self.dataSettings[currEl].uom;
                                             }
                                         }
                                     }
                                 }
                             }
+                            // Check to see if a modified UOM is set and we need to replace it
+                            if(this.dataSettings.hasOwnProperty(key) 
+                                && self.dataSettings[key].hasOwnProperty('modifiedUOM')
+                                && self.dataSettings[key].modifiedUOM !== null){
+                                uomAvailable = true;
+                                tObj.Unit = self.dataSettings[key].modifiedUOM;
+                            } else {
+                                // Check if parameter is part of a combined
+                                // parameter if yes use modifiedUOM of original
+                                if(this.renderSettings.hasOwnProperty('combinedParameters')){
+                                    for(let cpkey in this.renderSettings.combinedParameters){
+                                        if(cpkey === key){
+                                            currEl = this.renderSettings.combinedParameters[cpkey][0];
+                                            if(self.dataSettings.hasOwnProperty(currEl) &&
+                                               self.dataSettings[currEl].hasOwnProperty('modifiedUOM') &&
+                                               self.dataSettings[currEl].modifiedUOM !== null ){
+                                                uomAvailable = true;
+                                                tObj.Unit = self.dataSettings[currEl].modifiedUOM;
+                                            }
+                                        }
+                                    }
+                                }
+                            } 
                             tabledata.push(tObj);
                         }
 
@@ -1028,7 +1054,7 @@ class graphly extends EventEmitter {
         // colorscale
         if(this.autoColorExtent){
             let filterKeys = Object.keys(filters);
-            for (var i = 0; i < filterKeys.length; i++) {
+            for (let i = 0; i < filterKeys.length; i++) {
                 if(this.filters.hasOwnProperty(filterKeys[i])){
                     // New parameter has been added, reset color scale range
                     // if available in datasettings
@@ -1399,7 +1425,7 @@ class graphly extends EventEmitter {
         let renderWidth = Math.floor(this.dim.width * this.resFactor);
         let renderHeight = Math.floor(this.dim.height * this.resFactor);
 
-        var svg_html = this.el.select('svg')
+        let svg_html = this.el.select('svg')
             .attr("version", 1.1)
             .attr("xmlns", "http://www.w3.org/2000/svg")
             .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
@@ -1418,9 +1444,9 @@ class graphly extends EventEmitter {
             // If format is jpeg we need to "remove" transparent pixels as they 
             // are turned black
             if(this.outFormat === 'jpeg'){
-                var imgData=this.IRctx.getImageData(0,0,this.IRc.width,this.IRc.height);
-                var data=imgData.data;
-                for(var i=0;i<data.length;i+=4){
+                let imgData=this.IRctx.getImageData(0,0,this.IRc.width,this.IRc.height);
+                let data=imgData.data;
+                for(let i=0;i<data.length;i+=4){
                     if(data[i+3]<255){
                         data[i] = 255 - data[i];
                         data[i+1] = 255 - data[i+1];
@@ -1492,13 +1518,57 @@ class graphly extends EventEmitter {
 
         let listText = [];
         // Add uom info to unique elements
-        for (var i = 0; i < uniq.length; i++) {
-            if(this.dataSettings.hasOwnProperty(uniq[i]) && 
-               this.dataSettings[uniq[i]].hasOwnProperty('uom') &&
-               this.dataSettings[uniq[i]].uom !== null){
-                listText.push(uniq[i].replace(this.labelReplace, ' ') +
-                    ' ['+this.dataSettings[uniq[i]].uom+'] ');
-            }else{
+        for (let i = 0; i < uniq.length; i++) {
+
+            // Check to see if a modified UOM is set and we need to replace it
+            let key = uniq[i];
+            let uomText;
+
+            if(this.dataSettings.hasOwnProperty(key) 
+                && this.dataSettings[key].hasOwnProperty('uom')
+                && this.dataSettings[key].uom !== null){
+                uomText = this.dataSettings[key].uom;
+            } else {
+                // Check if parameter is part of a combined
+                // parameter if yes use uom of original
+                if(this.renderSettings.hasOwnProperty('combinedParameters')){
+                    for(let cpkey in this.renderSettings.combinedParameters){
+                        if(cpkey === key){
+                            let currEl = this.renderSettings.combinedParameters[cpkey][0];
+                            if(this.dataSettings.hasOwnProperty(currEl) &&
+                               this.dataSettings[currEl].hasOwnProperty('uom') &&
+                               this.dataSettings[currEl].uom !== null ){
+                                uomText = this.dataSettings[currEl].uom;
+                            }
+                        }
+                    }
+                }
+            }
+            // Check for available modified uom
+            if(this.dataSettings.hasOwnProperty(key) 
+                && this.dataSettings[key].hasOwnProperty('modifiedUOM')
+                && this.dataSettings[key].modifiedUOM !== null){
+                uomText = this.dataSettings[key].modifiedUOM;
+            } else {
+                // Check if parameter is part of a combined
+                // parameter if yes use modifiedUOM of original
+                if(this.renderSettings.hasOwnProperty('combinedParameters')){
+                    for(let cpkey in this.renderSettings.combinedParameters){
+                        if(cpkey === key){
+                            let currEl = this.renderSettings.combinedParameters[cpkey][0];
+                            if(this.dataSettings.hasOwnProperty(currEl) &&
+                               this.dataSettings[currEl].hasOwnProperty('modifiedUOM') &&
+                               this.dataSettings[currEl].modifiedUOM !== null ){
+                                uomText = this.dataSettings[currEl].modifiedUOM;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(typeof uomText !== 'undefined') {
+                listText.push(uniq[i].replace(this.labelReplace, ' ') + ' ['+uomText+'] ');
+            } else {
                 listText.push(uniq[i].replace(this.labelReplace, ' '));
             }
         }
@@ -1633,7 +1703,7 @@ class graphly extends EventEmitter {
 
         scaleChoices.attr('multiple', true);
 
-        var toggleView = function(divEl){
+        let toggleView = function(divEl){
             if(divEl.style('display') === 'block'){
                 divEl.style('display', 'none');
             }else{
@@ -2098,13 +2168,55 @@ class graphly extends EventEmitter {
         if(Array.isArray(this.renderSettings.xAxis)){
             xLabel = this.renderSettings.xAxis.join();
         }
-        if(this.dataSettings.hasOwnProperty(xLabel) && 
-           this.dataSettings[xLabel].hasOwnProperty('uom') &&
-           this.dataSettings[xLabel].uom !== null){
-            xLabel+=' ['+this.dataSettings[xLabel].uom+']';
+
+        let currEl;
+        let uom;
+        if(this.dataSettings.hasOwnProperty(xLabel) 
+            && this.dataSettings[xLabel].hasOwnProperty('uom')
+            && this.dataSettings[xLabel].uom !== null){
+            uom = this.dataSettings[xLabel].uom;
+        } else {
+            // Check if parameter is part of a combined
+            // parameter if yes use uom of original
+            if(this.renderSettings.hasOwnProperty('combinedParameters')){
+                for(let cpkey in this.renderSettings.combinedParameters){
+                    if(cpkey === xLabel){
+                        currEl = this.renderSettings.combinedParameters[cpkey][0];
+                        if(this.dataSettings.hasOwnProperty(currEl) &&
+                           this.dataSettings[currEl].hasOwnProperty('uom') &&
+                           this.dataSettings[currEl].uom !== null ){
+                            uom = this.dataSettings[currEl].uom;
+                        }
+                    }
+                }
+            }
         }
+        // Check for modified uom
+        if(this.dataSettings.hasOwnProperty(xLabel) 
+            && this.dataSettings[xLabel].hasOwnProperty('modifiedUOM')
+            && this.dataSettings[xLabel].modifiedUOM !== null){
+            uom = this.dataSettings[xLabel].modifiedUOM;
+        } else {
+            // Check if parameter is part of a combined
+            // parameter if yes use uom of original
+            if(this.renderSettings.hasOwnProperty('combinedParameters')){
+                for(let cpkey in this.renderSettings.combinedParameters){
+                    if(cpkey === xLabel){
+                        currEl = this.renderSettings.combinedParameters[cpkey][0];
+                        if(this.dataSettings.hasOwnProperty(currEl) &&
+                           this.dataSettings[currEl].hasOwnProperty('modifiedUOM') &&
+                           this.dataSettings[currEl].modifiedUOM !== null ){
+                            uom = this.dataSettings[currEl].modifiedUOM;
+                        }
+                    }
+                }
+            }
+        }
+
         if(this.xAxisLabel){
             xLabel = this.xAxisLabel;
+        } else if(typeof uom !== 'undefined'){
+            xLabel+=' ['+uom+']';
         }
 
         let labelxtext = this.svg.append('text')
@@ -2155,7 +2267,7 @@ class graphly extends EventEmitter {
             }
         });
 
-        var xSettingParameters = new Choices(this.el.select('#xScaleChoices').node(), {
+        let xSettingParameters = new Choices(this.el.select('#xScaleChoices').node(), {
           choices: xChoices,
           placeholderValue: ' select ...',
           itemSelectText: '',
@@ -2425,10 +2537,52 @@ class graphly extends EventEmitter {
 
             let label = id;
 
-            if(this.dataSettings.hasOwnProperty(id) && 
-               this.dataSettings[id].hasOwnProperty('uom') && 
-               this.dataSettings[id].uom !== null){
-                label += ' ['+this.dataSettings[id].uom+'] ';
+            let currEl;
+            let uom;
+            if(this.dataSettings.hasOwnProperty(id) 
+               && this.dataSettings[id].hasOwnProperty('uom')
+               && this.dataSettings[id].uom !== null){
+                uom = this.dataSettings[id].uom;
+            } else {
+                // Check if parameter is part of a combined
+                // parameter if yes use uom of original
+                if(this.renderSettings.hasOwnProperty('combinedParameters')){
+                    for(let cpkey in this.renderSettings.combinedParameters){
+                        if(cpkey === id){
+                            currEl = this.renderSettings.combinedParameters[cpkey][0];
+                            if(this.dataSettings.hasOwnProperty(currEl) &&
+                               this.dataSettings[currEl].hasOwnProperty('uom') &&
+                               this.dataSettings[currEl].uom !== null ){
+                                uom = this.dataSettings[currEl].uom;
+                            }
+                        }
+                    }
+                }
+            }
+            // Check for modified UOM
+            if(this.dataSettings.hasOwnProperty(id) 
+               && this.dataSettings[id].hasOwnProperty('modifiedUOM')
+               && this.dataSettings[id].modifiedUOM !== null){
+                uom = this.dataSettings[id].modifiedUOM;
+            } else {
+                // Check if parameter is part of a combined
+                // parameter if yes use uom of original
+                if(this.renderSettings.hasOwnProperty('combinedParameters')){
+                    for(let cpkey in this.renderSettings.combinedParameters){
+                        if(cpkey === id){
+                            currEl = this.renderSettings.combinedParameters[cpkey][0];
+                            if(this.dataSettings.hasOwnProperty(currEl) &&
+                               this.dataSettings[currEl].hasOwnProperty('modifiedUOM') &&
+                               this.dataSettings[currEl].modifiedUOM !== null ){
+                                uom = this.dataSettings[currEl].modifiedUOM;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(typeof uom !== 'undefined'){
+                label += ' ['+uom+'] ';
             }
 
             g.append('text')
@@ -2583,7 +2737,7 @@ class graphly extends EventEmitter {
             }
             // Go through all axis and save the extent if they are locked
             if (this.allowLockingAxisScale) {
-                for (var yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+                for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
                     if (this.renderSettings.hasOwnProperty('yAxisLocked')
                         && this.renderSettings.yAxisLocked.length >= yPos
                         && this.renderSettings.yAxisLocked[yPos]){
@@ -2707,7 +2861,7 @@ class graphly extends EventEmitter {
                             if(this.renderSettings.yAxis.length === 2){
                                 let shPars = this.renderSettings.sharedParameters;
                                 let convAvailable = false;
-                                for (var shK in shPars){
+                                for (let shK in shPars){
                                     if(shPars[shK].indexOf(this.renderSettings.xAxis) !== -1){
                                         this.renderSettings.xAxis = shK;
                                         convAvailable = true;
@@ -3155,7 +3309,7 @@ class graphly extends EventEmitter {
     setDefaultValues(){
         // Add some default values for datasettings if nothing is defined yet
         let keys = Object.keys(this.data);
-        for (var i = 0; i < keys.length; i++) {
+        for (let i = 0; i < keys.length; i++) {
 
             // If the parameter is multi-Id we initialize it differnetly
             if (this.renderSettings.hasOwnProperty('dataIdentifier')){
@@ -3258,10 +3412,10 @@ class graphly extends EventEmitter {
         }
 
         this.data = {};
-        for (var dk in data){
+        for (let dk in data){
             // Ignore keys added to ignore list
-            var ignoreKey = false;
-            for (var i = 0; i < this.ignoreParameters.length; i++) {
+            let ignoreKey = false;
+            for (let i = 0; i < this.ignoreParameters.length; i++) {
                 if(this.ignoreParameters[i] instanceof RegExp){
                     if(this.ignoreParameters[i].test(dk)){
                         ignoreKey = true;
@@ -3275,7 +3429,7 @@ class graphly extends EventEmitter {
             if(!ignoreKey){
                 this.data[dk] = data[dk];
             }
-        };
+        }
 
         this.timeScales = [];
 
@@ -3307,9 +3461,9 @@ class graphly extends EventEmitter {
                     // Generate discrete colorscale as object key value
                     let dsC = {};
 
-                    var uniqueValues = this.data[key].filter(onlyUnique);
+                    let uniqueValues = this.data[key].filter(onlyUnique);
                     for(let c=0;c<uniqueValues.length;c++){
-                        var col = u.getdiscreteColor();
+                        let col = u.getdiscreteColor();
                         dsC[uniqueValues[c]] = [
                             col[0]/255, col[1]/255, col[2]/255, 1.0
                         ];
@@ -3411,7 +3565,7 @@ class graphly extends EventEmitter {
 
     calculateExtent(selection) {
         let currExt, resExt; 
-        for (var i = selection.length - 1; i >= 0; i--) {
+        for (let i = selection.length - 1; i >= 0; i--) {
             // Check if null value has been defined
             if(this.dataSettings.hasOwnProperty(selection[i]) &&
                this.dataSettings[selection[i]].hasOwnProperty('nullValue')){
@@ -3689,7 +3843,7 @@ class graphly extends EventEmitter {
                 let sharedPars = this.renderSettings.sharedParameters[this.renderSettings.xAxis];
                 let rs = this.renderSettings;
                 // Check for group parameters inside the shared parameters
-                for (var i = 0; i < sharedPars.length; i++) {
+                for (let i = 0; i < sharedPars.length; i++) {
                     if(rs.combinedParameters.hasOwnProperty(sharedPars[i])){
                         xSelection = [].concat.apply(
                             [], rs.combinedParameters[sharedPars[i]]
@@ -3902,7 +4056,7 @@ class graphly extends EventEmitter {
                             let newColAxis = [];
                             let newCol2Axis = [];
 
-                            for (var i = 0; i < currYAxis.length; i++) {
+                            for (let i = 0; i < currYAxis.length; i++) {
 
                                 // Try to find equvalent parameter
                                 let tmpPar = currYAxis[i].replace(prevGroup, groupKey);
@@ -3957,7 +4111,7 @@ class graphly extends EventEmitter {
                                 }
                             }
 
-                            for (var i = 0; i < currY2Axis.length; i++) {
+                            for (let i = 0; i < currY2Axis.length; i++) {
                                 // Try to find equvalent parameter
                                 if(currY2Axis[i] !== null){
                                     let tmpPar = currY2Axis[i].replace(prevGroup, groupKey);
@@ -4572,7 +4726,7 @@ class graphly extends EventEmitter {
 
         // Go through all axis and save the extent if they are locked
         if (this.allowLockingAxisScale) {
-            for (var yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
+            for (let yPos = 0; yPos < this.renderSettings.yAxis.length; yPos++) {
                 if (this.renderSettings.hasOwnProperty('yAxisLocked')
                     && this.renderSettings.yAxisLocked.length >= yPos
                     && this.renderSettings.yAxisLocked[yPos]){
@@ -4734,8 +4888,8 @@ class graphly extends EventEmitter {
         // make sure enough space is available for buttons
         const topTicks = this.el.selectAll('.y.axis>.tick:last-of-type');
         topTicks.each(function(){
-            var item = d3.select(this);
-            var components = d3.transform(item.attr('transform'));
+            let item = d3.select(this);
+            let components = d3.transform(item.attr('transform'));
             if(components.translate[1] < 25) {
                 item.select('text').attr('display', 'none');
             }
@@ -5111,8 +5265,8 @@ class graphly extends EventEmitter {
                     return data[parId][i] === id;
                 };
 
-                var filteredX = data[xAxRen].filter(filterFunc.bind(this));
-                var filteredY = data[yAxRen].filter(filterFunc.bind(this));
+                let filteredX = data[xAxRen].filter(filterFunc.bind(this));
+                let filteredY = data[yAxRen].filter(filterFunc.bind(this));
                 // remove possible filtered out values
                 filteredX = filteredX.filter((d)=>{return !Number.isNaN(d);});
                 filteredY = filteredY.filter((d)=>{return !Number.isNaN(d);});
@@ -5537,10 +5691,9 @@ class graphly extends EventEmitter {
 
         // TODO: How to decide which item to take for counting
         // should we compare changes and look for errors in config?
-        var l = data[xGroup[0]].length;
+        let l = data[xGroup[0]].length;
 
         let currColCache = null;
-        let discreteCSOffset;
         let discreteColorScaleEnabled = false;
         let maskParameter;
 
@@ -5556,7 +5709,7 @@ class graphly extends EventEmitter {
             identParam = this.renderSettings.dataIdentifier.parameter;
             // Check if alpha value is set for all parameters
             let identifiers = this.renderSettings.dataIdentifier.identifiers;
-            for (var i = 0; i < identifiers.length; i++) {
+            for (let i = 0; i < identifiers.length; i++) {
                 if(!this.dataSettings[identParam][identifiers[i]].hasOwnProperty('alpha')){
                     this.dataSettings[identParam][identifiers[i]].alpha = this.defaultAlpha;
                 }
@@ -5799,7 +5952,7 @@ class graphly extends EventEmitter {
             identParam = this.renderSettings.dataIdentifier.parameter;
             // Check if alpha value is set for all parameters
             let identifiers = this.renderSettings.dataIdentifier.identifiers;
-            for (var i = 0; i < identifiers.length; i++) {
+            for (let i = 0; i < identifiers.length; i++) {
                 if(!this.dataSettings[yAxis][identifiers[i]].hasOwnProperty('alpha')){
                     this.dataSettings[yAxis][identifiers[i]].alpha = this.defaultAlpha;
                 }
@@ -6100,7 +6253,7 @@ class graphly extends EventEmitter {
 
                 if(parSett.symbol !== null && parSett.symbol !== 'none'){
                     par_properties.symbol = parSett.symbol;
-                    var sym = defaultFor(dotType[parSett.symbol], 2.0);
+                    let sym = defaultFor(dotType[parSett.symbol], 2.0);
                     this.batchDrawer.addDot(
                         x, y, currDotSize, sym, 
                         rC[0], rC[1], rC[2], rC[3], renderValue
@@ -6184,7 +6337,6 @@ class graphly extends EventEmitter {
 
         // Identify how colors are applied to the points
         let singleSettings = true;
-        let colorObj;
         let identParam;
         let dotsize = defaultFor(this.dataSettings[yAxis].size, DOTSIZE);
         dotsize *= this.resFactor;
@@ -6195,7 +6347,7 @@ class graphly extends EventEmitter {
             identParam = this.renderSettings.dataIdentifier.parameter;
             // Check if alpha value is set for all parameters
             let identifiers = this.renderSettings.dataIdentifier.identifiers;
-            for (var i = 0; i < identifiers.length; i++) {
+            for (let i = 0; i < identifiers.length; i++) {
                 if(!this.dataSettings[yAxis][identifiers[i]].hasOwnProperty('alpha')){
                     this.dataSettings[yAxis][identifiers[i]].alpha = this.defaultAlpha;
                 }
@@ -6360,7 +6512,7 @@ class graphly extends EventEmitter {
                     } else if(symbol === 'triangle'){
                         symbol = 'triangle_empty'
                     }
-                    var sym = defaultFor(dotType[symbol], 2.0);
+                    let sym = defaultFor(dotType[symbol], 2.0);
                     this.batchDrawer.addDot(
                         x, y, currDotSize, sym, rC[0], rC[1], rC[2], 0.2, Number.MIN_SAFE_INTEGER
                     );
@@ -6657,7 +6809,7 @@ class graphly extends EventEmitter {
             inactiveData[p] = [];
         }
 
-        var filters = Object.assign(
+        let filters = Object.assign(
             {},
             this.filterManager.filters,
             this.filterManager.boolFilters,
@@ -7479,7 +7631,7 @@ class graphly extends EventEmitter {
             parIds = [null];
         }
 
-        for (var i = 0; i < parIds.length; i++) {
+        for (let i = 0; i < parIds.length; i++) {
 
             // Check if current combination is available in data as per config
             if(this.renderSettings.hasOwnProperty('availableParameters') &&
@@ -7653,7 +7805,7 @@ class graphly extends EventEmitter {
             if(rS.sharedParameters.hasOwnProperty(idX)){
                 let sharedPars = rS.sharedParameters[idX];
 
-                for (var i = 0; i < sharedPars.length; i++) {
+                for (let i = 0; i < sharedPars.length; i++) {
                     if(currGroup.parameters.indexOf(sharedPars[i])!==-1){
                         idX = sharedPars[i];
                     }
@@ -7948,7 +8100,7 @@ class graphly extends EventEmitter {
                 .attr("stroke", "green")
                 .attr("fill", "green");
 
-        var aV = this.arrowValues;
+        let aV = this.arrowValues;
         for(let gr=0; gr<this.arrowValues.length; gr++){
             arrCont.append('line')
                 .attr('marker-end', "url(#arrow)")
@@ -7969,7 +8121,7 @@ class graphly extends EventEmitter {
     }
 
     findAlternativeSharedXAxis(idX, plotY){
-        var returnId = idX;
+        let returnId = idX;
         // If necessary update the current x axis parameter used based on 
         // current plot group
         if(this.renderSettings.renderGroups && 
@@ -7977,7 +8129,7 @@ class graphly extends EventEmitter {
             this.renderSettings.sharedParameters.hasOwnProperty(idX)){
             let sharPars = this.renderSettings.sharedParameters[idX];
             let rGroup = this.renderSettings.groups[plotY];
-            for (var sp = 0; sp < sharPars.length; sp++) {
+            for (let sp = 0; sp < sharPars.length; sp++) {
                 if(this.renderSettings.renderGroups[rGroup]
                     .parameters.indexOf(sharPars[sp]) !== -1){
                     returnId = sharPars[sp];

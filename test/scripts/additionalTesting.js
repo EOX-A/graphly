@@ -694,6 +694,22 @@ export var dataSettingsConfig = {
             scaleFormat: 'time',
             timeFormat: 'MJD2000_S'
         },
+        rayleigh_wind_result_bottom_altitude:{
+            uom: 'm',
+            modifiedUOM: 'km'
+        },
+        rayleigh_wind_result_top_altitude:{
+            uom: 'm',
+            modifiedUOM: 'km'
+        },
+        mie_wind_result_bottom_altitude:{
+            uom: 'm',
+            modifiedUOM: 'km'
+        },
+        mie_wind_result_top_altitude:{
+            uom: 'm',
+            modifiedUOM: 'km'
+        },
         'mie_meas_map': {
             colorscale: 'jet',
             csDiscrete: true
@@ -743,9 +759,11 @@ export var dataSettingsConfig = {
             timeFormat: 'MJD2000_S'
         },
         'rayleigh_wind_result_wind_velocity': {
-            uom: 'm/s',
+            uom: 'cm/s',
             colorscale: 'viridis',
-            extent: [-20,20]
+            extent: [-20,20],
+            modifier: 'x/100',
+            modifiedUOM: 'm/s'
         },
         'mie_wind_result_start_time': {
             scaleFormat: 'time',
@@ -756,9 +774,11 @@ export var dataSettingsConfig = {
             timeFormat: 'MJD2000_S'
         },
         'mie_wind_result_wind_velocity': {
-            uom: 'm/s',
+            uom: 'cm/s',
             colorscale: 'viridis',
-            extent: [-20,20]
+            extent: [-20,20],
+            modifier: 'x/100',
+            modifiedUOM: 'm/s'
         }
     },
 
@@ -1077,6 +1097,7 @@ export var filterSettingsConfiguration = {
     },
 
     'L2B': {
+        dataSettings: dataSettingsConfig['L2B'],
         parameterMatrix: {
           'latitude_of_DEM_intersection': [
             'latitude_of_DEM_intersection_start',
@@ -1238,7 +1259,9 @@ export var filterSettingsConfiguration = {
             'mie_wind_result_validity_flag',
             'rayleigh_wind_result_validity_flag',
             'rayleigh_wind_result_observation_type',
-            'mie_wind_result_observation_type'
+            'mie_wind_result_observation_type',
+            'mie_wind_result_wind_velocity',
+            'rayleigh_wind_result_wind_velocity',
         ],
         boolParameter: {
             parameters: [
@@ -1692,11 +1715,23 @@ export function handleL2BData(data, graph, filterManager){
 
     for (var l = 0; l < subK.length; l++) {
       
-      if(subK[l] === 'mie_wind_result_wind_velocity' ||
-         subK[l] === 'rayleigh_wind_result_wind_velocity'){
+      if([
+        'mie_wind_result_wind_velocity',
+        'rayleigh_wind_result_wind_velocity',
+        ].indexOf(subK[l]) !== -1){
         // Convert from cm/s to m/s
         resData[subK[l]]= ds[keys[k]][subK[l]].map(
           function(x) { return x / 100; }
+        );
+      } else if([
+        'mie_wind_result_bottom_altitude',
+        'mie_wind_result_top_altitude',
+        'rayleigh_wind_result_bottom_altitude',
+        'rayleigh_wind_result_top_altitude',
+        ].indexOf(subK[l]) !== -1){
+        // Convert from m to km
+        resData[subK[l]]= ds[keys[k]][subK[l]].map(
+          function(x) { return x / 1000; }
         );
       } else if(startEndVarsBins.indexOf(subK[l]) !== -1){
         resData[subK[l]+'_start'] = ds[keys[k]][subK[l]];

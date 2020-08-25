@@ -189,12 +189,14 @@ window.onload = function () {
 
     var that = this;
 
-    var startloaded = 'L2A';
+    var startloaded = 'L2B';
     if(startloaded){
         this.selValue = startloaded;
         graph.setRenderSettings(addT.renderSettingsDefinition[startloaded]);
         graph.dataSettings = addT.dataSettingsConfig[startloaded];
         filterManager.updateFilterSettings(addT.filterSettingsConfiguration[startloaded]);
+        filterManager.dataSettings = addT.dataSettingsConfig[startloaded];
+
         xhr.open('GET', ('data/'+startloaded+'.mp'), true);
         xhr.send();
     }
@@ -207,6 +209,7 @@ window.onload = function () {
         graph.setRenderSettings(addT.renderSettingsDefinition[that.selValue]);
         graph.dataSettings = addT.dataSettingsConfig[that.selValue];
         filterManager.updateFilterSettings(addT.filterSettingsConfiguration[that.selValue]);
+        filterManager.dataSettings = addT.dataSettingsConfig[that.selValue];
 
         xhr.open('GET', ('data/'+that.selValue+'.mp'), true);
         xhr.send();

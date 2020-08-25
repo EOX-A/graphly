@@ -261,15 +261,24 @@ class FilterManager extends EventEmitter {
             });
 
         var label = d.replace(this.labelReplace, ' ');
-        if(this.dataSettings.hasOwnProperty(d) && 
-            this.dataSettings[d].hasOwnProperty('uom') && 
-            this.dataSettings[d].uom !== null){
-            label += ' ['+this.dataSettings[d].uom + ']';
+        let uom;
+        if(this.dataSettings[d].hasOwnProperty('uom') &&
+           this.dataSettings[d].uom !== null){
+            uom = this.dataSettings[d].uom;
+        }
+        // Check for modified uom
+        if(this.dataSettings[d].hasOwnProperty('modifiedUOM') &&
+           this.dataSettings[d].modifiedUOM !== null){
+            uom = this.dataSettings[d].modifiedUOM;
+        }
+
+        if(typeof uom !== 'undefined') {
+            label += ' ['+ uom + ']';
         }
 
         div.append('div')
             .attr('class', 'parameterLabel')
-            .style('transform', d=>{
+            .style('transform', ()=>{
                 return 'translate(10px,'+
                 (height-20)+
                 'px) rotate(-90deg)';
@@ -570,10 +579,22 @@ class FilterManager extends EventEmitter {
             });
 
         var label = d.replace(this.labelReplace, ' ');
-        if(this.dataSettings.hasOwnProperty(d) && 
-            this.dataSettings[d].hasOwnProperty('uom') && 
-            this.dataSettings[d].uom !== null){
-            label += ' ['+this.dataSettings[d].uom + ']';
+        let uom;
+
+        if(this.dataSettings.hasOwnProperty(d) &&
+           this.dataSettings[d].hasOwnProperty('uom') &&
+           this.dataSettings[d].uom !== null){
+            uom = this.dataSettings[d].uom;
+        }
+        // Check for modified uom
+        if(this.dataSettings.hasOwnProperty(d) &&
+           this.dataSettings[d].hasOwnProperty('modifiedUOM') &&
+           this.dataSettings[d].modifiedUOM !== null){
+            uom = this.dataSettings[d].modifiedUOM;
+        }
+
+        if(typeof uom !== 'undefined') {
+            label += ' ['+ uom + ']';
         }
 
         if(this.brushes.hasOwnProperty(d)){
