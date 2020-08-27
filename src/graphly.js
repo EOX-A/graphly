@@ -5694,6 +5694,7 @@ class graphly extends EventEmitter {
         let l = data[xGroup[0]].length;
 
         let currColCache = null;
+        let discreteCSOffset;
         let discreteColorScaleEnabled = false;
         let maskParameter;
 
