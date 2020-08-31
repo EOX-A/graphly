@@ -1667,7 +1667,7 @@ class graphly extends EventEmitter {
                     }
                     that.initAxis();
                     that.renderData();
-                    this.emit('axisExtentChanged');
+                    that.emit('axisChange');
                 });
 
             divCont.append('label')
@@ -1695,7 +1695,7 @@ class graphly extends EventEmitter {
                 }
                 that.initAxis();
                 that.renderData();
-                this.emit('axisExtentChanged');
+                that.emit('axisChange');
             });
 
         divCont.append('label')
