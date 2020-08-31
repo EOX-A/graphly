@@ -1850,12 +1850,8 @@ class graphly extends EventEmitter {
             subYParameters.passedElement.addEventListener('addItem', function(event) {
                 let addYT = that.renderSettings.additionalYTicks;
                 addYT[yPos].push(event.detail.value);
-                let maxL = 0;
-                for(let i=0;i<addYT.length;i++){
-                    maxL = Math.max(maxL, addYT[i].length);
-                }
-                that.subAxisMarginY = 80*maxL;
                 that.initAxis();
+                that.resize(false);
                 that.renderData();
                 that.createAxisLabels();
                 that.emit('axisChange');
@@ -1866,12 +1862,8 @@ class graphly extends EventEmitter {
                 let index = addYT[yPos].indexOf(event.detail.value);
                 if(index!==-1){
                     addYT[yPos].splice(index, 1);
-                    let maxL = 0;
-                    for(let i=0;i<addYT.length;i++){
-                        maxL = Math.max(maxL, addYT[i].length);
-                    }
-                    that.subAxisMarginY = 80*maxL;
                     that.initAxis();
+                    that.resize(false);
                     that.renderData();
                     that.createAxisLabels();
                     that.emit('axisChange');
@@ -2318,7 +2310,6 @@ class graphly extends EventEmitter {
 
                 subXParameters.passedElement.addEventListener('addItem', function(event) {
                     that.renderSettings.additionalXTicks.push(event.detail.value);
-                    that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
                     that.initAxis();
                     that.resize(false);
                     that.renderData();
@@ -2330,7 +2321,6 @@ class graphly extends EventEmitter {
                     let index = that.renderSettings.additionalXTicks.indexOf(event.detail.value);
                     if(index!==-1){
                         that.renderSettings.additionalXTicks.splice(index, 1);
-                        that.subAxisMarginX = 40*that.renderSettings.additionalXTicks.length;
                         that.initAxis();
                         that.resize(false);
                         that.renderData();
@@ -2344,7 +2334,6 @@ class graphly extends EventEmitter {
         xSettingParameters.passedElement.addEventListener('change', function(event) {
             //Reset subaxis parameters when changing main parameter
             that.renderSettings.additionalXTicks = [];
-
             that.xAxisLabel = null;
             that.renderSettings.xAxis = event.detail.value;
             that.recalculateBufferSize();
@@ -3047,12 +3036,6 @@ class graphly extends EventEmitter {
 
                         let addYT = this.renderSettings.additionalYTicks; 
                         addYT.splice(index,1);
-                        // Recalculate subaxis margin
-                        let maxL = 0;
-                        for(let i=0; i<addYT.length; i++){
-                            maxL = Math.max(maxL, addYT[i].length);
-                        }
-                        this.subAxisMarginY = 80*maxL;
 
                         if(renSett.renderGroups && renSett.groups){
 
@@ -3832,6 +3815,18 @@ class graphly extends EventEmitter {
 
         // "Flatten selections"
         let xSelection = [];
+
+        if(this.enableSubXAxis!==false && typeof(this.renderSettings.additionalXTicks) !== 'undefined'){
+            this.subAxisMarginX = 40*this.renderSettings.additionalXTicks.length;
+        }
+        if(this.enableSubYAxis && typeof(this.renderSettings.additionalYTicks) !== 'undefined') {
+            let addYT = this.renderSettings.additionalYTicks;
+            let maxL = 0;
+            for(let i=0; i<addYT.length; i++){
+                maxL = Math.max(maxL, addYT[i].length);
+            }
+            this.subAxisMarginY = 80*maxL;
+        }
 
         if(this.renderSettings.hasOwnProperty('renderGroups') && 
             this.renderSettings.renderGroups !== false && 
