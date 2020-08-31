@@ -4739,7 +4739,7 @@ class graphly extends EventEmitter {
                 }
             }
         }
-        this.emit('axisExtentChanged');
+        this.emit('zoomUpdate');
     }
 
     onZoom() {
