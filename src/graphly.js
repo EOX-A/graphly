@@ -1404,20 +1404,8 @@ class graphly extends EventEmitter {
             .attr('stroke', 'none')
             .attr('shape-rendering', 'crispEdges');
 
-        // Set fontsize for text explicitly
-        /*this.svg.selectAll('text')
-            .attr('font-size', '12px');*/
-
-        // TODO: We introduce a short timeout here because it seems for some
-        // reason the rendered image is not ready when not using the debounce
-        // flag, not sure how to discover if the image is ready or not,
-        // when debugging the svg_html shows the correct image, but the 
-        // redering is empty
-        if(!this.debounceActive || this.resFactor !== 1){
-            setTimeout(this.createOutputFile.bind(this), 1000);
-        } else {
-            this.createOutputFile();
-        }
+        this.createOutputFile();
+       
     }
 
     createOutputFile(){
@@ -1466,9 +1454,17 @@ class graphly extends EventEmitter {
             this.svg.selectAll('.axisLabel').attr('font-weight', 'bold');
 
             let outformat = 'image/'+ this.outFormat;
-            this.IRc.toBlob((blob)=> {
-                FileSaver.saveAs(blob, this.fileSaveString);
-            }, outformat ,1);
+
+            const saveToBlob = ()=>{
+                this.IRc.toBlob((blob)=> {
+                    FileSaver.saveAs(blob, this.fileSaveString);
+                    this.resFactor = 1;
+                    this.resize();
+                }, outformat ,1);
+            }
+            // TODO: We introduce a short timeout here because it seems for some
+            // reason the rendered image is not ready when saving the blob
+            setTimeout(saveToBlob.bind(this), 1000);
         }
 
 
@@ -1482,8 +1478,6 @@ class graphly extends EventEmitter {
         this.el.select('#renderingContainer0')
             .style('clip-path','url('+this.nsId+'clipbox)');
 
-        this.resFactor = 1;
-        this.resize();
     }
 
     addTextMouseover(text){
