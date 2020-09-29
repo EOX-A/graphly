@@ -1481,8 +1481,13 @@ class graphly extends EventEmitter {
         this.el.select('#renderingContainer0')
             .style('clip-path','url('+this.nsId+'clipbox)');
 
+        //if(this.debounceActive){
+            //this.svg.selectAll('.previewImage').style('display', 'block');
+        //}
+
         this.resFactor = 1;
-        this.resize(false);
+        this.resize();
+        //setTimeout(this.resize.bind(this), 10);
     }
 
     addTextMouseover(text){
