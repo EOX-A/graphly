@@ -1404,8 +1404,16 @@ class graphly extends EventEmitter {
             .attr('stroke', 'none')
             .attr('shape-rendering', 'crispEdges');
 
-        this.createOutputFile();
-       
+        // TODO: We introduce a short timeout here because it seems for some
+        // reason the rendered image is not ready when not using the debounce
+        // flag, not sure how to discover if the image is ready or not,
+        // when debugging the svg_html shows the correct image, but the 
+        // redering is empty
+        if(!this.debounceActive || this.resFactor !== 1){
+            setTimeout(this.createOutputFile.bind(this), 1000);
+        } else {
+            this.createOutputFile();
+        }
     }
 
     createOutputFile(){
