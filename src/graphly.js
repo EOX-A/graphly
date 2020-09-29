@@ -4506,7 +4506,13 @@ class graphly extends EventEmitter {
             let y2Axisformat = this.getAxisFormat(
                 y2S[0], false, false
             );
-            this.y2Axis[yPos].tickFormat(y2Axisformat);
+
+            if(this.logY2.length>=yPos && this.logY2[yPos]){
+                this.y2Axis[yPos].ticks(0, '0.0e');
+            } else {
+                this.y2Axis[yPos].tickFormat(y2Axisformat);
+            }
+            
 
             if(currY2Axis.length > 0){
                 let currSvgy2Axis = this.svg.append('g')
