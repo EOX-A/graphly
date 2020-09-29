@@ -331,11 +331,12 @@ class graphly extends EventEmitter {
             }
         }
 
-        this.setRenderSettings(options.renderSettings);
-
         this.logX = defaultFor(options.logX, false);
         this.logY = defaultFor(options.logY, false);
         this.logY2 = defaultFor(options.logY2, false);
+
+        this.setRenderSettings(options.renderSettings);
+
 
         this.defaultTickSize = 12;
         this.defaultLabelSize = 12;
@@ -1481,13 +1482,8 @@ class graphly extends EventEmitter {
         this.el.select('#renderingContainer0')
             .style('clip-path','url('+this.nsId+'clipbox)');
 
-        //if(this.debounceActive){
-            //this.svg.selectAll('.previewImage').style('display', 'block');
-        //}
-
         this.resFactor = 1;
         this.resize();
-        //setTimeout(this.resize.bind(this), 10);
     }
 
     addTextMouseover(text){
@@ -3039,6 +3035,9 @@ class graphly extends EventEmitter {
                         renSett.yAxisExtent.splice(index, 1);
                         renSett.y2AxisExtent.splice(index, 1);
 
+                        this.logY.splice(index,1);
+                        this.logY2.splice(index,1);
+
                         let addYT = this.renderSettings.additionalYTicks; 
                         addYT.splice(index,1);
 
@@ -3096,6 +3095,12 @@ class graphly extends EventEmitter {
                             shiftParameter('y2AxisLocked', index, -1);
                             shiftParameter('yAxisExtent', index, -1);
                             shiftParameter('y2AxisExtent', index, -1);
+                            const tmpLogY = this.logY[index];
+                            this.logY[index] = this.logY[index-1];
+                            this.logY[index-1] = tmpLogY;
+                            const tmpLogY2 = this.logY2[index];
+                            this.logY2[index] = this.logY2[index-1];
+                            this.logY2[index-1] = tmpLogY2;
 
                             if(rS.renderGroups && rS.groups){
                                 let currGroup = rS.groups[index];
@@ -3136,6 +3141,12 @@ class graphly extends EventEmitter {
                             shiftParameter('y2AxisLocked', index, 1);
                             shiftParameter('yAxisExtent', index, 1);
                             shiftParameter('y2AxisExtent', index, 1);
+                            const tmpLogY = this.logY[index];
+                            this.logY[index] = this.logY[index+1];
+                            this.logY[index+1] = tmpLogY;
+                            const tmpLogY2 = this.logY2[index];
+                            this.logY2[index] = this.logY2[index+1];
+                            this.logY2[index+1] = tmpLogY2;
 
                             if(rS.renderGroups && rS.groups){
                                 let currGroup = rS.groups[index];
@@ -4398,7 +4409,12 @@ class graphly extends EventEmitter {
             let yAxisformat = this.getAxisFormat(
                 yS[0], parameter, addticks
             );
-            this.yAxis[yPos].tickFormat(yAxisformat);
+
+            if(this.logY.length>=yPos && this.logY[yPos]){
+                this.yAxis[yPos].ticks(0, '0.0e');
+            } else {
+                this.yAxis[yPos].tickFormat(yAxisformat);
+            }
 
 
             if(currYAxis.length > 0){
