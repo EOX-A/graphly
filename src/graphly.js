@@ -6590,6 +6590,17 @@ class graphly extends EventEmitter {
                                 } else {
                                     delete this.dataSettings[colorParameter].maskParameter;
                                 }
+                                /**
+                                * Fires when the mask parameter is changed
+                                *
+                                * @event module:graphly.graphly#maskParameterChange
+                                * @property {Object} containing parameter key
+                                * and colorscale identifier
+                                */
+                                this.emit('maskParameterChange', {
+                                    parameter: colorParameter,
+                                    maskParameter: maskParameter
+                                });
                             } else {
                                 dataSettings[key] = this.settingsToApply[key];
                                 if(key === 'colorscale'){
