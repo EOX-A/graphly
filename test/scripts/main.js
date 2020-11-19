@@ -34,6 +34,7 @@ function randn_bm() {
 }
 
 var data = {};
+var overlayData = {};
 generateRandomData();
 
 function generateRandomData() {
@@ -49,9 +50,13 @@ function generateRandomData() {
             data[parameters[i]].push(randn_bm() * extent);
         }
     }*/
-    data['parameter1'] = [0, 0, 0, 0, 0, 0, 0, 0];
+    data['parameter1'] = [1, 2, 3, 4, 5, 6, 7, 8].reverse();
     data['parameter2'] = [1, 2, 3, 4, 5, 6, 7, 8];
     data['parameter3'] = [0.1, 1, 10, 100, 1000, 10000, 1000000, 10000000];
+
+    overlayData['parameter1'] = [1, 3, 6, 7].reverse();
+    overlayData['parameter2'] = [1, 3, 6, 7];
+    overlayData['type'] = [1, 2, 1, 2];
 }
 
 
@@ -67,6 +72,35 @@ var filterManager = new FilterManager({
     ignoreParameters: '__info__',
     replaceUnderscore: true,
 });
+
+/*
+rectangle, rectangle_empty, circle, circle_empty, plus, x, triangle, triangle_empty
+*/
+dataSettings.overlaySettings = {
+    keyParameter: 'type',
+    typeDefinition: [
+        {
+            id: 1,
+            name: 'Type 1',
+            style: {
+                symbol: 'rectangle_empty',
+                size: 15,
+                color: [1.0, 0, 0],
+                alpha: [0.8]
+            }
+        },
+        {
+            id: 2,
+            name: 'Type 2',
+            style: {
+                symbol: 'circle_empty',
+                size: 15,
+                color: [0, 1.0, 0],
+                alpha: [0.8]
+            }
+        }
+    ]
+};
 
 
 
@@ -97,7 +131,7 @@ var graph = new graphly.graphly({
     //margin: {top: 50, left: 90, bottom: 50, right: 40},
     //colorAxisTickFormat: 'customExp',
     //defaultAxisTickFormat: 'customExp',
-    enableSubXAxis: 'datetime',
+    enableSubXAxis: 'time',
     allowLockingAxisScale: true,
     enableMaskParameters: true,
     //disableAntiAlias: true,
@@ -110,6 +144,7 @@ graph.addColorScale(
 
 filterManager.loadData(data);
 graph.loadData(data);
+graph.loadOverlayData(overlayData);
 
 //filterManager.setRenderNode('#filters');
 
@@ -127,7 +162,7 @@ filterManager.on('filterChange', function(filters){
 });
 
 d3.select('#save').on('click', function(){
-    graph.saveImage('png' , 2);
+    graph.saveImage('png' , 1);
 });
 
 d3.select('#resetfilter').on('click', function(){
@@ -153,7 +188,7 @@ graph.on('axisExtentChanged', function(){
     console.log(this.renderSettings.y2AxisLocked);
 })
 
-
+graph.fileSaveString = 'test.png';
 
 var xhr = new XMLHttpRequest();
 xhr.responseType = 'arraybuffer';
@@ -189,7 +224,7 @@ window.onload = function () {
 
     var that = this;
 
-    var startloaded = 'L2B';
+    var startloaded = false;
     if(startloaded){
         this.selValue = startloaded;
         graph.setRenderSettings(addT.renderSettingsDefinition[startloaded]);

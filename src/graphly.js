@@ -275,6 +275,7 @@ class graphly extends EventEmitter {
         this.allowLockingAxisScale = defaultFor(options.allowLockingAxisScale, false);
         this.replaceUnderscore = defaultFor(options.replaceUnderscore, false);
         this.enableMaskParameters = defaultFor(options.enableMaskParameters, false);
+        this.overlayData = defaultFor(options.overlayData, false);
 
         this.labelReplace = /a^/; // Default not matchin anything
         if(this.replaceUnderscore){
@@ -3391,6 +3392,19 @@ class graphly extends EventEmitter {
     }
 
     /**
+    * Load overlay data from data object
+    * @param {Object} data Data object containing parameter identifier as keys and 
+             arrays of values as corresponding parameter. {'parId1': [1, 2, 3], 
+             'parId2': [0.6, 0.1, 3.2]}. In order to be correctly visualized 
+             the overlay data needs to be described as overlaySettings object 
+             part of the dataSettings
+    */
+    loadOverlayData(overlayData){
+        this.overlayData = overlayData;
+        this.renderData(false);
+    }
+
+    /**
     * Load data from data object
     * @param {Object} data Data object containing parameter identifier as keys and 
              arrays of values as corresponding parameter. {'parId1': [1, 2, 3], 
@@ -5944,6 +5958,110 @@ class graphly extends EventEmitter {
         } // end data for loop
     }
 
+    shiftPeriodicValue(value, max, min, period, offset){
+        let shiftpos = Math.abs(parseInt(max/period));
+        let shiftneg = Math.abs(parseInt(min/period));
+        if(offset===0){
+            shiftneg = Math.abs(Math.floor(min/period));
+        }
+        let shift = Math.max(shiftpos, shiftneg);
+        if(shiftneg>shiftpos){
+            shift*=-1;
+        }
+        if(Math.abs(shift) > 0){
+            value = value + shift*period;
+            if(value-offset > max){
+                value -= period;
+            }
+            if(value+offset < min){
+                value += period;
+            }
+        }
+        return value;
+    }
+
+    renderOverlayPoints(xAxis, yAxis, plotY, yScale) {
+
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
+
+        let x, y, valX, valY, currDotSize;
+        let dotsize = 15;
+        let color = [1.0,0,0];
+        const overlayData = this.overlayData;
+        yScale = yScale[plotY];
+
+        if(overlayData.hasOwnProperty(yAxis) && overlayData.hasOwnProperty(xAxis)){
+
+            const lp = overlayData[yAxis].length;
+
+            for (let j=0;j<lp; j++) {
+
+                currDotSize = dotsize;
+
+                valY = overlayData[yAxis][j];
+                valX = overlayData[xAxis][j];
+
+                // Skip "empty" values
+                if(Number.isNaN(valY) || Number.isNaN(valX)){
+                    continue;
+                }
+
+                let rC = color;
+
+                /*
+                // Manipulate value if we have a periodic parameter
+                if(yperiodic){
+                    valY = this.shiftPeriodicValue(valY, yMax, yMin, yperiod, yoffset);
+                }
+                */
+
+                y = yScale(valY);
+                y+=axisOffset;
+
+                /*
+                // Manipulate value if we have a periodic parameter
+                if(xperiodic){
+                    valX = this.shiftPeriodicValue(valX, xMax, xMin, period, xoffset);
+                }
+                */
+                x = this.xScale(valX);
+
+                let par_properties = {
+                    index: j,
+                    x: {
+                        val: valX,
+                        id: xAxis,
+                        coord: x
+                    },
+                    y: {
+                        val: valY,
+                        id: yAxis,
+                        coord: y
+                    },
+                };
+
+
+                let parSett = {};
+
+                const renderValue = 0;
+                if(!parSett.hasOwnProperty('symbol')){
+                    parSett.symbol = 'rectangle_empty';
+                }
+                par_properties.dotsize = currDotSize;
+
+                if(parSett.symbol !== null && parSett.symbol !== 'none'){
+                    par_properties.symbol = parSett.symbol;
+                    let sym = defaultFor(dotType[parSett.symbol], 2.0);
+                    this.batchDrawer.addDot(
+                        x, y, currDotSize, sym, 
+                        rC[0], rC[1], rC[2], rC[3], renderValue
+                    );
+                    
+                }
+
+            }
+        }
+    }
 
     renderPoints(data, xAxis, yAxis, cAxis, plotY, yScale, leftYAxis, updateReferenceCanvas) {
 
@@ -6162,26 +6280,7 @@ class graphly extends EventEmitter {
 
             // Manipulate value if we have a periodic parameter
             if(yperiodic){
-                let shiftpos = Math.abs(parseInt(yMax/yperiod));
-                let shiftneg = Math.abs(parseInt(yMin/yperiod));
-                if(yoffset===0){
-                    shiftneg = Math.abs(Math.floor(yMin/yperiod));
-                }
-                let shift = Math.max(shiftpos, shiftneg);
-                if(shiftneg>shiftpos){
-                    shift*=-1;
-                }
-
-                if(Math.abs(shift) > 0){
-                    valY = valY + shift*yperiod;
-                    if(valY-yoffset > yMax){
-                        valY -= yperiod;
-                    }
-                    if(valY+yoffset < yMin){
-                        valY += yperiod;
-                    }
-                    
-                }
+                valY = this.shiftPeriodicValue(valY, yMax, yMin, yperiod, yoffset);
             }
 
             y = yScale(valY);
@@ -6189,27 +6288,9 @@ class graphly extends EventEmitter {
 
             // Manipulate value if we have a periodic parameter
             if(xperiodic){
-                let shiftpos = Math.abs(parseInt(xMax/period));
-                let shiftneg = Math.abs(parseInt(xMin/period));
-                if(xoffset===0){
-                    shiftneg = Math.abs(Math.floor(xMin/period));
-                }
-                let shift = Math.max(shiftpos, shiftneg);
-                if(shiftneg>shiftpos){
-                    shift*=-1;
-                }
-
-                if(Math.abs(shift) > 0){
-                    valX = valX + shift*period;
-                    if(valX-xoffset > xMax){
-                        valX -= period;
-                    }
-                    if(valX+xoffset < xMin){
-                        valX += period;
-                    }
-                    
-                }
+                valX = this.shiftPeriodicValue(valX, xMax, xMin, period, xoffset);
             }
+
             x = this.xScale(valX);
 
             let c = u.genColor();
@@ -7904,7 +7985,8 @@ class graphly extends EventEmitter {
                         );
                     }
                 }
-                
+                // Check also if overlayData needs to be rendered
+                this.renderOverlayPoints(idX, idY, plotY, currYScale);
             }
         }
         this.endTiming('renderParameter:'+idY);
