@@ -276,6 +276,7 @@ class graphly extends EventEmitter {
         this.replaceUnderscore = defaultFor(options.replaceUnderscore, false);
         this.enableMaskParameters = defaultFor(options.enableMaskParameters, false);
         this.overlayData = defaultFor(options.overlayData, false);
+        this.overlaySettings = defaultFor(options.overlaySettings, false);
 
         this.labelReplace = /a^/; // Default not matchin anything
         if(this.replaceUnderscore){
@@ -1221,6 +1222,10 @@ class graphly extends EventEmitter {
         this.outFormat = defaultFor(format, 'png');
         this.resFactor = defaultFor(resFactor, 1);
 
+        // Hide axis edit buttons
+        this.svg.selectAll('.modifyAxisIcon').style('display', 'none');
+        this.svg.selectAll('.lockAxisIcon').style('display', 'none');
+
         if (this.resFactor !== 1){
 
             this.batchDrawer.updateCanvasSize(
@@ -1265,9 +1270,6 @@ class graphly extends EventEmitter {
             let yAxRen = this.renderSettings.yAxis;
             let y2AxRen = this.renderSettings.y2Axis;
 
-            // Hide axis edit buttons
-            this.svg.selectAll('.modifyAxisIcon').style('display', 'none');
-            this.svg.selectAll('.lockAxisIcon').style('display', 'none');
 
             // Render all y axis parameters
             for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
@@ -2610,6 +2612,7 @@ class graphly extends EventEmitter {
                             colorAxis, id, g, evtx, evty, csZoom, 'right'
                         );
                     }.bind(this))
+                    .append('title').text('Edit axis range');
             }
         }
     }
@@ -4012,7 +4015,8 @@ class graphly extends EventEmitter {
                         this.xAxis, null, this.xAxisSvg,
                         evtx, evty, this.xzoom, 'middleleft'
                     );
-                }.bind(this));
+                }.bind(this))
+                .append('title').text('Edit axis range');
         }
 
 
@@ -4456,7 +4460,8 @@ class graphly extends EventEmitter {
                                 this.yAxis[yPos], null, currSvgyAxis,
                                 evtx, evty, this.yzoom[yPos], 'right'
                             );
-                        }.bind(this));
+                        }.bind(this))
+                        .append('title').text('Edit axis range');
                 }
                 if(this.allowLockingAxisScale) {
                     if (this.renderSettings.hasOwnProperty('yAxisLocked')) {
@@ -4478,7 +4483,8 @@ class graphly extends EventEmitter {
                                     this.renderData();
                                 }
                                 this.emit('axisExtentChanged');
-                            }.bind(this));
+                            }.bind(this))
+                            .append('title').text('Lock axis range');
                     }
                 }
             } else {
@@ -4561,6 +4567,7 @@ class graphly extends EventEmitter {
                                 evtx, evty, this.y2zoom[yPos], 'left'
                             );
                         }.bind(this))
+                        .append('title').text('Edit axis range');
                 }
                 if(this.allowLockingAxisScale) {
                     if (this.renderSettings.hasOwnProperty('y2AxisLocked')) {
@@ -4582,7 +4589,8 @@ class graphly extends EventEmitter {
                                     this.renderData();
                                 }
                                 this.emit('axisExtentChanged');
-                            }.bind(this));
+                            }.bind(this))
+                            .append('title').text('Lock axis range');
                     }
                 }
             } else {
@@ -5980,23 +5988,53 @@ class graphly extends EventEmitter {
         return value;
     }
 
-    renderOverlayPoints(xAxis, yAxis, plotY, yScale) {
+    renderOverlayPoints(xAxis, yAxis, plotY, yScale, leftYAxis) {
 
         let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
 
-        let x, y, valX, valY, currDotSize;
-        let dotsize = 15;
-        let color = [1.0,0,0];
+        let x, y, valX, valY, currDotSize, currSymbol;
+        let defaultSize = 15;
+        let defaultColor = [255.0,0,0, 1.0];
         const overlayData = this.overlayData;
         yScale = yScale[plotY];
 
-        if(overlayData.hasOwnProperty(yAxis) && overlayData.hasOwnProperty(xAxis)){
+        // Check if cyclic axis and if currently displayed axis range needs to
+        // offset to be shown in "next cycle" above or below
+        let xMax, xMin, period, xoffset;
+        let xperiodic = false;
+        if(this.dataSettings.hasOwnProperty(xAxis) && 
+           this.dataSettings[xAxis].hasOwnProperty('periodic')){
+            xoffset = defaultFor(
+                this.dataSettings[xAxis].periodic.offset, 0
+            );
+            xperiodic = true;
+            period = this.dataSettings[xAxis].periodic.period;
+            xMax = this.xScale.domain()[1]-xoffset;
+            xMin = this.xScale.domain()[0]+xoffset;
+        }
+
+        let yMax, yMin, yoffset, yperiod;
+        let yperiodic = false;
+        if(this.dataSettings.hasOwnProperty(yAxis) && 
+           this.dataSettings[yAxis].hasOwnProperty('periodic') && leftYAxis){
+            yoffset = defaultFor(
+                this.dataSettings[yAxis].periodic.offset, 0
+            );
+            yperiodic = true;
+            yperiod = this.dataSettings[yAxis].periodic.period;
+            yMax = this.yScale[plotY].domain()[1]-yoffset;
+            yMin = this.yScale[plotY].domain()[0]+yoffset;
+        }
+
+        if(this.overlaySettings !== false && overlayData.hasOwnProperty(yAxis)
+            && overlayData.hasOwnProperty(xAxis)){
+
+            const keyPar = this.overlaySettings.keyParameter;
+            const typeDef = this.overlaySettings.typeDefinition;
 
             const lp = overlayData[yAxis].length;
 
             for (let j=0;j<lp; j++) {
-
-                currDotSize = dotsize;
 
                 valY = overlayData[yAxis][j];
                 valX = overlayData[xAxis][j];
@@ -6006,59 +6044,39 @@ class graphly extends EventEmitter {
                     continue;
                 }
 
-                let rC = color;
-
-                /*
                 // Manipulate value if we have a periodic parameter
                 if(yperiodic){
                     valY = this.shiftPeriodicValue(valY, yMax, yMin, yperiod, yoffset);
                 }
-                */
-
                 y = yScale(valY);
                 y+=axisOffset;
 
-                /*
                 // Manipulate value if we have a periodic parameter
                 if(xperiodic){
                     valX = this.shiftPeriodicValue(valX, xMax, xMin, period, xoffset);
                 }
-                */
                 x = this.xScale(valX);
 
-                let par_properties = {
-                    index: j,
-                    x: {
-                        val: valX,
-                        id: xAxis,
-                        coord: x
-                    },
-                    y: {
-                        val: valY,
-                        id: yAxis,
-                        coord: y
-                    },
-                };
+                const currType = overlayData[keyPar][j];
+                const overlayType = typeDef.find((item) => item.key === currType);
+                let rC = defaultColor;
 
-
-                let parSett = {};
-
-                const renderValue = 0;
-                if(!parSett.hasOwnProperty('symbol')){
-                    parSett.symbol = 'rectangle_empty';
-                }
-                par_properties.dotsize = currDotSize;
-
-                if(parSett.symbol !== null && parSett.symbol !== 'none'){
-                    par_properties.symbol = parSett.symbol;
-                    let sym = defaultFor(dotType[parSett.symbol], 2.0);
-                    this.batchDrawer.addDot(
-                        x, y, currDotSize, sym, 
-                        rC[0], rC[1], rC[2], rC[3], renderValue
+                if (typeof overlayType !== 'undefined' && overlayType.hasOwnProperty('style')) {
+                    currDotSize = defaultFor(overlayType.style.size, defaultSize);
+                    currSymbol = defaultFor(
+                        dotType[overlayType.style.symbol], dotType['rectangle_empty']
                     );
-                    
-                }
+                    if (overlayType.style.hasOwnProperty('color')){
+                        rC = overlayType.style.color;
+                    }
 
+                    this.batchDrawer.addDot(
+                        x, y, currDotSize, currSymbol,
+                        rC[0], rC[1], rC[2], rC[3], Number.MIN_SAFE_INTEGER
+                    );
+                } else {
+                    continue;
+                }
             }
         }
     }
@@ -6163,7 +6181,6 @@ class graphly extends EventEmitter {
         // Check if cyclic axis and if currently displayed axis range needs to
         // offset to be shown in "next cycle" above or below
         let xMax, xMin, period, xoffset;
-
         let xperiodic = false;
         if(this.dataSettings.hasOwnProperty(xAxis) && 
            this.dataSettings[xAxis].hasOwnProperty('periodic')){
@@ -7986,7 +8003,7 @@ class graphly extends EventEmitter {
                     }
                 }
                 // Check also if overlayData needs to be rendered
-                this.renderOverlayPoints(idX, idY, plotY, currYScale);
+                this.renderOverlayPoints(idX, idY, plotY, currYScale, leftYAxis);
             }
         }
         this.endTiming('renderParameter:'+idY);

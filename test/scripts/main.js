@@ -76,27 +76,25 @@ var filterManager = new FilterManager({
 /*
 rectangle, rectangle_empty, circle, circle_empty, plus, x, triangle, triangle_empty
 */
-dataSettings.overlaySettings = {
+var overlaySettings = {
     keyParameter: 'type',
     typeDefinition: [
         {
-            id: 1,
+            key: 1,
             name: 'Type 1',
             style: {
                 symbol: 'rectangle_empty',
-                size: 15,
-                color: [1.0, 0, 0],
-                alpha: [0.8]
+                size: 20,
+                color: [0, 0, 1.0, 0.8],
             }
         },
         {
-            id: 2,
+            key: 2,
             name: 'Type 2',
             style: {
                 symbol: 'circle_empty',
-                size: 15,
-                color: [0, 1.0, 0],
-                alpha: [0.8]
+                size: 20,
+                color: [0, 1.0, 0.2, 0.9],
             }
         }
     ]
@@ -112,6 +110,7 @@ var graph = new graphly.graphly({
     debounceActive: false,
     debug: false,
     replaceUnderscore: true,
+    overlaySettings: overlaySettings,
     //labelAllignment: 'center',
     //enableFit: false,
     //displayColorscaleOptions: false,
