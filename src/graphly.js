@@ -3404,6 +3404,7 @@ class graphly extends EventEmitter {
     */
     loadOverlayData(overlayData){
         this.overlayData = overlayData;
+        this.createParameterInfo();
         this.renderData(false);
     }
 
@@ -7070,6 +7071,31 @@ class graphly extends EventEmitter {
                 this.addParameterLabel(idY2, infoGroup, parInfEl, yPos, 'right', parPos);
             }
 
+            // Add possible overlay labels
+            if(this.overlaySettings !== false){
+                // See if correct axis are visible to show overlay data
+                for (var i = 0; i < this.overlaySettings.typeDefinition.length; i++) {
+                    const currDef = this.overlaySettings.typeDefinition[i];
+                    const xMatch = this.overlayData.hasOwnProperty(this.renderSettings.xAxis);
+                    let yMatch = false;
+                    for (let parPos=0; parPos<yAxRen.length; parPos++){
+                        if(this.overlayData.hasOwnProperty(yAxRen[parPos])){
+                            yMatch = true;
+                            break;
+                        }
+                    }
+                    for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                        if(this.overlayData.hasOwnProperty(y2AxRen[parPos])){
+                            yMatch = true;
+                            break;
+                        }
+                    }
+                    if(xMatch && yMatch){
+                        this.addOverlayLabel(currDef, infoGroup, parInfEl);
+                    }
+                }
+            }
+
             // Change height of settings panel to be just under labels
             /*let dim = parInfEl.node().getBoundingClientRect();
             this.el.select('#parameterSettings'+yPos)
@@ -7750,6 +7776,63 @@ class graphly extends EventEmitter {
             that.renderRegressionOptions(id, regressionTypes, dataSettings);
         }
 
+    }
+
+    addOverlayLabel(typedef, infoGroup, parInfEl){
+
+        let parDiv = parInfEl.append('div')
+            .attr('class', 'overlayLabelitem');
+
+        infoGroup.style('visibility', 'hidden');
+
+        let displayName = typedef.name;
+
+        parDiv.append('div')
+            .style('display', 'inline')
+            .html(displayName);
+
+        // Update size of rect based on size of original div
+        let boundRect = parInfEl.node().getBoundingClientRect();
+        infoGroup.select('rect').attr('height', boundRect.height);
+
+        // check amount of elements and calculate offset
+        let offset = 21 + infoGroup.selectAll('text').size() *20;
+        let labelText = infoGroup.append('text')
+            .attr('class', 'svgaxisLabel')
+            .attr('text-anchor', 'middle')
+            .attr('y', offset)
+            .attr('x', 153)
+            .text(displayName);
+
+        let labelBbox = labelText.node().getBBox();
+
+        let iconSvg = parDiv.insert('div', ':first-child')
+            .attr('class', 'svgIcon')
+            .style('display', 'inline')
+            .append('svg')
+            .attr('width', 20).attr('height', 10);
+
+        let symbolColor = '';
+
+        let style = typedef.style;
+
+        if(style.hasOwnProperty('color')){
+            symbolColor = '#'+ CP.RGB2HEX(
+                style.color
+                .map(function(c){return Math.round(c*255);})
+            );
+        }
+
+        style.symbol = defaultFor(
+            style.symbol, 'circle'
+        );
+
+        u.addSymbol(iconSvg, style.symbol, symbolColor);
+
+        let symbolGroup = infoGroup.append('g')
+            .attr('transform', 'translate(' + (130-labelBbox.width/2) + ',' +
+            (offset-10) + ')');
+        u.addSymbol(symbolGroup, style.symbol, symbolColor);
     }
 
 

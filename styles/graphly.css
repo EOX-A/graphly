@@ -231,6 +231,10 @@ input[type=text] {
     margin: 5px;
 }
 
+.overlayLabelitem{
+    margin: 5px;
+}
+
 .labelitem:hover { 
     text-decoration: underline;
 }

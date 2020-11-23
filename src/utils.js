@@ -72,7 +72,7 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
         case 'rectangle_empty':
             element = el.append("rect")
                 .attr("x", c.x-s/2).attr("y", c.y-s/2)
-                .attr("width", s-1).attr("height", s-1)
+                .attr("width", s).attr("height", s)
                 .attr('fill', 'none')
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
