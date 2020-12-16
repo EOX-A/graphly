@@ -80,7 +80,7 @@ var overlaySettings = {
     keyParameter: 'type',
     typeDefinition: [
         {
-            key: 1,
+            match: function(val){return val === 1},
             name: 'Type 1',
             style: {
                 symbol: 'rectangle_empty',
@@ -89,7 +89,7 @@ var overlaySettings = {
             }
         },
         {
-            key: 2,
+            match: function(val){return val === 2},
             name: 'Type 2',
             style: {
                 symbol: 'circle_empty',

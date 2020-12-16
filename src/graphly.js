@@ -6059,7 +6059,7 @@ class graphly extends EventEmitter {
                 x = this.xScale(valX);
 
                 const currType = overlayData[keyPar][j];
-                const overlayType = typeDef.find((item) => item.key === currType);
+                const overlayType = typeDef.find((item) => item.match(currType));
                 let rC = defaultColor;
 
                 if (typeof overlayType !== 'undefined' && overlayType.hasOwnProperty('style')) {
