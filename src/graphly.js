@@ -275,7 +275,7 @@ class graphly extends EventEmitter {
         this.allowLockingAxisScale = defaultFor(options.allowLockingAxisScale, false);
         this.replaceUnderscore = defaultFor(options.replaceUnderscore, false);
         this.enableMaskParameters = defaultFor(options.enableMaskParameters, false);
-        this.overlayData = defaultFor(options.overlayData, false);
+        this.overlayData = defaultFor(options.overlayData, {});
         this.overlaySettings = defaultFor(options.overlaySettings, false);
 
         this.labelReplace = /a^/; // Default not matchin anything
@@ -3020,8 +3020,8 @@ class graphly extends EventEmitter {
                 this.el.append('div')
                     .attr('class', 'cross removePlot')
                     .attr('data-index', plotY)
-                    .style('left', '10px')
-                    .style('top', (offsetY+this.margin.top+10)+'px')
+                    .style('left', '5px')
+                    .style('top', (offsetY+this.margin.top)+3+'px')
                     .on('click', ()=>{
 
                         let renSett = this.renderSettings;
@@ -3085,8 +3085,8 @@ class graphly extends EventEmitter {
                         .attr('class', 'arrowChangePlot up')
                         .html('&#9650;')
                         .attr('data-index', plotY)
-                        .style('left', '10px')
-                        .style('top', (offsetY+this.margin.top+20)+'px')
+                        .style('left', '5px')
+                        .style('top', (offsetY+this.margin.top+15)+'px')
                         .on('click', ()=>{
                             let index = Number(d3.select(d3.event.target).attr('data-index'));
                             let rS = this.renderSettings;
@@ -3121,15 +3121,15 @@ class graphly extends EventEmitter {
 
                 // Add move down arrow 
                 if(plotY<this.renderSettings.yAxis.length-1){
-                    let addoff = 45;
+                    let addoff = 40;
                     if(plotY === 0){
-                        addoff = 20;
+                        addoff = 15;
                     }
                     this.el.append('div')
                         .attr('class', 'arrowChangePlot down')
                         .html('&#9660;')
                         .attr('data-index', plotY)
-                        .style('left', '10px')
+                        .style('left', '5px')
                         .style('top', (offsetY+this.margin.top+addoff)+'px')
                         .on('click', ()=>{
 
@@ -3404,8 +3404,12 @@ class graphly extends EventEmitter {
     */
     loadOverlayData(overlayData){
         this.overlayData = overlayData;
-        this.createParameterInfo();
-        this.renderData(false);
+        // Check if there is no loaded data if not it does
+        // not really make sense to call render here
+        if (typeof this.data === 'object' && Object.keys(this.data).length !== 0) {
+            this.createParameterInfo();
+            this.renderData(false);
+        }
     }
 
     /**
@@ -5697,14 +5701,14 @@ class graphly extends EventEmitter {
 
 
         this.el.selectAll('.removePlot').each(function(d,i){
-            d3.select(this).style('top', ((heighChunk*i)+10+that.margin.top)+'px')
+            d3.select(this).style('top', ((heighChunk*i)+3+that.margin.top)+'px')
         });
 
         this.el.selectAll('.arrowChangePlot.up').each(function(d,i){
-            d3.select(this).style('top', ((heighChunk*(i+1))+that.margin.top+20)+'px')
+            d3.select(this).style('top', ((heighChunk*(i+1))+that.margin.top+15)+'px')
         });
         this.el.selectAll('.arrowChangePlot.down').each(function(d,i){
-            d3.select(this).style('top', ((heighChunk*(i))+that.margin.top+45)+'px')
+            d3.select(this).style('top', ((heighChunk*(i))+that.margin.top+40)+'px')
         });
 
         this.el.selectAll('.previewImage')
@@ -6027,59 +6031,64 @@ class graphly extends EventEmitter {
             yMin = this.yScale[plotY].domain()[0]+yoffset;
         }
 
-        if(this.overlaySettings !== false && overlayData.hasOwnProperty(yAxis)
-            && overlayData.hasOwnProperty(xAxis)){
+        if(this.overlaySettings !== false) {
+            for (let coll in this.overlaySettings) {
+                if(overlayData.hasOwnProperty(coll)
+                    && overlayData[coll].hasOwnProperty(yAxis)
+                    && overlayData[coll].hasOwnProperty(xAxis)){
 
-            const keyPar = this.overlaySettings.keyParameter;
-            const typeDef = this.overlaySettings.typeDefinition;
+                    const keyPar = this.overlaySettings[coll].keyParameter;
+                    const typeDef = this.overlaySettings[coll].typeDefinition;
 
-            const lp = overlayData[yAxis].length;
+                    const lp = overlayData[coll][yAxis].length;
 
-            for (let j=0;j<lp; j++) {
+                    for (let j=0;j<lp; j++) {
 
-                valY = overlayData[yAxis][j];
-                valX = overlayData[xAxis][j];
+                        valY = overlayData[coll][yAxis][j];
+                        valX = overlayData[coll][xAxis][j];
 
-                // Skip "empty" values
-                if(Number.isNaN(valY) || Number.isNaN(valX)){
-                    continue;
-                }
+                        // Skip "empty" values
+                        if(Number.isNaN(valY) || Number.isNaN(valX)){
+                            continue;
+                        }
 
-                // Manipulate value if we have a periodic parameter
-                if(yperiodic){
-                    valY = this.shiftPeriodicValue(valY, yMax, yMin, yperiod, yoffset);
-                }
-                y = yScale(valY);
-                y+=axisOffset;
+                        // Manipulate value if we have a periodic parameter
+                        if(yperiodic){
+                            valY = this.shiftPeriodicValue(valY, yMax, yMin, yperiod, yoffset);
+                        }
+                        y = yScale(valY);
+                        y+=axisOffset;
 
-                // Manipulate value if we have a periodic parameter
-                if(xperiodic){
-                    valX = this.shiftPeriodicValue(valX, xMax, xMin, period, xoffset);
-                }
-                x = this.xScale(valX);
+                        // Manipulate value if we have a periodic parameter
+                        if(xperiodic){
+                            valX = this.shiftPeriodicValue(valX, xMax, xMin, period, xoffset);
+                        }
+                        x = this.xScale(valX);
 
-                const currType = overlayData[keyPar][j];
-                const overlayType = typeDef.find((item) => item.match(currType));
-                let rC = defaultColor;
+                        const currType = overlayData[coll][keyPar][j];
+                        const overlayType = typeDef.find((item) => item.match(currType));
+                        let rC = defaultColor;
 
-                if (typeof overlayType !== 'undefined' && overlayType.hasOwnProperty('style')) {
-                    currDotSize = defaultFor(overlayType.style.size, defaultSize);
-                    currSymbol = defaultFor(
-                        dotType[overlayType.style.symbol], dotType['rectangle_empty']
-                    );
-                    if (overlayType.style.hasOwnProperty('color')){
-                        rC = overlayType.style.color;
+                        if (typeof overlayType !== 'undefined' && overlayType.hasOwnProperty('style')) {
+                            currDotSize = defaultFor(overlayType.style.size, defaultSize);
+                            currSymbol = defaultFor(
+                                dotType[overlayType.style.symbol], dotType['rectangle_empty']
+                            );
+                            if (overlayType.style.hasOwnProperty('color')){
+                                rC = overlayType.style.color;
+                            }
+
+                            this.batchDrawer.addDot(
+                                x, y, currDotSize, currSymbol,
+                                rC[0], rC[1], rC[2], rC[3], Number.MIN_SAFE_INTEGER
+                            );
+                        } else {
+                            continue;
+                        }
                     }
-
-                    this.batchDrawer.addDot(
-                        x, y, currDotSize, currSymbol,
-                        rC[0], rC[1], rC[2], rC[3], Number.MIN_SAFE_INTEGER
-                    );
-                } else {
-                    continue;
                 }
             }
-        }
+         }
     }
 
     renderPoints(data, xAxis, yAxis, cAxis, plotY, yScale, leftYAxis, updateReferenceCanvas) {
@@ -7073,25 +7082,32 @@ class graphly extends EventEmitter {
 
             // Add possible overlay labels
             if(this.overlaySettings !== false){
-                // See if correct axis are visible to show overlay data
-                for (var i = 0; i < this.overlaySettings.typeDefinition.length; i++) {
-                    const currDef = this.overlaySettings.typeDefinition[i];
-                    const xMatch = this.overlayData.hasOwnProperty(this.renderSettings.xAxis);
-                    let yMatch = false;
-                    for (let parPos=0; parPos<yAxRen.length; parPos++){
-                        if(this.overlayData.hasOwnProperty(yAxRen[parPos])){
-                            yMatch = true;
-                            break;
+                for (let coll in this.overlaySettings) {
+                    // See if correct axis are visible to show overlay data
+                    for (var i = 0; i < this.overlaySettings[coll].typeDefinition.length; i++) {
+                        const currDef = this.overlaySettings[coll].typeDefinition[i];
+                        const xMatch = (
+                            this.overlayData.hasOwnProperty(coll)
+                            && this.overlayData[coll].hasOwnProperty(this.renderSettings.xAxis)
+                        );
+                        let yMatch = false;
+                        for (let parPos=0; parPos<yAxRen.length; parPos++){
+                            if(this.overlayData.hasOwnProperty(coll)
+                                && this.overlayData[coll].hasOwnProperty(yAxRen[parPos])){
+                                yMatch = true;
+                                break;
+                            }
                         }
-                    }
-                    for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                        if(this.overlayData.hasOwnProperty(y2AxRen[parPos])){
-                            yMatch = true;
-                            break;
+                        for (let parPos=0; parPos<y2AxRen.length; parPos++){
+                            if(this.overlayData.hasOwnProperty(coll)
+                                && this.overlayData[coll].hasOwnProperty(y2AxRen[parPos])){
+                                yMatch = true;
+                                break;
+                            }
                         }
-                    }
-                    if(xMatch && yMatch){
-                        this.addOverlayLabel(currDef, infoGroup, parInfEl);
+                        if(xMatch && yMatch){
+                            this.addOverlayLabel(currDef, infoGroup, parInfEl);
+                        }
                     }
                 }
             }
@@ -7787,13 +7803,24 @@ class graphly extends EventEmitter {
 
         let displayName = typedef.name;
 
+        // Check if this label name is not already present
+        const textEls = infoGroup.selectAll('text')[0];
+        const equalLabel = textEls.find(
+            (el) => {return d3.select(el).text() === displayName}
+        );
+        if (typeof equalLabel !== 'undefined'){
+            return;
+        }
+
         parDiv.append('div')
             .style('display', 'inline')
             .html(displayName);
 
         // Update size of rect based on size of original div
-        let boundRect = parInfEl.node().getBoundingClientRect();
-        infoGroup.select('rect').attr('height', boundRect.height);
+        if ( parInfEl.node() !== null ) {
+            let boundRect = parInfEl.node().getBoundingClientRect();
+            infoGroup.select('rect').attr('height', boundRect.height);
+        }
 
         // check amount of elements and calculate offset
         let offset = 21 + infoGroup.selectAll('text').size() *20;
@@ -7932,8 +7959,10 @@ class graphly extends EventEmitter {
                 .html(displayName.replace(this.labelReplace, ' '));
 
             // Update size of rect based on size of original div
-            let boundRect = parInfEl.node().getBoundingClientRect();
-            infoGroup.select('rect').attr('height', boundRect.height);
+            if (parInfEl.node() !== null) {
+                let boundRect = parInfEl.node().getBoundingClientRect();
+                infoGroup.select('rect').attr('height', boundRect.height);
+            }
 
             // check amount of elements and calculate offset
             let offset = 21 + infoGroup.selectAll('text').size() *20;

@@ -53,10 +53,17 @@ function generateRandomData() {
     data['parameter1'] = [1, 2, 3, 4, 5, 6, 7, 8].reverse();
     data['parameter2'] = [1, 2, 3, 4, 5, 6, 7, 8];
     data['parameter3'] = [0.1, 1, 10, 100, 1000, 10000, 1000000, 10000000];
+    data['parameter4'] = [1, 6, 3, 4, 2, 6, 12, 8];
 
-    overlayData['parameter1'] = [1, 3, 6, 7].reverse();
-    overlayData['parameter2'] = [1, 3, 6, 7];
-    overlayData['type'] = [1, 2, 1, 2];
+    overlayData['collection1'] = {
+        parameter1: [1, 3, 6, 7].reverse(),
+        parameter2: [1, 3, 6, 7],
+        type: [1, 2, 1, 2],
+    };
+    overlayData['collection2'] = {
+        parameter1: [1, 3],
+        parameter2: [1, 3].reverse(),
+    }
 }
 
 
@@ -77,27 +84,43 @@ var filterManager = new FilterManager({
 rectangle, rectangle_empty, circle, circle_empty, plus, x, triangle, triangle_empty
 */
 var overlaySettings = {
-    keyParameter: 'type',
-    typeDefinition: [
-        {
-            match: function(val){return val === 1},
-            name: 'Type 1',
-            style: {
-                symbol: 'rectangle_empty',
-                size: 20,
-                color: [0, 0, 1.0, 0.8],
+    collection1: {
+        keyParameter: 'type',
+        typeDefinition: [
+            {
+                match: function(val){return val === 1},
+                name: 'Type 1',
+                style: {
+                    symbol: 'rectangle_empty',
+                    size: 20,
+                    color: [0, 0, 1.0, 0.8],
+                }
+            },
+            {
+                match: function(val){return val === 2},
+                name: 'Type 2',
+                style: {
+                    symbol: 'circle_empty',
+                    size: 20,
+                    color: [0, 1.0, 0.2, 0.9],
+                }
             }
-        },
-        {
-            match: function(val){return val === 2},
-            name: 'Type 2',
-            style: {
-                symbol: 'circle_empty',
-                size: 20,
-                color: [0, 1.0, 0.2, 0.9],
-            }
-        }
-    ]
+        ]
+    },
+    collection2: {
+        keyParameter: 'parameter2',
+        typeDefinition: [
+            {
+                match: function(){return true},
+                name: 'Type 1',
+                style: {
+                    symbol: 'circle_empty',
+                    size: 20,
+                    color: [0, 0, 1.0, 0.8],
+                }
+            },
+        ]
+    }
 };
 
 
