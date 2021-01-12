@@ -52,7 +52,7 @@ function generateRandomData() {
     }*/
     data['parameter1'] = [1, 2, 3, 4, 5, 6, 7, 8].reverse();
     data['parameter2'] = [1, 2, 3, 4, 5, 6, 7, 8];
-    data['parameter3'] = [NaN, 1, NaN, 100, 1000, 10000, 1000000, 10000000];
+    data['parameter3'] = [0.1, 1, 10, 100, 1000, 10000, 1000000, 10000000];
     data['parameter4'] = [1, 6, 3, 4, 2, 6, 12, 8];
 
     overlayData['collection1'] = {
@@ -92,7 +92,7 @@ var overlaySettings = {
                 match: function(val){return val === 1},
                 name: 'Type 1',
                 style: {
-                    symbol: 'rhombus',
+                    symbol: 'rectangle_empty',
                     size: 20,
                     color: [0, 0, 1.0, 0.8],
                 }

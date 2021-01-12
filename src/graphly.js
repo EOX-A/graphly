@@ -6052,6 +6052,16 @@ class graphly extends EventEmitter {
 
                     const lp = overlayData[coll][yAxis].length;
 
+                    // Check also for filters to see if they apply
+                    let showDataY = null;
+                    if(this.filters.hasOwnProperty(yAxis)){
+                        showDataY = overlayData[coll][yAxis].map(this.filters[yAxis]);
+                    }
+                    let showDataX = null;
+                    if(this.filters.hasOwnProperty(xAxis)){
+                        showDataX = overlayData[coll][xAxis].map(this.filters[xAxis]);
+                    }
+
                     for (let j=0;j<lp; j++) {
 
                         valY = overlayData[coll][yAxis][j];
@@ -6059,6 +6069,14 @@ class graphly extends EventEmitter {
 
                         // Skip "empty" values
                         if(Number.isNaN(valY) || Number.isNaN(valX)){
+                            continue;
+                        }
+
+                        // Skipped filtered values
+                        if(showDataX !== null && !showDataX[j]){
+                            continue;
+                        }
+                        if(showDataY !== null && !showDataY[j]){
                             continue;
                         }
 
