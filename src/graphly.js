@@ -6286,8 +6286,14 @@ class graphly extends EventEmitter {
             let renderValue = Number.MIN_SAFE_INTEGER;
             if(cAxis !== null){
                 rC = [1.0, 0.0, 0.0, constAlpha];
+                if(Number.isNaN(data[cAxis][j])) {
+                    if(!this.connectFilteredPoints){
+                        p_x = NaN;
+                        p_y = NaN;
+                    }
+                    continue;
+                }
                 renderValue = data[cAxis][j];
-                
             } else {
                 if(singleSettings){
                     rC = colorObj;
