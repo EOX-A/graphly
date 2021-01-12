@@ -1045,6 +1045,31 @@ class BatchDrawer {
                             discard;
                         }
                         fragmentColor = color_out;
+                    } else if(dotType == 8.0){
+
+                        // Rhombus
+                        float modDotSize = dotSize * 2.0;
+                        float borderSize = 0.1 * dotSize;
+                        if(borderSize<1.2){
+                            borderSize = 1.2;
+                        }
+                        borderSize = borderSize*2.0;
+
+                        vec2 m = (gl_PointCoord.xy)*modDotSize;
+
+                        m.x = m.x + 0.5;
+                        m.y = m.y + 0.5;
+
+                        if ( 
+                          !(m.x + m.y > (0.5*modDotSize)+borderSize) ||
+                          !(m.x - m.y < (0.5*modDotSize)-borderSize) ||
+                          !(m.x - m.y > (-0.5*modDotSize)+borderSize) ||
+                           (m.x + m.y > (1.5*modDotSize)-borderSize)
+                        ){
+                          discard;
+                        }
+                        
+                        fragmentColor = color_out;
                     }
 
                 }`;

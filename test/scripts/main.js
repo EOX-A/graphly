@@ -93,7 +93,7 @@ var overlaySettings = {
                 name: 'Type 1',
                 style: {
                     symbol: 'rhombus',
-                    size: 20,
+                    size: 14,
                     color: [0, 0, 1.0, 0.8],
                 }
             },
@@ -101,8 +101,8 @@ var overlaySettings = {
                 match: function(val){return val === 2},
                 name: 'Type 2',
                 style: {
-                    symbol: 'circle_empty',
-                    size: 20,
+                    symbol: 'circle',
+                    size: 8,
                     color: [0, 1.0, 0.2, 0.9],
                 }
             }

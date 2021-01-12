@@ -119,6 +119,7 @@ const dotType = {
     x: 5.0,
     triangle: 6.0,
     triangle_empty: 7.0,
+    rhombus: 8.0,
 };
 
 
