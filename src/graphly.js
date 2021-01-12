@@ -6037,6 +6037,16 @@ class graphly extends EventEmitter {
                     && overlayData[coll].hasOwnProperty(yAxis)
                     && overlayData[coll].hasOwnProperty(xAxis)){
 
+                    const oSetts = this.overlaySettings[coll]
+                    if (oSetts.hasOwnProperty('displayParameters')) {
+                        if (oSetts.displayParameters.indexOf(xAxis) === -1
+                            || oSetts.displayParameters.indexOf(yAxis) === -1) {
+                            // If config has displayParameters and current
+                            // parameters do not match skip this cycle
+                            continue;
+                        }
+                    }
+
                     const keyPar = this.overlaySettings[coll].keyParameter;
                     const typeDef = this.overlaySettings[coll].typeDefinition;
 
@@ -7098,25 +7108,44 @@ class graphly extends EventEmitter {
             if(this.overlaySettings !== false){
                 for (let coll in this.overlaySettings) {
                     // See if correct axis are visible to show overlay data
+                    // and if they are also defined as displayParameters
                     for (var i = 0; i < this.overlaySettings[coll].typeDefinition.length; i++) {
-                        const currDef = this.overlaySettings[coll].typeDefinition[i];
-                        const xMatch = (
+                        const oSetts = this.overlaySettings[coll];
+                        const currDef = oSetts.typeDefinition[i];
+                        let xMatch = (
                             this.overlayData.hasOwnProperty(coll)
                             && this.overlayData[coll].hasOwnProperty(this.renderSettings.xAxis)
                         );
+                        if (xMatch && oSetts.hasOwnProperty('displayParameters')) {
+                          xMatch = oSetts.displayParameters.indexOf(this.renderSettings.xAxis) != -1;
+                        }
                         let yMatch = false;
                         for (let parPos=0; parPos<yAxRen.length; parPos++){
                             if(this.overlayData.hasOwnProperty(coll)
                                 && this.overlayData[coll].hasOwnProperty(yAxRen[parPos])){
-                                yMatch = true;
-                                break;
+                                if (oSetts.hasOwnProperty('displayParameters')) {
+                                    if (oSetts.displayParameters.indexOf(yAxRen[parPos]) != -1) {
+                                        yMatch = true;
+                                        break;
+                                    }
+                                } else {
+                                    yMatch = true;
+                                    break;
+                                }
                             }
                         }
                         for (let parPos=0; parPos<y2AxRen.length; parPos++){
                             if(this.overlayData.hasOwnProperty(coll)
                                 && this.overlayData[coll].hasOwnProperty(y2AxRen[parPos])){
-                                yMatch = true;
-                                break;
+                                if (oSetts.hasOwnProperty('displayParameters')) {
+                                    if (oSetts.displayParameters.indexOf(y2AxRen[parPos]) != -1) {
+                                        yMatch = true;
+                                        break;
+                                    }
+                                } else {
+                                    yMatch = true;
+                                    break;
+                                }
                             }
                         }
                         if(xMatch && yMatch){
