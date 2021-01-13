@@ -5993,7 +5993,7 @@ class graphly extends EventEmitter {
         return value;
     }
 
-    renderOverlayPoints(xAxis, yAxis, plotY, yScale, leftYAxis) {
+    renderOverlayPoints(xAxis, yAxis, cAxis, plotY, yScale, leftYAxis) {
 
         let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
 
@@ -6039,8 +6039,8 @@ class graphly extends EventEmitter {
 
                     const oSetts = this.overlaySettings[coll]
                     if (oSetts.hasOwnProperty('displayParameters')) {
-                        if (oSetts.displayParameters.indexOf(xAxis) === -1
-                            || oSetts.displayParameters.indexOf(yAxis) === -1) {
+                        if (oSetts.displayParameters.indexOf(yAxis) === -1
+                            && (cAxis === null || oSetts.displayParameters.indexOf(cAxis) === -1)) {
                             // If config has displayParameters and current
                             // parameters do not match skip this cycle
                             continue;
@@ -6052,14 +6052,13 @@ class graphly extends EventEmitter {
 
                     const lp = overlayData[coll][yAxis].length;
 
-                    // Check also for filters to see if they apply
-                    let showDataY = null;
-                    if(this.filters.hasOwnProperty(yAxis)){
-                        showDataY = overlayData[coll][yAxis].map(this.filters[yAxis]);
-                    }
-                    let showDataX = null;
-                    if(this.filters.hasOwnProperty(xAxis)){
-                        showDataX = overlayData[coll][xAxis].map(this.filters[xAxis]);
+                    // Collect applicable filters
+                    var applicableFilters = {}
+                    for (let key in overlayData[coll]) {
+                        if (overlayData[coll].hasOwnProperty(key) &&
+                            this.filters.hasOwnProperty(key)) {
+                            applicableFilters[key] = this.filters[key];
+                        }
                     }
 
                     for (let j=0;j<lp; j++) {
@@ -6072,11 +6071,16 @@ class graphly extends EventEmitter {
                             continue;
                         }
 
-                        // Skipped filtered values
-                        if(showDataX !== null && !showDataX[j]){
-                            continue;
+                        // Apply filters
+                        let skipRecord = false;
+                        for (let key in applicableFilters) {
+                            if (applicableFilters.hasOwnProperty(key)
+                                && !applicableFilters[key](overlayData[coll][key][j])) {
+                                skipRecord = true;
+                                break;
+                            }
                         }
-                        if(showDataY !== null && !showDataY[j]){
+                        if (skipRecord) {
                             continue;
                         }
 
@@ -7122,6 +7126,20 @@ class graphly extends EventEmitter {
                 this.addParameterLabel(idY2, infoGroup, parInfEl, yPos, 'right', parPos);
             }
 
+            // color axis parameters
+            let cAxRen = this.renderSettings.colorAxis[yPos];
+            let cAx2Ren = this.renderSettings.colorAxis2[yPos];
+
+            let _matchAxisParameter = function (parameters, data, allowedParameters) {
+                for (let i=0; i<parameters.length; i++){
+                    if (data.hasOwnProperty(parameters[i])
+                        && allowedParameters.indexOf(parameters[i]) != -1){
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             // Add possible overlay labels
             if(this.overlaySettings !== false){
                 for (let coll in this.overlaySettings) {
@@ -7130,41 +7148,18 @@ class graphly extends EventEmitter {
                     for (var i = 0; i < this.overlaySettings[coll].typeDefinition.length; i++) {
                         const oSetts = this.overlaySettings[coll];
                         const currDef = oSetts.typeDefinition[i];
-                        let xMatch = (
+                        const xMatch = (
                             this.overlayData.hasOwnProperty(coll)
                             && this.overlayData[coll].hasOwnProperty(this.renderSettings.xAxis)
                         );
-                        if (xMatch && oSetts.hasOwnProperty('displayParameters')) {
-                          xMatch = oSetts.displayParameters.indexOf(this.renderSettings.xAxis) != -1;
-                        }
-                        let yMatch = false;
-                        for (let parPos=0; parPos<yAxRen.length; parPos++){
-                            if(this.overlayData.hasOwnProperty(coll)
-                                && this.overlayData[coll].hasOwnProperty(yAxRen[parPos])){
-                                if (oSetts.hasOwnProperty('displayParameters')) {
-                                    if (oSetts.displayParameters.indexOf(yAxRen[parPos]) != -1) {
-                                        yMatch = true;
-                                        break;
-                                    }
-                                } else {
-                                    yMatch = true;
-                                    break;
-                                }
-                            }
-                        }
-                        for (let parPos=0; parPos<y2AxRen.length; parPos++){
-                            if(this.overlayData.hasOwnProperty(coll)
-                                && this.overlayData[coll].hasOwnProperty(y2AxRen[parPos])){
-                                if (oSetts.hasOwnProperty('displayParameters')) {
-                                    if (oSetts.displayParameters.indexOf(y2AxRen[parPos]) != -1) {
-                                        yMatch = true;
-                                        break;
-                                    }
-                                } else {
-                                    yMatch = true;
-                                    break;
-                                }
-                            }
+                        let yMatch = !oSetts.hasOwnProperty('displayParameters');
+                        if(xMatch && !yMatch && this.overlayData.hasOwnProperty(coll)){
+                              yMatch = (
+                                  _matchAxisParameter(yAxRen, this.overlayData[coll], oSetts.displayParameters)
+                                  || _matchAxisParameter(y2AxRen, this.overlayData[coll], oSetts.displayParameters)
+                                  || _matchAxisParameter(cAxRen, this.overlayData[coll], oSetts.displayParameters)
+                                  || _matchAxisParameter(cAx2Ren, this.overlayData[coll], oSetts.displayParameters)
+                              );
                         }
                         if(xMatch && yMatch){
                             this.addOverlayLabel(currDef, infoGroup, parInfEl);
@@ -8176,7 +8171,7 @@ class graphly extends EventEmitter {
                     }
                 }
                 // Check also if overlayData needs to be rendered
-                this.renderOverlayPoints(idX, idY, plotY, currYScale, leftYAxis);
+                this.renderOverlayPoints(idX, idY, idCS, plotY, currYScale, leftYAxis);
             }
         }
         this.endTiming('renderParameter:'+idY);
