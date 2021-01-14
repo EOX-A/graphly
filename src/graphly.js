@@ -6039,7 +6039,8 @@ class graphly extends EventEmitter {
 
                     const oSetts = this.overlaySettings[coll]
                     if (oSetts.hasOwnProperty('displayParameters')) {
-                        if (oSetts.displayParameters.indexOf(yAxis) === -1
+                        if (oSetts.displayParameters.indexOf(xAxis) === -1
+                            && oSetts.displayParameters.indexOf(yAxis) === -1
                             && (cAxis === null || oSetts.displayParameters.indexOf(cAxis) === -1)) {
                             // If config has displayParameters and current
                             // parameters do not match skip this cycle
@@ -7159,6 +7160,7 @@ class graphly extends EventEmitter {
                                   || _matchAxisParameter(y2AxRen, this.overlayData[coll], oSetts.displayParameters)
                                   || _matchAxisParameter(cAxRen, this.overlayData[coll], oSetts.displayParameters)
                                   || _matchAxisParameter(cAx2Ren, this.overlayData[coll], oSetts.displayParameters)
+                                  || _matchAxisParameter([this.renderSettings.xAxis], this.overlayData[coll], oSetts.displayParameters)
                               );
                         }
                         if(xMatch && yMatch){
