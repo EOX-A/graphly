@@ -55,7 +55,15 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
         {"x": c.x-s/2, "y": c.y+s/2}
     ];
 
-    let triangleFunction = d3.svg.line()
+    let diamondData = [
+        {"x": c.x-s/2, "y": c.y},
+        {"x": c.x, "y": c.y+s/2},
+        {"x": c.x+s/2, "y": c.y},
+        {"x": c.x, "y": c.y-s/2},
+        {"x": c.x-s/2, "y": c.y},
+    ];
+
+    let polygonFunction = d3.svg.line()
          .x(function(d) { return d.x; })
          .y(function(d) { return d.y; })
          .interpolate("linear");
@@ -130,14 +138,28 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
             break;
         case 'triangle':
             element = el.append("path")
-                .attr("d", triangleFunction(triangleData))
+                .attr("d", polygonFunction(triangleData))
                 .attr("stroke-width", sW)
                 .attr("stroke", color)
                 .attr("fill", color);
             break;
         case 'triangle_empty':
             element = el.append("path")
-                .attr("d", triangleFunction(triangleData))
+                .attr("d", polygonFunction(triangleData))
+                .attr("stroke-width", sW)
+                .attr("stroke", color)
+                .attr("fill", "none");
+            break;
+        case 'diamond':
+            element = el.append("path")
+                .attr("d", polygonFunction(diamondData))
+                .attr("stroke-width", sW)
+                .attr("stroke", color)
+                .attr("fill", color);
+            break;
+        case 'diamond_empty':
+            element = el.append("path")
+                .attr("d", polygonFunction(diamondData))
                 .attr("stroke-width", sW)
                 .attr("stroke", color)
                 .attr("fill", "none");

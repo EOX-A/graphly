@@ -880,6 +880,7 @@ class BatchDrawer {
                `#version 300 es
                 #define PI 3.14159265359
                 #define TWO_PI 6.28318530718
+                #define SQRT_TWO 1.414213562373
 
                 precision mediump float;
                 
@@ -1026,6 +1027,7 @@ class BatchDrawer {
                         if( abs(m.x)*2.0 > m.y ) {
                             discard;
                         }
+
                         fragmentColor = color_out;
 
                     } else if(dotType == 7.0){
@@ -1044,7 +1046,44 @@ class BatchDrawer {
                              (color.a >= 0.0) ) {
                             discard;
                         }
+
                         fragmentColor = color_out;
+
+                    } else if(dotType == 8.0){
+
+                        // Rhombus
+                        vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                        float l = abs(m.x) + abs(m.y);
+
+                        float outerBound = 0.5;
+
+                        if(color.a > 0.0 && l > outerBound) {
+                            discard;
+                        }
+
+                        fragmentColor = color_out;
+
+                    } else if(dotType == 9.0){
+
+                        // Empty Rhombus
+                        vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+                        float l = abs(m.x) + abs(m.y);
+
+                        float strokeWidth = 1.2 / dotSize;
+                        if(strokeWidth < 0.1){
+                            strokeWidth = 0.1;
+                        }
+                        //strokeWidth *= SQRT_TWO
+
+                        float outerBound = 0.5;
+                        float innerBound = outerBound - strokeWidth;
+
+                        if(color.a > 0.0 && (l > outerBound || l < innerBound)) {
+                            discard;
+                        }
+
+                        fragmentColor = color_out;
+
                     }
 
                 }`;
@@ -1238,6 +1277,7 @@ class BatchDrawer {
 
                 #define PI 3.14159265359
                 #define TWO_PI 6.28318530718
+                #define SQRT_TWO 1.414213562373
 
                 precision mediump float;
 
@@ -1403,10 +1443,46 @@ class BatchDrawer {
                             discard;
                         }
                         gl_FragColor = color_out;
+
+                    } else if(dotType == 8.0){
+
+                        // Rhombus
+                        vec2 l = (gl_PointCoord.xy - vec2(0.5, 0.5));
+                        vec2 m = vec2(abs(l.x + l.y), abs(l.x - l.y));
+
+                        float outerBound = 0.5;
+
+                        if(color.a > 0.0 && (m.x > outerBound || m.y > outerBound)) {
+                            discard;
+                        }
+
+                        fragmentColor = color_out;
+
+                    } else if(dotType == 9.0){
+
+                        // Empty Rhombus
+                        vec2 l = (gl_PointCoord.xy - vec2(0.5, 0.5));
+                        vec2 m = vec2(abs(l.x + l.y), abs(l.x - l.y));
+
+                        float strokeWidth = 1.2 / dotSize;
+                        if(strokeWidth < 0.1){
+                            strokeWidth = 0.1;
+                        }
+                        //strokeWidth *= SQRT_TWO
+
+                        float outerBound = 0.5;
+                        float innerBound = outerBound - strokeWidth;
+
+                        if(color.a > 0.0 && (
+                          (m.x > outerBound || m.y > outerBound) ||
+                          (m.x < innerBound && m.y < innerBound)
+                        )) {
+                            discard;
+                        }
+
+                        fragmentColor = color_out;
+
                     }
-
-
-
                 }`;
 
             dotVertexSource = 
@@ -1600,4 +1676,4 @@ class BatchDrawer {
     }
 }
 
-module.exports = BatchDrawer; 
+module.exports = BatchDrawer;

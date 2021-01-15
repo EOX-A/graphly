@@ -119,6 +119,8 @@ const dotType = {
     x: 5.0,
     triangle: 6.0,
     triangle_empty: 7.0,
+    diamond : 8.0,
+    diamond_empty: 9.0,
 };
 
 
@@ -6693,6 +6695,8 @@ class graphly extends EventEmitter {
                         symbol = 'rectangle_empty'
                     } else if(symbol === 'triangle'){
                         symbol = 'triangle_empty'
+                    } else if(symbol === 'diamond'){
+                        symbol = 'diamond_empty'
                     }
                     let sym = defaultFor(dotType[symbol], 2.0);
                     this.batchDrawer.addDot(
@@ -7469,6 +7473,8 @@ class graphly extends EventEmitter {
                 { name:'X', value: 'x'},
                 { name:'Triangle', value: 'triangle'},
                 { name:'Triangle outline', value: 'triangle_empty'}
+                //{ name:'Diamond', value: 'diamond'},
+                //{ name:'Diamond outline', value: 'diamond_empty'},
             ];
 
 
