@@ -7472,9 +7472,9 @@ class graphly extends EventEmitter {
                 { name:'Plus', value: 'plus'},
                 { name:'X', value: 'x'},
                 { name:'Triangle', value: 'triangle'},
-                { name:'Triangle outline', value: 'triangle_empty'}
-                //{ name:'Diamond', value: 'diamond'},
-                //{ name:'Diamond outline', value: 'diamond_empty'},
+                { name:'Triangle outline', value: 'triangle_empty'},
+                { name:'Diamond', value: 'diamond'},
+                { name:'Diamond outline', value: 'diamond_empty'}
             ];
 
 
