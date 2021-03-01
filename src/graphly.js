@@ -6102,6 +6102,10 @@ class graphly extends EventEmitter {
 
                         const currType = overlayData[coll][keyPar][j];
                         const overlayType = typeDef.find((item) => item.match(currType));
+                        if(overlayType.hasOwnProperty('active') && !overlayType.active){
+                          continue;
+                        }
+
                         let rC = defaultColor;
 
                         if (typeof overlayType !== 'undefined' && overlayType.hasOwnProperty('style')) {
@@ -7875,10 +7879,21 @@ class graphly extends EventEmitter {
         if (typeof equalLabel !== 'undefined'){
             return;
         }
-
-        parDiv.append('div')
+        const textDiv = parDiv.append('div')
             .style('display', 'inline')
+            .style('cursor', 'pointer')
             .html(displayName);
+
+        textDiv.on('click', () => {
+          if(typedef.hasOwnProperty('active')){
+            typedef.active = !typedef.active;
+          } else {
+            typedef.active = false;
+          }
+          this.emit('axisChange');
+          this.createParameterInfo();
+          this.renderData();
+        });
 
         // Update size of rect based on size of original div
         if ( parInfEl.node() !== null ) {
@@ -7894,6 +7909,11 @@ class graphly extends EventEmitter {
             .attr('y', offset)
             .attr('x', 153)
             .text(displayName);
+
+        if(typedef.hasOwnProperty('active') && !typedef.active){
+          textDiv.style('text-decoration', 'line-through');
+          labelText.attr('text-decoration', 'line-through')
+        }
 
         let labelBbox = labelText.node().getBBox();
 

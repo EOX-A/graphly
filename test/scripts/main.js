@@ -95,7 +95,8 @@ var overlaySettings = {
                     symbol: 'rectangle_empty',
                     size: 20,
                     color: [0, 0, 1.0, 0.8],
-                }
+                },
+                active: false,
             },
             {
                 match: function(val){return val === 2},
