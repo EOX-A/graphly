@@ -2818,7 +2818,7 @@ class graphly extends EventEmitter {
             .attr('width', this.width-20)
             .attr('height', (this.margin.bottom+this.subAxisMarginX))
             .attr('transform', 'translate(' + 0 + ',' + (this.height) + ')')
-            .style('visibility', 'hidden')
+            .attr('fill', 'none')
             .attr('pointer-events', 'all');
 
         if(this.debug){
@@ -3232,7 +3232,7 @@ class graphly extends EventEmitter {
                     'translate(' + -(this.margin.left+this.subAxisMarginY) + 
                     ',' + ((heighChunk*plotY)+20) + ')'
                 )
-                .style('visibility', 'hidden')
+                .attr('fill', 'none')
                 .attr('pointer-events', 'all');
 
                 if(this.debug){
@@ -3251,7 +3251,7 @@ class graphly extends EventEmitter {
                     'translate(' + this.width + 
                     ',' + ((heighChunk*plotY)+20) + ')'
                 )
-                .style('visibility', 'hidden')
+                .attr('fill', 'none')
                 .attr('pointer-events', 'all');
 
             if(this.debug){
@@ -5677,6 +5677,7 @@ class graphly extends EventEmitter {
                     'translate(' + -(this.margin.left+this.subAxisMarginY) + 
                     ',' + ((heighChunk*yPos)+20) + ')'
                 )
+                .attr('fill', 'none')
                 .attr('pointer-events', 'all');
 
             this.el.select('#zoomY2Box'+yPos)
@@ -5687,6 +5688,7 @@ class graphly extends EventEmitter {
                     'translate(' + this.width + 
                     ',' + ((heighChunk*yPos)+20) + ')'
                 )
+                .attr('fill', 'none')
                 .attr('pointer-events', 'all');
         }
 
