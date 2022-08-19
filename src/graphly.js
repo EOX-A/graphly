@@ -86,6 +86,7 @@
 *           id.
 * @property {String} [errorParameter] Identifier of other parameter that represents
 *           the error value of the current parameter.
+* @property {boolean} [errorParameterActive] Defines if errorParameter is enabled.
 * @property {Object} [periodic] Can be set when parameter has periodic pattern.
 *           The object must have the 'period' value and can have a possible
 *           offset. For example longitude values from -180 to 180 would have 360
@@ -3334,8 +3335,13 @@ class graphly extends EventEmitter {
                         const paramProps = [
                             'alpha', 'color', 'symbol', 'lineConnect',
                             'colorscale', 'regression', 'scaleType',
-                            'errorParameter', 'size',
+                            'errorParameter', 'errorParameterActive', 'size',
                         ];
+                        // Special check for error parameter
+                        if(this.dataSettings[keys[i]].hasOwnProperty('errorParameter')
+                           && !this.dataSettings[keys[i]].hasOwnProperty('errorParameterActive')) {
+                            this.dataSettings[keys[i]].errorParameterActive = true;
+                        }
                         paramProps.forEach(prop => {
                             if(this.dataSettings[keys[i]].hasOwnProperty(prop)) {
                                 defaultValues[prop] = this.dataSettings[keys[i]][prop];
@@ -6255,7 +6261,9 @@ class graphly extends EventEmitter {
 
             let cA = this.dataSettings[cAxis];
             if (parSett){
-                if(parSett.hasOwnProperty('errorParameter')  && !Number.isNaN(min_error_y)) {
+                if(parSett.hasOwnProperty('errorParameter')
+                   && parSett.errorParameterActive
+                   && !Number.isNaN(min_error_y)) {
                     // If an error parameter has been configured we show error
                     // lines
                     if (data.hasOwnProperty(parSett.errorParameter)) {
@@ -7715,7 +7723,6 @@ class graphly extends EventEmitter {
             .attr('for', 'lineConnect')
             .text('Line connect');
             
-
         parSetEl
             .append('input')
             .attr('id', 'lineConnect')
@@ -7728,6 +7735,25 @@ class graphly extends EventEmitter {
                     !defaultFor(dataSettings.lineConnect, false);
                 that.addApply(dataSettings);
             });
+        
+        if (dataSettings.hasOwnProperty('errorParameterActive')) {
+            parSetEl
+                .append('label')
+                .attr('for', 'errorParameterActive')
+                .text('Show error');
+            parSetEl
+                .append('input')
+                .attr('id', 'errorParameterActive')
+                .attr('type', 'checkbox')
+                .property('checked', 
+                    defaultFor(dataSettings.errorParameterActive, false)
+                )
+                .on('change', function(){
+                    that.settingsToApply.errorParameterActive = 
+                        !defaultFor(dataSettings.errorParameterActive, false);
+                    that.addApply(dataSettings);
+                });
+        }
 
         if(this.enableFit){
             parSetEl
