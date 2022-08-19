@@ -6259,7 +6259,7 @@ class graphly extends EventEmitter {
                     // If an error parameter has been configured we show error
                     // lines
                     if (data.hasOwnProperty(parSett.errorParameter)) {
-                        let yErrorVal = data[parSett.errorParameter][j]*50000;
+                        let yErrorVal = data[parSett.errorParameter][j];
                         let maxError = yScale(valY + yErrorVal);
                         let minError = yScale(valY - yErrorVal);
                         // "whiskers" for error
