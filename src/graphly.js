@@ -3324,11 +3324,24 @@ class graphly extends EventEmitter {
                 }
                 for (let j = 0; j < parIds.length; j++) {
                     if(!this.dataSettings[keys[i]].hasOwnProperty(parIds[j])) {
-                        this.dataSettings[keys[i]][parIds[j]] = {
+                        let defaultValues = {
                             symbol: 'circle',
                             color: [Math.random(), Math.random(), Math.random()],
                             alpha: this.defaultAlpha
-                        };
+                        }
+                        // If there are already style properties defined we pass
+                        // them to the created data identifier properties
+                        const paramProps = [
+                            'alpha', 'color', 'symbol', 'lineConnect',
+                            'colorscale', 'regression', 'scaleType',
+                            'errorParameter', 'size',
+                        ];
+                        paramProps.forEach(prop => {
+                            if(this.dataSettings[keys[i]].hasOwnProperty(prop)) {
+                                defaultValues[prop] = this.dataSettings[keys[i]][prop];
+                            }
+                        })
+                        this.dataSettings[keys[i]][parIds[j]] = defaultValues;
                     }
                 }
 
