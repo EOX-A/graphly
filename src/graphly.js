@@ -84,6 +84,8 @@
 *           using value MJD2000_S.
 * @property {String} [displayName] String to use for labels instead of parameter
 *           id.
+* @property {String} [errorParameter] Identifier of other parameter that represents
+*           the error value of the current parameter.
 * @property {Object} [periodic] Can be set when parameter has periodic pattern.
 *           The object must have the 'period' value and can have a possible
 *           offset. For example longitude values from -180 to 180 would have 360
@@ -5950,7 +5952,7 @@ class graphly extends EventEmitter {
     renderPoints(data, xAxis, yAxis, cAxis, plotY, yScale, leftYAxis, updateReferenceCanvas) {
 
         let lp;
-        let p_x, p_y;
+        let p_x, p_y, min_error_y, max_error_y;
         yScale = yScale[plotY];
 
         let combPars = this.renderSettings.combinedParameters;
@@ -6239,10 +6241,108 @@ class graphly extends EventEmitter {
             }
 
             let cA = this.dataSettings[cAxis];
-
             if (parSett){
+                if(parSett.hasOwnProperty('errorParameter')  && !Number.isNaN(min_error_y)) {
+                    // If an error parameter has been configured we show error
+                    // lines
+                    if (data.hasOwnProperty(parSett.errorParameter)) {
+                        let yErrorVal = data[parSett.errorParameter][j]*50000;
+                        let maxError = yScale(valY + yErrorVal);
+                        let minError = yScale(valY - yErrorVal);
+                        // "whiskers" for error
+                        /*
+                        this.batchDrawer.addLine(
+                            x, y, x, maxError, (1.5*this.resFactor),
+                            rC[0], rC[1], rC[2], 0.5,
+                            renderValue
+                        );
+                        this.batchDrawer.addLine(
+                            x-5, maxError, x+5, maxError, (1.5*this.resFactor),
+                            rC[0], rC[1], rC[2], 0.5,
+                            renderValue
+                        );
+                        this.batchDrawer.addLine(
+                            x, y, x, minError, (1.5*this.resFactor),
+                            rC[0], rC[1], rC[2], 0.5,
+                            renderValue
+                        );
+                        this.batchDrawer.addLine(
+                            x-5, minError, x+5, minError, (1.5*this.resFactor),
+                            rC[0], rC[1], rC[2], 0.5,
+                            renderValue
+                        );
+                        */
 
-                 if(parSett.hasOwnProperty('lineConnect') &&
+
+                        // Top and bottom line for error
+                        /*
+                        if (!Number.isNaN(p_x)) {
+                            this.batchDrawer.addLine(
+                                p_x, min_error_y, x, maxError, (1.5*this.resFactor),
+                                rC[0], rC[1], rC[2], 0.5,
+                                renderValue
+                            );
+                            this.batchDrawer.addLine(
+                                p_x, max_error_y, x, minError, (1.5*this.resFactor),
+                                rC[0], rC[1], rC[2], 0.5,
+                                renderValue
+                            );
+                        }
+                        min_error_y = maxError;
+                        max_error_y = minError;
+                        */
+
+                        // Fill method NN
+                        if (!Number.isNaN(min_error_y) && !Number.isNaN(p_x)) {
+                            // Lets check pixel distanze to previous point
+                            let stepSize = x - p_x;
+                            // Mid
+                            this.batchDrawer.addLine(
+                                (p_x+stepSize/2), maxError, (p_x+stepSize/2), minError, (stepSize*this.resFactor),
+                                rC[0], rC[1], rC[2], 0.5,
+                                renderValue
+                            );
+                        }
+
+                        // TODO: Fill method pixel based
+                        /*
+                        if (!Number.isNaN(min_error_y) && typeof p_x !== 'undefined' && !Number.isNaN(p_x)) {
+                            let stepX = x - p_x;
+                            const xAxisRange = this.xScale.range();
+                            // Only draw if inside visible canvas
+                            if(x > xAxisRange[0] && x <= xAxisRange[1]+1){
+                                if (stepX > 1){
+                                    let lastPos = null;
+                                    for (let xs=p_x; xs<x-1; xs++) {
+                                        this.batchDrawer.addLine(
+                                            xs+0.5, minError, xs+0.5, maxError, 1,
+                                            rC[0], rC[1], rC[2], 0.5,
+                                            renderValue
+                                        );
+                                        lastPos = xs;
+                                    }
+                                    const lastPosDiff = x - lastPos;
+                                    if (lastPosDiff > 0) {
+                                        // Add final line smaller then 1 to fill gap to current point
+                                        this.batchDrawer.addLine(
+                                            lastPos+(lastPosDiff/2), minError, lastPos+(lastPosDiff/2), maxError, lastPosDiff,
+                                            rC[0], rC[1], rC[2], 0.5,
+                                            // 0, 255, 0, 0.5,
+                                            renderValue
+                                        );
+                                    }
+                                } else {
+                                    // TODO: calculate average of all values
+                                }
+                            }
+                        }
+                        */
+                        min_error_y = maxError;
+                        max_error_y = minError;
+                        
+                    }
+                }
+                if(parSett.hasOwnProperty('lineConnect') &&
                     parSett.lineConnect && j>0 && !Number.isNaN(p_x)){
 
                     // Check if using ordinal scale (multiple
