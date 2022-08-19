@@ -6262,8 +6262,8 @@ class graphly extends EventEmitter {
                         let yErrorVal = data[parSett.errorParameter][j];
                         let maxError = yScale(valY + yErrorVal);
                         let minError = yScale(valY - yErrorVal);
+                        
                         // "whiskers" for error
-                        /*
                         this.batchDrawer.addLine(
                             x, y, x, maxError, (1.5*this.resFactor),
                             rC[0], rC[1], rC[2], 0.5,
@@ -6284,7 +6284,7 @@ class graphly extends EventEmitter {
                             rC[0], rC[1], rC[2], 0.5,
                             renderValue
                         );
-                        */
+                        
 
 
                         // Top and bottom line for error
@@ -6306,6 +6306,7 @@ class graphly extends EventEmitter {
                         */
 
                         // Fill method NN
+                        /*
                         if (!Number.isNaN(min_error_y) && !Number.isNaN(p_x)) {
                             // Lets check pixel distanze to previous point
                             let stepSize = x - p_x;
@@ -6316,6 +6317,7 @@ class graphly extends EventEmitter {
                                 renderValue
                             );
                         }
+                        */
 
                         // TODO: Fill method pixel based
                         /*
