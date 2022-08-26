@@ -968,12 +968,13 @@ class FilterManager extends EventEmitter {
             {}, this.filters, this.boolFilters, this.maskFilters
         );
         for (var f in currentFilters){
-            var filter = currentFilters[f];
             // Check if data actually has filter parameter
             if(!data.hasOwnProperty(f)){
                 continue;
             }
             var currentDataset = data[f];
+            var filter = currentFilters[f];
+            var selectionMask = null;
             for (var p in data){
                 var applicableFilter = true;
                 if(this.filterSettings.hasOwnProperty('filterRelation')){
@@ -1009,9 +1010,10 @@ class FilterManager extends EventEmitter {
                 }
 
                 if(applicableFilter){
-                    data[p] = data[p].filter((e,i)=>{
-                        return filter(currentDataset[i]);
-                    });
+                    if (selectionMask == null) {
+                        selectionMask = currentDataset.map(filter);
+                    }
+                    data[p] = data[p].filter((e,i) => selectionMask[i]);
                 }
             }
         }
