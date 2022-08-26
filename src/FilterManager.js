@@ -235,11 +235,10 @@ class FilterManager extends EventEmitter {
         this._filtersChanged();
     }
 
-    _createMaskFilterElement(d, data) {
+    _createMaskFilterElement(id, data) {
 
         var height = 252;
         var width = 120;
-        var mP = this.maskParameter[d];
 
         var div = this.el.append('div')
                 .attr('class', 'filterContainer maskfilter')
@@ -257,19 +256,19 @@ class FilterManager extends EventEmitter {
                 * @event module:graphly.FilterManager#removeFilter
                 * @property {String} id - Provides identifier of parameter
                 */
-                this.emit('removeFilter', d);
+                this.emit('removeFilter', id);
             });
 
-        var label = d.replace(this.labelReplace, ' ');
+        var label = id.replace(this.labelReplace, ' ');
         let uom;
-        if(this.dataSettings[d].hasOwnProperty('uom') &&
-           this.dataSettings[d].uom !== null){
-            uom = this.dataSettings[d].uom;
+        if(this.dataSettings[id].hasOwnProperty('uom') &&
+            this.dataSettings[id].uom !== null) {
+            uom = this.dataSettings[id].uom;
         }
         // Check for modified uom
-        if(this.dataSettings[d].hasOwnProperty('modifiedUOM') &&
-           this.dataSettings[d].modifiedUOM !== null){
-            uom = this.dataSettings[d].modifiedUOM;
+        if(this.dataSettings[id].hasOwnProperty('modifiedUOM') &&
+            this.dataSettings[id].modifiedUOM !== null) {
+            uom = this.dataSettings[id].modifiedUOM;
         }
 
         if(typeof uom !== 'undefined') {
@@ -287,23 +286,29 @@ class FilterManager extends EventEmitter {
             .html(label);
 
         var updateFilter = function () {
-            var mask = BitwiseInt.fromBoolArray(mP.enabled);
-            var selection = BitwiseInt.fromBoolArray(mP.selection).and(mask);
+            var maskParameter = this.maskParameter[id];
+            var mask = BitwiseInt.fromBoolArray(maskParameter.enabled);
+            var selection = BitwiseInt.fromBoolArray(maskParameter.selection).and(mask);
             if (mask.toNumber() != 0) {
-                this.maskFilters[d] = function (value) {
+                this.maskFilters[id] = function (value) {
                     return BitwiseInt.fromNumber(value).and(mask).equals(selection);
                 };
             } else {
-                delete this.maskFilters[d];
+                // FIXME: filter deletion does not currently clear the applied
+                // using always-true filter instead
+                //delete this.maskFilters[id];
+                this.maskFilters[id] = function (value) {return true;};
             }
         }.bind(this);
 
+        var mP = this.maskParameter[id];
+
         if(!mP.hasOwnProperty('enabled')) {
-            mP.enabled = BitwiseInt.fromNumber(0).toBooleanArray(mP.values.length);
+            mP.enabled = BitwiseInt.fromNumber(0).toBoolArray(mP.values.length);
         }
 
         if(!mP.hasOwnProperty('selection')) {
-            mP.selection = BitwiseInt.fromNumber(0).toBooleanArray(mP.values.length);
+            mP.selection = BitwiseInt.fromNumber(0).toBoolArray(mP.values.length);
         }
 
         updateFilter();
@@ -316,17 +321,18 @@ class FilterManager extends EventEmitter {
 
         subdivs.append('div')
             .attr('class', function(d,i){
-                if (!mP.enabled[i]){
+                if (!this.maskParameter[id].enabled[i]){
                     return 'editButton add';
                 }else{
                     return 'editButton remove';
                 }
-            })
+            }.bind(this))
             .attr('title','Enable filtering for this bit')
             .style('line-height', '10px')
             .style('display', 'inline')
             .on('click', function(dat,i){
-                mP.enabled[i] = !mP.enabled[i];
+                var maskParameter = this.maskParameter[id];
+                maskParameter.enabled[i] = !maskParameter.enabled[i];
                 updateFilter();
                 this._filtersChanged();
             }.bind(this));
@@ -336,28 +342,25 @@ class FilterManager extends EventEmitter {
                 .attr('title',function(d,i){ return d[1]; })
                 .style('display', 'inline')
                 .style('color', function(d,i){
-                    var color = '#000';
-                    if(!mP.enabled[i]){
-                        color = '#aaa';
-                    }
-                    return color;
-                })
+                    return this.maskParameter[id].enabled[i] ? '#000' : '#aaa';
+                }.bind(this))
                 .text(function(d) {
                     return d[0].replace(this.labelReplace, ' ');
                 }.bind(this))
             .append("input")
-                .property("checked", function(d,i){
-                    return mP.selection[i];
-                })
-                .property('disabled', function(d,i){
-                    return !mP.enabled[i];
-                })
+                .property("checked", function(d, i){
+                    return this.maskParameter[id].selection[i];
+                }.bind(this))
+                .property('disabled', function(d, i){
+                    return !this.maskParameter[id].enabled[i];
+                }.bind(this))
                 .attr('title','Checked equals 1, unchecked equals 0')
                 .attr("class", "maskinput")
                 .attr("type", "checkbox")
                 .attr("id", function(d) { return d[0]; })
                 .on('click', function(dat, i){
-                    mP.selection[i] = !mP.selection[i];
+                    var maskParameter = this.maskParameter[id];
+                    maskParameter.selection[i] = !maskParameter.selection[i];
                     updateFilter();
                     this._filtersChanged();
                 }.bind(this));
@@ -1122,4 +1125,3 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
     module.exports = FilterManager;
 else
     window.FilterManager = FilterManager;
-

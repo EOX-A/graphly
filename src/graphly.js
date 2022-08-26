@@ -147,10 +147,12 @@ let Choices = require('choices.js');
 
 let BatchDrawer = require('./BatchDraw.js');
 let FilterManager = require('./FilterManager.js');
+let BitwiseInt = require('./BitwiseInt.js');
 let canvg = require('./vendor/canvg.js');
 let colorscalesdef = require('colorscalesdef');
 
 global.FilterManager = FilterManager;
+global.BitwiseInt = BitwiseInt;
 
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
