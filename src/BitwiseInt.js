@@ -91,7 +91,14 @@ class BitwiseInt {
     * @param {BitwiseInt} that
     */
     equals(that) {
-        return this.lowPart == that.lowPart && this.highPart == that.highPart;
+        return this.lowPart === that.lowPart && this.highPart === that.highPart;
+    }
+
+    /**
+    * bitwise NOT
+    */
+    not() {
+        return new BitwiseInt(~this.lowPart, ~this.highPart);
     }
 
     /**
@@ -104,6 +111,112 @@ class BitwiseInt {
             this.highPart & that.highPart
         );
     }
+
+    /**
+    * bitwise OR
+    * @param {BitwiseInt} that
+    */
+    or(that) {
+        return new BitwiseInt(
+            this.lowPart | that.lowPart,
+            this.highPart | that.highPart
+        );
+    }
+
+    /**
+    * bitwise XOR
+    * @param {BitwiseInt} that
+    */
+    xor(that) {
+        return new BitwiseInt(
+            this.lowPart ^ that.lowPart,
+            this.highPart ^ that.highPart
+        );
+    }
+
+    /**
+    * bitwise left shift
+    * @param {Number} bits
+    */
+    shiftLeft(bits) {
+        if (bits === 0) {
+            return new BitwiseInt(this.lowPart, this.highPart);
+        }
+        if (bits < 0) {
+            return this.shiftRight(-bits);
+        }
+        var offset = BitwiseInt.LOW_BIT_SIZE;
+        if (bits >= offset) {
+            return new BitwiseInt(0, this.lowPart << (bits - offset));
+        }
+        return new BitwiseInt(
+            this.lowPart << bits,
+            this.highPart << bits | this.lowPart >> (offset - bits)
+        );
+    }
+
+    /**
+    * bitwise right shift
+    * @param {Number} bits
+    */
+    shiftRight(bits) {
+        if (bits === 0) {
+            return new BitwiseInt(this.lowPart, this.highPart);
+        }
+        if (bits < 0) {
+            return this.shiftLeft(-bits);
+        }
+        var offset = BitwiseInt.LOW_BIT_SIZE;
+        if (bits >= offset) {
+            return new BitwiseInt(this.highPart >> (bits - offset), 0);
+        }
+        return new BitwiseInt(
+            this.lowPart >> bits | this.highPart << (offset - bits),
+            this.highPart >> bits
+        );
+    }
+
+    /**
+     * get bit value as a Boolean
+     *
+     * @parmam {Number} bitIndex
+     */
+    getBit(bitIndex) {
+      if (bitIndex < 0 || bitIndex >= BitwiseInt.MAX_BIT_SIZE) {
+        return false;
+      }
+      var offset = BitwiseInt.LOW_BIT_SIZE;
+      if (bitIndex >= offset) {
+        return (this.highPart & (1 << (bitIndex - offset))) !== 0;
+      }
+      return (this.lowPart & (1 << bitIndex)) !== 0;
+    }
+
+    /**
+     * set new BitwiseInt with bit value set from a Boolean
+     *
+     * @parmam {Number} bitIndex
+     * @parmam {Boolean} value
+     */
+    setBit(bitIndex, value) {
+      if (bitIndex < 0 || bitIndex >= BitwiseInt.MAX_BIT_SIZE) {
+        return this;
+      }
+      var offset = BitwiseInt.LOW_BIT_SIZE;
+      var lowPart = this.lowPart;
+      var highPart = this.highPart;
+      if (bitIndex >= offset) {
+        highPart = _setBit(highPart, bitIndex - offset, value);
+      } else {
+        lowPart = _setBit(lowPart, bitIndex, value);
+      }
+      return new BitwiseInt(lowPart, highPart);
+    }
+}
+
+var _setBit = function (source, bitIndex, bitValue) {
+  var mask = 1 << bitIndex;
+  return bitValue ? source | mask : source & ~mask;
 }
 
 /* static attributes and methods */
@@ -113,6 +226,10 @@ BitwiseInt.LOW_MASK = 0x7fffffff;
 BitwiseInt.LOW_SIZE = 0x80000000;
 BitwiseInt.HIGH_MASK = 0x003fffff;
 BitwiseInt.HIGH_SIZE = 0x00400000;
+
+/* useful constants */
+BitwiseInt.ZERO = BitwiseInt.fromNumber(0);
+BitwiseInt.ONE = BitwiseInt.fromNumber(1);
 
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined')
