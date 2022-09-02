@@ -76,7 +76,7 @@ class FilterManager extends EventEmitter {
             parameters: [], enabled: []
         });
         this.choiceParameter = defaultFor(this.filterSettings.choiceParameter, []);
-        this.maskParameter = defaultFor(this.filterSettings.maskParameter, []);
+        this.maskParameter = defaultFor(this.filterSettings.maskParameter, {});
         this.originalMaskParameter = utils.iterationCopy(this.maskParameter);
 
         this.data = defaultFor(params.data, {});
@@ -130,6 +130,46 @@ class FilterManager extends EventEmitter {
         this._filtersChanged();
         this._renderFilters();
         this._filtersChanged();
+    }
+
+    /**
+    * Set a new range filter
+    */
+    _setFilter(id, lowerBound, upperBound) {
+        this.brushes[id] = [lowerBound, upperBound]
+        this.filters[id] = (value)=>{
+            return value <= upperBound && value >= lowerBound;
+        };
+    }
+
+    /**
+    * Set a new mask filter
+    */
+    _setMaskFilter(id, mask, selection) {
+        if (!this.maskParameter.hasOwnProperty(id)) {
+          // not a recognized mask parameter
+          return;
+        }
+        var maskParameter = this.maskParameter[id];
+        var size = maskParameter.values.length;
+        maskParameter.enabled = BitwiseInt.fromNumber(mask).toBoolArray(size);
+        maskParameter.selection = BitwiseInt.fromNumber(selection).toBoolArray(size);
+        this._updateMaskFilter(id);
+    }
+
+    /**
+    * Remove filter by id
+    */
+    _removeFilter(id) {
+      if (this.brushes.hasOwnProperty(id)) {
+          delete this.brushes[id];
+          delete this.filters[id];
+      } else if (this.maskParameter.hasOwnProperty(id)) {
+          delete this.maskParameter[id].enabled;
+          delete this.maskParameter[id].selection;
+          delete this.maskFilters[id];
+      }
+      // TODO: handle bool filters
     }
 
     _initData() {
@@ -285,36 +325,18 @@ class FilterManager extends EventEmitter {
             .style('width', height-20+'px')
             .html(label);
 
-        var updateFilter = function () {
-            var maskParameter = this.maskParameter[id];
-            var mask = BitwiseInt.fromBoolArray(maskParameter.enabled);
-            var selection = BitwiseInt.fromBoolArray(maskParameter.selection).and(mask);
-            if (mask.toNumber() != 0) {
-                this.maskFilters[id] = function (value) {
-                    return BitwiseInt.fromNumber(value).and(mask).equals(selection);
-                };
-            } else {
-                // FIXME: filter deletion does not currently clear the applied
-                // using always-true filter instead
-                //delete this.maskFilters[id];
-                this.maskFilters[id] = function (value) {return true;};
-            }
-        }.bind(this);
+        var maskParameter = this.maskParameter[id];
 
-        var mP = this.maskParameter[id];
-
-        if(!mP.hasOwnProperty('enabled')) {
-            mP.enabled = BitwiseInt.fromNumber(0).toBoolArray(mP.values.length);
+        if(!maskParameter.hasOwnProperty('enabled')) {
+            maskParameter.enabled = BitwiseInt.fromNumber(0).toBoolArray(maskParameter.values.length);
         }
 
-        if(!mP.hasOwnProperty('selection')) {
-            mP.selection = BitwiseInt.fromNumber(0).toBoolArray(mP.values.length);
+        if(!maskParameter.hasOwnProperty('selection')) {
+            maskParameter.selection = BitwiseInt.fromNumber(0).toBoolArray(maskParameter.values.length);
         }
-
-        updateFilter();
 
         var subdivs = div.selectAll("input")
-            .data(mP.values)
+            .data(maskParameter.values)
             .enter()
             .append('div')
             .attr('class', 'bitcontainer');
@@ -333,7 +355,7 @@ class FilterManager extends EventEmitter {
             .on('click', function(dat,i){
                 var maskParameter = this.maskParameter[id];
                 maskParameter.enabled[i] = !maskParameter.enabled[i];
-                updateFilter();
+                this._updateMaskFilter(id);
                 this._filtersChanged();
             }.bind(this));
 
@@ -361,10 +383,23 @@ class FilterManager extends EventEmitter {
                 .on('click', function(dat, i){
                     var maskParameter = this.maskParameter[id];
                     maskParameter.selection[i] = !maskParameter.selection[i];
-                    updateFilter();
+                    this._updateMaskFilter(id);
                     this._filtersChanged();
                 }.bind(this));
 
+    }
+
+    _updateMaskFilter(id) {
+        var maskParameter = this.maskParameter[id];
+        var mask = BitwiseInt.fromBoolArray(maskParameter.enabled);
+        var selection = BitwiseInt.fromBoolArray(maskParameter.selection).and(mask);
+        if (mask.toNumber() != 0) {
+            this.maskFilters[id] = function (value) {
+                return BitwiseInt.fromNumber(value).and(mask).equals(selection);
+            };
+        } else {
+            delete this.maskFilters[id];
+        }
     }
 
     _createAxisForms(parameter, brush, evtx, evty){
