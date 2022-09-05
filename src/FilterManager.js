@@ -277,6 +277,32 @@ class FilterManager extends EventEmitter {
 
     _createMaskFilterElement(id, data) {
 
+        var filter = this.maskParameter[id];
+        var size = filter.values.length;
+
+        if(!filter.hasOwnProperty('enabled')) {
+            filter.enabled = BitwiseInt.fromNumber(0).toBoolArray(size);
+        }
+
+        if(!filter.hasOwnProperty('selection')) {
+            filter.selection = BitwiseInt.fromNumber(0).toBoolArray(size);
+        }
+
+        // get actual content of the data
+        var ones = BitwiseInt.fromNumber(0);
+        var zeros = BitwiseInt.fromNumber(0);
+
+        if (data.hasOwnProperty(id)) {
+          data[id].forEach((value) => {
+            var bitValue = BitwiseInt.fromNumber(value);
+            ones = ones.or(bitValue);
+            zeros = zeros.or(bitValue.not());
+          });
+        }
+
+        var mask = BitwiseInt.fromBoolArray(filter.enabled).toNumber();
+        var value = BitwiseInt.fromBoolArray(filter.selection).toNumber();
+
         var height = 252;
         var width = 120;
 
@@ -299,6 +325,19 @@ class FilterManager extends EventEmitter {
                 this.emit('removeFilter', id);
             });
 
+        if (mask > 0) {
+            div.append('div')
+                .attr('class', 'eraserIcon editButton')
+                .on('click', () => {
+                    var filter = this.maskParameter[id];
+                    var size = filter.values.length;
+                    filter.enabled = BitwiseInt.fromNumber(0).toBoolArray(size);
+                    filter.selection = BitwiseInt.fromNumber(0).toBoolArray(size);
+                    this._updateMaskFilter(id);
+                    this._filtersChanged();
+                });
+        }
+
         var label = id.replace(this.labelReplace, ' ');
         let uom;
         if(this.dataSettings[id].hasOwnProperty('uom') &&
@@ -315,6 +354,10 @@ class FilterManager extends EventEmitter {
             label += ' ['+ uom + ']';
         }
 
+        if (mask > 0) {
+          label += `<span style="float:right;color:#aaa" title="value / mask">${value} / ${mask}</span>`
+        }
+
         div.append('div')
             .attr('class', 'parameterLabel')
             .style('transform', ()=>{
@@ -325,67 +368,99 @@ class FilterManager extends EventEmitter {
             .style('width', height-20+'px')
             .html(label);
 
-        var maskParameter = this.maskParameter[id];
-
-        if(!maskParameter.hasOwnProperty('enabled')) {
-            maskParameter.enabled = BitwiseInt.fromNumber(0).toBoolArray(maskParameter.values.length);
-        }
-
-        if(!maskParameter.hasOwnProperty('selection')) {
-            maskParameter.selection = BitwiseInt.fromNumber(0).toBoolArray(maskParameter.values.length);
-        }
+        var onClickHandler = (d, i) => {
+            var filter = this.maskParameter[id];
+            if (!d.enabled) {
+                // not enabled ==> not selected
+                filter.enabled[i] = true;
+                filter.selection[i] = false;
+            } else if (!d.selected) {
+                // not selected ==> selected
+                filter.enabled[i] = true;
+                filter.selection[i] = true;
+            } else {
+                // selected ==> not enabled
+                filter.enabled[i] = false;
+                filter.selection[i] = false;
+            }
+            this._updateMaskFilter(id);
+            this._filtersChanged();
+        };
 
         var subdivs = div.selectAll("input")
-            .data(maskParameter.values)
+            .data(filter.values.map((item, index) => ({
+                id: item[0],
+                label: item[0].replace(this.labelReplace, ' '),
+                title: item[1],
+                enabled: filter.enabled[index],
+                selected: filter.selection[index],
+                hasOnes: ones.getBit(index),
+                hasZeros: zeros.getBit(index),
+            })))
             .enter()
             .append('div')
             .attr('class', 'bitcontainer');
 
-        subdivs.append('div')
-            .attr('class', function(d,i){
-                if (!this.maskParameter[id].enabled[i]){
-                    return 'editButton add';
-                }else{
-                    return 'editButton remove';
-                }
-            }.bind(this))
-            .attr('title','Enable filtering for this bit')
-            .style('line-height', '10px')
-            .style('display', 'inline')
-            .on('click', function(dat,i){
-                var maskParameter = this.maskParameter[id];
-                maskParameter.enabled[i] = !maskParameter.enabled[i];
-                this._updateMaskFilter(id);
-                this._filtersChanged();
-            }.bind(this));
+        subdivs.append('span')
+            .style('margin-left', '23px')
+            .style('margin-right', '5px')
+            .attr('title', (d) => (
+                d.hasOnes
+                ? (
+                    d.hasZeros
+                    ? `The ${d.label} flag is set in some of the selected records.`
+                    : `The ${d.label} flag is set in all selected records.`
+                )
+                : (
+                  d.hasZeros
+                  ? `The ${d.label} flag is not set in any selected record.`
+                  : `No record selected`
+                )
+            ))
+            .attr('class', (d) => (
+                d.hasOnes
+                ? (d.hasZeros ? "flagMixedIcon" : "flagAllOneIcon")
+                : (d.hasZeros ? "flagAllZeroIcon" : "flagNoneIcon")
+            ));
+
+        var checkbox = subdivs.append('div')
+            .style('display', 'inline-block')
+            .style('position', 'relative')
+            .style('margin-right', '5px');
+
+        checkbox.append('input')
+            .property('checked', (d) => d.selected)
+            .property('disabled', (d) => !d.enabled)
+            .attr('class', 'maskinput')
+            .attr('type', 'checkbox')
+            .attr('id', (d) => d.id)
+
+        checkbox.append('div')
+            .style('position', 'absolute')
+            .style('left', '0')
+            .style('right', '0')
+            .style('top', '0')
+            .style('bottom', '0')
+            .style('cursor', 'pointer')
+            .attr('title', (d) => (
+                d.enabled
+                ? (
+                    d.selected
+                    ? `Records with the ${d.label} flag set are selected.`
+                    : `Records with the ${d.label} flag unset are selected.`
+                )
+                : `The ${d.label} flag is ignored.`
+            ))
+            .on('click', onClickHandler);
 
         subdivs.append('label')
-                .attr('for',function(d,i){ return d[0]; })
-                .attr('title',function(d,i){ return d[1]; })
-                .style('display', 'inline')
-                .style('color', function(d,i){
-                    return this.maskParameter[id].enabled[i] ? '#000' : '#aaa';
-                }.bind(this))
-                .text(function(d) {
-                    return d[0].replace(this.labelReplace, ' ');
-                }.bind(this))
-            .append("input")
-                .property("checked", function(d, i){
-                    return this.maskParameter[id].selection[i];
-                }.bind(this))
-                .property('disabled', function(d, i){
-                    return !this.maskParameter[id].enabled[i];
-                }.bind(this))
-                .attr('title','Checked equals 1, unchecked equals 0')
-                .attr("class", "maskinput")
-                .attr("type", "checkbox")
-                .attr("id", function(d) { return d[0]; })
-                .on('click', function(dat, i){
-                    var maskParameter = this.maskParameter[id];
-                    maskParameter.selection[i] = !maskParameter.selection[i];
-                    this._updateMaskFilter(id);
-                    this._filtersChanged();
-                }.bind(this));
+            .attr('for', (d) => d.id)
+            .attr('title', (d) => d.title)
+            .style('display', 'inline')
+            .style('cursor', 'pointer')
+            .style('color', (d) => (d.enabled ? '#000' : '#aaa'))
+            .text((d) => d.label)
+            .on('click', onClickHandler);
 
     }
 
