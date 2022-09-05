@@ -231,6 +231,10 @@ input[type=text] {
     margin: 5px;
 }
 
+.overlayLabelitem{
+    margin: 5px;
+}
+
 .labelitem:hover { 
     text-decoration: underline;
 }
@@ -563,6 +567,55 @@ input[type=text] {
 
 .bitcontainer{
     height: 20px;
+}
+
+.cross {
+    background-image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjEiIGhlaWdodD0iMjEiIHZpZXdCb3g9IjAgMCAyMSAyMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSIjMDAwIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0yLjU5Mi4wNDRsMTguMzY0IDE4LjM2NC0yLjU0OCAyLjU0OEwuMDQ0IDIuNTkyeiIvPjxwYXRoIGQ9Ik0wIDE4LjM2NEwxOC4zNjQgMGwyLjU0OCAyLjU0OEwyLjU0OCAyMC45MTJ6Ii8+PC9nPjwvc3ZnPg==);
+    background-repeat-x: no-repeat;
+    background-repeat-y: no-repeat;
+    background-size: 100%;
+    height: 8px;
+    width: 8px;
+}
+
+.flagNoneIcon {
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjEiIGhlaWdodD0iMjEiIHZpZXdCb3g9IjAgMCAyMSAyMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI1MCUiIGN5PSI1MCUiIHI9IjkiIHN0cm9rZT0iI2FhYSIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIzIi8+PC9zdmc+Cg==");
+    background-repeat-x: no-repeat;
+    background-repeat-y: no-repeat;
+    background-size: 100%;
+    height: 14px;
+    width: 14px;
+    display: inline-block;
+}
+
+.flagAllZeroIcon {
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjEiIGhlaWdodD0iMjEiIHZpZXdCb3g9IjAgMCAyMSAyMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI1MCUiIGN5PSI1MCUiIHI9IjkiIHN0cm9rZT0iIzFmNzdiNCIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIzIi8+PC9zdmc+Cg==");
+    background-repeat-x: no-repeat;
+    background-repeat-y: no-repeat;
+    background-size: 100%;
+    height: 14px;
+    width: 14px;
+    display: inline-block;
+}
+
+.flagAllOneIcon {
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjEiIGhlaWdodD0iMjEiIHZpZXdCb3g9IjAgMCAyMSAyMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI1MCUiIGN5PSI1MCUiIHI9IjkiIHN0cm9rZT0iIzFmNzdiNCIgZmlsbD0iIzFmNzdiNCIgc3Ryb2tlLXdpZHRoPSIzIi8+PC9zdmc+Cg==");
+    background-repeat-x: no-repeat;
+    background-repeat-y: no-repeat;
+    background-size: 100%;
+    height: 14px;
+    width: 14px;
+    display: inline-block;
+}
+
+.flagMixedIcon {
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjEiIGhlaWdodD0iMjEiIHZpZXdCb3g9IjAgMCAyMSAyMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bWFzayBpZD0ibSI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2ZmZiIvPjxwb2x5Z29uIHBvaW50cz0iMjEsMCAwLDAgMCwyMSIgZmlsbD0iIzAwMCIvPjwvbWFzaz48L2RlZnM+PGNpcmNsZSBjeD0iNTAlIiBjeT0iNTAlIiByPSI5IiBmaWxsPSIjMWY3N2I0IiBtYXNrPSJ1cmwoI20pIi8+PGNpcmNsZSBjeD0iNTAlIiBjeT0iNTAlIiByPSI5IiBzdHJva2U9IiMxZjc3YjQiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMyIvPjwvc3ZnPgo=");
+    background-repeat-x: no-repeat;
+    background-repeat-y: no-repeat;
+    background-size: 100%;
+    height: 14px;
+    width: 14px;
+    display: inline-block;
 }
 
 

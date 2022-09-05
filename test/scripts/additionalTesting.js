@@ -187,6 +187,7 @@ export var renderSettingsDefinition = {
         xAxis: 'time',
         yAxis: [['rayleigh_altitude'], ['mie_altitude']],
         y2Axis: [[], []],
+        additionalXTicks: ['mie_wind_result_COG_range_start'],
         groups: ['rayleigh', 'mie'],
         combinedParameters: {
             mie_altitude: ['mie_wind_result_bottom_altitude', 'mie_wind_result_top_altitude'],
@@ -661,6 +662,12 @@ export var dataSettingsConfig = {
            // nullValue: 642.7306076260679
             extent: [-50,50]
             //outline: false
+        },
+        mie_bin_quality_flag: {
+          uom: null
+        },
+        rayleigh_bin_quality_flag: {
+          uom: null
         }
 
     },
@@ -1368,7 +1375,7 @@ function flattenObservationArray(input){
 
 export function handleSwarmData(data, graph, filterManager){
 
-    graph.debounceActive = true;
+    graph.debounceActive = false;
 
     var ids = {
       'A': 'Alpha',

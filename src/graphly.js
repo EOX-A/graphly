@@ -122,6 +122,8 @@ const dotType = {
     x: 5.0,
     triangle: 6.0,
     triangle_empty: 7.0,
+    diamond : 8.0,
+    diamond_empty: 9.0,
 };
 
 
@@ -148,10 +150,12 @@ let Choices = require('choices.js');
 
 let BatchDrawer = require('./BatchDraw.js');
 let FilterManager = require('./FilterManager.js');
+let BitwiseInt = require('./BitwiseInt.js');
 let canvg = require('./vendor/canvg.js');
 let colorscalesdef = require('colorscalesdef');
 
 global.FilterManager = FilterManager;
+global.BitwiseInt = BitwiseInt;
 
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
@@ -278,6 +282,8 @@ class graphly extends EventEmitter {
         this.allowLockingAxisScale = defaultFor(options.allowLockingAxisScale, false);
         this.replaceUnderscore = defaultFor(options.replaceUnderscore, false);
         this.enableMaskParameters = defaultFor(options.enableMaskParameters, false);
+        this.overlayData = defaultFor(options.overlayData, {});
+        this.overlaySettings = defaultFor(options.overlaySettings, false);
 
         this.labelReplace = /a^/; // Default not matchin anything
         if(this.replaceUnderscore){
@@ -1223,6 +1229,10 @@ class graphly extends EventEmitter {
         this.outFormat = defaultFor(format, 'png');
         this.resFactor = defaultFor(resFactor, 1);
 
+        // Hide axis edit buttons
+        this.svg.selectAll('.modifyAxisIcon').style('display', 'none');
+        this.svg.selectAll('.lockAxisIcon').style('display', 'none');
+
         if (this.resFactor !== 1){
 
             this.batchDrawer.updateCanvasSize(
@@ -1267,9 +1277,6 @@ class graphly extends EventEmitter {
             let yAxRen = this.renderSettings.yAxis;
             let y2AxRen = this.renderSettings.y2Axis;
 
-            // Hide axis edit buttons
-            this.svg.selectAll('.modifyAxisIcon').style('display', 'none');
-            this.svg.selectAll('.lockAxisIcon').style('display', 'none');
 
             // Render all y axis parameters
             for (let plotY = 0; plotY < this.renderSettings.y2Axis.length; plotY++) {
@@ -2612,6 +2619,7 @@ class graphly extends EventEmitter {
                             colorAxis, id, g, evtx, evty, csZoom, 'right'
                         );
                     }.bind(this))
+                    .append('title').text('Edit axis range');
             }
         }
     }
@@ -3019,8 +3027,8 @@ class graphly extends EventEmitter {
                 this.el.append('div')
                     .attr('class', 'cross removePlot')
                     .attr('data-index', plotY)
-                    .style('left', '10px')
-                    .style('top', (offsetY+this.margin.top+10)+'px')
+                    .style('left', '5px')
+                    .style('top', (offsetY+this.margin.top)+3+'px')
                     .on('click', ()=>{
 
                         let renSett = this.renderSettings;
@@ -3084,8 +3092,8 @@ class graphly extends EventEmitter {
                         .attr('class', 'arrowChangePlot up')
                         .html('&#9650;')
                         .attr('data-index', plotY)
-                        .style('left', '10px')
-                        .style('top', (offsetY+this.margin.top+20)+'px')
+                        .style('left', '5px')
+                        .style('top', (offsetY+this.margin.top+15)+'px')
                         .on('click', ()=>{
                             let index = Number(d3.select(d3.event.target).attr('data-index'));
                             let rS = this.renderSettings;
@@ -3120,15 +3128,15 @@ class graphly extends EventEmitter {
 
                 // Add move down arrow 
                 if(plotY<this.renderSettings.yAxis.length-1){
-                    let addoff = 45;
+                    let addoff = 40;
                     if(plotY === 0){
-                        addoff = 20;
+                        addoff = 15;
                     }
                     this.el.append('div')
                         .attr('class', 'arrowChangePlot down')
                         .html('&#9660;')
                         .attr('data-index', plotY)
-                        .style('left', '10px')
+                        .style('left', '5px')
                         .style('top', (offsetY+this.margin.top+addoff)+'px')
                         .on('click', ()=>{
 
@@ -3409,6 +3417,24 @@ class graphly extends EventEmitter {
     removeGroupArrows(){
         this.activeArrows = false;
         this.arrowValues = null;
+    }
+
+    /**
+    * Load overlay data from data object
+    * @param {Object} data Data object containing parameter identifier as keys and 
+             arrays of values as corresponding parameter. {'parId1': [1, 2, 3], 
+             'parId2': [0.6, 0.1, 3.2]}. In order to be correctly visualized 
+             the overlay data needs to be described as overlaySettings object 
+             part of the dataSettings
+    */
+    loadOverlayData(overlayData){
+        this.overlayData = overlayData;
+        // Check if there is no loaded data if not it does
+        // not really make sense to call render here
+        if (typeof this.data === 'object' && Object.keys(this.data).length !== 0) {
+            this.createParameterInfo();
+            this.renderData(false);
+        }
     }
 
     /**
@@ -4019,7 +4045,8 @@ class graphly extends EventEmitter {
                         this.xAxis, null, this.xAxisSvg,
                         evtx, evty, this.xzoom, 'middleleft'
                     );
-                }.bind(this));
+                }.bind(this))
+                .append('title').text('Edit axis range');
         }
 
 
@@ -4463,7 +4490,8 @@ class graphly extends EventEmitter {
                                 this.yAxis[yPos], null, currSvgyAxis,
                                 evtx, evty, this.yzoom[yPos], 'right'
                             );
-                        }.bind(this));
+                        }.bind(this))
+                        .append('title').text('Edit axis range');
                 }
                 if(this.allowLockingAxisScale) {
                     if (this.renderSettings.hasOwnProperty('yAxisLocked')) {
@@ -4485,7 +4513,8 @@ class graphly extends EventEmitter {
                                     this.renderData();
                                 }
                                 this.emit('axisExtentChanged');
-                            }.bind(this));
+                            }.bind(this))
+                            .append('title').text('Lock axis range');
                     }
                 }
             } else {
@@ -4568,6 +4597,7 @@ class graphly extends EventEmitter {
                                 evtx, evty, this.y2zoom[yPos], 'left'
                             );
                         }.bind(this))
+                        .append('title').text('Edit axis range');
                 }
                 if(this.allowLockingAxisScale) {
                     if (this.renderSettings.hasOwnProperty('y2AxisLocked')) {
@@ -4589,7 +4619,8 @@ class graphly extends EventEmitter {
                                     this.renderData();
                                 }
                                 this.emit('axisExtentChanged');
-                            }.bind(this));
+                            }.bind(this))
+                            .append('title').text('Lock axis range');
                     }
                 }
             } else {
@@ -5697,14 +5728,14 @@ class graphly extends EventEmitter {
 
 
         this.el.selectAll('.removePlot').each(function(d,i){
-            d3.select(this).style('top', ((heighChunk*i)+10+that.margin.top)+'px')
+            d3.select(this).style('top', ((heighChunk*i)+3+that.margin.top)+'px')
         });
 
         this.el.selectAll('.arrowChangePlot.up').each(function(d,i){
-            d3.select(this).style('top', ((heighChunk*(i+1))+that.margin.top+20)+'px')
+            d3.select(this).style('top', ((heighChunk*(i+1))+that.margin.top+15)+'px')
         });
         this.el.selectAll('.arrowChangePlot.down').each(function(d,i){
-            d3.select(this).style('top', ((heighChunk*(i))+that.margin.top+45)+'px')
+            d3.select(this).style('top', ((heighChunk*(i))+that.margin.top+40)+'px')
         });
 
         this.el.selectAll('.previewImage')
@@ -5967,6 +5998,162 @@ class graphly extends EventEmitter {
         } // end data for loop
     }
 
+    shiftPeriodicValue(value, max, min, period, offset){
+        let shiftpos = Math.abs(parseInt(max/period));
+        let shiftneg = Math.abs(parseInt(min/period));
+        if(offset===0){
+            shiftneg = Math.abs(Math.floor(min/period));
+        }
+        let shift = Math.max(shiftpos, shiftneg);
+        if(shiftneg>shiftpos){
+            shift*=-1;
+        }
+        if(Math.abs(shift) > 0){
+            value = value + shift*period;
+            if(value-offset > max){
+                value -= period;
+            }
+            if(value+offset < min){
+                value += period;
+            }
+        }
+        return value;
+    }
+
+    renderOverlayPoints(xAxis, yAxis, cAxis, plotY, yScale, leftYAxis) {
+
+        let axisOffset = plotY * (this.height/this.renderSettings.yAxis.length)  * this.resFactor;
+
+        let x, y, valX, valY, currDotSize, currSymbol;
+        let defaultSize = 15;
+        let defaultColor = [255.0,0,0, 1.0];
+        const overlayData = this.overlayData;
+        yScale = yScale[plotY];
+
+        // Check if cyclic axis and if currently displayed axis range needs to
+        // offset to be shown in "next cycle" above or below
+        let xMax, xMin, period, xoffset;
+        let xperiodic = false;
+        if(this.dataSettings.hasOwnProperty(xAxis) && 
+           this.dataSettings[xAxis].hasOwnProperty('periodic')){
+            xoffset = defaultFor(
+                this.dataSettings[xAxis].periodic.offset, 0
+            );
+            xperiodic = true;
+            period = this.dataSettings[xAxis].periodic.period;
+            xMax = this.xScale.domain()[1]-xoffset;
+            xMin = this.xScale.domain()[0]+xoffset;
+        }
+
+        let yMax, yMin, yoffset, yperiod;
+        let yperiodic = false;
+        if(this.dataSettings.hasOwnProperty(yAxis) && 
+           this.dataSettings[yAxis].hasOwnProperty('periodic') && leftYAxis){
+            yoffset = defaultFor(
+                this.dataSettings[yAxis].periodic.offset, 0
+            );
+            yperiodic = true;
+            yperiod = this.dataSettings[yAxis].periodic.period;
+            yMax = this.yScale[plotY].domain()[1]-yoffset;
+            yMin = this.yScale[plotY].domain()[0]+yoffset;
+        }
+
+        if(this.overlaySettings !== false) {
+            for (let coll in this.overlaySettings) {
+                if(overlayData.hasOwnProperty(coll)
+                    && overlayData[coll].hasOwnProperty(yAxis)
+                    && overlayData[coll].hasOwnProperty(xAxis)){
+
+                    const oSetts = this.overlaySettings[coll]
+                    if (oSetts.hasOwnProperty('displayParameters')) {
+                        if (oSetts.displayParameters.indexOf(xAxis) === -1
+                            && oSetts.displayParameters.indexOf(yAxis) === -1
+                            && (cAxis === null || oSetts.displayParameters.indexOf(cAxis) === -1)) {
+                            // If config has displayParameters and current
+                            // parameters do not match skip this cycle
+                            continue;
+                        }
+                    }
+
+                    const keyPar = this.overlaySettings[coll].keyParameter;
+                    const typeDef = this.overlaySettings[coll].typeDefinition;
+
+                    const lp = overlayData[coll][yAxis].length;
+
+                    // Collect applicable filters
+                    var applicableFilters = {}
+                    for (let key in overlayData[coll]) {
+                        if (overlayData[coll].hasOwnProperty(key) &&
+                            this.filters.hasOwnProperty(key)) {
+                            applicableFilters[key] = this.filters[key];
+                        }
+                    }
+
+                    for (let j=0;j<lp; j++) {
+
+                        valY = overlayData[coll][yAxis][j];
+                        valX = overlayData[coll][xAxis][j];
+
+                        // Skip "empty" values
+                        if(Number.isNaN(valY) || Number.isNaN(valX)){
+                            continue;
+                        }
+
+                        // Apply filters
+                        let skipRecord = false;
+                        for (let key in applicableFilters) {
+                            if (applicableFilters.hasOwnProperty(key)
+                                && !applicableFilters[key](overlayData[coll][key][j])) {
+                                skipRecord = true;
+                                break;
+                            }
+                        }
+                        if (skipRecord) {
+                            continue;
+                        }
+
+                        // Manipulate value if we have a periodic parameter
+                        if(yperiodic){
+                            valY = this.shiftPeriodicValue(valY, yMax, yMin, yperiod, yoffset);
+                        }
+                        y = yScale(valY);
+                        y+=axisOffset;
+
+                        // Manipulate value if we have a periodic parameter
+                        if(xperiodic){
+                            valX = this.shiftPeriodicValue(valX, xMax, xMin, period, xoffset);
+                        }
+                        x = this.xScale(valX);
+
+                        const currType = overlayData[coll][keyPar][j];
+                        const overlayType = typeDef.find((item) => item.match(currType));
+                        if(overlayType.hasOwnProperty('active') && !overlayType.active){
+                          continue;
+                        }
+
+                        let rC = defaultColor;
+
+                        if (typeof overlayType !== 'undefined' && overlayType.hasOwnProperty('style')) {
+                            currDotSize = defaultFor(overlayType.style.size, defaultSize);
+                            currSymbol = defaultFor(
+                                dotType[overlayType.style.symbol], dotType['rectangle_empty']
+                            );
+                            if (overlayType.style.hasOwnProperty('color')){
+                                rC = overlayType.style.color;
+                            }
+
+                            this.batchDrawer.addDot(
+                                x, y, currDotSize, currSymbol,
+                                rC[0], rC[1], rC[2], rC[3], Number.MIN_SAFE_INTEGER
+                            );
+                        } else {
+                            continue;
+                        }
+                    }
+                }
+            }
+         }
+    }
 
     renderPoints(data, xAxis, yAxis, cAxis, plotY, yScale, leftYAxis, updateReferenceCanvas) {
 
@@ -6068,7 +6255,6 @@ class graphly extends EventEmitter {
         // Check if cyclic axis and if currently displayed axis range needs to
         // offset to be shown in "next cycle" above or below
         let xMax, xMin, period, xoffset;
-
         let xperiodic = false;
         if(this.dataSettings.hasOwnProperty(xAxis) && 
            this.dataSettings[xAxis].hasOwnProperty('periodic')){
@@ -6164,13 +6350,27 @@ class graphly extends EventEmitter {
             let renderValue = Number.MIN_SAFE_INTEGER;
             if(cAxis !== null){
                 rC = [1.0, 0.0, 0.0, constAlpha];
+                if(Number.isNaN(data[cAxis][j])) {
+                    if(!this.connectFilteredPoints){
+                        p_x = NaN;
+                        p_y = NaN;
+                    }
+                    continue;
+                }
                 renderValue = data[cAxis][j];
-                
             } else {
                 if(singleSettings){
                     rC = colorObj;
                 } else {
                     let val = data[identParam][j];
+                    // If color value is NaN don't render it
+                    if(Number.isNaN(val)){
+                        if(!this.connectFilteredPoints){
+                            p_x = NaN;
+                            p_y = NaN;
+                        }
+                        continue;
+                    }
                     if(val){
                         let col = this.dataSettings[yAxis][val].color;
                         rC = [
@@ -6185,26 +6385,7 @@ class graphly extends EventEmitter {
 
             // Manipulate value if we have a periodic parameter
             if(yperiodic){
-                let shiftpos = Math.abs(parseInt(yMax/yperiod));
-                let shiftneg = Math.abs(parseInt(yMin/yperiod));
-                if(yoffset===0){
-                    shiftneg = Math.abs(Math.floor(yMin/yperiod));
-                }
-                let shift = Math.max(shiftpos, shiftneg);
-                if(shiftneg>shiftpos){
-                    shift*=-1;
-                }
-
-                if(Math.abs(shift) > 0){
-                    valY = valY + shift*yperiod;
-                    if(valY-yoffset > yMax){
-                        valY -= yperiod;
-                    }
-                    if(valY+yoffset < yMin){
-                        valY += yperiod;
-                    }
-                    
-                }
+                valY = this.shiftPeriodicValue(valY, yMax, yMin, yperiod, yoffset);
             }
 
             y = yScale(valY);
@@ -6212,27 +6393,9 @@ class graphly extends EventEmitter {
 
             // Manipulate value if we have a periodic parameter
             if(xperiodic){
-                let shiftpos = Math.abs(parseInt(xMax/period));
-                let shiftneg = Math.abs(parseInt(xMin/period));
-                if(xoffset===0){
-                    shiftneg = Math.abs(Math.floor(xMin/period));
-                }
-                let shift = Math.max(shiftpos, shiftneg);
-                if(shiftneg>shiftpos){
-                    shift*=-1;
-                }
-
-                if(Math.abs(shift) > 0){
-                    valX = valX + shift*period;
-                    if(valX-xoffset > xMax){
-                        valX -= period;
-                    }
-                    if(valX+xoffset < xMin){
-                        valX += period;
-                    }
-                    
-                }
+                valX = this.shiftPeriodicValue(valX, xMax, xMin, period, xoffset);
             }
+
             x = this.xScale(valX);
 
             let c = u.genColor();
@@ -6663,6 +6826,8 @@ class graphly extends EventEmitter {
                         symbol = 'rectangle_empty'
                     } else if(symbol === 'triangle'){
                         symbol = 'triangle_empty'
+                    } else if(symbol === 'diamond'){
+                        symbol = 'diamond_empty'
                     }
                     let sym = defaultFor(dotType[symbol], 2.0);
                     this.batchDrawer.addDot(
@@ -7097,6 +7262,49 @@ class graphly extends EventEmitter {
                 this.addParameterLabel(idY2, infoGroup, parInfEl, yPos, 'right', parPos);
             }
 
+            // color axis parameters
+            let cAxRen = this.renderSettings.colorAxis[yPos];
+            let cAx2Ren = this.renderSettings.colorAxis2[yPos];
+
+            let _matchAxisParameter = function (parameters, data, allowedParameters) {
+                for (let i=0; i<parameters.length; i++){
+                    if (data.hasOwnProperty(parameters[i])
+                        && allowedParameters.indexOf(parameters[i]) != -1){
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // Add possible overlay labels
+            if(this.overlaySettings !== false){
+                for (let coll in this.overlaySettings) {
+                    // See if correct axis are visible to show overlay data
+                    // and if they are also defined as displayParameters
+                    for (var i = 0; i < this.overlaySettings[coll].typeDefinition.length; i++) {
+                        const oSetts = this.overlaySettings[coll];
+                        const currDef = oSetts.typeDefinition[i];
+                        const xMatch = (
+                            this.overlayData.hasOwnProperty(coll)
+                            && this.overlayData[coll].hasOwnProperty(this.renderSettings.xAxis)
+                        );
+                        let yMatch = !oSetts.hasOwnProperty('displayParameters');
+                        if(xMatch && !yMatch && this.overlayData.hasOwnProperty(coll)){
+                              yMatch = (
+                                  _matchAxisParameter(yAxRen, this.overlayData[coll], oSetts.displayParameters)
+                                  || _matchAxisParameter(y2AxRen, this.overlayData[coll], oSetts.displayParameters)
+                                  || _matchAxisParameter(cAxRen, this.overlayData[coll], oSetts.displayParameters)
+                                  || _matchAxisParameter(cAx2Ren, this.overlayData[coll], oSetts.displayParameters)
+                                  || _matchAxisParameter([this.renderSettings.xAxis], this.overlayData[coll], oSetts.displayParameters)
+                              );
+                        }
+                        if(xMatch && yMatch){
+                            this.addOverlayLabel(currDef, infoGroup, parInfEl);
+                        }
+                    }
+                }
+            }
+
             // Change height of settings panel to be just under labels
             /*let dim = parInfEl.node().getBoundingClientRect();
             this.el.select('#parameterSettings'+yPos)
@@ -7395,7 +7603,9 @@ class graphly extends EventEmitter {
                 { name:'Plus', value: 'plus'},
                 { name:'X', value: 'x'},
                 { name:'Triangle', value: 'triangle'},
-                { name:'Triangle outline', value: 'triangle_empty'}
+                { name:'Triangle outline', value: 'triangle_empty'},
+                { name:'Diamond', value: 'diamond'},
+                { name:'Diamond outline', value: 'diamond_empty'}
             ];
 
 
@@ -7797,6 +8007,90 @@ class graphly extends EventEmitter {
 
     }
 
+    addOverlayLabel(typedef, infoGroup, parInfEl){
+
+        let parDiv = parInfEl.append('div')
+            .attr('class', 'overlayLabelitem');
+
+        infoGroup.style('visibility', 'hidden');
+
+        let displayName = typedef.name;
+
+        // Check if this label name is not already present
+        const textEls = infoGroup.selectAll('text')[0];
+        const equalLabel = textEls.find(
+            (el) => {return d3.select(el).text() === displayName}
+        );
+        if (typeof equalLabel !== 'undefined'){
+            return;
+        }
+        const textDiv = parDiv.append('div')
+            .style('display', 'inline')
+            .style('cursor', 'pointer')
+            .html(displayName);
+
+        textDiv.on('click', () => {
+          if(typedef.hasOwnProperty('active')){
+            typedef.active = !typedef.active;
+          } else {
+            typedef.active = false;
+          }
+          this.emit('axisChange');
+          this.createParameterInfo();
+          this.renderData();
+        });
+
+        // Update size of rect based on size of original div
+        if ( parInfEl.node() !== null ) {
+            let boundRect = parInfEl.node().getBoundingClientRect();
+            infoGroup.select('rect').attr('height', boundRect.height);
+        }
+
+        // check amount of elements and calculate offset
+        let offset = 21 + infoGroup.selectAll('text').size() *20;
+        let labelText = infoGroup.append('text')
+            .attr('class', 'svgaxisLabel')
+            .attr('text-anchor', 'middle')
+            .attr('y', offset)
+            .attr('x', 153)
+            .text(displayName);
+
+        if(typedef.hasOwnProperty('active') && !typedef.active){
+          textDiv.style('text-decoration', 'line-through');
+          labelText.attr('text-decoration', 'line-through')
+        }
+
+        let labelBbox = labelText.node().getBBox();
+
+        let iconSvg = parDiv.insert('div', ':first-child')
+            .attr('class', 'svgIcon')
+            .style('display', 'inline')
+            .append('svg')
+            .attr('width', 20).attr('height', 10);
+
+        let symbolColor = '';
+
+        let style = typedef.style;
+
+        if(style.hasOwnProperty('color')){
+            symbolColor = '#'+ CP.RGB2HEX(
+                style.color
+                .map(function(c){return Math.round(c*255);})
+            );
+        }
+
+        style.symbol = defaultFor(
+            style.symbol, 'circle'
+        );
+
+        u.addSymbol(iconSvg, style.symbol, symbolColor);
+
+        let symbolGroup = infoGroup.append('g')
+            .attr('transform', 'translate(' + (130-labelBbox.width/2) + ',' +
+            (offset-10) + ')');
+        u.addSymbol(symbolGroup, style.symbol, symbolColor);
+    }
+
 
     addParameterLabel(id, infoGroup, parInfEl, yPos, orientation, parPos){
 
@@ -7894,8 +8188,10 @@ class graphly extends EventEmitter {
                 .html(displayName.replace(this.labelReplace, ' '));
 
             // Update size of rect based on size of original div
-            let boundRect = parInfEl.node().getBoundingClientRect();
-            infoGroup.select('rect').attr('height', boundRect.height);
+            if (parInfEl.node() !== null) {
+                let boundRect = parInfEl.node().getBoundingClientRect();
+                infoGroup.select('rect').attr('height', boundRect.height);
+            }
 
             // check amount of elements and calculate offset
             let offset = 21 + infoGroup.selectAll('text').size() *20;
@@ -8047,7 +8343,8 @@ class graphly extends EventEmitter {
                         );
                     }
                 }
-                
+                // Check also if overlayData needs to be rendered
+                this.renderOverlayPoints(idX, idY, idCS, plotY, currYScale, leftYAxis);
             }
         }
         this.endTiming('renderParameter:'+idY);

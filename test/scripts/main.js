@@ -34,6 +34,7 @@ function randn_bm() {
 }
 
 var data = {};
+var overlayData = {};
 generateRandomData();
 
 function generateRandomData() {
@@ -49,9 +50,20 @@ function generateRandomData() {
             data[parameters[i]].push(randn_bm() * extent);
         }
     }*/
-    data['parameter1'] = [0, 0, 0, 0, 0, 0, 0, 0];
+    data['parameter1'] = [1, 2, 3, 4, 5, 6, 7, 8].reverse();
     data['parameter2'] = [1, 2, 3, 4, 5, 6, 7, 8];
     data['parameter3'] = [0.1, 1, 10, 100, 1000, 10000, 1000000, 10000000];
+    data['parameter4'] = [1, 6, 3, 4, 2, 6, 12, 8];
+
+    overlayData['collection1'] = {
+        parameter1: [1, 3, 6, 7].reverse(),
+        parameter2: [1, 3, 6, 7],
+        type: [1, 2, 1, 2],
+    };
+    overlayData['collection2'] = {
+        parameter1: [1, 3],
+        parameter2: [1, 3].reverse(),
+    }
 }
 
 
@@ -68,6 +80,51 @@ var filterManager = new FilterManager({
     replaceUnderscore: true,
 });
 
+/*
+rectangle, rectangle_empty, circle, circle_empty, plus, x, triangle, triangle_empty
+*/
+var overlaySettings = {
+    collection1: {
+        keyParameter: 'type',
+        displayParameters: ['parameter2', 'parameter1'],
+        typeDefinition: [
+            {
+                match: function(val){return val === 1},
+                name: 'Type 1',
+                style: {
+                    symbol: 'rectangle_empty',
+                    size: 20,
+                    color: [0, 0, 1.0, 0.8],
+                },
+                active: false,
+            },
+            {
+                match: function(val){return val === 2},
+                name: 'Type 2',
+                style: {
+                    symbol: 'circle_empty',
+                    size: 20,
+                    color: [0, 1.0, 0.2, 0.9],
+                }
+            }
+        ]
+    },
+    collection2: {
+        keyParameter: 'parameter2',
+        typeDefinition: [
+            {
+                match: function(){return true},
+                name: 'Type 1',
+                style: {
+                    symbol: 'circle_empty',
+                    size: 20,
+                    color: [0, 0, 1.0, 0.8],
+                }
+            },
+        ]
+    }
+};
+
 
 
 var graph = new graphly.graphly({
@@ -78,6 +135,7 @@ var graph = new graphly.graphly({
     debounceActive: false,
     debug: false,
     replaceUnderscore: true,
+    overlaySettings: overlaySettings,
     //labelAllignment: 'center',
     //enableFit: false,
     //displayColorscaleOptions: false,
@@ -97,7 +155,7 @@ var graph = new graphly.graphly({
     //margin: {top: 50, left: 90, bottom: 50, right: 40},
     //colorAxisTickFormat: 'customExp',
     //defaultAxisTickFormat: 'customExp',
-    enableSubXAxis: 'datetime',
+    enableSubXAxis: 'time',
     allowLockingAxisScale: true,
     enableMaskParameters: true,
     //disableAntiAlias: true,
@@ -110,6 +168,7 @@ graph.addColorScale(
 
 filterManager.loadData(data);
 graph.loadData(data);
+graph.loadOverlayData(overlayData);
 
 //filterManager.setRenderNode('#filters');
 
@@ -127,7 +186,7 @@ filterManager.on('filterChange', function(filters){
 });
 
 d3.select('#save').on('click', function(){
-    graph.saveImage('png' , 2);
+    graph.saveImage('png' , 1);
 });
 
 d3.select('#resetfilter').on('click', function(){
@@ -153,7 +212,7 @@ graph.on('axisExtentChanged', function(){
     console.log(this.renderSettings.y2AxisLocked);
 })
 
-
+graph.fileSaveString = 'test.png';
 
 var xhr = new XMLHttpRequest();
 xhr.responseType = 'arraybuffer';
@@ -189,7 +248,7 @@ window.onload = function () {
 
     var that = this;
 
-    var startloaded = 'L2B';
+    var startloaded = false;
     if(startloaded){
         this.selValue = startloaded;
         graph.setRenderSettings(addT.renderSettingsDefinition[startloaded]);
