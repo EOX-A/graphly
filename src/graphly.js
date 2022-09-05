@@ -6433,7 +6433,7 @@ class graphly extends EventEmitter {
                         let yErrorVal = data[parSett.errorParameter][j];
                         let maxError = yScale(valY + yErrorVal);
                         let minError = yScale(valY - yErrorVal);
-                        
+
                         // "whiskers" for error
                         this.batchDrawer.addLine(
                             x, y, x, maxError, (1.5*this.resFactor),
@@ -6455,8 +6455,6 @@ class graphly extends EventEmitter {
                             rC[0], rC[1], rC[2], 0.5,
                             renderValue
                         );
-                        
-
 
                         // Top and bottom line for error
                         /*
@@ -6525,7 +6523,7 @@ class graphly extends EventEmitter {
                         */
                         min_error_y = maxError;
                         max_error_y = minError;
-                        
+
                     }
                 }
                 if(parSett.hasOwnProperty('lineConnect') &&
@@ -7945,7 +7943,7 @@ class graphly extends EventEmitter {
                     !defaultFor(dataSettings.lineConnect, false);
                 that.addApply(dataSettings);
             });
-        
+
         if (dataSettings.hasOwnProperty('errorParameterActive')) {
             parSetEl
                 .append('label')
@@ -7955,11 +7953,11 @@ class graphly extends EventEmitter {
                 .append('input')
                 .attr('id', 'errorParameterActive')
                 .attr('type', 'checkbox')
-                .property('checked', 
+                .property('checked',
                     defaultFor(dataSettings.errorParameterActive, false)
                 )
                 .on('change', function(){
-                    that.settingsToApply.errorParameterActive = 
+                    that.settingsToApply.errorParameterActive =
                         !defaultFor(dataSettings.errorParameterActive, false);
                     that.addApply(dataSettings);
                 });
