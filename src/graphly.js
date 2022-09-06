@@ -84,9 +84,10 @@
 *           using value MJD2000_S.
 * @property {String} [displayName] String to use for labels instead of parameter
 *           id.
-* @property {String} [errorParameter] Identifier of other parameter that represents
+* @property {String} [errorParameter] Identifier of parameter representing
 *           the error value of the current parameter.
-* @property {boolean} [errorParameterActive] Defines if errorParameter is enabled.
+* @property {boolean} [errorDisplayed] If true then the errorParameter is
+*           displayed.
 * @property {Object} [periodic] Can be set when parameter has periodic pattern.
 *           The object must have the 'period' value and can have a possible
 *           offset. For example longitude values from -180 to 180 would have 360
@@ -3343,12 +3344,12 @@ class graphly extends EventEmitter {
                         const paramProps = [
                             'alpha', 'color', 'symbol', 'lineConnect',
                             'colorscale', 'regression', 'scaleType',
-                            'errorParameter', 'errorParameterActive', 'size',
+                            'errorParameter', 'errorDisplayed', 'size',
                         ];
                         // Special check for error parameter
                         if(this.dataSettings[keys[i]].hasOwnProperty('errorParameter')
-                           && !this.dataSettings[keys[i]].hasOwnProperty('errorParameterActive')) {
-                            this.dataSettings[keys[i]].errorParameterActive = true;
+                           && !this.dataSettings[keys[i]].hasOwnProperty('errorDisplayed')) {
+                            this.dataSettings[keys[i]].errorDisplayed = true;
                         }
                         paramProps.forEach(prop => {
                             if(this.dataSettings[keys[i]].hasOwnProperty(prop)) {
@@ -6425,12 +6426,14 @@ class graphly extends EventEmitter {
             let cA = this.dataSettings[cAxis];
             if (parSett){
                 if(parSett.hasOwnProperty('errorParameter')
-                   && parSett.errorParameterActive
+                   && parSett.errorDisplayed
+                   && data.hasOwnProperty(parSett.errorParameter)
                    && !Number.isNaN(min_error_y)) {
-                    // If an error parameter has been configured we show error
-                    // lines
-                    if (data.hasOwnProperty(parSett.errorParameter)) {
-                        let yErrorVal = data[parSett.errorParameter][j];
+
+                    let yErrorVal = data[parSett.errorParameter][j];
+
+                    // ignore negative error values
+                    if (yErrorVal >= 0) {
                         let maxError = yScale(valY + yErrorVal);
                         let minError = yScale(valY - yErrorVal);
 
@@ -7944,21 +7947,21 @@ class graphly extends EventEmitter {
                 that.addApply(dataSettings);
             });
 
-        if (dataSettings.hasOwnProperty('errorParameterActive')) {
+        if (dataSettings.hasOwnProperty('errorDisplayed')) {
             parSetEl
                 .append('label')
-                .attr('for', 'errorParameterActive')
+                .attr('for', 'errorDisplayed')
                 .text('Show error');
             parSetEl
                 .append('input')
-                .attr('id', 'errorParameterActive')
+                .attr('id', 'errorDisplayed')
                 .attr('type', 'checkbox')
                 .property('checked',
-                    defaultFor(dataSettings.errorParameterActive, false)
+                    defaultFor(dataSettings.errorDisplayed, false)
                 )
                 .on('change', function(){
-                    that.settingsToApply.errorParameterActive =
-                        !defaultFor(dataSettings.errorParameterActive, false);
+                    that.settingsToApply.errorDisplayed =
+                        !defaultFor(dataSettings.errorDisplayed, false);
                     that.addApply(dataSettings);
                 });
         }
