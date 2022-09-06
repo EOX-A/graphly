@@ -368,35 +368,39 @@ class FilterManager extends EventEmitter {
             .style('width', height-20+'px')
             .html(label);
 
-        var onClickHandler = (d, i) => {
+        var onClickHandler = (d) => {
             var filter = this.maskParameter[id];
             if (!d.enabled) {
                 // not enabled ==> not selected
-                filter.enabled[i] = true;
-                filter.selection[i] = false;
+                filter.enabled[d.index] = true;
+                filter.selection[d.index] = false;
             } else if (!d.selected) {
                 // not selected ==> selected
-                filter.enabled[i] = true;
-                filter.selection[i] = true;
+                filter.enabled[d.index] = true;
+                filter.selection[d.index] = true;
             } else {
                 // selected ==> not enabled
-                filter.enabled[i] = false;
-                filter.selection[i] = false;
+                filter.enabled[d.index] = false;
+                filter.selection[d.index] = false;
             }
             this._updateMaskFilter(id);
             this._filtersChanged();
         };
 
         var subdivs = div.selectAll("input")
-            .data(filter.values.map((item, index) => ({
-                id: item[0],
-                label: item[0].replace(this.labelReplace, ' '),
-                title: item[1],
-                enabled: filter.enabled[index],
-                selected: filter.selection[index],
-                hasOnes: ones.getBit(index),
-                hasZeros: zeros.getBit(index),
-            })))
+            .data(filter.values
+                .map((item, index) => ({
+                    index: index,
+                    id: item[0],
+                    label: (item[0] || "").replace(this.labelReplace, ' '),
+                    title: item[1],
+                    enabled: filter.enabled[index],
+                    selected: filter.selection[index],
+                    hasOnes: ones.getBit(index),
+                    hasZeros: zeros.getBit(index),
+                }))
+                .filter((item) => (item.id != null))
+            )
             .enter()
             .append('div')
             .attr('class', 'bitcontainer');
