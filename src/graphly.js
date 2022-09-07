@@ -6434,8 +6434,8 @@ class graphly extends EventEmitter {
 
                     // ignore negative error values
                     if (yErrorVal >= 0) {
-                        let maxError = yScale(valY + yErrorVal);
-                        let minError = yScale(valY - yErrorVal);
+                        let maxError = yScale(valY + yErrorVal) + axisOffset;
+                        let minError = yScale(valY - yErrorVal) + axisOffset;
 
                         // "whiskers" for error
                         this.batchDrawer.addLine(
