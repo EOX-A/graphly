@@ -129,6 +129,7 @@ const dotType = {
 
 
 let DOTSIZE = 8;
+let ERROBAR_CAP_WIDTH = 5;
 
 let lockicon = require('../styles/lock.svg');
 let unlockicon = require('../styles/unlock.svg');
@@ -6431,6 +6432,7 @@ class graphly extends EventEmitter {
                    && !Number.isNaN(min_error_y)) {
 
                     let yErrorVal = data[parSett.errorParameter][j];
+                    let capWidth = ERROBAR_CAP_WIDTH;
 
                     // ignore negative error values
                     if (yErrorVal >= 0) {
@@ -6444,17 +6446,20 @@ class graphly extends EventEmitter {
                             renderValue
                         );
                         this.batchDrawer.addLine(
-                            x-5, maxError, x+5, maxError, (1.5*this.resFactor),
+                            x-capWidth, maxError, x+capWidth, maxError,
+                            (1.5*this.resFactor),
                             rC[0], rC[1], rC[2], 0.5,
                             renderValue
                         );
                         this.batchDrawer.addLine(
-                            x, y, x, minError, (1.5*this.resFactor),
+                            x, y, x, minError,
+                            (1.5*this.resFactor),
                             rC[0], rC[1], rC[2], 0.5,
                             renderValue
                         );
                         this.batchDrawer.addLine(
-                            x-5, minError, x+5, minError, (1.5*this.resFactor),
+                            x-capWidth, minError, x+capWidth, minError,
+                            (1.5*this.resFactor),
                             rC[0], rC[1], rC[2], 0.5,
                             renderValue
                         );
