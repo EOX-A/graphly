@@ -128,8 +128,8 @@ const dotType = {
 };
 
 
-let DOTSIZE = 8;
-let ERROBAR_CAP_WIDTH = 5;
+let DOTSIZE = 6;
+let ERROBAR_CAP_WIDTH = 4;
 
 let lockicon = require('../styles/lock.svg');
 let unlockicon = require('../styles/unlock.svg');
