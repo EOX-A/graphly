@@ -250,9 +250,12 @@ class graphly extends EventEmitter {
     * @param {String} [options.labelAllignment='right'] allignment for label box
     * @param {boolean} [options.connectFilteredPoints=false] option to render
     *        lines between points when there are filtered points in between
+    * @param {Object} [options.colorscaleDefinitions] Hash of colorscale
+    *        definitions. Defaults to colorscales from colorscalesdef (eox-a)
     * @param {Array} [options.colorscales] Array of strings with colorscale 
-    *        identifiers that should be provided for selection, default list
-    *        includes colorscales from colorscalesdef (eox-a)
+    *        identifiers offered for selection, defaults to keys from
+    *        options.colorscaleDefinitions. Note that identifiers not present
+    *        in options.colorscaleDefinitions are ignored.
     * @param {boolean} [options.showFilteredData=true] Option to show greyed out
     *        data points when filtering
     * @param {boolean} [options.allowLockingAxisScale=false] Option to add lock
@@ -447,11 +450,15 @@ class graphly extends EventEmitter {
         this.mouseDown = false;
         this.prevMousePos = null;
 
-        let colorscalesKeys = Object.keys(colorscalesdef.colorscales);
+        let colorscaleDefinitions = defaultFor(
+            options.colorscaleDefinitions, colorscalesdef.colorscales
+        )
+
+        // NOTE: undefined colorscales are rejected
         this.colorscales = defaultFor(
-            options.colorscales,
-            colorscalesKeys
-        );
+            options.colorscales, Object.keys(colorscaleDefinitions)
+        ).filter(name => colorscaleDefinitions.hasOwnProperty(name));
+
         this.discreteColorScales = {};
 
         if(this.filterManager){
@@ -503,7 +510,8 @@ class graphly extends EventEmitter {
             coordinateSystem: 'pixels',
             contextParams: {
                 preserveDrawingBuffer: true
-            }
+            },
+            colorscales: colorscaleDefinitions
         };
 
         if(this.disableAntiAlias){
@@ -7431,11 +7439,6 @@ class graphly extends EventEmitter {
           .append('select')
             .attr('id','colorScaleSelection')
             .on('change',oncolorScaleSelectionChange);
-
-        // Check if colorscales are defined in colorscalesdef
-        this.colorscales = this.colorscales.filter((cs)=>{
-            return colorscalesdef.colorscales.hasOwnProperty(cs);
-        });
 
         this.colorscales.sort();
 

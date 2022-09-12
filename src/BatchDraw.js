@@ -4,6 +4,7 @@
  * License: MIT
  */
 
+let colorscalesdef = require('colorscalesdef');
 
 
 function defaultFor(arg, val) { return typeof arg !== 'undefined' ? arg : val; }
@@ -23,8 +24,7 @@ class BatchDrawer {
         this.clearColor = defaultFor(params.clearColor, {r: 0, g: 0, b: 0, a: 0});
         this.contextParams = defaultFor(params.contextParams, {});
 
-        let colorscalesdef = require('colorscalesdef');
-        this.colorscales = colorscalesdef.colorscales;
+        this.colorscales = defaultFor(params.colorscales, colorscalesdef.colorscales);
 
         this.setNoDataValue(Number.MIN_VALUE);
         this.setLogScale(false);
