@@ -6136,8 +6136,8 @@ class graphly extends EventEmitter {
                         x = this.xScale(valX);
 
                         const currType = overlayData[coll][keyPar][j];
-                        const overlayType = typeDef.find((item) => item.match(currType));
-                        if(overlayType.hasOwnProperty('active') && !overlayType.active){
+                        const overlayType = typeDef.find((item) => !item.match || item.match(currType));
+                        if(overlayType && overlayType.hasOwnProperty('active') && !overlayType.active){
                           continue;
                         }
 
