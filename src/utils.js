@@ -45,22 +45,29 @@ String.prototype.allReplace = function(obj) {
 export function addSymbol(el, symbol, color, center, stroke, size , className){
 
     let s = defaultFor(size, 10);
-    let c = defaultFor(center, {x: s, y: s/2});
+    let c = defaultFor(center, {x: s, y: s*0.5});
     let sW = defaultFor(stroke, 1.5);
 
-    let triangleData = [ 
-        {"x": c.x-s/2, "y": c.y+s/2}, 
-        {"x": c.x, "y": c.y-s/2},
-        {"x": c.x+s/2, "y": c.y+s/2},
-        {"x": c.x-s/2, "y": c.y+s/2}
+    let triangleUpData = [
+        {"x": c.x - s*0.5, "y": c.y + s*0.3660},
+        {"x": c.x, "y": c.y - s*0.5},
+        {"x": c.x + s*0.5, "y": c.y + s*0.3660},
+        {"x": c.x - s*0.5, "y": c.y + s*0.3660}
+    ];
+
+    let triangleDownData = [
+        {"x": c.x - s*0.5, "y": c.y - s*0.3660},
+        {"x": c.x + s*0.5, "y": c.y - s*0.3660},
+        {"x": c.x, "y": c.y + s*0.5},
+        {"x": c.x - s*0.5, "y": c.y - s*0.3660},
     ];
 
     let diamondData = [
-        {"x": c.x-s/2, "y": c.y},
-        {"x": c.x, "y": c.y+s/2},
-        {"x": c.x+s/2, "y": c.y},
-        {"x": c.x, "y": c.y-s/2},
-        {"x": c.x-s/2, "y": c.y},
+        {"x": c.x - s*0.5, "y": c.y},
+        {"x": c.x, "y": c.y + s*0.5},
+        {"x": c.x + s*0.5, "y": c.y},
+        {"x": c.x, "y": c.y - s*0.5},
+        {"x": c.x - s*0.5, "y": c.y},
     ];
 
     let polygonFunction = d3.svg.line()
@@ -72,14 +79,14 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
     switch(symbol){
         case 'rectangle':
             element = el.append("rect")
-                .attr("x", c.x-s/2).attr("y", c.y-s/2)
+                .attr("x", c.x - s*0.5).attr("y", c.y - s*0.5)
                 .attr("width", s).attr("height", s)
                 .attr('fill', color)
                 .attr("stroke", 'none');
             break;
         case 'rectangle_empty':
             element = el.append("rect")
-                .attr("x", c.x-s/2).attr("y", c.y-s/2)
+                .attr("x", c.x - s*0.5).attr("y", c.y - s*0.5)
                 .attr("width", s).attr("height", s)
                 .attr('fill', 'none')
                 .attr("stroke-width", sW)
@@ -88,30 +95,30 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
         case 'circle':
             element = el.append("ellipse")
                 .attr("cx", c.x).attr("cy", c.y)
-                .attr("rx", s/2).attr("ry", s/2)
+                .attr("rx", s*0.5).attr("ry", s*0.5)
                 .attr('fill', color)
                 .attr("stroke", 'none');
             break;
         case 'circle_empty':
             element = el.append("ellipse")
                 .attr("cx", c.x).attr("cy", c.y)
-                .attr("rx", s/2-1).attr("ry", s/2-1)
+                .attr("rx", s*0.5 - 1.0).attr("ry", s*0.5 - 1.0)
                 .attr('fill', 'none')
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
             break;
         case 'plus':
             element = el.append('line')
-                .attr('x1', c.x).attr('y1', c.y-s/2)
-                .attr('x2', c.x).attr('y2', c.y+s/2)
+                .attr('x1', c.x).attr('y1', c.y - s*0.5)
+                .attr('x2', c.x).attr('y2', c.y + s*0.5)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
             if(className){
                 element.attr('class', className);
             }
             element = el.append('line')
-                .attr('x1', c.x-s/2).attr('y1', c.y)
-                .attr('x2', c.x+s/2).attr('y2', c.y)
+                .attr('x1', c.x - s*0.5).attr('y1', c.y)
+                .attr('x2', c.x + s*0.5).attr('y2', c.y)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
             if(className){
@@ -120,16 +127,16 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
             break;
         case 'x':
             element = el.append('line')
-                .attr('x1', c.x-s/2).attr('y1', c.y-s/2)
-                .attr('x2', c.x+s/2).attr('y2', c.y+s/2)
+                .attr('x1', c.x - s*0.5).attr('y1', c.y - s*0.5)
+                .attr('x2', c.x + s*0.5).attr('y2', c.y + s*0.5)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
             if(className){
                 element.attr('class', className);
             }
             element = el.append('line')
-                .attr('x1', c.x+s/2).attr('y1', c.y-s/2)
-                .attr('x2', c.x-s/2).attr('y2', c.y+s/2)
+                .attr('x1', c.x + s*0.5).attr('y1', c.y - s*0.5)
+                .attr('x2', c.x - s*0.5).attr('y2', c.y + s*0.5)
                 .attr("stroke-width", sW)
                 .attr("stroke", color);
             if(className){
@@ -137,15 +144,31 @@ export function addSymbol(el, symbol, color, center, stroke, size , className){
             }
             break;
         case 'triangle':
+        case 'triangle_up':
             element = el.append("path")
-                .attr("d", polygonFunction(triangleData))
+                .attr("d", polygonFunction(triangleUpData))
                 .attr("stroke-width", sW)
                 .attr("stroke", color)
                 .attr("fill", color);
             break;
         case 'triangle_empty':
+        case 'triangle_up_empty':
             element = el.append("path")
-                .attr("d", polygonFunction(triangleData))
+                .attr("d", polygonFunction(triangleUpData))
+                .attr("stroke-width", sW)
+                .attr("stroke", color)
+                .attr("fill", "none");
+            break;
+        case 'triangle_down':
+            element = el.append("path")
+                .attr("d", polygonFunction(triangleDownData))
+                .attr("stroke-width", sW)
+                .attr("stroke", color)
+                .attr("fill", color);
+            break;
+        case 'triangle_down_empty':
+            element = el.append("path")
+                .attr("d", polygonFunction(triangleDownData))
                 .attr("stroke-width", sW)
                 .attr("stroke", color)
                 .attr("fill", "none");

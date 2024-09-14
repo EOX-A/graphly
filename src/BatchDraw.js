@@ -1021,10 +1021,10 @@ class BatchDrawer {
 
                     } else if(dotType == 6.0){
 
-                       // Triangle filled
+                        // Triangle up filled
 
-                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.0))*dotSize;
-                        if( abs(m.x)*2.0 > m.y ) {
+                        vec2 m = vec2(gl_PointCoord.xy.x - 0.5, gl_PointCoord.xy.y)*dotSize;
+                        if(( abs(m.x)*1.7321 > m.y ) || ( m.y > 0.8660*dotSize)) {
                             discard;
                         }
 
@@ -1032,18 +1032,18 @@ class BatchDrawer {
 
                     } else if(dotType == 7.0){
 
-                        // Triangle empty
+                        // Triangle up empty
+
                         float borderSize = 0.1 * dotSize;
                         if(borderSize<1.2){
                             borderSize = 1.2;
                         }
 
-                        vec2 m = (gl_PointCoord.xy - vec2(0.5, 0.0))*dotSize;
-                        if( abs(m.x)*2.0 > m.y ) {
+                        vec2 m = vec2(gl_PointCoord.xy.x - 0.5, gl_PointCoord.xy.y)*dotSize;
+                        if(( abs(m.x)*1.7321 > m.y ) || ( m.y > 0.8660*dotSize)) {
                             discard;
                         }
-                        if( (m.y < dotSize-(borderSize) ) && (abs(m.x)*2.0 < m.y-borderSize*2.0) &&
-                             (color.a >= 0.0) ) {
+                        if( (m.y < 0.8660*dotSize - borderSize ) && ((abs(m.x) + 1.28676*borderSize)*1.7321 < m.y) && (color.a >= 0.0) ) {
                             discard;
                         }
 
@@ -1079,6 +1079,36 @@ class BatchDrawer {
                         float innerBound = outerBound - strokeWidth;
 
                         if(color.a > 0.0 && (l > outerBound || l < innerBound)) {
+                            discard;
+                        }
+
+                        fragmentColor = color_out;
+
+                    } else if(dotType == 10.0){
+
+                        // Triangle down filled
+
+                        vec2 m = vec2(gl_PointCoord.xy.x - 0.5, 1.0 - gl_PointCoord.xy.y)*dotSize;
+                        if(( abs(m.x)*1.7321 > m.y ) || ( m.y > 0.8660*dotSize)) {
+                            discard;
+                        }
+
+                        fragmentColor = color_out;
+
+                    } else if(dotType == 11.0){
+
+                        // Triangle down empty
+
+                        float borderSize = 0.1 * dotSize;
+                        if(borderSize<1.2){
+                            borderSize = 1.2;
+                        }
+
+                        vec2 m = vec2(gl_PointCoord.xy.x - 0.5, 1.0 - gl_PointCoord.xy.y)*dotSize;
+                        if(( abs(m.x)*1.7321 > m.y ) || ( m.y > 0.8660*dotSize)) {
+                            discard;
+                        }
+                        if( (m.y < 0.8660*dotSize - borderSize ) && ((abs(m.x) + 1.28676*borderSize)*1.7321 < m.y) && (color.a >= 0.0) ) {
                             discard;
                         }
 

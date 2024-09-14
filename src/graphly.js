@@ -65,7 +65,7 @@
 * @typedef {Object} ParameterSettings
 * @property {String} [symbol] to use for rendering, can be dotType, rectangle,
 *           rectangle_empty, circle, circle_empty, plus, x, triangle, 
-*           triangle_empty.
+*           triangle_empty, ... etc.
 * @property {String} [uom] Unit of measurement to be added to label.
 * @property {boolean} [lineConnect] Connect points with lines.
 * @property {String} [colorscale] Colorscale used if parameter is selected to be
@@ -123,8 +123,12 @@ const dotType = {
     x: 5.0,
     triangle: 6.0,
     triangle_empty: 7.0,
+    triangle_up: 6.0,
+    triangle_up_empty: 7.0,
     diamond : 8.0,
     diamond_empty: 9.0,
+    triangle_down: 10.0,
+    triangle_down_empty: 11.0,
 };
 
 
@@ -6838,8 +6842,10 @@ class graphly extends EventEmitter {
                         symbol = 'circle_empty'
                     } else if(symbol === 'rectangle'){
                         symbol = 'rectangle_empty'
-                    } else if(symbol === 'triangle'){
-                        symbol = 'triangle_empty'
+                    } else if(symbol === 'triangle' || symbol === 'triangle_up'){
+                        symbol = 'triangle_up_empty'
+                    } else if(symbol === 'triangle_down'){
+                        symbol = 'triangle_down_empty'
                     } else if(symbol === 'diamond'){
                         symbol = 'diamond_empty'
                     }
@@ -7605,16 +7611,18 @@ class graphly extends EventEmitter {
 
             let data = [
                 { name:'None', value: 'none' },
-                { name:'Rectangle', value: 'rectangle' },
-                { name:'Rectangle outline', value: 'rectangle_empty'},
                 { name:'Circle', value: 'circle'},
                 { name:'Circle outline', value: 'circle_empty'},
+                { name:'Rectangle', value: 'rectangle' },
+                { name:'Rectangle outline', value: 'rectangle_empty'},
+                { name:'Diamond', value: 'diamond'},
+                { name:'Diamond outline', value: 'diamond_empty'},
                 { name:'Plus', value: 'plus'},
                 { name:'X', value: 'x'},
-                { name:'Triangle', value: 'triangle'},
-                { name:'Triangle outline', value: 'triangle_empty'},
-                { name:'Diamond', value: 'diamond'},
-                { name:'Diamond outline', value: 'diamond_empty'}
+                { name:'Triangle (up)', value: 'triangle'},
+                { name:'Triangle outline (up)', value: 'triangle_empty'},
+                { name:'Triangle (down)', value: 'triangle_down'},
+                { name:'Triangle outline (down)', value: 'triangle_down_empty'},
             ];
 
 
