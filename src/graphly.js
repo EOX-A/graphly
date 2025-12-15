@@ -3629,6 +3629,19 @@ class graphly extends EventEmitter {
 
     calculateExtent(selection) {
         let currExt, resExt; 
+        var filterApplicableSelection = function(selection, data){
+          var applicableSelection = [];
+          for (var i = selection.length - 1; i >= 0; i--){
+            if (data.hasOwnProperty(selection[i]) && data[selection[i]].length > 0){
+              applicableSelection.push(selection[i]);
+            }
+          }
+          return applicableSelection;
+        };
+        selection = filterApplicableSelection(selection, this.data);
+        if(selection.length === 0){
+            return [0,1];
+        }
         for (let i = selection.length - 1; i >= 0; i--) {
             // Check if null value has been defined
             if(this.dataSettings.hasOwnProperty(selection[i]) &&
@@ -3664,9 +3677,6 @@ class graphly extends EventEmitter {
             }else{
                 resExt = currExt;
             }
-        }
-        if(selection.length === 0){
-            return [0,1];
         }
         if(isNaN(resExt[0])){
             resExt[0] = 0;
@@ -6178,16 +6188,22 @@ class graphly extends EventEmitter {
         let combPars = this.renderSettings.combinedParameters;
         let xGroup = false;
         let yGroup = false;
+
         // Check if either x or y axis is a combined parameter
-        if(combPars.hasOwnProperty(xAxis)){
-            xGroup = combPars[xAxis];
+        if (combPars.hasOwnProperty(xAxis)) {
+          xGroup = combPars[xAxis];
+        } else if (data.hasOwnProperty(xAxis)) {
+          lp = data[xAxis].length;
         } else {
-            lp = data[xAxis].length;
+          return; // data is not available
         }
-        if(combPars.hasOwnProperty(yAxis)){
-            yGroup = combPars[yAxis];
+
+        if (combPars.hasOwnProperty(yAxis)) {
+          yGroup = combPars[yAxis];
+        } else if (data.hasOwnProperty(yAxis)) {
+          lp = data[yAxis].length;
         } else {
-            lp = data[yAxis].length;
+          return; // data is not available
         }
 
         // Identify how colors are applied to the points
@@ -6615,16 +6631,23 @@ class graphly extends EventEmitter {
         let combPars = this.renderSettings.combinedParameters;
         let xGroup = false;
         let yGroup = false;
+
         // Check if either x or y axis is a combined parameter
-        if(combPars.hasOwnProperty(xAxis)){
-            xGroup = combPars[xAxis];
+
+        if (combPars.hasOwnProperty(xAxis)) {
+          xGroup = combPars[xAxis];
+        } else if (data.hasOwnProperty(xAxis)) {
+          lp = data[xAxis].length;
         } else {
-            lp = data[xAxis].length;
+          return; // data is not available
         }
-        if(combPars.hasOwnProperty(yAxis)){
-            yGroup = combPars[yAxis];
+
+        if (combPars.hasOwnProperty(yAxis)) {
+          yGroup = combPars[yAxis];
+        } else if (data.hasOwnProperty(yAxis)) {
+          lp = data[yAxis].length;
         } else {
-            lp = data[yAxis].length;
+          return; // data is not available
         }
 
         yScale = yScale[plotY];
